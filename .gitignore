@@ -64,3 +64,4 @@ dist-ssr
 temp_stitch/
 tmp/
 temp/
+.vite/

@@ -1,16 +1,26 @@
-# React + Vite
+# Lista-de-Tarefas
+Projeto desenvolvido com Google Antigravity no curso do Senai
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+## Como Rodar o Projeto Localmente
 
-Currently, two official plugins are available:
+1. **Instalar Dependências**:
+   ```bash
+   npm install
+   ```
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+2. **Configuração de Variáveis de Ambiente**:
+   Crie um arquivo `.env.local` na raiz do projeto com as chaves do Supabase (use as referências do `.env.example`):
+   ```env
+   VITE_SUPABASE_URL=seu_url_do_supabase
+   VITE_SUPABASE_ANON_KEY=sua_anon_key_do_supabase
+   ```
 
-## React Compiler
+3. **Executar em Desenvolvimento**:
+   ```bash
+   npm run dev
+   ```
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+4. **Gerar Build de Produção**:
+   ```bash
+   npm run build
+   ```
