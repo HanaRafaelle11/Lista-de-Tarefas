@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="pt-BR"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>AuraWatch Elite | Performance de Luxo</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&amp;family=Montserrat:wght@600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "inverse-primary": "#4d44e3",
+                      "surface-container-high": "#272a2c",
+                      "on-surface-variant": "#c7c4d8",
+                      "secondary-fixed-dim": "#bec6e0",
+                      "surface-dim": "#101415",
+                      "on-secondary": "#283044",
+                      "error": "#ffb4ab",
+                      "surface-tint": "#c3c0ff",
+                      "on-error": "#690005",
+                      "primary-fixed": "#e2dfff",
+                      "on-surface": "#e0e3e5",
+                      "tertiary-fixed": "#6ffbbe",
+                      "surface-container-lowest": "#0b0f10",
+                      "primary-fixed-dim": "#c3c0ff",
+                      "tertiary-container": "#006e4b",
+                      "surface-container": "#1d2022",
+                      "on-tertiary-fixed": "#002113",
+                      "on-error-container": "#ffdad6",
+                      "on-primary-container": "#dad7ff",
+                      "background": "#101415",
+                      "tertiary-fixed-dim": "#4edea3",
+                      "primary": "#c3c0ff",
+                      "on-primary-fixed-variant": "#3323cc",
+                      "inverse-surface": "#e0e3e5",
+                      "on-secondary-container": "#adb4ce",
+                      "surface-container-low": "#191c1e",
+                      "secondary-fixed": "#dae2fd",
+                      "on-tertiary": "#003824",
+                      "surface": "#101415",
+                      "tertiary": "#4edea3",
+                      "outline": "#918fa1",
+                      "inverse-on-surface": "#2d3133",
+                      "surface-bright": "#363a3b",
+                      "primary-container": "#4f46e5",
+                      "secondary-container": "#3f465c",
+                      "on-tertiary-fixed-variant": "#005236",
+                      "on-tertiary-container": "#67f4b7",
+                      "secondary": "#bec6e0",
+                      "on-primary-fixed": "#0f0069",
+                      "on-primary": "#1d00a5",
+                      "on-background": "#e0e3e5",
+                      "surface-variant": "#323537",
+                      "outline-variant": "#464555",
+                      "on-secondary-fixed": "#131b2e",
+                      "surface-container-highest": "#323537",
+                      "on-secondary-fixed-variant": "#3f465c",
+                      "error-container": "#93000a"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "1.5rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "stack-sm": "8px",
+                      "section-padding": "120px",
+                      "stack-md": "24px",
+                      "margin-mobile": "20px",
+                      "container-max": "1280px",
+                      "gutter": "24px",
+                      "stack-lg": "64px"
+              },
+              "fontFamily": {
+                      "headline-md": ["Montserrat"],
+                      "headline-xl-mobile": ["Montserrat"],
+                      "body-md": ["Inter"],
+                      "headline-lg": ["Montserrat"],
+                      "headline-xl": ["Montserrat"],
+                      "label-caps": ["Inter"],
+                      "body-lg": ["Inter"]
+              },
+              "fontSize": {
+                      "headline-md": ["32px", {"lineHeight": "40px", "fontWeight": "600"}],
+                      "headline-xl-mobile": ["40px", {"lineHeight": "48px", "letterSpacing": "-0.01em", "fontWeight": "700"}],
+                      "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                      "headline-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.01em", "fontWeight": "700"}],
+                      "headline-xl": ["64px", {"lineHeight": "72px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                      "label-caps": ["12px", {"lineHeight": "16px", "letterSpacing": "0.1em", "fontWeight": "600"}],
+                      "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}]
+              }
+            },
+          },
+        }
+    </script>
+<style>
+        @keyframes pulse-soft {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.1); opacity: 0.8; }
+        }
+        .animate-pulse-soft {
+            animation: pulse-soft 2s infinite ease-in-out;
+        }
+        .glass {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .hero-glow {
+            box-shadow: 0 0 80px -20px rgba(79, 70, 229, 0.3);
+        }
+        .scroll-reveal {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: all 0.8s ease-out;
+        }
+        .scroll-reveal.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .watch-float {
+            transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .watch-float:hover {
+            transform: rotate(-3deg) scale(1.02);
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body-md selection:bg-primary selection:text-on-primary">
+<!-- Header (TopNavBar) -->
+<nav class="fixed top-0 w-full z-50 bg-surface/80 dark:bg-surface/80 backdrop-blur-xl border-b border-white/10 shadow-lg shadow-primary/10 h-20">
+<div class="flex justify-between items-center max-w-container-max mx-auto px-margin-mobile md:px-gutter h-full">
+<div class="font-headline-md text-headline-md font-bold text-primary tracking-tight">AuraWatch Elite</div>
+<div class="hidden md:flex items-center gap-stack-lg">
+<a class="text-on-surface-variant hover:text-primary transition-colors font-label-caps text-label-caps" href="#design">Design</a>
+<a class="text-on-surface-variant hover:text-primary transition-colors font-label-caps text-label-caps" href="#saude">Saúde</a>
+<a class="text-on-surface-variant hover:text-primary transition-colors font-label-caps text-label-caps" href="#specs">Especificações</a>
+<a class="text-on-surface-variant hover:text-primary transition-colors font-label-caps text-label-caps" href="#garantia">Garantia</a>
+</div>
+<button class="bg-primary-container text-on-primary-container px-6 py-3 rounded-xl font-label-caps text-label-caps font-bold hover:opacity-80 transition-all active:scale-95 duration-200">
+                Compre Agora
+            </button>
+</div>
+</nav>
+<!-- Hero Section -->
+<section class="pt-40 pb-stack-lg overflow-hidden">
+<div class="max-w-container-max mx-auto px-margin-mobile md:px-gutter grid md:grid-cols-2 gap-stack-lg items-center">
+<div class="space-y-stack-md">
+<span class="font-label-caps text-label-caps text-primary tracking-[0.2em] uppercase">Tecnologia de Vanguarda</span>
+<h1 class="font-headline-xl-mobile md:font-headline-xl text-headline-xl-mobile md:text-headline-xl leading-tight text-on-surface">
+                    AuraWatch Elite: Conectividade, Saúde e Estilo no seu Pulso.
+                </h1>
+<p class="font-body-lg text-body-lg text-on-surface-variant max-w-xl">
+                    O assistente pessoal definitivo para quem valoriza produtividade e bem-estar. Design minimalista com performance máxima.
+                </p>
+<div class="pt-stack-sm flex flex-col sm:flex-row gap-stack-sm items-start sm:items-center">
+<button class="bg-primary-container text-on-primary-container px-8 py-5 rounded-xl font-headline-md text-[18px] font-bold hero-glow hover:brightness-110 transition-all active:scale-95">
+                        Compre Agora - <span class="line-through opacity-60 text-sm">R$ 289,00</span> R$ 187,00
+                    </button>
+<div class="flex items-center gap-2 px-4 py-2 bg-surface-container-high rounded-full border border-white/5">
+<span class="material-symbols-outlined text-tertiary text-sm" style="font-variation-settings: 'FILL' 1;">verified</span>
+<span class="font-label-caps text-label-caps text-on-surface-variant">Original AuraWatch</span>
+</div>
+</div>
+</div>
+<div class="relative group">
+<div class="absolute -inset-10 bg-primary/20 blur-[100px] rounded-full opacity-50 group-hover:opacity-70 transition-opacity"></div>
+<img alt="Relógio AuraWatch Elite" class="relative z-10 w-full h-auto watch-float rounded-xl" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCNddGzdFp37UsZIDeBbeqa0_Z2Olron65_MGdTeuDVgg2DoU3AFKWGFCDPjrRm6YPeTIizxYoFEQa3puyPRxh1rJ_6a5SzuD5XWVvJI_66kHk0W3zmcLJ0kSZzAugKQZPj6_qfTaMS1pXuyHnbJlvfZT-T6Y1F5Gct1jfAomcR2lYxFrCo30CKSfJmCEzfQxtUqgpU0uuBvSK4iW1CqG1hmJwX0F2WIZgjizMTdv5b2xyiadjTJRiTwKJL3QPcYVe-SmMQ_ans8-I"/>
+</div>
+</div>
+</section>
+<!-- Connectivity Section -->
+<section class="py-section-padding bg-surface-container-lowest" id="design">
+<div class="max-w-container-max mx-auto px-margin-mobile md:px-gutter">
+<div class="text-center mb-stack-lg scroll-reveal">
+<h2 class="font-headline-lg text-headline-lg text-on-surface mb-stack-sm">Nunca perca o que importa.</h2>
+<p class="text-on-surface-variant font-body-lg max-w-2xl mx-auto">Sincronização instantânea com suas redes favoritas e chamadas cristalinas.</p>
+</div>
+<div class="grid md:grid-cols-2 gap-stack-lg items-center">
+<div class="order-2 md:order-1 relative">
+<img alt="Interface de notificações" class="rounded-xl shadow-2xl scroll-reveal" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDDBvX5b_hdvVFsrFfJeQntAYlK5QnvpQMid7WOKCCFMLRO7gP1b4GoRrvHgiAmuVvktofTq7ndHxqDou57d6vU3tVGewA6bQQ8JwWlNnvemFZK8TGD3qC_t59OpCthBWywxgsmHCxDr-xCgx-ObRujrAEluluRmq5EiHLtVxdf4KILAh2RGBbVvGzihkfvnQIQxjRRgV4BbvhGYJxLzkEKfneK-bVIh19W1NVMs2VO-UBaAvvYvgKk9Sv9_cczxo1yADiv_lc4QgI"/>
+<!-- Notification Orbs -->
+<div class="absolute top-1/4 -left-4 w-16 h-16 glass rounded-full flex items-center justify-center animate-pulse-soft">
+<span class="material-symbols-outlined text-tertiary" data-icon="chat">chat</span>
+</div>
+<div class="absolute bottom-1/4 -right-4 w-20 h-20 glass rounded-full flex items-center justify-center animate-pulse-soft" style="animation-delay: 1s">
+<span class="material-symbols-outlined text-primary" data-icon="call">call</span>
+</div>
+</div>
+<div class="order-1 md:order-2 space-y-stack-md scroll-reveal">
+<div class="glass p-stack-md rounded-xl space-y-stack-sm">
+<div class="flex items-center gap-stack-sm">
+<span class="material-symbols-outlined text-tertiary" data-icon="forum">forum</span>
+<h3 class="font-headline-md text-[24px] text-on-surface">WhatsApp &amp; Instagram</h3>
+</div>
+<p class="text-on-surface-variant">Receba notificações em tempo real, visualize mensagens e responda com agilidade diretamente do seu pulso.</p>
+</div>
+<div class="glass p-stack-md rounded-xl space-y-stack-sm">
+<div class="flex items-center gap-stack-sm">
+<span class="material-symbols-outlined text-error" data-icon="add_call">add_call</span>
+<h3 class="font-headline-md text-[24px] text-on-surface">Chamadas em HD</h3>
+</div>
+<p class="text-on-surface-variant">Microfone com cancelamento de ruído e alto-falante potente para atender chamadas onde quer que você esteja.</p>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Health Management -->
+<section class="py-section-padding" id="saude">
+<div class="max-w-container-max mx-auto px-margin-mobile md:px-gutter">
+<div class="flex flex-col md:flex-row justify-between items-end gap-stack-md mb-stack-lg scroll-reveal">
+<div class="max-w-2xl">
+<h2 class="font-headline-lg text-headline-lg text-on-surface mb-stack-sm">Seu Assistente Pessoal de Bem-Estar.</h2>
+<p class="text-on-surface-variant font-body-lg">Monitore cada batimento, cada passo e cada noite de sono com sensores de grau médico.</p>
+</div>
+<div class="flex gap-2">
+<div class="w-12 h-12 rounded-full glass flex items-center justify-center text-primary">
+<span class="material-symbols-outlined animate-pulse-soft" style="font-variation-settings: 'FILL' 1;">favorite</span>
+</div>
+</div>
+</div>
+<div class="grid md:grid-cols-3 gap-stack-md mb-stack-lg">
+<div class="md:col-span-2 glass rounded-xl overflow-hidden scroll-reveal">
+<img alt="Dashboard de saúde" class="w-full h-full object-cover opacity-80 hover:opacity-100 transition-opacity" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBgdB9THaTM3XgAH2e30UfMpYVmaEEPHpHi7Mp5r4tlFR3Pw3TG9SC-AJEos_JfjianI_rq1eGbRp19InkuVU_tPB4CNxxD6SLa0p9edSrHZTi9HTxPvLziANDrZ3HRKJWednynAmV3OvYOWPmORHjT0Gp_KVUKT5ki0QJYOheFMpuaTIYmnS1ksIQCu1BFsLBriBfxxJY0ODDglCCqYAFvgDPxOL-srU_f_Dn2d6j36nQ99QI7OhJR2gfK-92X2B-747WOjXCSv80"/>
+</div>
+<div class="grid grid-rows-2 gap-stack-md">
+<div class="glass p-stack-md rounded-xl flex flex-col justify-between scroll-reveal">
+<span class="material-symbols-outlined text-tertiary text-4xl" data-icon="bedtime">bedtime</span>
+<div>
+<h4 class="font-headline-md text-[20px] text-on-surface mb-1">Sono Profundo</h4>
+<p class="text-sm text-on-surface-variant">Análise detalhada das fases REM e leve.</p>
+</div>
+</div>
+<div class="glass p-stack-md rounded-xl flex flex-col justify-between scroll-reveal">
+<span class="material-symbols-outlined text-error text-4xl animate-pulse-soft" data-icon="vital_signs">vital_signs</span>
+<div>
+<h4 class="font-headline-md text-[20px] text-on-surface mb-1">Frequência Cardíaca</h4>
+<p class="text-sm text-on-surface-variant">Monitoramento 24/7 com alertas de arritmia.</p>
+</div>
+</div>
+</div>
+</div>
+<div class="grid sm:grid-cols-2 md:grid-cols-4 gap-stack-md">
+<div class="glass p-stack-md rounded-xl text-center scroll-reveal">
+<span class="material-symbols-outlined text-primary text-3xl mb-2" data-icon="water_drop">water_drop</span>
+<h5 class="font-label-caps text-label-caps text-on-surface">Lembrete de Água</h5>
+</div>
+<div class="glass p-stack-md rounded-xl text-center scroll-reveal">
+<span class="material-symbols-outlined text-tertiary text-3xl mb-2" data-icon="medication">medication</span>
+<h5 class="font-label-caps text-label-caps text-on-surface">Remédios</h5>
+</div>
+<div class="glass p-stack-md rounded-xl text-center scroll-reveal">
+<span class="material-symbols-outlined text-secondary text-3xl mb-2" data-icon="blood_pressure">blood_pressure</span>
+<h5 class="font-label-caps text-label-caps text-on-surface">Pressão Arterial</h5>
+</div>
+<div class="glass p-stack-md rounded-xl text-center scroll-reveal">
+<span class="material-symbols-outlined text-primary text-3xl mb-2" data-icon="stress_management">stress_management</span>
+<h5 class="font-label-caps text-label-caps text-on-surface">Gestão de Estresse</h5>
+</div>
+</div>
+</div>
+</section>
+<!-- Technical Specs -->
+<section class="py-section-padding bg-surface-container" id="specs">
+<div class="max-w-container-max mx-auto px-margin-mobile md:px-gutter">
+<h2 class="font-headline-lg text-headline-lg text-on-surface text-center mb-stack-lg scroll-reveal">Especificações de Elite</h2>
+<div class="grid grid-cols-2 md:grid-cols-5 gap-stack-md text-center">
+<div class="space-y-stack-sm scroll-reveal">
+<span class="material-symbols-outlined text-primary text-4xl" data-icon="translate">translate</span>
+<p class="font-label-caps text-label-caps">Português Nativo</p>
+</div>
+<div class="space-y-stack-sm scroll-reveal">
+<span class="material-symbols-outlined text-tertiary text-4xl" data-icon="exercise">exercise</span>
+<p class="font-label-caps text-label-caps">Métricas de Treino</p>
+</div>
+<div class="space-y-stack-sm scroll-reveal">
+<span class="material-symbols-outlined text-secondary text-4xl" data-icon="local_fire_department">local_fire_department</span>
+<p class="font-label-caps text-label-caps">Calorias Queimadas</p>
+</div>
+<div class="space-y-stack-sm scroll-reveal">
+<span class="material-symbols-outlined text-primary text-4xl" data-icon="footprint">footprint</span>
+<p class="font-label-caps text-label-caps">Contador de Passos</p>
+</div>
+<div class="space-y-stack-sm scroll-reveal">
+<span class="material-symbols-outlined text-tertiary text-4xl" data-icon="distance">distance</span>
+<p class="font-label-caps text-label-caps">Quilometragem</p>
+</div>
+</div>
+</div>
+</section>
+<!-- Authenticity Section -->
+<section class="py-section-padding bg-surface-container-lowest" id="garantia">
+<div class="max-w-container-max mx-auto px-margin-mobile md:px-gutter text-center scroll-reveal">
+<div class="inline-block p-1 bg-gradient-to-tr from-primary to-tertiary rounded-xl mb-stack-md">
+<div class="bg-surface-container-lowest px-12 py-12 rounded-xl">
+<span class="material-symbols-outlined text-6xl text-primary mb-stack-md" data-icon="verified_user">verified_user</span>
+<h2 class="font-headline-lg text-headline-lg text-on-surface mb-stack-sm">Qualidade Garantida e Originalidade</h2>
+<p class="text-on-surface-variant font-body-lg max-w-xl mx-auto">
+                        Cada AuraWatch Elite é submetido a testes rigorosos de durabilidade e precisão. Garantimos a autenticidade do seu produto com selo oficial de originalidade.
+                    </p>
+<div class="mt-stack-md flex flex-wrap justify-center gap-stack-md">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-tertiary" data-icon="shield">shield</span>
+<span class="font-label-caps text-label-caps">1 Ano de Garantia</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-tertiary" data-icon="local_shipping">local_shipping</span>
+<span class="font-label-caps text-label-caps">Frete Rápido</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-tertiary" data-icon="lock">lock</span>
+<span class="font-label-caps text-label-caps">Pagamento Seguro</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Floating CTA -->
+<div class="fixed bottom-8 right-8 z-[100] sm:block hidden">
+<button class="bg-primary-container text-on-primary-container px-6 py-4 rounded-full font-label-caps text-label-caps font-bold shadow-2xl flex items-center gap-3 hover:scale-105 active:scale-95 transition-all group">
+<span>Compre Agora - R$ 187,00</span>
+<span class="material-symbols-outlined group-hover:translate-x-1 transition-transform" data-icon="arrow_forward">arrow_forward</span>
+</button>
+</div>
+<!-- Footer -->
+<footer class="w-full py-stack-lg bg-surface-container-lowest dark:bg-surface-container-lowest border-t border-outline-variant">
+<div class="flex flex-col md:flex-row justify-between items-center max-w-container-max mx-auto px-margin-mobile gap-stack-md">
+<div class="space-y-2">
+<div class="font-headline-md text-headline-md text-on-surface font-bold tracking-tight">AuraWatch</div>
+<p class="text-on-surface-variant text-body-md">© 2024 AuraWatch. Performance de Luxo e Precisão Tecnológica.</p>
+</div>
+<div class="flex gap-stack-md">
+<a class="text-on-surface-variant hover:text-tertiary transition-colors font-label-caps text-label-caps" href="#">Suporte</a>
+<a class="text-on-surface-variant hover:text-tertiary transition-colors font-label-caps text-label-caps" href="#">Termos de Uso</a>
+<a class="text-on-surface-variant hover:text-tertiary transition-colors font-label-caps text-label-caps" href="#">Privacidade</a>
+<a class="text-on-surface-variant hover:text-tertiary transition-colors font-label-caps text-label-caps" href="#">Rastreio</a>
+</div>
+</div>
+</footer>
+<script>
+        // Scroll Reveal logic
+        const observerOptions = {
+            threshold: 0.1
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('active');
+                }
+            });
+        }, observerOptions);
+
+        document.querySelectorAll('.scroll-reveal').forEach(el => observer.observe(el));
+
+        // Smooth scroll for nav links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                document.querySelector(this.getAttribute('href')).scrollIntoView({
+                    behavior: 'smooth'
+                });
+            });
+        });
+    </script>
+</body></html>
