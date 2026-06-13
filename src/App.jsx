@@ -6,7 +6,6 @@ import EvolutionView from './components/EvolutionView';
 import HomeView from './components/HomeView';
 import GoalsView from './components/GoalsView';
 import SettingsView from './components/SettingsView';
-import GoalsView from './components/GoalsView';
 import AchievementToastManager from './components/AchievementToast';
 import useAchievements from './hooks/useAchievements';
 import { useHabits } from './hooks/useHabits';

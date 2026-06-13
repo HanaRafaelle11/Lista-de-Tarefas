@@ -28,7 +28,6 @@ export default function Navbar({ activeTab, setActiveTab, currentUser, onLogout 
               Olá, {currentUser?.name?.split(' ')[0] || 'Usuário'}
             </h1>
           </div>
-          </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <button
               onClick={() => setActiveTab('settings')}
