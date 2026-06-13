@@ -1,6 +1,6 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
-
 /* Design System & Global Styles — FocusList */
+/* Fontes carregadas via <link> no index.html (Inter + Plus Jakarta Sans) */
+
 
 :root {
   /* Cores Globais (Modo Claro - Aura v2 do Stitch) */
@@ -4250,4 +4250,85 @@ button[title="Sair do FocusList"]:hover {
 .aura-insight .aura-item-icon {
   color: #C89658;
 }
+
+/* ================================================================
+   DARK MODE — Variáveis sobrescritas quando <html class="dark">
+   ================================================================ */
+.dark {
+  /* Fundos */
+  --bg-app:           #0F1110;
+  --bg-card:          #181C1A;
+  --bg-card-hover:    #1E2320;
+
+  /* Textos */
+  --text-main:        #E8EBE8;
+  --text-muted:       #A8B2A8;
+  --text-light:       #6B7A6B;
+
+  /* Bordas */
+  --border-light:     #252A25;
+  --border-medium:    #2D352D;
+
+  /* Primário adaptado ao dark */
+  --primary:          #6DB876;
+  --primary-light:    rgba(109, 184, 118, 0.12);
+  --primary-hover:    #85CC8E;
+  --primary-glow:     rgba(109, 184, 118, 0.15);
+
+  /* Categorias dark */
+  --cat-trabalho-bg:  #1A2025;
+  --cat-pessoal-bg:   #1A201A;
+  --cat-estudos-bg:   #201E18;
+  --cat-lazer-bg:     #201A1C;
+
+  /* Prioridades dark */
+  --prio-alta-bg:     #200F0F;
+  --prio-alta-border: #3D1F1F;
+  --prio-media-bg:    #201808;
+  --prio-media-border:#3D2F10;
+  --prio-baixa-bg:    #181A18;
+  --prio-baixa-border:#2D302D;
+
+  /* Sombras dark */
+  --shadow-sm:        0 1px 3px rgba(0, 0, 0, 0.3);
+  --shadow-md:        0 8px 30px rgba(0, 0, 0, 0.4);
+  --shadow-lg:        0 16px 40px rgba(0, 0, 0, 0.5);
+  --shadow-glow:      0 0 15px rgba(109, 184, 118, 0.08);
+}
+
+/* Navbar com fundo escuro */
+.dark .navbar-header {
+  background-color: rgba(24, 28, 26, 0.90);
+  border-bottom-color: var(--border-light);
+}
+
+/* Overdue card no dark */
+.dark .todo-item-card.overdue {
+  border-color: #3D1F1F;
+  background-color: #1A0F0F;
+}
+
+/* Active nav tab no dark */
+.dark .active-nav-tab {
+  background-color: var(--bg-card);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+}
+
+/* Modal overlay no dark */
+.dark .modal-overlay {
+  background-color: rgba(0, 0, 0, 0.55);
+}
+
+/* Logout button no dark */
+.dark .navbar-logout-btn {
+  border-color: var(--border-medium);
+  color: var(--text-muted);
+}
+
+.dark .navbar-logout-btn:hover {
+  color: #E47070;
+  border-color: #5C2C2C;
+  background-color: #200F0F;
+}
+
 

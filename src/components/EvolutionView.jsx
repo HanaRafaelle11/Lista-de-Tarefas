@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { CheckCircle, Clock, AlertTriangle, BarChart3, PieChart, Target } from 'lucide-react';
 import { ACHIEVEMENTS, calcStats, calcStreak } from '../hooks/useAchievements';
+import { useAppContext } from '../contexts/AppContext';
 
 // ─── Utilitários ─────────────────────────────────────────────────────────────
 function formatDate(isoStr) {
@@ -179,7 +180,8 @@ function PriorityBars({ tasks }) {
 }
 
 // ─── View Principal ───────────────────────────────────────────────────────────
-export default function EvolutionView({ tasks, goals, unlockedAchievements }) {
+export default function EvolutionView() {
+  const { tasks, goals, unlockedAchievements } = useAppContext();
   const stats = useMemo(() => calcStats(tasks, goals), [tasks, goals]);
   const streak = stats.currentStreak;
 

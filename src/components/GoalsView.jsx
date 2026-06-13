@@ -4,6 +4,7 @@ import GoalCard from './GoalCard';
 import GoalModal from './GoalModal';
 import GoalTasksModal from './GoalTasksModal';
 import HabitsWidget from './HabitsWidget';
+import { useAppContext } from '../contexts/AppContext';
 
 // Estado vazio para cada filtro
 function GoalsEmptyState({ filter, onAdd }) {
@@ -53,17 +54,16 @@ function GoalsEmptyState({ filter, onAdd }) {
   );
 }
 
-export default function GoalsView({
-  goals,
-  goalTasks,
-  tasks,
-  onAddGoal,
-  onUpdateGoal,
-  onDeleteGoal,
-  onLinkTask,
-  onUnlinkTask,
-  habitsManager
-}) {
+export default function GoalsView() {
+  const {
+    goals, goalTasks, tasks,
+    handleAddGoal: onAddGoal,
+    handleUpdateGoal: onUpdateGoal,
+    handleDeleteGoal: onDeleteGoal,
+    handleLinkTask: onLinkTask,
+    handleUnlinkTask: onUnlinkTask,
+    habitsManager,
+  } = useAppContext();
   const [filter, setFilter] = useState('active');
   const [isGoalModalOpen, setIsGoalModalOpen] = useState(false);
   const [isTasksModalOpen, setIsTasksModalOpen] = useState(false);

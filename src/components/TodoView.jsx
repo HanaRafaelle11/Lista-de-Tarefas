@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { Plus, Search, X, Calendar, ChevronDown, ChevronRight, SlidersHorizontal } from 'lucide-react';
 import TodoItem from './TodoItem';
 import WeeklyPlannerModal from './WeeklyPlannerModal';
+import { useAppContext } from '../contexts/AppContext';
 
 // Helper: retorna a data local zerada como string YYYY-MM-DD
 const todayStr = () => {
@@ -166,7 +167,14 @@ function EmptyState({ filter, searchQuery, onAdd }) {
   );
 }
 
-export default function TodoView({ tasks, onAddTask, onUpdateTask, onDeleteTask, onToggleComplete }) {
+export default function TodoView() {
+  const {
+    tasks,
+    handleAddTask: onAddTask,
+    handleUpdateTask: onUpdateTask,
+    handleDeleteTask: onDeleteTask,
+    handleToggleComplete: onToggleComplete,
+  } = useAppContext();
   const [filter, setFilter] = useState('all'); // all, active, completed
   const [searchQuery, setSearchQuery] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);

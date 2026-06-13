@@ -1,25 +1,14 @@
-import React, { useState, useEffect } from 'react';
-import { Settings, User, Moon, Sun, Bell, Shield, Heart } from 'lucide-react';
+import React, { useState } from 'react';
+import { Settings, User, Moon, Sun, Bell, Shield, Heart, BellOff, BellRing, CheckCircle } from 'lucide-react';
 import { supabase } from '../supabaseClient';
+import { useNotifications } from '../hooks/useNotifications';
+import { useAppContext } from '../contexts/AppContext';
 
-export default function SettingsView({ currentUser, onLogout }) {
-  const [theme, setTheme] = useState(localStorage.getItem('theme') || 'system');
+
+export default function SettingsView() {
+  const { theme, setTheme, currentUser, handleLogout } = useAppContext();
   const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    if (theme === 'dark') {
-      document.documentElement.classList.add('dark');
-    } else if (theme === 'light') {
-      document.documentElement.classList.remove('dark');
-    } else {
-      if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-        document.documentElement.classList.add('dark');
-      } else {
-        document.documentElement.classList.remove('dark');
-      }
-    }
-    localStorage.setItem('theme', theme);
-  }, [theme]);
+  const notifications = useNotifications();
 
   const handlePasswordReset = async () => {
     setLoading(true);
@@ -101,14 +90,105 @@ export default function SettingsView({ currentUser, onLogout }) {
           </p>
         </div>
 
-        {/* Notificações (Desativadas no Beta) */}
-        <div style={{ backgroundColor: 'var(--bg-card)', padding: '24px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-light)', opacity: 0.7 }}>
+        {/* Notificações */}
+        <div style={{ backgroundColor: 'var(--bg-card)', padding: '24px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-light)' }}>
           <h2 style={{ fontSize: '16px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-            <Bell size={18} /> Notificações
+            <Bell size={18} /> Notificações do Navegador
           </h2>
-          <p style={{ fontSize: '13px', color: 'var(--text-main)' }}>Notificações push estão desativadas no momento.</p>
-          <p style={{ fontSize: '12px', color: 'var(--text-light)', marginTop: '4px' }}>Estamos preparando essa funcionalidade para uma próxima atualização.</p>
+
+          {!notifications.isSupported ? (
+            <p style={{ fontSize: '13px', color: 'var(--text-light)' }}>
+              Seu navegador não suporta notificações.
+            </p>
+          ) : notifications.permission === 'denied' ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--prio-alta-text)' }}>
+                <BellOff size={16} />
+                <span style={{ fontSize: '13px', fontWeight: '600' }}>Notificações bloqueadas</span>
+              </div>
+              <p style={{ fontSize: '12px', color: 'var(--text-light)' }}>
+                Você bloqueou as notificações no navegador. Para reativar, acesse as configurações do seu navegador e permita notificações para este site.
+              </p>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {/* Toggle principal */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px' }}>
+                <div>
+                  <p style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-main)' }}>
+                    {notifications.isEnabled ? 'Notificações ativas' : 'Notificações desativadas'}
+                  </p>
+                  <p style={{ fontSize: '12px', color: 'var(--text-light)', marginTop: '2px' }}>
+                    {notifications.isEnabled
+                      ? 'Você receberá lembretes e alertas do FocusList. Funciona com o app aberto (foreground).'
+                      : 'Ative para receber lembretes de tarefas e conquistas.'}
+                  </p>
+                </div>
+                {/* Botão toggle */}
+                <button
+                  id="notifications-toggle-btn"
+                  onClick={notifications.isEnabled ? notifications.disableNotifications : notifications.requestPermission}
+                  style={{
+                    position: 'relative',
+                    width: '44px',
+                    height: '24px',
+                    borderRadius: '99px',
+                    backgroundColor: notifications.isEnabled ? 'var(--primary)' : 'var(--border-medium)',
+                    border: 'none',
+                    cursor: 'pointer',
+                    transition: 'background-color 0.25s',
+                    flexShrink: 0,
+                  }}
+                  aria-label={notifications.isEnabled ? 'Desativar notificações' : 'Ativar notificações'}
+                >
+                  <span style={{
+                    position: 'absolute',
+                    top: '3px',
+                    left: notifications.isEnabled ? '23px' : '3px',
+                    width: '18px',
+                    height: '18px',
+                    borderRadius: '50%',
+                    backgroundColor: 'white',
+                    transition: 'left 0.25s',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                  }} />
+                </button>
+              </div>
+
+              {/* Status e ações */}
+              {notifications.isEnabled && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--primary)', fontSize: '12px', fontWeight: '600' }}>
+                    <CheckCircle size={14} />
+                    Permissão concedida pelo navegador
+                  </div>
+                  <button
+                    id="notifications-test-btn"
+                    onClick={() => notifications.sendNotification('FocusList 🔔', {
+                      body: 'Notificações estão funcionando! Você será avisado sobre suas tarefas.',
+                      tag: 'focuslist-test',
+                    })}
+                    style={{
+                      alignSelf: 'flex-start',
+                      padding: '6px 14px',
+                      fontSize: '12px',
+                      fontWeight: '600',
+                      borderRadius: '6px',
+                      backgroundColor: 'var(--primary-light)',
+                      color: 'var(--primary)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                    }}
+                  >
+                    <BellRing size={13} /> Enviar notificação de teste
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
+
 
         {/* PWA & Sistema */}
         <div style={{ backgroundColor: 'var(--bg-card)', padding: '24px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-light)' }}>
@@ -124,7 +204,7 @@ export default function SettingsView({ currentUser, onLogout }) {
           </div>
 
           <button 
-            onClick={onLogout} 
+            onClick={handleLogout} 
             style={{ marginTop: '24px', padding: '12px 24px', backgroundColor: '#FAF0F0', color: '#C06C6C', borderRadius: '8px', fontWeight: '600', display: 'inline-block' }}
           >
             Sair da minha conta

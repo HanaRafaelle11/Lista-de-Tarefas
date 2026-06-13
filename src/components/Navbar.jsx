@@ -1,6 +1,10 @@
 import React from 'react';
+import { useAppContext } from '../contexts/AppContext';
 
-export default function Navbar({ activeTab, setActiveTab, currentUser, onLogout }) {
+export default function Navbar() {
+  const { activeTab, setActiveTab, currentUser, handleLogout } = useAppContext();
+  const onLogout = handleLogout;
+
   const getInitials = (name) => {
     if (!name) return 'U';
     const parts = name.trim().split(/\s+/);

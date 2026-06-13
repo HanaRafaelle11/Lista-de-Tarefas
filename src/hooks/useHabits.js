@@ -21,8 +21,9 @@ export function useHabits(user) {
     try {
       const [habitsResponse, logsResponse] = await Promise.all([
         supabase.from('habits').select('*').order('created_at', { ascending: false }),
-        supabase.from('habit_logs').select('*')
+        supabase.from('habit_logs').select('*').eq('user_id', user.id)
       ]);
+
 
       if (habitsResponse.error) throw habitsResponse.error;
       if (logsResponse.error) throw logsResponse.error;

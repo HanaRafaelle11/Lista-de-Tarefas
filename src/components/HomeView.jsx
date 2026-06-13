@@ -3,6 +3,7 @@ import { Target, CheckCircle, Clock, ChevronRight, Award, Plus } from 'lucide-re
 import { calcStreak, ACHIEVEMENTS } from '../hooks/useAchievements';
 import { useAuraAssistant } from '../hooks/useAuraAssistant';
 import AuraAssistantWidget from './AuraAssistantWidget';
+import { useAppContext } from '../contexts/AppContext';
 // Formata data amigável
 function formatFriendlyDate(dateStr) {
   if (!dateStr) return '';
@@ -40,7 +41,9 @@ function GoalProgressRow({ goal, linkedTasks }) {
   );
 }
 
-export default function HomeView({ tasks, goals, goalTasks, currentUser, onStartTask, setActiveTab, unlockedAchievements }) {
+export default function HomeView() {
+  const { tasks, goals, goalTasks, currentUser, setActiveTab, unlockedAchievements } = useAppContext();
+  const onStartTask = () => setActiveTab('tasks');
   const pendingTasks = tasks.filter(t => !t.completed);
 
   // Lógica de priorização do Hero Card
@@ -117,6 +120,7 @@ export default function HomeView({ tasks, goals, goalTasks, currentUser, onStart
 
   // ─── Estado de Onboarding ───
   const [onboardingStep, setOnboardingStep] = useState(0);
+  const ONBOARDING_TOTAL_STEPS = 3;
 
   useEffect(() => {
     const isDone = localStorage.getItem('focuslist_onboarding_done');
@@ -124,19 +128,56 @@ export default function HomeView({ tasks, goals, goalTasks, currentUser, onStart
       setOnboardingStep(0);
       return;
     }
-    if (tasks.length === 0 && goals.length === 0) {
-      setOnboardingStep(1);
-    } else if (goals.length > 0 && tasks.length === 0) {
-      setOnboardingStep(2);
-    } else if (goals.length > 0 && tasks.length > 0) {
-      setOnboardingStep(3);
+    const savedStep = localStorage.getItem('focuslist_onboarding_step');
+    if (savedStep) {
+      setOnboardingStep(Number(savedStep));
+      return;
+    }
+    const hasSeenIntro = localStorage.getItem('focuslist_onboarding_started');
+    if (!hasSeenIntro) {
+      setOnboardingStep(0); // mostra a tela de boas-vindas
     } else {
+      setOnboardingStep(1);
+    }
+  }, []);
+
+  const handleStartOnboarding = () => {
+    localStorage.setItem('focuslist_onboarding_started', 'true');
+    localStorage.setItem('focuslist_onboarding_step', '1');
+    setOnboardingStep(1);
+  };
+
+  const handleGoToStep = (step, tab) => {
+    localStorage.setItem('focuslist_onboarding_step', String(step));
+    setOnboardingStep(step);
+    if (tab) setActiveTab(tab);
+  };
+
+  const handleNextStep = () => {
+    const next = onboardingStep + 1;
+    if (next <= ONBOARDING_TOTAL_STEPS) {
+      localStorage.setItem('focuslist_onboarding_step', String(next));
+      setOnboardingStep(next);
+    } else {
+      handleFinishOnboarding();
+    }
+  };
+
+  const handlePrevStep = () => {
+    const prev = onboardingStep - 1;
+    if (prev >= 1) {
+      localStorage.setItem('focuslist_onboarding_step', String(prev));
+      setOnboardingStep(prev);
+    } else {
+      localStorage.removeItem('focuslist_onboarding_started');
+      localStorage.removeItem('focuslist_onboarding_step');
       setOnboardingStep(0);
     }
-  }, [tasks.length, goals.length]);
+  };
 
   const handleFinishOnboarding = () => {
     localStorage.setItem('focuslist_onboarding_done', 'true');
+    localStorage.removeItem('focuslist_onboarding_step');
     setOnboardingStep(0);
   };
 
@@ -160,47 +201,102 @@ export default function HomeView({ tasks, goals, goalTasks, currentUser, onStart
       </section>
 
       {/* ── Onboarding (Guia de Boas-Vindas) ─────────────── */}
+      {/* Passo 0: tela de boas-vindas — só aparece na primeira abertura */}
+      {onboardingStep === 0 && !localStorage.getItem('focuslist_onboarding_done') && !localStorage.getItem('focuslist_onboarding_started') && (
+        <section className="onboarding-card animate-fade-in" style={{ textAlign: 'center' }}>
+          <div className="onboarding-header" style={{ justifyContent: 'flex-end' }}>
+            <button className="onboarding-skip-btn" onClick={handleFinishOnboarding}>Pular Guia</button>
+          </div>
+          <div className="onboarding-body" style={{ alignItems: 'center', paddingTop: '8px' }}>
+            <div style={{ fontSize: '48px', marginBottom: '8px' }}>👋</div>
+            <h4 className="onboarding-title" style={{ fontSize: '20px' }}>Bem-vindo ao FocusList!</h4>
+            <p className="onboarding-desc" style={{ maxWidth: '420px', margin: '8px auto 0' }}>
+              O FocusList é sua plataforma de produtividade pessoal. Em 3 passos simples você vai criar
+              seus <strong>Objetivos</strong>, organizar suas <strong>Tarefas</strong> e acompanhar
+              sua <strong>Evolução</strong> ao longo do tempo.
+            </p>
+            <div style={{ display: 'flex', gap: '16px', justifyContent: 'center', flexWrap: 'wrap', marginTop: '8px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: 'var(--text-muted)' }}>
+                <span style={{ fontSize: '18px' }}>🎯</span> Objetivos
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: 'var(--text-muted)' }}>
+                <span style={{ fontSize: '18px' }}>💼</span> Tarefas diárias
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: 'var(--text-muted)' }}>
+                <span style={{ fontSize: '18px' }}>📈</span> Evolução
+              </div>
+            </div>
+            <button onClick={handleStartOnboarding} className="onboarding-cta-btn btn-primary-glow" style={{ marginTop: '20px' }}>
+              Começar o Guia 🚀
+            </button>
+          </div>
+          <div className="onboarding-progress-track">
+            <div className="onboarding-progress-fill" style={{ width: '0%' }} />
+          </div>
+        </section>
+      )}
+
+      {/* Passos 1–3: progressão do guia */}
       {onboardingStep > 0 && (
         <section className="onboarding-card animate-fade-in">
           <div className="onboarding-header">
-            <span className="onboarding-step-badge">Guia de Boas-Vindas · Passo {onboardingStep} de 3</span>
+            <span className="onboarding-step-badge">Guia de Boas-Vindas · Passo {onboardingStep} de {ONBOARDING_TOTAL_STEPS}</span>
             <button className="onboarding-skip-btn" onClick={handleFinishOnboarding}>Pular Guia</button>
           </div>
           
           <div className="onboarding-body">
             {onboardingStep === 1 && (
               <>
-                <h4 className="onboarding-title">🎯 Defina seu primeiro Objetivo</h4>
+                <h4 className="onboarding-title">🎯 Passo 1 — Crie seu primeiro Objetivo</h4>
                 <p className="onboarding-desc">
-                  Para onde você quer canalizar sua energia? Definir objetivos ajuda você a entender o impacto real das suas tarefas diárias.
+                  Objetivos são suas grandes metas: aprender algo, terminar um projeto, mudar um hábito.
+                  Defina para onde você quer chegar e o app acompanhará seu progresso automaticamente.
                 </p>
-                <button onClick={() => setActiveTab('goals')} className="onboarding-cta-btn btn-primary-glow">
-                  Criar Primeiro Objetivo 🎯
-                </button>
+                <div className="onboarding-actions" style={{ display: 'flex', gap: '12px', marginTop: '16px' }}>
+                  <button onClick={() => handleGoToStep(2, 'goals')} className="onboarding-cta-btn btn-primary-glow" style={{ margin: 0 }}>
+                    Criar Objetivo 🎯
+                  </button>
+                  <button onClick={handleNextStep} className="onboarding-complete-btn" style={{ padding: '10px 16px', border: '1px solid var(--border-medium)', borderRadius: 'var(--radius-md)', background: 'transparent', color: 'var(--text-main)', cursor: 'pointer', fontWeight: '500' }}>
+                    Próximo Passo ➔
+                  </button>
+                </div>
               </>
             )}
             {onboardingStep === 2 && (
               <>
-                <h4 className="onboarding-title">💼 Crie sua primeira Tarefa</h4>
+                <h4 className="onboarding-title">💼 Passo 2 — Adicione sua primeira Tarefa</h4>
                 <p className="onboarding-desc">
-                  Agora, quebre seu objetivo em ações simples. Crie uma tarefa específica e associe-a ao seu novo objetivo.
+                  Tarefas são as ações do dia a dia. Crie uma tarefa, defina uma prioridade e vincule-a
+                  ao objetivo que você acabou de criar para ver o progresso em tempo real.
                 </p>
-                <button onClick={() => setActiveTab('tasks')} className="onboarding-cta-btn btn-primary-glow">
-                  Criar Minha Primeira Tarefa 💼
-                </button>
+                <div className="onboarding-actions" style={{ display: 'flex', gap: '12px', marginTop: '16px' }}>
+                  <button onClick={() => handleGoToStep(3, 'tasks')} className="onboarding-cta-btn btn-primary-glow" style={{ margin: 0 }}>
+                    Criar Tarefa 💼
+                  </button>
+                  <button onClick={handlePrevStep} className="onboarding-complete-btn" style={{ padding: '10px 16px', border: '1px solid var(--border-medium)', borderRadius: 'var(--radius-md)', background: 'transparent', color: 'var(--text-main)', cursor: 'pointer', fontWeight: '500' }}>
+                    ➔ Voltar
+                  </button>
+                  <button onClick={handleNextStep} className="onboarding-complete-btn" style={{ padding: '10px 16px', border: '1px solid var(--border-medium)', borderRadius: 'var(--radius-md)', background: 'transparent', color: 'var(--text-main)', cursor: 'pointer', fontWeight: '500' }}>
+                    Próximo Passo ➔
+                  </button>
+                </div>
               </>
             )}
             {onboardingStep === 3 && (
               <>
-                <h4 className="onboarding-title">📈 Acompanhe sua Evolução</h4>
+                <h4 className="onboarding-title">📈 Passo 3 — Acompanhe sua Evolução</h4>
                 <p className="onboarding-desc">
-                  Tudo pronto! À medida que você conclui tarefas e avança nos seus objetivos, seus gráficos e insígnias serão desbloqueados na aba <strong>Evolução</strong>.
+                  Tudo pronto! À medida que você conclui tarefas e avança nos seus objetivos,
+                  gráficos, conquistas e insígnias serão desbloqueados na aba <strong>Evolução</strong>.
                 </p>
-                <div className="onboarding-actions">
-                  <button onClick={() => setActiveTab('analytics')} className="onboarding-cta-btn btn-primary-glow">
+                <div className="onboarding-actions" style={{ display: 'flex', gap: '12px', marginTop: '16px' }}>
+                  <button onClick={() => setActiveTab('analytics')} className="onboarding-cta-btn btn-primary-glow" style={{ margin: 0 }}>
                     Ver minha Evolução 📈
                   </button>
-                  <button onClick={handleFinishOnboarding} className="onboarding-complete-btn">
+                  <button onClick={handlePrevStep} className="onboarding-complete-btn" style={{ padding: '10px 16px', border: '1px solid var(--border-medium)', borderRadius: 'var(--radius-md)', background: 'transparent', color: 'var(--text-main)', cursor: 'pointer', fontWeight: '500' }}>
+                    ➔ Voltar
+                  </button>
+                  <button onClick={handleFinishOnboarding} className="onboarding-complete-btn" style={{ padding: '10px 20px', borderRadius: 'var(--radius-md)', backgroundColor: 'var(--success-light)', color: 'var(--success-text)', border: 'none', cursor: 'pointer', fontWeight: '600' }}>
                     Concluir Guia ✨
                   </button>
                 </div>
@@ -211,7 +307,7 @@ export default function HomeView({ tasks, goals, goalTasks, currentUser, onStart
           <div className="onboarding-progress-track">
             <div 
               className="onboarding-progress-fill" 
-              style={{ width: `${(onboardingStep / 3) * 100}%` }}
+              style={{ width: `${(onboardingStep / ONBOARDING_TOTAL_STEPS) * 100}%` }}
             />
           </div>
         </section>

@@ -80,10 +80,11 @@ export function calcStreak(tasks) {
   const completedDates = [
     ...new Set(
       tasks
-        .filter(t => t.completed && t.dueDate)
-        .map(t => t.dueDate)
+        .filter(t => t.completed && (t.dueDate || t.createdAt))
+        .map(t => t.dueDate || t.createdAt.split('T')[0])
     )
   ].sort().reverse();
+
 
   if (completedDates.length === 0) return 0;
 
