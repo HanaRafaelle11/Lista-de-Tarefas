@@ -1,12 +1,11 @@
 import React, { useState } from 'react';
-import { Settings, User, Moon, Sun, Bell, Shield, Heart, BellOff, BellRing, CheckCircle } from 'lucide-react';
+import { Settings, User, Moon, Sun, Bell, Shield, Heart, BellOff, BellRing, CheckCircle, Award } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import { useNotifications } from '../hooks/useNotifications';
 import { useAppContext } from '../contexts/AppContext';
 
-
 export default function SettingsView() {
-  const { theme, setTheme, currentUser, handleLogout } = useAppContext();
+  const { theme, setTheme, currentUser, handleLogout, isPro, handleSimulateUpgrade } = useAppContext();
   const [loading, setLoading] = useState(false);
   const notifications = useNotifications();
 
@@ -58,6 +57,49 @@ export default function SettingsView() {
           </div>
         </div>
 
+        {/* Assinatura SaaS (Simulador Pro) - Bloco 6 */}
+        <div style={{ backgroundColor: 'var(--bg-card)', padding: '24px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-light)' }}>
+          <h2 style={{ fontSize: '16px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+            <Award size={18} /> Assinatura Flowday
+          </h2>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div style={{ padding: '8px', borderRadius: '50%', backgroundColor: isPro ? 'var(--primary-light)' : 'var(--border-medium)', color: isPro ? 'var(--primary)' : 'var(--text-light)' }}>
+                <Award size={24} />
+              </div>
+              <div>
+                <p style={{ fontSize: '15px', fontWeight: '600', color: 'var(--text-main)' }}>
+                  Plano Atual: {isPro ? 'Flowday Pro ⚡' : 'Flowday Grátis'}
+                </p>
+                <p style={{ fontSize: '12px', color: 'var(--text-light)' }}>
+                  {isPro 
+                    ? 'Você possui acesso ilimitado a todos os recursos de evolução pessoal.'
+                    : 'Acesse ferramentas avançadas de produtividade e foco.'}
+                </p>
+              </div>
+            </div>
+
+            <button
+              onClick={handleSimulateUpgrade}
+              style={{
+                alignSelf: 'flex-start',
+                marginTop: '8px',
+                padding: '10px 20px',
+                borderRadius: 'var(--radius-sm)',
+                backgroundColor: isPro ? 'var(--prio-alta-bg)' : 'var(--primary)',
+                color: isPro ? 'var(--prio-alta-text)' : 'white',
+                fontWeight: '600',
+                fontSize: '13px',
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+                border: isPro ? '1px solid var(--prio-alta-border)' : 'none'
+              }}
+            >
+              {isPro ? 'Voltar para o Plano Grátis (Simulado)' : 'Ativar Flowday Pro ⚡ (Simulado)'}
+            </button>
+          </div>
+        </div>
+
         {/* Aparência */}
         <div style={{ backgroundColor: 'var(--bg-card)', padding: '24px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-light)' }}>
           <h2 style={{ fontSize: '16px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
@@ -86,7 +128,7 @@ export default function SettingsView() {
             ))}
           </div>
           <p style={{ fontSize: '12px', color: 'var(--text-light)', marginTop: '12px' }}>
-            O FocusList se adapta à sua preferência. O modo escuro reduz o cansaço visual.
+            O Flowday se adapta à sua preferência. O modo escuro reduz o cansaço visual.
           </p>
         </div>
 
@@ -120,7 +162,7 @@ export default function SettingsView() {
                   </p>
                   <p style={{ fontSize: '12px', color: 'var(--text-light)', marginTop: '2px' }}>
                     {notifications.isEnabled
-                      ? 'Você receberá lembretes e alertas do FocusList. Funciona com o app aberto (foreground).'
+                      ? 'Você receberá lembretes e alertas do Flowday. Funciona com o app aberto (foreground).'
                       : 'Ative para receber lembretes de tarefas e conquistas.'}
                   </p>
                 </div>
@@ -164,9 +206,9 @@ export default function SettingsView() {
                   </div>
                   <button
                     id="notifications-test-btn"
-                    onClick={() => notifications.sendNotification('FocusList 🔔', {
+                    onClick={() => notifications.sendNotification('Flowday 🔔', {
                       body: 'Notificações estão funcionando! Você será avisado sobre suas tarefas.',
-                      tag: 'focuslist-test',
+                      tag: 'flowday-test',
                     })}
                     style={{
                       alignSelf: 'flex-start',
@@ -193,7 +235,7 @@ export default function SettingsView() {
         {/* PWA & Sistema */}
         <div style={{ backgroundColor: 'var(--bg-card)', padding: '24px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-light)' }}>
           <h2 style={{ fontSize: '16px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-            <Shield size={18} /> FocusList v1.0
+            <Shield size={18} /> Flowday v1.0
           </h2>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '13px', color: 'var(--text-light)' }}>
             <p>Plataforma de Progresso Pessoal</p>
@@ -215,3 +257,4 @@ export default function SettingsView() {
     </div>
   );
 }
+

@@ -1,5 +1,6 @@
 import React from 'react';
 import { Calendar, Trash2, Edit2, AlertCircle } from 'lucide-react';
+import { parseTaskMetadata, formatDescriptionWithoutMetadata } from '../contexts/AppContext';
 
 export default function TodoItem({ item, onToggleComplete, onDelete, onEdit }) {
   // Verificar se a tarefa está atrasada
@@ -27,6 +28,8 @@ export default function TodoItem({ item, onToggleComplete, onDelete, onEdit }) {
   };
 
   const overdue = isOverdue();
+  const meta = parseTaskMetadata(item.description);
+  const cleanDescription = formatDescriptionWithoutMetadata(item.description);
 
   return (
     <div 
@@ -55,9 +58,9 @@ export default function TodoItem({ item, onToggleComplete, onDelete, onEdit }) {
           )}
         </div>
 
-        {item.description && (
+        {cleanDescription && (
           <p className="todo-item-description">
-            {item.description}
+            {cleanDescription}
           </p>
         )}
 
@@ -77,8 +80,19 @@ export default function TodoItem({ item, onToggleComplete, onDelete, onEdit }) {
           {item.dueDate && (
             <div className={`todo-item-date-wrapper ${overdue ? 'date-overdue' : ''}`}>
               <Calendar size={13} />
-              <span className="todo-item-date-text">{formatDueDate(item.dueDate)}</span>
+              <span className="todo-item-date-text">
+                {formatDueDate(item.dueDate)}
+                {meta.due_time && ` às ${meta.due_time}`}
+              </span>
             </div>
+          )}
+
+          {/* Recorrência */}
+          {meta.recurrence && meta.recurrence !== 'nenhuma' && (
+            <span className="badge-priority baixa" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+              <span>🔄</span>
+              <span style={{ textTransform: 'capitalize' }}>{meta.recurrence}</span>
+            </span>
           )}
         </div>
       </div>

@@ -40,9 +40,21 @@ function GoalProgressRow({ goal, linkedTasks }) {
     </div>
   );
 }
+export default function HomeView() {
+  const { 
+    tasks, 
+    goals, 
+    goalTasks, 
+    currentUser, 
+    setActiveTab, 
+    unlockedAchievements, 
+    habitsManager, 
+    consistencyScore, 
+    handleCompleteOnboarding 
+  } = useAppContext();
+  
+  const { habits, habitLogs } = habitsManager;
 
-export default function HomeView() {
-  const { tasks, goals, goalTasks, currentUser, setActiveTab, unlockedAchievements } = useAppContext();
   const onStartTask = () => setActiveTab('tasks');
   const pendingTasks = tasks.filter(t => !t.completed);
 
@@ -118,37 +130,38 @@ export default function HomeView() {
   const streakDays = currentStreak;
   const auraAnalysis = useAuraAssistant(tasks, goals, goalTasks, currentStreak, unlockedCount);
 
-  // ─── Estado de Onboarding ───
+  // ─── Estado de Onboarding (Bloco 3 - Seção 7) ───
   const [onboardingStep, setOnboardingStep] = useState(0);
-  const ONBOARDING_TOTAL_STEPS = 3;
+  const ONBOARDING_TOTAL_STEPS = 5;
+
+  const onboardingCompleted = !!currentUser?.user_metadata?.onboarding_completed;
 
   useEffect(() => {
-    const isDone = localStorage.getItem('focuslist_onboarding_done');
-    if (isDone === 'true') {
+    if (onboardingCompleted) {
       setOnboardingStep(0);
       return;
     }
-    const savedStep = localStorage.getItem('focuslist_onboarding_step');
+    const savedStep = localStorage.getItem('flowday_onboarding_step');
     if (savedStep) {
       setOnboardingStep(Number(savedStep));
       return;
     }
-    const hasSeenIntro = localStorage.getItem('focuslist_onboarding_started');
+    const hasSeenIntro = localStorage.getItem('flowday_onboarding_started');
     if (!hasSeenIntro) {
       setOnboardingStep(0); // mostra a tela de boas-vindas
     } else {
       setOnboardingStep(1);
     }
-  }, []);
+  }, [onboardingCompleted]);
 
   const handleStartOnboarding = () => {
-    localStorage.setItem('focuslist_onboarding_started', 'true');
-    localStorage.setItem('focuslist_onboarding_step', '1');
+    localStorage.setItem('flowday_onboarding_started', 'true');
+    localStorage.setItem('flowday_onboarding_step', '1');
     setOnboardingStep(1);
   };
 
   const handleGoToStep = (step, tab) => {
-    localStorage.setItem('focuslist_onboarding_step', String(step));
+    localStorage.setItem('flowday_onboarding_step', String(step));
     setOnboardingStep(step);
     if (tab) setActiveTab(tab);
   };
@@ -156,7 +169,7 @@ export default function HomeView() {
   const handleNextStep = () => {
     const next = onboardingStep + 1;
     if (next <= ONBOARDING_TOTAL_STEPS) {
-      localStorage.setItem('focuslist_onboarding_step', String(next));
+      localStorage.setItem('flowday_onboarding_step', String(next));
       setOnboardingStep(next);
     } else {
       handleFinishOnboarding();
@@ -166,81 +179,110 @@ export default function HomeView() {
   const handlePrevStep = () => {
     const prev = onboardingStep - 1;
     if (prev >= 1) {
-      localStorage.setItem('focuslist_onboarding_step', String(prev));
+      localStorage.setItem('flowday_onboarding_step', String(prev));
       setOnboardingStep(prev);
     } else {
-      localStorage.removeItem('focuslist_onboarding_started');
-      localStorage.removeItem('focuslist_onboarding_step');
+      localStorage.removeItem('flowday_onboarding_started');
+      localStorage.removeItem('flowday_onboarding_step');
       setOnboardingStep(0);
     }
   };
 
   const handleFinishOnboarding = () => {
-    localStorage.setItem('focuslist_onboarding_done', 'true');
-    localStorage.removeItem('focuslist_onboarding_step');
+    localStorage.removeItem('flowday_onboarding_step');
+    handleCompleteOnboarding(); // Persiste no Supabase Auth metadata
     setOnboardingStep(0);
   };
+
+  // Cálculo de pendências do Widget "Hoje"
+  const getTodayDateStr = () => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  };
+  const todayDate = getTodayDateStr();
+  const completedHabitsToday = habitLogs.filter(l => l.completed_date === todayDate).length;
+  const pendingHabitsCount = Math.max(0, habits.length - completedHabitsToday);
 
   return (
     <div className="home-view-container animate-fade-in">
 
-      {/* ── 1. Saudação ──────────────────────────────────── */}
-      <section className="home-greeting-section">
-        <h2 className="home-greeting-title">
-          Bom dia, {currentUser?.name?.split(' ')[0] || 'usuário'} 👋
-        </h2>
-        <p className="home-reflection-text">
-          "Pequenos passos constroem grandes mudanças. Foque no agora e confie no processo."
-        </p>
-        {streakDays > 0 && (
-          <div className="home-streak-banner">
-            <span className="material-symbols-outlined streak-icon">local_fire_department</span>
-            <span className="streak-text">Você está há {streakDays} dias avançando nos seus objetivos</span>
+      {/* ── 1. Saudação & Consistency Score (Bloco 3 / 5) ──────────────────── */}
+      <section className="home-greeting-section" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '20px', flexWrap: 'wrap' }}>
+        <div>
+          <h2 className="home-greeting-title" style={{ fontSize: '24px', fontWeight: '800' }}>
+            Olá, {currentUser?.name?.split(' ')[0] || 'usuário'} 👋
+          </h2>
+          <p className="home-reflection-text" style={{ margin: '4px 0 0' }}>
+            "Pequenos passos constroem grandes mudanças. Foque no agora e evolua continuamente."
+          </p>
+        </div>
+
+        {/* Badge do Score de Consistência */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 16px', borderRadius: 'var(--radius-md)', backgroundColor: 'var(--primary-glow)', border: '1px solid var(--primary-light)', minWidth: '180px' }}>
+          <span style={{ fontSize: '28px' }}>🔥</span>
+          <div>
+            <span style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--primary)', fontWeight: '700', display: 'block' }}>Score de Consistência</span>
+            <span style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-main)' }}>{consistencyScore} <span style={{ fontSize: '13px', color: 'var(--text-light)', fontWeight: '500' }}>/ 100</span></span>
           </div>
-        )}
+        </div>
       </section>
 
-      {/* ── Onboarding (Guia de Boas-Vindas) ─────────────── */}
-      {/* Passo 0: tela de boas-vindas — só aparece na primeira abertura */}
-      {onboardingStep === 0 && !localStorage.getItem('focuslist_onboarding_done') && !localStorage.getItem('focuslist_onboarding_started') && (
-        <section className="onboarding-card animate-fade-in" style={{ textAlign: 'center' }}>
+      {/* ── Widget "Hoje" (Bloco 3 - Seção 8) ─────────────── */}
+      <section className="onboarding-card animate-fade-in" style={{ background: 'linear-gradient(135deg, var(--bg-card) 0%, var(--bg-app) 100%)', border: '1px solid var(--border-medium)', padding: '24px' }}>
+        <h3 style={{ fontSize: '16px', fontWeight: '700', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+          📅 Resumo de Hoje
+        </h3>
+        <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '16px' }}>
+          Aqui está o que você precisa focar hoje para manter sua consistência:
+        </p>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '16px', marginBottom: '20px' }}>
+          <div style={{ padding: '12px', borderRadius: 'var(--radius-sm)', backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-light)' }}>
+            <span style={{ fontSize: '11px', color: 'var(--text-light)', display: 'block' }}>Tarefas Pendentes</span>
+            <span style={{ fontSize: '20px', fontWeight: '800', color: pendingTasks.length > 0 ? 'var(--primary)' : 'var(--text-light)' }}>{pendingTasks.length}</span>
+          </div>
+          <div style={{ padding: '12px', borderRadius: 'var(--radius-sm)', backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-light)' }}>
+            <span style={{ fontSize: '11px', color: 'var(--text-light)', display: 'block' }}>Hábitos Pendentes</span>
+            <span style={{ fontSize: '20px', fontWeight: '800', color: pendingHabitsCount > 0 ? '#C89658' : 'var(--text-light)' }}>{pendingHabitsCount}</span>
+          </div>
+          <div style={{ padding: '12px', borderRadius: 'var(--radius-sm)', backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-light)' }}>
+            <span style={{ fontSize: '11px', color: 'var(--text-light)', display: 'block' }}>Objetivos Ativos</span>
+            <span style={{ fontSize: '20px', fontWeight: '800', color: 'var(--text-main)' }}>{activeGoalsCount}</span>
+          </div>
+        </div>
+        <button 
+          onClick={() => setActiveTab('focus')} 
+          className="btn-primary-glow"
+          style={{ padding: '12px 24px', fontSize: '14px', fontWeight: '600', width: 'auto', display: 'inline-flex', alignItems: 'center', gap: '8px' }}
+        >
+          Começar meu dia ⚡
+        </button>
+      </section>
+
+      {/* ── Onboarding Guiado (Guia de Boas-Vindas) ─────────────── */}
+      {/* Passo 0: tela de boas-vindas */}
+      {onboardingStep === 0 && !onboardingCompleted && !localStorage.getItem('flowday_onboarding_started') && (
+        <section className="onboarding-card animate-fade-in" style={{ textAlign: 'center', border: '1px solid var(--primary-light)', boxShadow: 'var(--shadow-glow)' }}>
           <div className="onboarding-header" style={{ justifyContent: 'flex-end' }}>
             <button className="onboarding-skip-btn" onClick={handleFinishOnboarding}>Pular Guia</button>
           </div>
           <div className="onboarding-body" style={{ alignItems: 'center', paddingTop: '8px' }}>
             <div style={{ fontSize: '48px', marginBottom: '8px' }}>👋</div>
-            <h4 className="onboarding-title" style={{ fontSize: '20px' }}>Bem-vindo ao FocusList!</h4>
+            <h4 className="onboarding-title" style={{ fontSize: '20px' }}>Bem-vindo ao Flowday!</h4>
             <p className="onboarding-desc" style={{ maxWidth: '420px', margin: '8px auto 0' }}>
-              O FocusList é sua plataforma de produtividade pessoal. Em 3 passos simples você vai criar
-              seus <strong>Objetivos</strong>, organizar suas <strong>Tarefas</strong> e acompanhar
-              sua <strong>Evolução</strong> ao longo do tempo.
+              O Flowday é seu sistema de evolução pessoal. Vamos configurar sua jornada em 5 passos rápidos.
             </p>
-            <div style={{ display: 'flex', gap: '16px', justifyContent: 'center', flexWrap: 'wrap', marginTop: '8px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: 'var(--text-muted)' }}>
-                <span style={{ fontSize: '18px' }}>🎯</span> Objetivos
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: 'var(--text-muted)' }}>
-                <span style={{ fontSize: '18px' }}>💼</span> Tarefas diárias
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: 'var(--text-muted)' }}>
-                <span style={{ fontSize: '18px' }}>📈</span> Evolução
-              </div>
-            </div>
             <button onClick={handleStartOnboarding} className="onboarding-cta-btn btn-primary-glow" style={{ marginTop: '20px' }}>
-              Começar o Guia 🚀
+              Iniciar Jornada 🚀
             </button>
-          </div>
-          <div className="onboarding-progress-track">
-            <div className="onboarding-progress-fill" style={{ width: '0%' }} />
           </div>
         </section>
       )}
 
-      {/* Passos 1–3: progressão do guia */}
-      {onboardingStep > 0 && (
-        <section className="onboarding-card animate-fade-in">
+      {/* Passos 1–5: progressão do guia */}
+      {onboardingStep > 0 && !onboardingCompleted && (
+        <section className="onboarding-card animate-fade-in" style={{ border: '1px solid var(--primary-light)' }}>
           <div className="onboarding-header">
-            <span className="onboarding-step-badge">Guia de Boas-Vindas · Passo {onboardingStep} de {ONBOARDING_TOTAL_STEPS}</span>
+            <span className="onboarding-step-badge">Jornada Flowday · Passo {onboardingStep} de {ONBOARDING_TOTAL_STEPS}</span>
             <button className="onboarding-skip-btn" onClick={handleFinishOnboarding}>Pular Guia</button>
           </div>
           
@@ -249,15 +291,14 @@ export default function HomeView() {
               <>
                 <h4 className="onboarding-title">🎯 Passo 1 — Crie seu primeiro Objetivo</h4>
                 <p className="onboarding-desc">
-                  Objetivos são suas grandes metas: aprender algo, terminar um projeto, mudar um hábito.
-                  Defina para onde você quer chegar e o app acompanhará seu progresso automaticamente.
+                  Objetivos são as suas grandes metas de vida. Defina para onde você quer caminhar e o app calculará a evolução automaticamente.
                 </p>
                 <div className="onboarding-actions" style={{ display: 'flex', gap: '12px', marginTop: '16px' }}>
                   <button onClick={() => handleGoToStep(2, 'goals')} className="onboarding-cta-btn btn-primary-glow" style={{ margin: 0 }}>
                     Criar Objetivo 🎯
                   </button>
                   <button onClick={handleNextStep} className="onboarding-complete-btn" style={{ padding: '10px 16px', border: '1px solid var(--border-medium)', borderRadius: 'var(--radius-md)', background: 'transparent', color: 'var(--text-main)', cursor: 'pointer', fontWeight: '500' }}>
-                    Próximo Passo ➔
+                    Avançar ➔
                   </button>
                 </div>
               </>
@@ -266,8 +307,7 @@ export default function HomeView() {
               <>
                 <h4 className="onboarding-title">💼 Passo 2 — Adicione sua primeira Tarefa</h4>
                 <p className="onboarding-desc">
-                  Tarefas são as ações do dia a dia. Crie uma tarefa, defina uma prioridade e vincule-a
-                  ao objetivo que você acabou de criar para ver o progresso em tempo real.
+                  Tarefas são ações diretas. Adicione o que precisa fazer e vincule-a ao seu objetivo.
                 </p>
                 <div className="onboarding-actions" style={{ display: 'flex', gap: '12px', marginTop: '16px' }}>
                   <button onClick={() => handleGoToStep(3, 'tasks')} className="onboarding-cta-btn btn-primary-glow" style={{ margin: 0 }}>
@@ -277,33 +317,67 @@ export default function HomeView() {
                     ➔ Voltar
                   </button>
                   <button onClick={handleNextStep} className="onboarding-complete-btn" style={{ padding: '10px 16px', border: '1px solid var(--border-medium)', borderRadius: 'var(--radius-md)', background: 'transparent', color: 'var(--text-main)', cursor: 'pointer', fontWeight: '500' }}>
-                    Próximo Passo ➔
+                    Avançar ➔
                   </button>
                 </div>
               </>
             )}
             {onboardingStep === 3 && (
               <>
-                <h4 className="onboarding-title">📈 Passo 3 — Acompanhe sua Evolução</h4>
+                <h4 className="onboarding-title">🌱 Passo 3 — Crie seu primeiro Hábito</h4>
                 <p className="onboarding-desc">
-                  Tudo pronto! À medida que você conclui tarefas e avança nos seus objetivos,
-                  gráficos, conquistas e insígnias serão desbloqueados na aba <strong>Evolução</strong>.
+                  Hábitos constroem consistência a longo prazo. Configure hábitos diários na aba de Objetivos.
                 </p>
                 <div className="onboarding-actions" style={{ display: 'flex', gap: '12px', marginTop: '16px' }}>
-                  <button onClick={() => setActiveTab('analytics')} className="onboarding-cta-btn btn-primary-glow" style={{ margin: 0 }}>
-                    Ver minha Evolução 📈
+                  <button onClick={() => handleGoToStep(4, 'goals')} className="onboarding-cta-btn btn-primary-glow" style={{ margin: 0 }}>
+                    Criar Hábito 🌱
                   </button>
                   <button onClick={handlePrevStep} className="onboarding-complete-btn" style={{ padding: '10px 16px', border: '1px solid var(--border-medium)', borderRadius: 'var(--radius-md)', background: 'transparent', color: 'var(--text-main)', cursor: 'pointer', fontWeight: '500' }}>
                     ➔ Voltar
                   </button>
+                  <button onClick={handleNextStep} className="onboarding-complete-btn" style={{ padding: '10px 16px', border: '1px solid var(--border-medium)', borderRadius: 'var(--radius-md)', background: 'transparent', color: 'var(--text-main)', cursor: 'pointer', fontWeight: '500' }}>
+                    Avançar ➔
+                  </button>
+                </div>
+              </>
+            )}
+            {onboardingStep === 4 && (
+              <>
+                <h4 className="onboarding-title">📈 Passo 4 — Acompanhe sua Evolução</h4>
+                <p className="onboarding-desc">
+                  Veja seu progresso detalhado, estatísticas de conclusão e insígnias conquistadas.
+                </p>
+                <div className="onboarding-actions" style={{ display: 'flex', gap: '12px', marginTop: '16px' }}>
+                  <button onClick={() => handleGoToStep(5, 'analytics')} className="onboarding-cta-btn btn-primary-glow" style={{ margin: 0 }}>
+                    Ver Evolução 📈
+                  </button>
+                  <button onClick={handlePrevStep} className="onboarding-complete-btn" style={{ padding: '10px 16px', border: '1px solid var(--border-medium)', borderRadius: 'var(--radius-md)', background: 'transparent', color: 'var(--text-main)', cursor: 'pointer', fontWeight: '500' }}>
+                    ➔ Voltar
+                  </button>
+                  <button onClick={handleNextStep} className="onboarding-complete-btn" style={{ padding: '10px 16px', border: '1px solid var(--border-medium)', borderRadius: 'var(--radius-md)', background: 'transparent', color: 'var(--text-main)', cursor: 'pointer', fontWeight: '500' }}>
+                    Avançar ➔
+                  </button>
+                </div>
+              </>
+            )}
+            {onboardingStep === 5 && (
+              <>
+                <h4 className="onboarding-title">✨ Passo 5 — Pronto para Começar</h4>
+                <p className="onboarding-desc">
+                  Tudo configurado! Conclua o guia para salvar seu progresso no banco de dados.
+                </p>
+                <div className="onboarding-actions" style={{ display: 'flex', gap: '12px', marginTop: '16px' }}>
+                  <button onClick={handlePrevStep} className="onboarding-complete-btn" style={{ padding: '10px 16px', border: '1px solid var(--border-medium)', borderRadius: 'var(--radius-md)', background: 'transparent', color: 'var(--text-main)', cursor: 'pointer', fontWeight: '500' }}>
+                    ➔ Voltar
+                  </button>
                   <button onClick={handleFinishOnboarding} className="onboarding-complete-btn" style={{ padding: '10px 20px', borderRadius: 'var(--radius-md)', backgroundColor: 'var(--success-light)', color: 'var(--success-text)', border: 'none', cursor: 'pointer', fontWeight: '600' }}>
-                    Concluir Guia ✨
+                    Concluir Onboarding ✨
                   </button>
                 </div>
               </>
             )}
           </div>
-
+          
           <div className="onboarding-progress-track">
             <div 
               className="onboarding-progress-fill" 

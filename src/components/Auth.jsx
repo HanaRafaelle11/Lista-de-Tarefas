@@ -9,61 +9,149 @@ export default function Auth({ onLoginSuccess }) {
   const [name, setName] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [isWaitingConfirmation, setIsWaitingConfirmation] = useState(false);
+  const [showResendButton, setShowResendButton] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setSuccess('');
+    setShowResendButton(false);
 
     if (!email || !password || (!isLogin && !name)) {
       setError('Por favor, preencha todos os campos.');
       return;
     }
 
-    if (isLogin) {
-      // Processo de Login no Supabase
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password
-      });
+    setLoading(true);
 
-      if (error) {
-        setError(error.message || 'E-mail ou senha incorretos.');
-      } else if (data?.user) {
-        setSuccess('Login realizado com sucesso! Redirecionando...');
-        const userObj = {
-          id: data.user.id,
-          email: data.user.email,
-          name: data.user.user_metadata?.name || data.user.email.split('@')[0]
-        };
-        setTimeout(() => {
-          onLoginSuccess(userObj);
-        }, 1000);
-      }
-    } else {
-      // Processo de Cadastro no Supabase
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            name: name
+    try {
+      if (isLogin) {
+        // Processo de Login no Supabase
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email,
+          password
+        });
+
+        if (error) {
+          if (error.message.includes('Email not confirmed') || error.message.includes('confirmar') || error.message.includes('confirmed')) {
+            setError('Seu e-mail ainda não foi confirmado. Por favor, ative sua conta pelo link enviado para sua caixa de entrada.');
+            setShowResendButton(true);
+          } else {
+            setError(error.message || 'E-mail ou senha incorretos.');
+          }
+        } else if (data?.user) {
+          setSuccess('Login realizado com sucesso! Redirecionando...');
+          const userObj = {
+            id: data.user.id,
+            email: data.user.email,
+            name: data.user.user_metadata?.name || data.user.email.split('@')[0],
+            user_metadata: data.user.user_metadata || {},
+          };
+          setTimeout(() => {
+            onLoginSuccess(userObj);
+          }, 1000);
+        }
+      } else {
+        // Processo de Cadastro no Supabase
+        const { data, error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: {
+              name: name
+            }
+          }
+        });
+
+        if (error) {
+          setError(error.message || 'Erro ao criar conta.');
+        } else if (data?.user) {
+          // Se o Supabase já retornar a sessão confirmada
+          if (data.session) {
+            setSuccess('Conta criada e confirmada automaticamente! Entrando...');
+            const userObj = {
+              id: data.user.id,
+              email: data.user.email,
+              name: data.user.user_metadata?.name || name,
+              user_metadata: data.user.user_metadata || {},
+            };
+            setTimeout(() => {
+              onLoginSuccess(userObj);
+            }, 1500);
+          } else {
+            // Se precisar confirmar e-mail
+            setIsWaitingConfirmation(true);
+            setSuccess('Conta criada! Enviamos um e-mail de confirmação.');
           }
         }
-      });
-
-      if (error) {
-        setError(error.message || 'Erro ao criar conta.');
-      } else if (data?.user) {
-        setSuccess('Conta criada com sucesso! Verifique seu e-mail para confirmação (caso ativado) ou faça login.');
-        setTimeout(() => {
-          setIsLogin(true);
-          setPassword('');
-          setSuccess('');
-        }, 2000);
       }
+    } catch (err) {
+      setError('Erro na requisição: ' + err.message);
+    } finally {
+      setLoading(false);
     }
   };
+
+  const handleResendConfirmation = async () => {
+    setError('');
+    setSuccess('');
+    try {
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email: email,
+      });
+      if (error) {
+        setError('Erro ao reenviar e-mail: ' + error.message);
+      } else {
+        setSuccess('E-mail de confirmação reenviado com sucesso! Verifique sua caixa de entrada.');
+      }
+    } catch (e) {
+      setError('Erro ao reenviar: ' + e.message);
+    }
+  };
+
+  // Tela de espera de confirmação de e-mail (Bloco 3 - Seção 6)
+  if (isWaitingConfirmation) {
+    return (
+      <div style={styles.authContainer} className="animate-fade-in">
+        <div style={styles.authCard}>
+          <div style={{ textAlign: 'center', padding: '20px 0' }}>
+            <div style={{ fontSize: '56px', marginBottom: '16px', color: 'var(--primary)' }}>✉️</div>
+            <h2 style={{ fontSize: '22px', fontWeight: '700', color: 'var(--text-main)', marginBottom: '8px' }}>Confirme seu E-mail</h2>
+            <p style={{ fontSize: '14px', color: 'var(--text-muted)', lineHeight: '1.6', marginBottom: '24px' }}>
+              Enviamos um link de confirmação para <strong>{email}</strong>. Acesse seu e-mail e clique no link para ativar sua conta do <strong>Flowday</strong>.
+            </p>
+            
+            {success && <div style={{ ...styles.successMessage, marginBottom: '20px' }}>{success}</div>}
+            {error && <div style={{ ...styles.errorMessage, marginBottom: '20px' }}>{error}</div>}
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <button 
+                onClick={handleResendConfirmation} 
+                className="btn-primary-glow"
+                style={{ ...styles.submitBtn, marginTop: 0 }}
+              >
+                Reenviar E-mail de Confirmação
+              </button>
+              <button 
+                onClick={() => {
+                  setIsWaitingConfirmation(false);
+                  setIsLogin(true);
+                  setError('');
+                  setSuccess('');
+                }} 
+                style={{ ...styles.toggleBtn, padding: '12px', fontSize: '14px', alignSelf: 'center' }}
+              >
+                Voltar para o Login
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={styles.authContainer} className="animate-fade-in">
@@ -72,10 +160,12 @@ export default function Auth({ onLoginSuccess }) {
         <div style={styles.cardHeader}>
           <div style={styles.logoContainer}>
             <CheckCircle2 size={32} color="var(--primary)" />
-            <h1 style={styles.logoText}>FocusList</h1>
+            <h1 style={styles.logoText}>Flowday</h1>
           </div>
           <p style={styles.subtitle}>
-            {isLogin ? 'Gerencie seu tempo e suas metas diariamente' : 'Crie sua conta para começar a organizar'}
+            {isLogin 
+              ? 'Um sistema de evolução pessoal que conecta suas tarefas, hábitos e metas.' 
+              : 'Comece hoje sua jornada de consistência e evolução contínua.'}
           </p>
         </div>
 
@@ -96,6 +186,7 @@ export default function Auth({ onLoginSuccess }) {
                   onChange={(e) => setName(e.target.value)}
                   style={styles.input}
                   className="form-input"
+                  disabled={loading}
                 />
               </div>
             </div>
@@ -112,6 +203,7 @@ export default function Auth({ onLoginSuccess }) {
                 onChange={(e) => setEmail(e.target.value)}
                 style={styles.input}
                 className="form-input"
+                disabled={loading}
               />
             </div>
           </div>
@@ -127,13 +219,24 @@ export default function Auth({ onLoginSuccess }) {
                 onChange={(e) => setPassword(e.target.value)}
                 style={styles.input}
                 className="form-input"
+                disabled={loading}
               />
             </div>
           </div>
 
-          <button type="submit" className="btn-primary-glow" style={styles.submitBtn}>
-            {isLogin ? 'Acessar Conta' : 'Criar Conta'}
+          <button type="submit" className="btn-primary-glow" style={styles.submitBtn} disabled={loading}>
+            {loading ? 'Processando...' : isLogin ? 'Acessar Conta' : 'Criar Conta'}
           </button>
+
+          {showResendButton && (
+            <button 
+              type="button" 
+              onClick={handleResendConfirmation} 
+              style={{ ...styles.toggleBtn, margin: '8px auto 0', display: 'block' }}
+            >
+              Reenviar e-mail de confirmação
+            </button>
+          )}
         </form>
 
         {/* Rodapé Alternador */}
@@ -145,15 +248,17 @@ export default function Auth({ onLoginSuccess }) {
                 setIsLogin(!isLogin);
                 setError('');
                 setSuccess('');
+                setShowResendButton(false);
               }}
               style={styles.toggleBtn}
+              disabled={loading}
             >
               {isLogin ? 'Cadastre-se' : 'Faça Login'}
             </button>
           </p>
           <div style={styles.demoBanner}>
             <Shield size={12} style={{ marginRight: 4 }} />
-            <span>Demonstração local. Seus dados estão seguros.</span>
+            <span>Dados criptografados e integrados com segurança.</span>
           </div>
         </div>
       </div>
@@ -243,7 +348,7 @@ const styles = {
     fontSize: '15px',
     fontWeight: '600',
     marginTop: '10px',
-    borderSelf: 'none',
+    border: 'none',
     cursor: 'pointer',
   },
   errorMessage: {
@@ -273,12 +378,6 @@ const styles = {
   footerText: {
     fontSize: '14px',
     color: 'var(--text-muted)',
-  },
-  toggleBtn: {
-    color: 'var(--primary)',
-    fontWeight: '600',
-    marginLeft: '6px',
-    fontSize: '14px',
   },
   toggleBtn: {
     color: 'var(--primary)',

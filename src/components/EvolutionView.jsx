@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { CheckCircle, Clock, AlertTriangle, BarChart3, PieChart, Target } from 'lucide-react';
+import { CheckCircle, Clock, AlertTriangle, BarChart3, PieChart, Target, Star, Award, ShieldAlert } from 'lucide-react';
 import { ACHIEVEMENTS, calcStats, calcStreak } from '../hooks/useAchievements';
 import { useAppContext } from '../contexts/AppContext';
 
@@ -181,14 +181,24 @@ function PriorityBars({ tasks }) {
 
 // ─── View Principal ───────────────────────────────────────────────────────────
 export default function EvolutionView() {
-  const { tasks, goals, unlockedAchievements } = useAppContext();
+  const { 
+    tasks, 
+    goals, 
+    unlockedAchievements, 
+    habitsManager, 
+    isPro, 
+    handleSimulateUpgrade, 
+    currentUser 
+  } = useAppContext();
+
   const stats = useMemo(() => calcStats(tasks, goals), [tasks, goals]);
   const streak = stats.currentStreak;
 
   // Mapa de conquistas desbloqueadas: key -> unlocked_at
   const unlockedMap = useMemo(() => {
     const m = {};
-    unlockedAchievements.forEach(a => { m[a.achievement_key] = a.unlocked_at; });
+    const list = unlockedAchievements || [];
+    list.forEach(a => { m[a.achievement_key] = a.unlocked_at; });
     return m;
   }, [unlockedAchievements]);
 
@@ -203,6 +213,25 @@ export default function EvolutionView() {
 
   // Objetivos concluídos com detalhes
   const completedGoals = goals.filter(g => g.status === 'completed');
+
+  // Lógica do Relatório Semanal
+  const weeklyReportData = useMemo(() => {
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    const dateStr = `${sevenDaysAgo.getFullYear()}-${String(sevenDaysAgo.getMonth() + 1).padStart(2, '0')}-${String(sevenDaysAgo.getDate()).padStart(2, '0')}`;
+
+    const recentCompletedTasks = tasks.filter(t => t.completed && t.dueDate && t.dueDate >= dateStr).length;
+    const recentHabitLogsCount = habitsManager.habitLogs.filter(l => l.completed_date >= dateStr).length;
+    
+    // Plano semanal carregado do metadata
+    const weeklyPlan = currentUser?.user_metadata?.weekly_plan || null;
+    
+    return {
+      completedTasks: recentCompletedTasks,
+      completedHabits: recentHabitLogsCount,
+      plan: weeklyPlan
+    };
+  }, [tasks, habitsManager.habitLogs, currentUser]);
 
   // Mensagem motivacional
   const getMotivation = () => {
@@ -224,6 +253,65 @@ export default function EvolutionView() {
           <h2 className="evo-motivation-title">{motivation.title}</h2>
           <p className="evo-motivation-desc">{motivation.desc}</p>
         </div>
+      </section>
+
+      {/* ── Relatório Semanal (Bloco 5) ─────────────────── */}
+      <section className="evo-card" style={{ background: 'linear-gradient(135deg, var(--bg-card) 0%, var(--primary-glow) 100%)', border: '1px solid var(--primary-light)' }}>
+        <div className="evo-card-header">
+          <h3 className="evo-card-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Award size={20} style={{ color: 'var(--primary)' }} />
+            Relatório Semanal Flowday
+          </h3>
+          <span style={{ fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', color: 'var(--primary)', letterSpacing: '0.05em' }}>Ativo</span>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '16px' }}>
+          <div style={{ padding: '12px 16px', backgroundColor: 'var(--bg-card)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-light)' }}>
+            <span style={{ fontSize: '11px', color: 'var(--text-light)', display: 'block' }}>Tarefas Concluídas (últimos 7 dias)</span>
+            <span style={{ fontSize: '24px', fontWeight: '800', color: 'var(--primary)' }}>{weeklyReportData.completedTasks}</span>
+          </div>
+          <div style={{ padding: '12px 16px', backgroundColor: 'var(--bg-card)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-light)' }}>
+            <span style={{ fontSize: '11px', color: 'var(--text-light)', display: 'block' }}>Hábitos Cumpridos (últimos 7 dias)</span>
+            <span style={{ fontSize: '24px', fontWeight: '800', color: '#C89658' }}>{weeklyReportData.completedHabits}</span>
+          </div>
+        </div>
+
+        {weeklyReportData.plan ? (
+          <div style={{ padding: '16px', backgroundColor: 'rgba(255,255,255,0.4)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-light)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <span style={{ fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', color: 'var(--text-muted)' }}>Plano de Ação Semanal</span>
+            <div>
+              <span style={{ fontSize: '12px', fontWeight: '500', color: 'var(--text-light)', display: 'block' }}>Foco da Semana:</span>
+              <strong style={{ fontSize: '14px', color: 'var(--text-main)' }}>{weeklyReportData.plan.focus}</strong>
+            </div>
+
+            <div>
+              <span style={{ fontSize: '12px', fontWeight: '500', color: 'var(--text-light)', display: 'block' }}>Prioridades Críticas:</span>
+              <ul style={{ fontSize: '13px', paddingLeft: '16px', marginTop: '4px', display: 'flex', flexDirection: 'column', gap: '2px', color: 'var(--text-main)' }}>
+                {weeklyReportData.plan.criticalPriorities?.map((prio, idx) => prio && (
+                  <li key={idx}><strong>{idx + 1}.</strong> {prio}</li>
+                ))}
+              </ul>
+            </div>
+
+            {weeklyReportData.plan.linkedGoals?.length > 0 && (
+              <div>
+                <span style={{ fontSize: '12px', fontWeight: '500', color: 'var(--text-light)', display: 'block', marginBottom: '4px' }}>Objetivos Priorizados:</span>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                  {goals.filter(g => weeklyReportData.plan.linkedGoals.includes(g.id)).map(g => (
+                    <span key={g.id} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', padding: '4px 8px', borderRadius: '4px', backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-light)' }}>
+                      <span>{g.icon}</span>
+                      <span style={{ fontWeight: '600' }}>{g.title}</span>
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        ) : (
+          <p style={{ fontSize: '12.5px', color: 'var(--text-muted)', fontStyle: 'italic', textAlign: 'center', padding: '16px 0' }}>
+            Nenhum planejamento semanal ativo. Acesse "Planejar Semana" na aba de Tarefas para preencher seu foco! ⚡
+          </p>
+        )}
       </section>
 
       {/* ── Grid de métricas ────────────────────────────── */}
@@ -311,26 +399,52 @@ export default function EvolutionView() {
         </section>
       )}
 
-      {/* ── Análise detalhada ────────────────────────────── */}
-      <section className="evo-charts-row">
-        <div className="evo-card evo-chart-card">
-          <div className="evo-card-header">
-            <h3 className="evo-card-title">
-              <PieChart size={16} style={{ display: 'inline', marginRight: '6px', verticalAlign: 'middle' }} />
-              Por categoria
-            </h3>
+      {/* ── Análise detalhada com Bloqueio Paywall Pro (Bloco 6) ── */}
+      <section className={`premium-lock-overlay ${!isPro ? 'premium-lock-active' : ''}`} style={{ position: 'relative' }}>
+        
+        {/* Banner de Paywall */}
+        {!isPro && (
+          <div className="premium-lock-banner">
+            <h4 className="premium-lock-title">
+              <ShieldAlert size={20} style={{ color: 'var(--primary)' }} />
+              Gráficos de Análise Avançada (Pro)
+            </h4>
+            <p className="premium-lock-desc">
+              Obtenha insights sobre a sua alocação de tempo e esforço com relatórios de distribuição por categoria e nível de prioridade.
+            </p>
+            <button 
+              onClick={handleSimulateUpgrade} 
+              className="btn-primary-glow"
+              style={{ padding: '8px 16px', fontSize: '13px', cursor: 'pointer' }}
+            >
+              Simular Upgrade Pro ⚡
+            </button>
           </div>
-          <CategoryDonut tasks={tasks} />
-        </div>
+        )}
 
-        <div className="evo-card evo-chart-card">
-          <div className="evo-card-header">
-            <h3 className="evo-card-title">
-              <BarChart3 size={16} style={{ display: 'inline', marginRight: '6px', verticalAlign: 'middle' }} />
-              Por prioridade
-            </h3>
-          </div>
-          <PriorityBars tasks={tasks} />
+        {/* Conteúdo Blocado/Borrado */}
+        <div className={!isPro ? 'premium-lock-blur' : ''} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          <section className="evo-charts-row">
+            <div className="evo-card evo-chart-card">
+              <div className="evo-card-header">
+                <h3 className="evo-card-title">
+                  <PieChart size={16} style={{ display: 'inline', marginRight: '6px', verticalAlign: 'middle' }} />
+                  Por categoria
+                </h3>
+              </div>
+              <CategoryDonut tasks={tasks} />
+            </div>
+
+            <div className="evo-card evo-chart-card">
+              <div className="evo-card-header">
+                <h3 className="evo-card-title">
+                  <BarChart3 size={16} style={{ display: 'inline', marginRight: '6px', verticalAlign: 'middle' }} />
+                  Por prioridade
+                </h3>
+              </div>
+              <PriorityBars tasks={tasks} />
+            </div>
+          </section>
         </div>
       </section>
     </div>

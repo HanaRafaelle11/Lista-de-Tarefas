@@ -16,6 +16,7 @@ export default function Navbar() {
     { key: 'home',      icon: 'home_max',     label: 'Início'    },
     { key: 'goals',     icon: 'target',       label: 'Objetivos' },
     { key: 'tasks',     icon: 'check_circle', label: 'Tarefas'   },
+    { key: 'focus',     icon: 'timer',        label: 'Foco'      },
     { key: 'analytics', icon: 'auto_graph',   label: 'Evolução'  },
   ];
 
@@ -44,7 +45,7 @@ export default function Navbar() {
             <button
               onClick={onLogout}
               className="app-top-logout-btn hide-on-mobile"
-              title="Sair do FocusList"
+              title="Sair do Flowday"
             >
               <span className="material-symbols-outlined">logout</span>
               <span className="logout-text">Sair</span>
