@@ -107,10 +107,6 @@ function AppLayout() {
       {isAdmin && <DevToolsWidget />}
 
       <AchievementToastManager queue={toastQueue} onDismiss={dismissToast} />
-
-      <footer className="app-footer">
-        <p>© 2026 Flowday. Sistema de Evolução Pessoal. Integrado com o Supabase.</p>
-      </footer>
     </div>
   );
 }

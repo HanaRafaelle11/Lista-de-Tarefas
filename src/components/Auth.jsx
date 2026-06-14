@@ -43,6 +43,13 @@ export default function Auth({ onLoginSuccess }) {
             setError(error.message || 'E-mail ou senha incorretos.');
           }
         } else if (data?.user) {
+          if (!data.user.email_confirmed_at && !data.user.user_metadata?.email_verified) {
+            await supabase.auth.signOut();
+            setError('Seu e-mail ainda não foi confirmado. Por favor, ative sua conta pelo link enviado para sua caixa de entrada.');
+            setShowResendButton(true);
+            setLoading(false);
+            return;
+          }
           setSuccess('Login realizado com sucesso! Redirecionando...');
           const userObj = {
             id: data.user.id,
@@ -87,7 +94,7 @@ export default function Auth({ onLoginSuccess }) {
           });
 
           // Se o Supabase já retornar a sessão confirmada
-          if (data.session) {
+          if (data.session && (data.user.email_confirmed_at || data.user.user_metadata?.email_verified)) {
             setSuccess('Conta criada e confirmada automaticamente! Entrando...');
             const userObj = {
               id: data.user.id,
@@ -100,6 +107,7 @@ export default function Auth({ onLoginSuccess }) {
             }, 1500);
           } else {
             // Se precisar confirmar e-mail
+            if (data.session) await supabase.auth.signOut();
             setIsWaitingConfirmation(true);
             setSuccess('Conta criada! Enviamos um e-mail de confirmação.');
           }

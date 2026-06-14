@@ -22,6 +22,27 @@ export default function SettingsView() {
     }
   };
 
+  const handleDeleteAccount = async () => {
+    if (!window.confirm('Tem certeza que deseja excluir sua conta? Seus dados serão mantidos por 30 dias para recuperação (Soft Delete).')) return;
+    
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.updateUser({
+        data: {
+          account_status: 'deleted',
+          deleted_at: new Date().toISOString()
+        }
+      });
+      if (error) throw error;
+      alert('Conta desativada com sucesso. Você será desconectado.');
+      handleLogout();
+    } catch (e) {
+      alert('Erro ao excluir conta: ' + e.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="settings-view animate-fade-in" style={{ padding: '24px 0' }}>
       <div className="tasks-page-header" style={{ marginBottom: '32px' }}>
@@ -245,12 +266,21 @@ export default function SettingsView() {
             </p>
           </div>
 
-          <button 
-            onClick={handleLogout} 
-            style={{ marginTop: '24px', padding: '12px 24px', backgroundColor: '#FAF0F0', color: '#C06C6C', borderRadius: '8px', fontWeight: '600', display: 'inline-block' }}
-          >
-            Sair da minha conta
-          </button>
+          <div style={{ display: 'flex', gap: '12px', marginTop: '24px', flexWrap: 'wrap' }}>
+            <button 
+              onClick={handleLogout} 
+              style={{ padding: '12px 24px', backgroundColor: '#FAF0F0', color: '#C06C6C', borderRadius: '8px', fontWeight: '600' }}
+            >
+              Sair da minha conta
+            </button>
+            <button 
+              onClick={handleDeleteAccount} 
+              disabled={loading}
+              style={{ padding: '12px 24px', backgroundColor: 'transparent', border: '1px solid #C06C6C', color: '#C06C6C', borderRadius: '8px', fontWeight: '600' }}
+            >
+              Excluir minha conta
+            </button>
+          </div>
         </div>
 
       </div>

@@ -42,102 +42,108 @@ export const eventReplayer = {
     };
 
     for (const ev of events) {
-      const { event_type, metadata, created_at } = ev;
+      if (!ev) continue;
+      try {
+        const { event_type, metadata, created_at, event_version = 1 } = ev;
+        const normMetadata = metadata || {};
 
-      switch (event_type) {
-        case 'signup_completed':
-        case 'signup':
-          projection.signupTimestamp = created_at;
-          break;
+        switch (event_type) {
+          case 'signup_completed':
+          case 'signup':
+            projection.signupTimestamp = created_at;
+            break;
 
-        case 'onboarding_started':
-          projection.onboarding.started = true;
-          projection.onboarding.step = 1;
-          break;
+          case 'onboarding_started':
+            projection.onboarding.started = true;
+            projection.onboarding.step = 1;
+            break;
 
-        case 'onboarding_step':
-          if (metadata && metadata.step !== undefined) {
-            projection.onboarding.step = Math.max(projection.onboarding.step, metadata.step);
-          }
-          break;
-
-        case 'onboarding_completed':
-          projection.onboarding.completed = true;
-          projection.onboarding.step = 5;
-          break;
-
-        case 'session_started':
-          projection.sessions.count += 1;
-          projection.sessions.lastActive = created_at;
-          break;
-
-        case 'session_ended':
-          projection.sessions.lastActive = created_at;
-          break;
-
-        case 'task_created':
-        case 'task_create':
-          projection.tasks.createdCount += 1;
-          if (metadata && metadata.taskId) {
-            projection.tasks.list.push({
-              id: metadata.taskId,
-              title: metadata.title || 'Tarefa sem título',
-              completed: false,
-              completedAt: null,
-              createdAt: created_at,
-              updatedAt: created_at
-            });
-          }
-          break;
-
-        case 'task_completed':
-          projection.tasks.completedCount += 1;
-          if (!projection.firstWinTimestamp) {
-            projection.firstWinTimestamp = created_at;
-          }
-          if (metadata && metadata.taskId) {
-            const task = projection.tasks.list.find(t => t.id === metadata.taskId);
-            if (task) {
-              task.completed = true;
-              task.completedAt = created_at;
-              task.updatedAt = created_at;
+          case 'onboarding_step':
+            if (normMetadata && normMetadata.step !== undefined) {
+              projection.onboarding.step = Math.max(projection.onboarding.step, normMetadata.step);
             }
-          }
-          break;
+            break;
 
-        case 'first_success_action':
-          if (!projection.firstWinTimestamp) {
-            projection.firstWinTimestamp = created_at;
-          }
-          break;
+          case 'onboarding_completed':
+            projection.onboarding.completed = true;
+            projection.onboarding.step = 5;
+            break;
 
-        case 'task_update':
-          if (metadata && metadata.taskId) {
-            const task = projection.tasks.list.find(t => t.id === metadata.taskId);
-            if (task) {
-              Object.assign(task, metadata.updates || {});
-              task.updatedAt = created_at;
+          case 'session_started':
+            projection.sessions.count += 1;
+            projection.sessions.lastActive = created_at;
+            break;
+
+          case 'session_ended':
+            projection.sessions.lastActive = created_at;
+            break;
+
+          case 'task_created':
+          case 'task_create':
+            projection.tasks.createdCount += 1;
+            if (normMetadata && normMetadata.taskId) {
+              projection.tasks.list.push({
+                id: normMetadata.taskId,
+                title: normMetadata.title || 'Tarefa sem título',
+                completed: false,
+                completedAt: null,
+                createdAt: created_at,
+                updatedAt: created_at
+              });
             }
-          }
-          break;
+            break;
 
-        case 'task_delete':
-          if (metadata && metadata.taskId) {
-            projection.tasks.list = projection.tasks.list.filter(t => t.id !== metadata.taskId);
-          }
-          break;
+          case 'task_completed':
+            projection.tasks.completedCount += 1;
+            if (!projection.firstWinTimestamp) {
+              projection.firstWinTimestamp = created_at;
+            }
+            if (normMetadata && normMetadata.taskId) {
+              const task = projection.tasks.list.find(t => t.id === normMetadata.taskId);
+              if (task) {
+                task.completed = true;
+                task.completedAt = created_at;
+                task.updatedAt = created_at;
+              }
+            }
+            break;
 
-        case 'habit_created':
-          projection.habits.createdCount += 1;
-          break;
+          case 'first_success_action':
+            if (!projection.firstWinTimestamp) {
+              projection.firstWinTimestamp = created_at;
+            }
+            break;
 
-        case 'habit_completed':
-          projection.habits.completedCount += 1;
-          break;
+          case 'task_update':
+            if (normMetadata && normMetadata.taskId) {
+              const task = projection.tasks.list.find(t => t.id === normMetadata.taskId);
+              if (task) {
+                Object.assign(task, normMetadata.updates || {});
+                task.updatedAt = created_at;
+              }
+            }
+            break;
 
-        case 'goal_created':
-          projection.goals.createdCount += 1;
-          break;
+          case 'task_delete':
+            if (normMetadata && normMetadata.taskId) {
+              projection.tasks.list = projection.tasks.list.filter(t => t.id !== normMetadata.taskId);
+            }
+            break;
+
+          case 'habit_created':
+            projection.habits.createdCount += 1;
+            break;
+
+          case 'habit_completed':
+            projection.habits.completedCount += 1;
+            break;
+
+          case 'goal_created':
+            projection.goals.createdCount += 1;
+            break;
+        }
+      } catch (err) {
+        console.error(`[eventReplayer] Falha ao reprocessar evento tipo="${ev?.event_type}" id="${ev?.id}":`, err);
       }
     }
 

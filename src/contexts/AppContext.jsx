@@ -581,8 +581,10 @@ export function AppProvider({ children }) {
     if (!currentUser?.id) return;
     const task = tasks.find((t) => t.id === id);
     if (!task) return;
-    const { data: next, completedAt } = await tasksService.toggleComplete(currentUser.id, id, task.completed);
-    if (next !== null) {
+    const { error } = await tasksService.toggleComplete(currentUser.id, id, task.completed);
+    if (!error) {
+      const next = !task.completed;
+      const completedAt = next ? new Date().toISOString() : null;
       setTasks((prev) => prev.map((t) => t.id === id ? { ...t, completed: next, completedAt } : t));
 
       if (next) {

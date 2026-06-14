@@ -70,12 +70,7 @@ export default function GoalsView() {
   const [editingGoal, setEditingGoal] = useState(null);
   const [managingGoal, setManagingGoal] = useState(null);
 
-  // Abertura automática se o usuário não tem objetivos criados (onboarding reativo)
-  useEffect(() => {
-    if (goals.length === 0) {
-      setIsGoalModalOpen(true);
-    }
-  }, [goals.length]);
+  // Abertura automática removida para evitar popups indesejados
 
   // Filtrar objetivos por status
   const filteredGoals = useMemo(() => {
@@ -225,12 +220,14 @@ export default function GoalsView() {
       )}
 
       {/* ── Modais ──────────────────────────────────────── */}
-      <GoalModal
-        isOpen={isGoalModalOpen}
-        onClose={() => { setIsGoalModalOpen(false); setEditingGoal(null); }}
-        onSave={handleSaveGoal}
-        editingGoal={editingGoal}
-      />
+      {isGoalModalOpen && (
+        <GoalModal
+          isOpen={isGoalModalOpen}
+          onClose={() => { setIsGoalModalOpen(false); setEditingGoal(null); }}
+          onSave={handleSaveGoal}
+          editingGoal={editingGoal}
+        />
+      )}
 
       <GoalTasksModal
         isOpen={isTasksModalOpen}

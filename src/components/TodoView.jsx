@@ -378,6 +378,23 @@ export default function TodoView() {
     }
   };
 
+  const handleDragOver = (e) => {
+    e.preventDefault();
+  };
+
+  const handleDrop = (e, status) => {
+    e.preventDefault();
+    const taskId = e.dataTransfer.getData('taskId');
+    const task = tasks.find(t => t.id === taskId);
+    if (task) {
+      handleMoveKanban(task, status);
+    }
+  };
+
+  const handleDragStart = (e, taskId) => {
+    e.dataTransfer.setData('taskId', taskId);
+  };
+
   // Lógica Calendário
   const calendarCells = useMemo(() => {
     const year = currentMonth.getFullYear();
@@ -562,13 +579,21 @@ export default function TodoView() {
               className="form-input category-input-emoji"
               maxLength={2}
             />
-            <input 
-              type="color" 
-              value={newCatColor}
-              onChange={e => setNewCatColor(e.target.value)}
-              className="category-input-color"
-              title="Cor da Categoria"
-            />
+            <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+              {['#6B7F8A', '#7A8B7B', '#B09E86', '#A88891', '#4A654E', '#9B6B5A', '#5A6B7A', '#8A6B8A'].map(color => (
+                <button
+                  key={color}
+                  type="button"
+                  onClick={() => setNewCatColor(color)}
+                  style={{
+                    width: '22px', height: '22px', borderRadius: '50%', backgroundColor: color,
+                    border: newCatColor === color ? '2px solid var(--text-main)' : '1px solid var(--border-medium)',
+                    cursor: 'pointer', padding: 0
+                  }}
+                  title="Selecionar cor"
+                />
+              ))}
+            </div>
             <button type="submit" className="btn-primary-glow" style={{ padding: '8px 16px', fontSize: '13px' }}>
               Adicionar
             </button>
@@ -696,7 +721,7 @@ export default function TodoView() {
       {viewMode === 'kanban' && (
         <div className="kanban-view-container animate-fade-in">
           {/* Coluna 1: A Fazer */}
-          <div className="kanban-column">
+          <div className="kanban-column" onDragOver={handleDragOver} onDrop={(e) => handleDrop(e, 'todo')}>
             <div className="kanban-column-header">
               <span className="kanban-column-title">📌 A Fazer</span>
               <span className="kanban-column-count">{kanbanTasks.todo.length}</span>
@@ -706,7 +731,7 @@ export default function TodoView() {
                 const meta = parseTaskMetadata(task.description);
                 const cleanDesc = formatDescriptionWithoutMetadata(task.description);
                 return (
-                  <div key={task.id} className="kanban-card">
+                  <div key={task.id} className="kanban-card" draggable onDragStart={(e) => handleDragStart(e, task.id)}>
                     <span className="kanban-card-title">{task.title}</span>
                     {cleanDesc && <span style={{ fontSize: '11px', color: 'var(--text-light)' }}>{cleanDesc}</span>}
                     <div className="kanban-card-meta">
@@ -742,7 +767,7 @@ export default function TodoView() {
           </div>
 
           {/* Coluna 2: Em Progresso */}
-          <div className="kanban-column">
+          <div className="kanban-column" onDragOver={handleDragOver} onDrop={(e) => handleDrop(e, 'in_progress')}>
             <div className="kanban-column-header">
               <span className="kanban-column-title">⚡ Em Progresso</span>
               <span className="kanban-column-count">{kanbanTasks.inProgress.length}</span>
@@ -752,7 +777,7 @@ export default function TodoView() {
                 const meta = parseTaskMetadata(task.description);
                 const cleanDesc = formatDescriptionWithoutMetadata(task.description);
                 return (
-                  <div key={task.id} className="kanban-card">
+                  <div key={task.id} className="kanban-card" draggable onDragStart={(e) => handleDragStart(e, task.id)}>
                     <span className="kanban-card-title">{task.title}</span>
                     {cleanDesc && <span style={{ fontSize: '11px', color: 'var(--text-light)' }}>{cleanDesc}</span>}
                     <div className="kanban-card-meta">
@@ -789,7 +814,7 @@ export default function TodoView() {
           </div>
 
           {/* Coluna 3: Concluídas */}
-          <div className="kanban-column">
+          <div className="kanban-column" onDragOver={handleDragOver} onDrop={(e) => handleDrop(e, 'completed')}>
             <div className="kanban-column-header">
               <span className="kanban-column-title">✅ Concluído</span>
               <span className="kanban-column-count">{kanbanTasks.completed.length}</span>
@@ -799,7 +824,7 @@ export default function TodoView() {
                 const meta = parseTaskMetadata(task.description);
                 const cleanDesc = formatDescriptionWithoutMetadata(task.description);
                 return (
-                  <div key={task.id} className="kanban-card" style={{ opacity: 0.75 }}>
+                  <div key={task.id} className="kanban-card" style={{ opacity: 0.75 }} draggable onDragStart={(e) => handleDragStart(e, task.id)}>
                     <span className="kanban-card-title" style={{ textDecoration: 'line-through' }}>{task.title}</span>
                     {cleanDesc && <span style={{ fontSize: '11px', color: 'var(--text-light)' }}>{cleanDesc}</span>}
                     <div className="kanban-card-meta">

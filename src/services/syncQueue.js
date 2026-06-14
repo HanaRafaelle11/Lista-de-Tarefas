@@ -15,20 +15,52 @@ import { localDB } from '../db/localDB';
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
 const QUEUE_KEY      = 'flowday_sync_queue';
-const MAX_ATTEMPTS   = 12;           // ~2h30 de retries antes de descartar
-const BASE_DELAY_MS  = 10_000;       // 10s
-const MAX_DELAY_MS   = 30 * 60_000;  // 30 minutos
+const MAX_ATTEMPTS   = 3;            // Reduzido para evitar loop infinito visual
+const BASE_DELAY_MS  = 2_000;        // 2s
+const MAX_DELAY_MS   = 10_000;       // 10s
 const POLL_INTERVAL  = 30_000;       // 30s
 
+// ─── Estado interno ───────────────────────────────────────────────────────────
 // ─── Estado interno ───────────────────────────────────────────────────────────
 let status = {
   supabase:    'healthy',   // 'healthy' | 'degraded' | 'offline'
   pendingOps:  0,
   lastSync:    null,        // ISO timestamp da última sincronização bem-sucedida
   warnings:    [],
+  avgSyncLagMs: 0,
+  totalSyncs: 0,
+  conflictCount: 0
 };
 let listeners  = new Set();
 let pollTimer  = null;
+const failureTracker = {};
+
+export function getConflictLogs() {
+  try {
+    return JSON.parse(localStorage.getItem('flowday_conflict_logs') || '[]');
+  } catch {
+    return [];
+  }
+}
+
+function logConflict(type, entityId, localData, serverData, resolution) {
+  const log = {
+    timestamp: new Date().toISOString(),
+    type,
+    entityId,
+    localData,
+    serverData,
+    resolution
+  };
+  const logs = getConflictLogs();
+  logs.push(log);
+  try {
+    localStorage.setItem('flowday_conflict_logs', JSON.stringify(logs.slice(-50)));
+  } catch (e) {
+    console.warn('[syncQueue] Falha ao salvar log de conflitos no localStorage:', e);
+  }
+}
+
 
 // Fila em memória para acesso síncrono ultra-rápido reativo
 let queueMemory = [];
@@ -339,23 +371,36 @@ export async function flush() {
     const ok = await trySend(item);
     if (ok) {
       consecutiveNetworkErrors = 0;
-      // Item removido com sucesso
+      delete failureTracker[item.idempotency_key];
+
+      // Métrica de sync lag
+      const lag = Date.now() - new Date(item.enqueuedAt).getTime();
+      const total = status.totalSyncs || 0;
+      const newAvg = total > 0 ? Math.round(((status.avgSyncLagMs * total) + lag) / (total + 1)) : lag;
+      updateStatus({
+        avgSyncLagMs: newAvg,
+        totalSyncs: total + 1
+      });
     } else {
       consecutiveNetworkErrors++;
+      failureTracker[item.idempotency_key] = (failureTracker[item.idempotency_key] || 0) + 1;
+
       const attempts = (item.attempts || 0) + 1;
+      const maxAttempts = window.BETA_SAFE_MODE ? 5 : MAX_ATTEMPTS; // Beta Safe Mode reduz a agressividade do retry
       
       // Backoff adaptativo: penaliza mais se a rede estiver visivelmente instável
       const isNetworkIssue = !navigator.onLine;
       const penaltyAttempts = isNetworkIssue ? attempts + 1 : attempts;
 
-      if (attempts < MAX_ATTEMPTS) {
+      if (attempts < maxAttempts) {
         remaining.push({
           ...item,
           attempts,
           nextRetryAt: calcNextRetry(penaltyAttempts),
         });
       } else {
-        console.warn(`[syncQueue] Item descartado após ${MAX_ATTEMPTS} tentativas:`, item.type);
+        console.warn(`[syncQueue] Item descartado após ${maxAttempts} tentativas:`, item.type);
+        logConflict(item.type, item.idempotency_key, item.payload, null, 'Descartado após exceder max retries');
         addWarning(`Operação "${item.type}" descartada após muitas tentativas`);
       }
     }
@@ -381,6 +426,15 @@ export async function flush() {
 // ─── Envio individual com idempotência ───────────────────────────────────────
 async function trySend(item) {
   const { type, payload, idempotency_key } = item;
+  
+  // Detecção de loop de sync (mesmo payload falhando repetidamente)
+  if (failureTracker[idempotency_key] > 2) {
+    console.warn(`[syncQueue] Loop de sync bloqueado para a op "${type}" key="${idempotency_key}".`);
+    logConflict(type, idempotency_key, payload, null, 'Cancelado por Loop de Sync');
+    updateStatus({ conflictCount: (status.conflictCount || 0) + 1 });
+    return true; // remove da fila
+  }
+
   try {
     if (type === 'event') {
       const { userId, eventType, metadata } = payload;
@@ -412,6 +466,8 @@ async function trySend(item) {
           const localTime = new Date(taskData.updated_at || item.enqueuedAt).getTime();
           if (serverTime > localTime) {
             console.log(`[syncQueue] Conflito em task_create para ${taskId}. Servidor possui versão mais recente.`);
+            logConflict('task_create', taskId || idempotency_key, taskData, serverTask, 'Server Wins (Criação obsoleta)');
+            updateStatus({ conflictCount: (status.conflictCount || 0) + 1 });
             return true;
           }
         }
@@ -502,7 +558,11 @@ async function trySend(item) {
 
             if (hasCollisions) {
               console.log(`[syncQueue] Colisão direta detectada para task ${id}. Descartando atualização local obsoleta.`);
+              logConflict('task_update', id, updates, serverTask, 'Server Wins por colisão de campo');
+              updateStatus({ conflictCount: (status.conflictCount || 0) + 1 });
               return true; // Remove a operação obsoleta do cliente da fila
+            } else {
+              logConflict('task_update', id, updates, serverTask, 'Merge não colidente');
             }
           }
         }
@@ -555,6 +615,8 @@ async function trySend(item) {
           const localTime = new Date(data.updated_at || item.enqueuedAt).getTime();
           if (serverTime > localTime) {
             console.log(`[syncQueue] Colisão em profile_update. Prevalece Server Wins.`);
+            logConflict('profile_update', userId, data, serverProfile, 'Server Wins');
+            updateStatus({ conflictCount: (status.conflictCount || 0) + 1 });
             return true; // Descarta alteração local obsoleta
           }
         }
@@ -577,6 +639,10 @@ async function trySend(item) {
 
   } catch (err) {
     console.warn(`[syncQueue] trySend falhou para "${type}":`, err?.message);
+    // Erros de schema irrecuperáveis (tabela/coluna inexistente) dropam na hora
+    if (err?.code && (err.code.startsWith('42') || err.code.startsWith('PGRST'))) {
+      return true;
+    }
     return false;
   }
 }

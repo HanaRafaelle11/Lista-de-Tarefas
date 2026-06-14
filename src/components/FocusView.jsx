@@ -22,7 +22,8 @@ export default function FocusView() {
     if (!isActive) {
       setTimeLeft((mode === 'focus' ? focusTime : breakTime) * 60);
     }
-  }, [focusTime, breakTime, mode, isActive]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusTime, breakTime, mode]);
 
   // Efeito principal do Timer
   useEffect(() => {

@@ -76,5 +76,12 @@ export function getEngagementSuggestions(userState = {}, tasks = [], onboardingC
     });
   }
 
-  return suggestions;
+  const VALID_TABS = ['home', 'goals', 'tasks', 'focus', 'analytics', 'performance', 'profile', 'admin', 'settings'];
+  return suggestions.map(s => {
+    if (s.actionTab && !VALID_TABS.includes(s.actionTab)) {
+      console.warn(`[retentionEngine] Aba de ação inválida detectada: "${s.actionTab}". Corrigido para "home".`);
+      s.actionTab = 'home';
+    }
+    return s;
+  });
 }
