@@ -2,7 +2,7 @@ import React from 'react';
 import { useAppContext } from '../contexts/AppContext';
 
 export default function Navbar() {
-  const { activeTab, setActiveTab, currentUser, handleLogout } = useAppContext();
+  const { activeTab, setActiveTab, currentUser, handleLogout, userProfile, isAdmin } = useAppContext();
   const onLogout = handleLogout;
 
   const getInitials = (name) => {
@@ -13,24 +13,40 @@ export default function Navbar() {
   };
 
   const navItems = [
-    { key: 'home',      icon: 'home_max',     label: 'Início'    },
-    { key: 'goals',     icon: 'target',       label: 'Objetivos' },
-    { key: 'tasks',     icon: 'check_circle', label: 'Tarefas'   },
-    { key: 'focus',     icon: 'timer',        label: 'Foco'      },
-    { key: 'analytics', icon: 'auto_graph',   label: 'Evolução'  },
+    { key: 'home',        icon: 'home_max',     label: 'Início'    },
+    { key: 'goals',       icon: 'target',       label: 'Objetivos' },
+    { key: 'tasks',       icon: 'check_circle', label: 'Tarefas'   },
+    { key: 'focus',       icon: 'timer',        label: 'Foco'      },
+    { key: 'analytics',   icon: 'auto_graph',   label: 'Evolução'  },
+    { key: 'performance', icon: 'trending_up',  label: 'Desempenho'},
   ];
+
+  if (isAdmin) {
+    navItems.push({ key: 'admin', icon: 'admin_panel_settings', label: 'Admin' });
+  }
 
   return (
     <>
       {/* ── Cabeçalho Superior ──────────────────────────── */}
       <header className="app-top-header">
         <div className="app-top-header-container">
-          <div className="app-top-profile">
-            <div className="app-top-avatar" title={currentUser?.name}>
-              {getInitials(currentUser?.name)}
+          <div 
+            className={`app-top-profile ${activeTab === 'profile' ? 'active' : ''}`}
+            onClick={() => setActiveTab('profile')}
+          >
+            <div className="app-top-avatar" title={userProfile?.name || currentUser?.name}>
+              {userProfile?.avatar_url ? (
+                <img 
+                  src={userProfile.avatar_url} 
+                  alt="Avatar" 
+                  style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }}
+                />
+              ) : (
+                getInitials(userProfile?.name || currentUser?.name)
+              )}
             </div>
             <h1 className="app-top-greeting">
-              Olá, {currentUser?.name?.split(' ')[0] || 'Usuário'}
+              Olá, {(userProfile?.name || currentUser?.name)?.split(' ')[0] || 'Usuário'}
             </h1>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -71,3 +87,4 @@ export default function Navbar() {
     </>
   );
 }
+

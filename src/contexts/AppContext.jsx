@@ -13,6 +13,7 @@ import { goalsService }         from '../services/goalsService';
 import { habitsService }        from '../services/habitsService';
 import { achievementsService }  from '../services/achievementsService';
 import { eventsService }        from '../services/eventsService';
+import { profilesService }      from '../services/profilesService';
 import { ACHIEVEMENTS, calcStats } from '../hooks/useAchievements';
 
 // ─── Helpers para Metadados de Tarefas (Horário e Recorrência) ───────────────
@@ -86,6 +87,9 @@ export function AppProvider({ children }) {
   const [currentUser, setCurrentUser]       = useState(null);
   const [isInitializing, setIsInitializing] = useState(true);
 
+  // ── Perfil do Usuário ──
+  const [userProfile, setUserProfile]       = useState(null);
+
   // ── Navegação ────────────────────────────────────────────────────────────────
   const [activeTab, setActiveTab] = useState('home');
 
@@ -112,6 +116,13 @@ export function AppProvider({ children }) {
 
   // ── Feature Flags & Assinatura (SaaS) ───────────────────────────────────────
   const [isPro, setIsPro] = useState(false);
+
+  // Determina se usuário logado é administrador
+  const isAdmin = useMemo(() => {
+    if (!currentUser) return false;
+    const adminEmails = ['admin@flowday.app', 'rafaelle@flowday.app', 'rafox@flowday.app'];
+    return !!currentUser.user_metadata?.is_admin || adminEmails.includes(currentUser.email);
+  }, [currentUser]);
 
   useEffect(() => {
     if (currentUser) {
@@ -246,6 +257,11 @@ export function AppProvider({ children }) {
     }
   }, []);
 
+  const loadProfile = useCallback(async (userId) => {
+    const { data } = await profilesService.getProfile(userId);
+    if (data) setUserProfile(data);
+  }, []);
+
   // ═══════════════════════════════════════════════════════════════════════════
   // AUTH — inicialização e listener
   // ═══════════════════════════════════════════════════════════════════════════
@@ -268,6 +284,7 @@ export function AppProvider({ children }) {
             loadGoals(u.id),
             loadAchievements(u.id),
             loadHabits(u.id),
+            loadProfile(u.id),
           ]).finally(() => setIsInitializing(false));
         } else {
           setIsInitializing(false);
@@ -286,8 +303,10 @@ export function AppProvider({ children }) {
         loadGoals(u.id);
         loadAchievements(u.id);
         loadHabits(u.id);
+        loadProfile(u.id);
       } else {
         setCurrentUser(null);
+        setUserProfile(null);
         setTasks([]); setGoals([]); setGoalTasks([]);
         setUnlockedAchievements([]); setUnlockedKeys(new Set());
         setHabits([]); setHabitLogs([]);
@@ -295,7 +314,7 @@ export function AppProvider({ children }) {
     });
 
     return () => subscription.unsubscribe();
-  }, [loadTasks, loadGoals, loadAchievements, loadHabits]);
+  }, [loadTasks, loadGoals, loadAchievements, loadHabits, loadProfile]);
 
   // ═══════════════════════════════════════════════════════════════════════════
   // CONQUISTAS — detecção automática
@@ -346,9 +365,10 @@ export function AppProvider({ children }) {
       loadGoals(user.id),
       loadAchievements(user.id),
       loadHabits(user.id),
+      loadProfile(user.id),
     ]);
     setActiveTab('home');
-  }, [loadTasks, loadGoals, loadAchievements, loadHabits]);
+  }, [loadTasks, loadGoals, loadAchievements, loadHabits, loadProfile]);
 
   const handleLogout = useCallback(async () => {
     try {
@@ -357,6 +377,7 @@ export function AppProvider({ children }) {
       }
       await supabase.auth.signOut();
       setCurrentUser(null);
+      setUserProfile(null);
       setTasks([]); setGoals([]); setGoalTasks([]);
       setUnlockedAchievements([]); setUnlockedKeys(new Set());
       setHabits([]); setHabitLogs([]);
@@ -423,9 +444,9 @@ export function AppProvider({ children }) {
     if (!currentUser?.id) return;
     const task = tasks.find((t) => t.id === id);
     if (!task) return;
-    const { data: next } = await tasksService.toggleComplete(currentUser.id, id, task.completed);
+    const { data: next, completedAt } = await tasksService.toggleComplete(currentUser.id, id, task.completed);
     if (next !== null) {
-      setTasks((prev) => prev.map((t) => t.id === id ? { ...t, completed: next } : t));
+      setTasks((prev) => prev.map((t) => t.id === id ? { ...t, completed: next, completedAt } : t));
       
       if (next) {
         eventsService.logEvent(currentUser.id, 'task_completed', { task_id: id });
@@ -450,6 +471,33 @@ export function AppProvider({ children }) {
       }
     }
   }, [currentUser?.id, tasks]);
+
+  const handleUpdateProfile = useCallback(async (profileData) => {
+    if (!currentUser?.id) return;
+    const { data } = await profilesService.updateProfile(currentUser.id, profileData);
+    if (data) {
+      setUserProfile(data);
+      eventsService.logEvent(currentUser.id, 'profile_updated');
+    }
+  }, [currentUser?.id]);
+
+  const handleUploadAvatar = useCallback(async (file) => {
+    if (!currentUser?.id) return;
+    const { publicUrl } = await profilesService.uploadAvatar(currentUser.id, file);
+    if (publicUrl) {
+      setUserProfile(prev => ({ ...prev, avatar_url: publicUrl }));
+      eventsService.logEvent(currentUser.id, 'profile_updated', { avatar: true });
+    }
+  }, [currentUser?.id]);
+
+  const handleDeleteAvatar = useCallback(async () => {
+    if (!currentUser?.id) return;
+    const { error } = await profilesService.deleteAvatar(currentUser.id);
+    if (!error) {
+      setUserProfile(prev => ({ ...prev, avatar_url: '' }));
+      eventsService.logEvent(currentUser.id, 'profile_updated', { avatar: false });
+    }
+  }, [currentUser?.id]);
 
   // ═══════════════════════════════════════════════════════════════════════════
   // GOALS CRUD
@@ -683,6 +731,7 @@ export function AppProvider({ children }) {
 
     // SaaS additions
     isPro,
+    isAdmin,
     handleSimulateUpgrade,
     categories,
     handleAddCategory,
@@ -691,7 +740,13 @@ export function AppProvider({ children }) {
     logEvent,
     consistencyScore,
     handleCompleteOnboarding,
-    supabaseConfigError
+    supabaseConfigError,
+
+    // Profiles additions
+    userProfile,
+    handleUpdateProfile,
+    handleUploadAvatar,
+    handleDeleteAvatar
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

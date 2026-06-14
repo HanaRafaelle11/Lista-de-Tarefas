@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Shield, Lock, Mail, User, CheckCircle2 } from 'lucide-react';
 import { supabase } from '../supabaseClient';
+import { eventsService } from '../services/eventsService';
 
 export default function Auth({ onLoginSuccess }) {
   const [isLogin, setIsLogin] = useState(true);
@@ -68,6 +69,9 @@ export default function Auth({ onLoginSuccess }) {
         if (error) {
           setError(error.message || 'Erro ao criar conta.');
         } else if (data?.user) {
+          // Registra o evento de cadastro no banco
+          eventsService.logEvent(data.user.id, 'signup');
+
           // Se o Supabase já retornar a sessão confirmada
           if (data.session) {
             setSuccess('Conta criada e confirmada automaticamente! Entrando...');

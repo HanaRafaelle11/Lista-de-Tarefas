@@ -50,7 +50,8 @@ function GoalProgressRow({ goal, linkedTasks }) {
     unlockedAchievements, 
     habitsManager, 
     consistencyScore, 
-    handleCompleteOnboarding 
+    handleCompleteOnboarding,
+    logEvent
   } = useAppContext();
   
   const { habits, habitLogs } = habitsManager;
@@ -158,6 +159,7 @@ function GoalProgressRow({ goal, linkedTasks }) {
     localStorage.setItem('flowday_onboarding_started', 'true');
     localStorage.setItem('flowday_onboarding_step', '1');
     setOnboardingStep(1);
+    logEvent('onboarding_started');
   };
 
   const handleGoToStep = (step, tab) => {

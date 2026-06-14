@@ -10,6 +10,7 @@ const mapTask = (t) => ({
   dueDate: t.due_date || '',
   completed: t.completed,
   createdAt: t.created_at,
+  completedAt: t.completed_at || null,
 });
 
 // Guard: bloqueia queries sem usuário autenticado
@@ -55,6 +56,7 @@ export const tasksService = {
           priority: taskData.priority,
           due_date: taskData.dueDate || null,
           completed: false,
+          completed_at: null,
         }])
         .select()
         .single();
@@ -79,6 +81,7 @@ export const tasksService = {
       if (updates.category !== undefined)    payload.category = updates.category;
       if (updates.priority !== undefined)    payload.priority = updates.priority;
       if (updates.dueDate !== undefined)     payload.due_date = updates.dueDate || null;
+      if (updates.completedAt !== undefined) payload.completed_at = updates.completedAt;
 
       const { error } = await supabase
         .from('tasks')
@@ -101,14 +104,15 @@ export const tasksService = {
     requireUser(userId);
     try {
       const next = !currentCompleted;
+      const completedAt = next ? new Date().toISOString() : null;
       const { error } = await supabase
         .from('tasks')
-        .update({ completed: next })
+        .update({ completed: next, completed_at: completedAt })
         .eq('id', id)
         .eq('user_id', userId);
 
       if (error) throw error;
-      return { data: next, error: null };
+      return { data: next, completedAt, error: null };
     } catch (error) {
       console.error('[tasksService.toggleComplete]', error);
       return { data: null, error };

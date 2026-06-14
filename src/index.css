@@ -1157,7 +1157,25 @@ button[title="Sair do FocusList"]:hover {
   display: flex;
   align-items: center;
   gap: 12px;
+  cursor: pointer;
+  padding: 4px 10px;
+  margin-left: -10px;
+  border-radius: 99px;
+  transition: all 0.2s ease;
 }
+
+.app-top-profile:hover {
+  background-color: var(--border-medium);
+}
+
+.app-top-profile.active {
+  background-color: var(--primary-light);
+}
+
+.app-top-profile.active .app-top-greeting {
+  color: var(--primary);
+}
+
 
 .app-top-avatar {
   width: 38px;
@@ -1263,6 +1281,26 @@ button[title="Sair do FocusList"]:hover {
   font-family: var(--font-display);
   font-weight: 550;
 }
+
+@media (max-width: 600px) {
+  .app-bottom-nav {
+    width: 96%;
+    padding: 6px 4px;
+    bottom: 12px;
+  }
+  .app-bottom-nav-btn {
+    padding: 6px 6px;
+    gap: 1px;
+  }
+  .app-bottom-nav-btn .nav-text {
+    font-size: 8.5px;
+    font-weight: 500;
+  }
+  .app-bottom-nav-btn .nav-icon {
+    font-size: 18px;
+  }
+}
+
 
 /* HomeView Styles (Aura Foco Fluxo) */
 .home-view-container {

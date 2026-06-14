@@ -72,7 +72,7 @@ export default function FocusView() {
 
   const toggleTimer = () => {
     if (!isActive) {
-      logEvent('focus_timer_started', { mode, task_id: selectedTaskId });
+      logEvent('focus_started', { mode, task_id: selectedTaskId });
     } else {
       logEvent('focus_timer_paused', { mode, timeLeft });
     }
