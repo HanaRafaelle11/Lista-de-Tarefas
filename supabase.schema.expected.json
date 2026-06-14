@@ -1,0 +1,11 @@
+{
+  "tables": {
+    "profiles": ["id", "name", "nickname", "profession", "bio", "avatar_url"],
+    "events": ["id", "user_id", "event_type", "metadata", "created_at"],
+    "tasks": ["id", "user_id", "title", "completed", "completed_at"],
+    "schema_migrations": ["id", "version", "applied_at", "checksum"]
+  },
+  "storage": {
+    "avatars": true
+  }
+}

@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "predeploy": "node scripts/preDeployValidation.js",
+    "build": "npm run predeploy && vite build",
     "lint": "eslint .",
     "preview": "vite preview"
   },
