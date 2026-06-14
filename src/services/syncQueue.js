@@ -92,17 +92,115 @@ export function generateId() {
   });
 }
 
+// ─── Priorização de Sync (Sync Engine 2.0) ──────────────────────────────────
+const TYPE_PRIORITIES = {
+  profile_update: 1, // Prioridade máxima
+  task_create:    2, // Prioridade média
+  task_update:    2,
+  task_delete:    2,
+  event:          3  // Prioridade baixa (analytics/batch)
+};
+
+function getPriority(item) {
+  return TYPE_PRIORITIES[item.type] || 99;
+}
+
+// ─── Deduplicação Semântica (Sync Engine 2.0) ────────────────────────────────
+function optimizeQueue(queue) {
+  const optimized = [];
+  const taskOps = {}; // Agrupa operações por ID da tarefa
+
+  for (const item of queue) {
+    if (item.type === 'task_create') {
+      const taskId = item.payload.taskId || item.idempotency_key;
+      taskOps[taskId] = { create: item, updates: [], delete: null };
+    } else if (item.type === 'task_update') {
+      const taskId = item.payload.id;
+      if (taskOps[taskId]) {
+        taskOps[taskId].updates.push(item);
+      } else {
+        taskOps[taskId] = { create: null, updates: [item], delete: null };
+      }
+    } else if (item.type === 'task_delete') {
+      const taskId = item.payload.id;
+      if (taskOps[taskId]) {
+        taskOps[taskId].delete = item;
+      } else {
+        taskOps[taskId] = { create: null, updates: [], delete: item };
+      }
+    } else {
+      optimized.push(item);
+    }
+  }
+
+  // Resolve e otimiza transições de estado de tasks pendentes
+  for (const [taskId, ops] of Object.entries(taskOps)) {
+    // Caso 1: Criada e excluída offline sem nunca ir para o server
+    if (ops.create && ops.delete) {
+      console.log(`[syncQueue] Deduplicação Semântica: Task ${taskId} criada e deletada localmente offline. Cancelando ambas.`);
+      continue;
+    }
+
+    // Caso 2: Deletada offline (descarte atualizações locais e envie apenas o delete)
+    if (ops.delete) {
+      optimized.push(ops.delete);
+      continue;
+    }
+
+    // Caso 3: Criada offline e atualizada offline (mescla atualizações na criação)
+    if (ops.create) {
+      let mergedData = { ...ops.create.payload.taskData };
+      let lastUpdateAt = ops.create.payload.taskData.updated_at || ops.create.enqueuedAt;
+
+      for (const up of ops.updates) {
+        Object.assign(mergedData, up.payload.updates);
+        if (up.payload.updates && up.payload.updates.updated_at) {
+          lastUpdateAt = up.payload.updates.updated_at;
+        }
+      }
+
+      mergedData.updated_at = lastUpdateAt;
+      ops.create.payload.taskData = mergedData;
+      optimized.push(ops.create);
+      continue;
+    }
+
+    // Caso 4: Múltiplas atualizações offline (mantém um único update com propriedades mescladas)
+    if (ops.updates.length > 0) {
+      const firstUpdate = ops.updates[0];
+      let mergedUpdates = {};
+      let lastUpdateAt = firstUpdate.payload.updates.updated_at || firstUpdate.enqueuedAt;
+
+      for (const up of ops.updates) {
+        Object.assign(mergedUpdates, up.payload.updates);
+        if (up.payload.updates && up.payload.updates.updated_at) {
+          lastUpdateAt = up.payload.updates.updated_at;
+        }
+      }
+
+      mergedUpdates.updated_at = lastUpdateAt;
+      firstUpdate.payload.updates = mergedUpdates;
+      optimized.push(firstUpdate);
+    }
+  }
+
+  return optimized;
+}
+
 // ─── Persistência ────────────────────────────────────────────────────────────
 function readQueue() {
   return queueMemory;
 }
 
 function writeQueue(queue) {
-  queueMemory = queue;
-  // Sincroniza em background
+  // Executa otimização semântica antes de persistir
+  const optimized = optimizeQueue(queue);
+  queueMemory = optimized;
+
+  // Sincroniza em background com o localDB (IndexedDB)
   localDB.clear('pendingOps')
     .then(() => {
-      const items = queue.map(item => ({ ...item, id: item.idempotency_key }));
+      const items = optimized.map(item => ({ ...item, id: item.idempotency_key }));
       return localDB.putMany('pendingOps', items);
     })
     .catch(err => {
@@ -113,7 +211,6 @@ function writeQueue(queue) {
 // ─── Backoff ─────────────────────────────────────────────────────────────────
 function calcNextRetry(attempts) {
   const delay = Math.min(BASE_DELAY_MS * Math.pow(2, attempts), MAX_DELAY_MS);
-  // Jitter de ±20% para evitar thundering herd
   const jitter = delay * 0.2 * (Math.random() - 0.5);
   return Date.now() + delay + jitter;
 }
@@ -203,7 +300,7 @@ export function enqueue(type, payload, idempotencyKey) {
 
 /**
  * Tenta reenviar todos os itens prontos para retry.
- * Respeita exponential backoff: itens com nextRetryAt no futuro são ignorados.
+ * Respeita prioridades e exponential backoff.
  */
 export async function flush() {
   const queue = readQueue();
@@ -218,21 +315,44 @@ export async function flush() {
   const ready     = queue.filter(item => (item.nextRetryAt || 0) <= now);
   const notReady  = queue.filter(item => (item.nextRetryAt || 0) > now);
 
+  // Ordena por prioridade de entidade, e depois por data (FIFO)
+  ready.sort((a, b) => {
+    const prioA = getPriority(a);
+    const prioB = getPriority(b);
+    if (prioA !== prioB) return prioA - prioB;
+    return new Date(a.enqueuedAt) - new Date(b.enqueuedAt);
+  });
+
   const remaining = [...notReady];
-  let anySuccess  = false;
+  let consecutiveNetworkErrors = 0;
 
   for (const item of ready) {
+    // Se tivemos muitos erros de conexão em lote, suspendemos temporariamente os próximos da fila
+    if (consecutiveNetworkErrors >= 3) {
+      remaining.push({
+        ...item,
+        nextRetryAt: Date.now() + 60_000 // joga 1 minuto no futuro
+      });
+      continue;
+    }
+
     const ok = await trySend(item);
     if (ok) {
-      anySuccess = true;
-      // Item removido da fila (não vai para remaining)
+      consecutiveNetworkErrors = 0;
+      // Item removido com sucesso
     } else {
+      consecutiveNetworkErrors++;
       const attempts = (item.attempts || 0) + 1;
+      
+      // Backoff adaptativo: penaliza mais se a rede estiver visivelmente instável
+      const isNetworkIssue = !navigator.onLine;
+      const penaltyAttempts = isNetworkIssue ? attempts + 1 : attempts;
+
       if (attempts < MAX_ATTEMPTS) {
         remaining.push({
           ...item,
           attempts,
-          nextRetryAt: calcNextRetry(attempts),
+          nextRetryAt: calcNextRetry(penaltyAttempts),
         });
       } else {
         console.warn(`[syncQueue] Item descartado após ${MAX_ATTEMPTS} tentativas:`, item.type);
@@ -319,23 +439,76 @@ async function trySend(item) {
     if (type === 'task_update') {
       const { userId, id, updates } = payload;
 
-      // Resolução de Conflitos para Update
+      // Resolução de Conflitos Avançada Multi-camada (Sync Engine 2.0)
       try {
         const { data: serverTask } = await supabase
           .from('tasks')
-          .select('updated_at')
+          .select('*')
           .eq('id', id)
           .single();
 
         if (serverTask && serverTask.updated_at) {
           const serverTime = new Date(serverTask.updated_at).getTime();
           const localTime = new Date(updates.updated_at || item.enqueuedAt).getTime();
+          
           if (serverTime > localTime) {
-            console.log(`[syncQueue] Conflito em task_update para ${id}. Servidor possui versão mais recente (${serverTask.updated_at} > ${updates.updated_at || item.enqueuedAt}). Descartando local.`);
-            return true;
+            console.log(`[syncQueue] Conflito detectado para task ${id} (Server: ${serverTask.updated_at} > Local: ${updates.updated_at || item.enqueuedAt})`);
+            
+            const schemaMap = {
+              title:       'title',
+              description: 'description',
+              category:    'category',
+              priority:    'priority',
+              dueDate:     'due_date',
+              completed:   'completed',
+              completedAt: 'completed_at'
+            };
+
+            let hasCollisions = false;
+            let nonCollidingMerge = {};
+
+            for (const [localProp, dbCol] of Object.entries(schemaMap)) {
+              if (updates[localProp] !== undefined) {
+                // Regra 1: Se ambos modificaram o mesmo campo e diferem, servidor prevalece (Server Wins por campo)
+                if (updates[localProp] !== serverTask[dbCol]) {
+                  console.log(`[syncQueue] Regra 1 (Server Wins por campo) em "${localProp}": Servidor (${serverTask[dbCol]}) prevalece sobre Local (${updates[localProp]}).`);
+                  hasCollisions = true;
+                }
+              } else {
+                // Regra 2: Merge não colidente (campo não editado localmente recebe valor do servidor)
+                nonCollidingMerge[localProp] = serverTask[dbCol];
+              }
+            }
+
+            // Atualiza cache local com o merge não colidente
+            const localTask = await localDB.get('tasks', id);
+            if (localTask) {
+              const updatedLocalTask = {
+                ...localTask,
+                ...nonCollidingMerge,
+                // Regra 3 (Fallback): se houver colisão total ou conflito irresolvível, atualiza cache local inteiro com dados do servidor
+                title:       serverTask.title,
+                description: serverTask.description || '',
+                category:    serverTask.category,
+                priority:    serverTask.priority,
+                dueDate:     serverTask.due_date || '',
+                completed:   serverTask.completed,
+                createdAt:   serverTask.created_at,
+                completedAt: serverTask.completed_at || null,
+                updatedAt:   serverTask.updated_at
+              };
+              await localDB.put('tasks', updatedLocalTask);
+            }
+
+            if (hasCollisions) {
+              console.log(`[syncQueue] Colisão direta detectada para task ${id}. Descartando atualização local obsoleta.`);
+              return true; // Remove a operação obsoleta do cliente da fila
+            }
           }
         }
-      } catch {}
+      } catch (err) {
+        console.debug('[syncQueue] Erro ao resolver conflito de tasks:', err.message);
+      }
 
       const { error } = await supabase
         .from('tasks')
@@ -369,7 +542,7 @@ async function trySend(item) {
     if (type === 'profile_update') {
       const { userId, data } = payload;
       
-      // Resolução de Conflitos para Perfil
+      // Resolução de Conflitos para Perfil (Server Wins)
       try {
         const { data: serverProfile } = await supabase
           .from('profiles')
@@ -381,8 +554,8 @@ async function trySend(item) {
           const serverTime = new Date(serverProfile.updated_at).getTime();
           const localTime = new Date(data.updated_at || item.enqueuedAt).getTime();
           if (serverTime > localTime) {
-            console.log(`[syncQueue] Conflito em profile_update para ${userId}. Servidor possui versão mais recente.`);
-            return true;
+            console.log(`[syncQueue] Colisão em profile_update. Prevalece Server Wins.`);
+            return true; // Descarta alteração local obsoleta
           }
         }
       } catch {}

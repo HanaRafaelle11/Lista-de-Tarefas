@@ -19,6 +19,9 @@ import { subscribe as subscribeSync, initSyncQueue } from '../services/syncQueue
 import { initEventBatcher } from '../services/eventBatcher';
 import { generateInsights } from '../intelligence/productIntelligence';
 import { getEngagementSuggestions } from '../intelligence/retentionEngine';
+import { eventStore } from '../services/eventStore';
+import { stateEngine } from '../services/stateEngine';
+import { eventEmitter } from '../services/eventEmitter';
 
 // ─── Helpers para Metadados de Tarefas (Horário e Recorrência) ───────────────
 export function parseTaskMetadata(description = '') {
@@ -223,31 +226,54 @@ export function AppProvider({ children }) {
     return () => window.removeEventListener('storage', handleStorage);
   }, [theme]);
 
-  // ═══════════════════════════════════════════════════════════════════════════
+  // ── Re-hidratação de Estado por Event Sourcing (Fase 3.0) ──
+  const rehydrateUserState = useCallback(async (userId) => {
+    if (!userId) return null;
+    try {
+      const evs = await eventStore.getEventsForUser(userId);
+      const projected = stateEngine.computeUserState(evs);
+      setUserState(projected);
+      return projected;
+    } catch (err) {
+      console.warn('[AppContext] Erro ao re-hidratar estado:', err.message);
+      return null;
+    }
+  }, []);
+
   // LOGGER DE EVENTOS com session tracking
   // ═══════════════════════════════════════════════════════════════════════════
   const logEvent = useCallback(async (eventType, metadata = {}) => {
     if (!currentUser?.id) return;
-    await eventsService.logEvent(currentUser.id, eventType, metadata);
-  }, [currentUser?.id]);
+    try {
+      // 1. Salva localmente via Event Sourcing (e emite no barramento síncrono)
+      await eventStore.saveEvent(currentUser.id, eventType, metadata);
+
+      // 2. Envia ao batcher para sincronização eventual
+      await eventsService.logEvent(currentUser.id, eventType, metadata);
+
+      // 3. Atualiza estado projetado do usuário a partir dos eventos
+      await rehydrateUserState(currentUser.id);
+    } catch (e) {
+      console.warn('[AppContext.logEvent] Falha ao rastrear:', e.message);
+    }
+  }, [currentUser?.id, rehydrateUserState]);
 
   // Session tracking: emite session_started no login e session_ended no unload
   useEffect(() => {
     if (!currentUser?.id) return;
 
-    eventsService.logEvent(currentUser.id, 'session_started', {
+    logEvent('session_started', {
       ts: new Date().toISOString()
     });
 
     const handleUnload = () => {
-      // Usa sendBeacon para garantir envio mesmo no fechamento da aba
-      eventsService.logEvent(currentUser.id, 'session_ended', {
+      logEvent('session_ended', {
         ts: new Date().toISOString()
       });
     };
     window.addEventListener('beforeunload', handleUnload);
     return () => window.removeEventListener('beforeunload', handleUnload);
-  }, [currentUser?.id]);
+  }, [currentUser?.id, logEvent]);
 
   // ═══════════════════════════════════════════════════════════════════════════
   // SCORE DE CONSISTÊNCIA (Bloco 5)
@@ -393,6 +419,7 @@ export function AppProvider({ children }) {
             loadAchievements(u.id),
             loadHabits(u.id),
             loadProfile(u.id),
+            rehydrateUserState(u.id),
           ]).finally(() => setIsInitializing(false));
         } else {
           setIsInitializing(false);
@@ -412,6 +439,7 @@ export function AppProvider({ children }) {
         loadAchievements(u.id);
         loadHabits(u.id);
         loadProfile(u.id);
+        rehydrateUserState(u.id);
       } else {
         setCurrentUser(null);
         setUserProfile(null);
@@ -422,7 +450,7 @@ export function AppProvider({ children }) {
     });
 
     return () => subscription.unsubscribe();
-  }, [loadTasks, loadGoals, loadAchievements, loadHabits, loadProfile, runSilentHealthCheck]);
+  }, [loadTasks, loadGoals, loadAchievements, loadHabits, loadProfile, runSilentHealthCheck, rehydrateUserState]);
 
   // ═══════════════════════════════════════════════════════════════════════════
   // CONQUISTAS — detecção automática
@@ -474,9 +502,10 @@ export function AppProvider({ children }) {
       loadAchievements(user.id),
       loadHabits(user.id),
       loadProfile(user.id),
+      rehydrateUserState(user.id)
     ]);
     setActiveTab('home');
-  }, [loadTasks, loadGoals, loadAchievements, loadHabits, loadProfile]);
+  }, [loadTasks, loadGoals, loadAchievements, loadHabits, loadProfile, rehydrateUserState]);
 
   const handleLogout = useCallback(async () => {
     try {
@@ -510,11 +539,11 @@ export function AppProvider({ children }) {
           onboarding_completed: true
         }
       }));
-      eventsService.logEvent(currentUser.id, 'onboarding_completed');
+      logEvent('onboarding_completed');
     } catch (e) {
       console.error('Erro ao marcar onboarding como concluído:', e);
     }
-  }, [currentUser]);
+  }, [currentUser, logEvent]);
 
   // ═══════════════════════════════════════════════════════════════════════════
   // TASKS CRUD
@@ -524,18 +553,18 @@ export function AppProvider({ children }) {
     const { data } = await tasksService.create(currentUser.id, taskData);
     if (data) {
       setTasks((prev) => [data, ...prev]);
-      eventsService.logEvent(currentUser.id, 'task_created', { title: taskData.title });
+      logEvent('task_created', { taskId: data.id, title: taskData.title });
     }
-  }, [currentUser?.id]);
+  }, [currentUser?.id, logEvent]);
 
   const handleUpdateTask = useCallback(async (id, updatedData) => {
     if (!currentUser?.id) return;
     const { error } = await tasksService.update(currentUser.id, id, updatedData);
     if (!error) {
       setTasks((prev) => prev.map((t) => t.id === id ? { ...t, ...updatedData } : t));
-      eventsService.logEvent(currentUser.id, 'task_updated', { task_id: id });
+      logEvent('task_updated', { task_id: id });
     }
-  }, [currentUser?.id]);
+  }, [currentUser?.id, logEvent]);
 
   const handleDeleteTask = useCallback(async (id) => {
     if (!currentUser?.id) return;
@@ -544,9 +573,9 @@ export function AppProvider({ children }) {
     if (!error) {
       setTasks((prev) => prev.filter((t) => t.id !== id));
       setGoalTasks((prev) => prev.filter((gt) => gt.task_id !== id));
-      eventsService.logEvent(currentUser.id, 'task_deleted', { task_id: id });
+      logEvent('task_deleted', { task_id: id });
     }
-  }, [currentUser?.id]);
+  }, [currentUser?.id, logEvent]);
 
   const handleToggleComplete = useCallback(async (id) => {
     if (!currentUser?.id) return;
@@ -557,13 +586,13 @@ export function AppProvider({ children }) {
       setTasks((prev) => prev.map((t) => t.id === id ? { ...t, completed: next, completedAt } : t));
 
       if (next) {
-        eventsService.logEvent(currentUser.id, 'task_completed', { task_id: id });
+        logEvent('task_completed', { taskId: id });
 
         // ─ Detecta first_success_action (emit apenas uma vez por usuário) ─
         const alreadyHadSuccess = tasks.some(t => t.id !== id && t.completed);
         if (!alreadyHadSuccess && !firstSuccessLogged.current) {
           firstSuccessLogged.current = true;
-          eventsService.logEvent(currentUser.id, 'first_success_action', {
+          logEvent('first_success_action', {
             task_id: id,
             task_title: task.title,
             ts: new Date().toISOString(),
@@ -584,39 +613,39 @@ export function AppProvider({ children }) {
           const { data: createdTask } = await tasksService.create(currentUser.id, nextTask);
           if (createdTask) {
             setTasks((prev) => [createdTask, ...prev]);
-            eventsService.logEvent(currentUser.id, 'task_created', { title: nextTask.title, recurrence_parent: id });
+            logEvent('task_created', { title: nextTask.title, recurrence_parent: id });
           }
         }
       }
     }
-  }, [currentUser?.id, tasks]);
+  }, [currentUser?.id, tasks, logEvent]);
 
   const handleUpdateProfile = useCallback(async (profileData) => {
     if (!currentUser?.id) return;
     const { data } = await profilesService.updateProfile(currentUser.id, profileData);
     if (data) {
       setUserProfile(data);
-      eventsService.logEvent(currentUser.id, 'profile_updated');
+      logEvent('profile_updated');
     }
-  }, [currentUser?.id]);
+  }, [currentUser?.id, logEvent]);
 
   const handleUploadAvatar = useCallback(async (file) => {
     if (!currentUser?.id) return;
     const { publicUrl } = await profilesService.uploadAvatar(currentUser.id, file);
     if (publicUrl) {
       setUserProfile(prev => ({ ...prev, avatar_url: publicUrl }));
-      eventsService.logEvent(currentUser.id, 'profile_updated', { avatar: true });
+      logEvent('profile_updated', { avatar: true });
     }
-  }, [currentUser?.id]);
+  }, [currentUser?.id, logEvent]);
 
   const handleDeleteAvatar = useCallback(async () => {
     if (!currentUser?.id) return;
     const { error } = await profilesService.deleteAvatar(currentUser.id);
     if (!error) {
       setUserProfile(prev => ({ ...prev, avatar_url: '' }));
-      eventsService.logEvent(currentUser.id, 'profile_updated', { avatar: false });
+      logEvent('profile_updated', { avatar: false });
     }
-  }, [currentUser?.id]);
+  }, [currentUser?.id, logEvent]);
 
   // ═══════════════════════════════════════════════════════════════════════════
   // GOALS CRUD
@@ -626,18 +655,18 @@ export function AppProvider({ children }) {
     const { data } = await goalsService.create(currentUser.id, goalData);
     if (data) {
       setGoals((prev) => [data, ...prev]);
-      eventsService.logEvent(currentUser.id, 'goal_created', { title: goalData.title });
+      logEvent('goal_created', { title: goalData.title });
     }
-  }, [currentUser?.id]);
+  }, [currentUser?.id, logEvent]);
 
   const handleUpdateGoal = useCallback(async (id, updatedData) => {
     if (!currentUser?.id) return;
     const { data: payload } = await goalsService.update(currentUser.id, id, updatedData);
     if (payload) {
       setGoals((prev) => prev.map((g) => g.id === id ? { ...g, ...payload } : g));
-      eventsService.logEvent(currentUser.id, 'goal_updated', { goal_id: id });
+      logEvent('goal_updated', { goal_id: id });
     }
-  }, [currentUser?.id]);
+  }, [currentUser?.id, logEvent]);
 
   const handleDeleteGoal = useCallback(async (id) => {
     if (!currentUser?.id) return;
@@ -646,26 +675,26 @@ export function AppProvider({ children }) {
     if (!error) {
       setGoals((prev) => prev.filter((g) => g.id !== id));
       setGoalTasks((prev) => prev.filter((gt) => gt.goal_id !== id));
-      eventsService.logEvent(currentUser.id, 'goal_deleted', { goal_id: id });
+      logEvent('goal_deleted', { goal_id: id });
     }
-  }, [currentUser?.id]);
+  }, [currentUser?.id, logEvent]);
 
   const handleLinkTask = useCallback(async (goalId, taskId) => {
     if (goalTasks.some((gt) => gt.goal_id === goalId && gt.task_id === taskId)) return;
     const { error } = await goalsService.linkTask(goalId, taskId);
     if (!error) {
       setGoalTasks((prev) => [...prev, { goal_id: goalId, task_id: taskId }]);
-      eventsService.logEvent(currentUser.id, 'task_linked_to_goal', { goal_id: goalId, task_id: taskId });
+      logEvent('task_linked_to_goal', { goal_id: goalId, task_id: taskId });
     }
-  }, [goalTasks, currentUser?.id]);
+  }, [goalTasks, currentUser?.id, logEvent]);
 
   const handleUnlinkTask = useCallback(async (goalId, taskId) => {
     const { error } = await goalsService.unlinkTask(goalId, taskId);
     if (!error) {
       setGoalTasks((prev) => prev.filter((gt) => !(gt.goal_id === goalId && gt.task_id === taskId)));
-      eventsService.logEvent(currentUser.id, 'task_unlinked_from_goal', { goal_id: goalId, task_id: taskId });
+      logEvent('task_unlinked_from_goal', { goal_id: goalId, task_id: taskId });
     }
-  }, [currentUser?.id]);
+  }, [currentUser?.id, logEvent]);
 
   // ═══════════════════════════════════════════════════════════════════════════
   // CATEGORIAS CRUD (Bloco 4)
@@ -674,7 +703,6 @@ export function AppProvider({ children }) {
     if (!currentUser?.id) return;
     const currentCustom = currentUser.user_metadata?.custom_categories || [];
     
-    // Evita duplicados em default ou customizado
     if (currentCustom.some(c => c.id.toLowerCase() === newCat.id.toLowerCase()) || 
         defaultCategories.some(c => c.id.toLowerCase() === newCat.id.toLowerCase())) {
       alert('Essa categoria já existe.');
@@ -690,11 +718,11 @@ export function AppProvider({ children }) {
         ...prev,
         user_metadata: { ...prev.user_metadata, custom_categories: updatedCustom }
       }));
-      eventsService.logEvent(currentUser.id, 'category_created', { category: newCat.name });
+      logEvent('category_created', { category: newCat.name });
     } catch (e) {
       console.error('Erro ao adicionar categoria:', e);
     }
-  }, [currentUser]);
+  }, [currentUser, logEvent]);
 
   const handleUpdateCategory = useCallback(async (id, name, emoji, color) => {
     if (!currentUser?.id) return;
@@ -709,11 +737,11 @@ export function AppProvider({ children }) {
         ...prev,
         user_metadata: { ...prev.user_metadata, custom_categories: updatedCustom }
       }));
-      eventsService.logEvent(currentUser.id, 'category_updated', { category: name });
+      logEvent('category_updated', { category: name });
     } catch (e) {
       console.error('Erro ao atualizar categoria:', e);
     }
-  }, [currentUser]);
+  }, [currentUser, logEvent]);
 
   const handleDeleteCategory = useCallback(async (id) => {
     if (!currentUser?.id) return;
@@ -728,11 +756,11 @@ export function AppProvider({ children }) {
         ...prev,
         user_metadata: { ...prev.user_metadata, custom_categories: updatedCustom }
       }));
-      eventsService.logEvent(currentUser.id, 'category_deleted', { category_id: id });
+      logEvent('category_deleted', { category_id: id });
     } catch (e) {
       console.error('Erro ao excluir categoria:', e);
     }
-  }, [currentUser]);
+  }, [currentUser, logEvent]);
 
   // ═══════════════════════════════════════════════════════════════════════════
   // SIMULADOR DE UPGRADE PRO (Bloco 6)
@@ -749,11 +777,11 @@ export function AppProvider({ children }) {
         ...prev,
         user_metadata: { ...prev.user_metadata, is_pro: nextPro }
       }));
-      eventsService.logEvent(currentUser.id, nextPro ? 'upgrade_clicked' : 'downgrade_clicked');
+      logEvent(nextPro ? 'upgrade_clicked' : 'downgrade_clicked');
     } catch (e) {
       console.error('Erro ao mudar assinatura:', e);
     }
-  }, [currentUser, isPro]);
+  }, [currentUser, isPro, logEvent]);
 
   // ═══════════════════════════════════════════════════════════════════════════
   // HABITS — interface compatível com useHabits anterior
@@ -767,29 +795,29 @@ export function AppProvider({ children }) {
       const { data } = await habitsService.create(currentUser.id, habitData);
       if (data) {
         setHabits((prev) => [data, ...prev]);
-        eventsService.logEvent(currentUser.id, 'habit_created', { title: habitData.title });
+        logEvent('habit_created', { title: habitData.title });
       }
       return data;
-    }, [currentUser?.id]),
+    }, [currentUser?.id, logEvent]),
     updateHabit: useCallback(async (id, updates) => {
       if (!currentUser?.id) return null;
       const { data } = await habitsService.update(currentUser.id, id, updates);
       if (data) {
         setHabits((prev) => prev.map((h) => h.id === id ? data : h));
-        eventsService.logEvent(currentUser.id, 'habit_updated', { habit_id: id });
+        logEvent('habit_updated', { habit_id: id });
       }
       return data;
-    }, [currentUser?.id]),
+    }, [currentUser?.id, logEvent]),
     deleteHabit: useCallback(async (id) => {
       if (!currentUser?.id) return false;
       const { error } = await habitsService.delete(currentUser.id, id);
       if (!error) {
         setHabits((prev) => prev.filter((h) => h.id !== id));
         setHabitLogs((prev) => prev.filter((l) => l.habit_id !== id));
-        eventsService.logEvent(currentUser.id, 'habit_deleted', { habit_id: id });
+        logEvent('habit_deleted', { habit_id: id });
       }
       return !error;
-    }, [currentUser?.id]),
+    }, [currentUser?.id, logEvent]),
     toggleHabitLog: useCallback(async (habitId, dateStr) => {
       if (!currentUser?.id) return false;
       const existing = habitLogs.find((l) => l.habit_id === habitId && l.completed_date === dateStr);
@@ -800,26 +828,30 @@ export function AppProvider({ children }) {
         setHabitLogs((prev) => prev.filter((l) => l.id !== existing.id));
       } else if (checked === true && logData) {
         setHabitLogs((prev) => [...prev, logData]);
-        eventsService.logEvent(currentUser.id, 'habit_completed', { habit_id: habitId, date: dateStr });
+        logEvent('habit_completed', { habit_id: habitId, date: dateStr });
       }
       return checked ?? false;
-    }, [currentUser?.id, habitLogs]),
+    }, [currentUser?.id, habitLogs, logEvent]),
   };
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // USER STATE INTELLIGENCE — derivado automaticamente
+  // USER STATE INTELLIGENCE — Re-hidratação baseada em eventos (Event Sourcing)
   // ═══════════════════════════════════════════════════════════════════════════
   useEffect(() => {
     if (!currentUser?.id) return;
-    // Busca eventos do Supabase e deriva o estado do usuário de forma assíncrona
-    import('../services/userStateService').then(({ computeUserState }) => {
-      computeUserState(currentUser.id).then(state => {
-        if (state) setUserState(state);
-        // Inicializa o flag de first_success se já tiver concluído antes
+
+    rehydrateUserState(currentUser.id).then((state) => {
+      if (state?.has_first_success) firstSuccessLogged.current = true;
+    });
+
+    const unsub = eventEmitter.on('*', () => {
+      rehydrateUserState(currentUser.id).then((state) => {
         if (state?.has_first_success) firstSuccessLogged.current = true;
       });
     });
-  }, [currentUser?.id]);
+
+    return unsub;
+  }, [currentUser?.id, rehydrateUserState]);
 
   // ═══════════════════════════════════════════════════════════════════════════
   // CONTEXT VALUE

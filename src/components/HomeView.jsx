@@ -298,11 +298,12 @@ function GoalProgressRow({ goal, linkedTasks }) {
                   <button 
                     onClick={() => {
                       if (sug.actionTab) setActiveTab(sug.actionTab);
-                      if (sug.id === 'onboarding_loop') {
+                      if (sug.id === 'onboarding_guided_loop' || sug.id === 'onboarding_loop') {
                         // Inicia onboarding se clicado
                         localStorage.setItem('flowday_onboarding_started', 'true');
                         localStorage.setItem('flowday_onboarding_step', '1');
-                        window.location.reload(); // recarrega para pegar o state
+                        setOnboardingStep(1);
+                        logEvent('onboarding_started');
                       }
                     }} 
                     className="btn-primary-glow"

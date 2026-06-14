@@ -1,74 +1,78 @@
 /**
- * retentionEngine.js — Gatilhos de engajamento e loops de retorno
+ * retentionEngine.js — Gatilhos de engajamento e loops de retorno (v2.0)
  *
- * Gera sugestões contextuais na UI para reter o usuário baseando-se
- * no seu progresso de onboarding, streak atual e estado comportamental.
+ * Gera sugestões ativas baseadas no ciclo de vida e no comportamento do usuário
+ * para fechar o loop de retenção e motivar ações rápidas na UI.
  */
 
 export function getEngagementSuggestions(userState = {}, tasks = [], onboardingCompleted = false) {
   const suggestions = [];
-
-  // 1. Loop de onboarding (Novos usuários)
-  if (!onboardingCompleted) {
-    suggestions.push({
-      id: 'onboarding_loop',
-      type: 'onboarding',
-      title: '🌱 Complete seu Onboarding',
-      message: 'Aprenda a configurar seus primeiros hábitos e objetivos para extrair o máximo do Flowday.',
-      ctaText: 'Ir para Onboarding',
-      actionTab: 'home' // UI abre widget de onboarding
-    });
-  }
-
-  // 2. Loop de estagnação (Sem vitória recente)
   const pending = tasks.filter(t => !t.completed);
   const completed = tasks.filter(t => t.completed);
-  
-  if (completed.length === 0 && pending.length > 0) {
+
+  // 1. Loop para Usuários em Risco ('at_risk' ou 'churned' recente)
+  if (userState.stage === 'at_risk' || userState.stage === 'churned') {
+    // Retenção ativa: simplificar a vida do usuário para reengajá-lo
     suggestions.push({
-      id: 'first_win_loop',
-      type: 'action',
-      title: '🎯 Sua primeira vitória',
-      message: 'Escolha uma tarefa simples da sua lista hoje e marque como concluída para dar o primeiro passo!',
-      ctaText: 'Ver tarefas',
-      actionTab: 'tasks'
+      id: 'churn_reengage_loop',
+      type: 'reengage',
+      title: '🎯 Simplifique seu dia',
+      message: 'Notamos que você está afastado. Que tal criar ou concluir uma única tarefa rápida hoje para reativar seu ritmo?',
+      ctaText: 'Retomar Foco ⚡',
+      actionTab: 'tasks',
+      autoTrigger: 'focus_simplification'
     });
   }
 
-  // 3. Loop de hábitos (Usuários que ativaram mas não têm hábitos estruturados)
-  if (userState.stage === 'activated' || (completed.length >= 3 && userState.stage === 'new')) {
-    // Sugere criar um hábito para manter consistência diária
+  // 2. Loop de Onboarding (Usuários novos)
+  if (!onboardingCompleted || userState.stage === 'new') {
+    const step = userState.onboarding_step || 1;
     suggestions.push({
-      id: 'habit_loop',
-      type: 'guide',
-      title: '🔥 Construa Consistência',
-      message: 'Tarefas avulsas funcionam, mas automatizar rotinas com Hábitos é o que gera mudança de longo prazo.',
-      ctaText: 'Criar um Hábito',
+      id: 'onboarding_guided_loop',
+      type: 'onboarding',
+      title: `🌱 Jornada Flowday (Passo ${step})`,
+      message: step === 1 
+        ? 'Defina seu primeiro grande Objetivo para conectar suas tarefas a metas maiores.'
+        : 'Crie suas primeiras tarefas de foco diário para iniciar sua rotina.',
+      ctaText: 'Continuar Guia 🚀',
+      actionTab: step === 1 ? 'goals' : 'tasks',
+      autoTrigger: 'open_onboarding_helper'
+    });
+  }
+
+  // 3. Loop de Hábitos (Usuários ativados que precisam consistência)
+  if (userState.stage === 'activated' && completed.length >= 3) {
+    suggestions.push({
+      id: 'habit_reinforcement_loop',
+      type: 'habit',
+      title: '🔥 Automatize sua Rotina',
+      message: 'Você já concluiu tarefas importantes! Oficialize suas rotinas como Hábitos para rastreamento contínuo.',
+      ctaText: 'Configurar Hábito',
       actionTab: 'habits'
     });
   }
 
-  // 4. Loop de objetivos (Usuários engajados sem objetivos ativos)
-  if (userState.stage === 'engaged' && tasks.length >= 10) {
+  // 4. Loop de Engajamento Alto (Reforço positivo para streaks ativos)
+  if (userState.stage === 'engaged') {
     suggestions.push({
-      id: 'goal_loop',
-      type: 'guide',
-      title: '🏆 Defina um Grande Objetivo',
-      message: 'Conecte suas tarefas diárias a metas maiores. Crie um Objetivo e vincule tarefas a ele.',
-      ctaText: 'Definir Objetivo',
-      actionTab: 'goals'
+      id: 'engagement_streak_loop',
+      type: 'celebrate',
+      title: '👑 Produtividade em Alta!',
+      message: 'Seu foco está incrível nesta semana. Proteja seu tempo livre hoje para recarregar as energias.',
+      ctaText: 'Ver Conquistas 🏆',
+      actionTab: 'analytics'
     });
   }
 
-  // 5. Card de reforço positivo para streaks ativos
-  if (userState.days_since_active === 0 && completed.length >= 2) {
+  // 5. Loop de Estagnação (Muitas pendentes acumuladas)
+  if (pending.length >= 7 && completed.length <= 1) {
     suggestions.push({
-      id: 'streak_celebrate',
-      type: 'celebrate',
-      title: '⚡ Sequência Ativa!',
-      message: 'Você está no fluxo de produtividade hoje. Mantenha o ritmo e evite sobrecarregar o seu dia.',
-      ctaText: null,
-      actionTab: null
+      id: 'stagnation_loop',
+      type: 'action',
+      title: '⚖️ Alivie sua carga',
+      message: 'Você tem muitas tarefas acumuladas. Que tal adiar as menos importantes e focar em apenas uma?',
+      ctaText: 'Organizar Tarefas',
+      actionTab: 'tasks'
     });
   }
 

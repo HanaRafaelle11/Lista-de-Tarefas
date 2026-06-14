@@ -1,83 +1,153 @@
 /**
- * productIntelligence.js — Análise comportamental e insights
+ * productIntelligence.js — Motor de Inteligência de Produto (Preditivo)
  *
- * Analisa o histórico de tarefas e eventos locais/remotos do usuário
- * para gerar dicas personalizadas, alertar sobre comportamentos
- * de procrastinação e parabenizar sequências ativas de produtividade.
+ * Analisa logs de eventos e tarefas para extrair insights preditivos:
+ * - Churn Risk (Probabilidade do usuário abandonar o app/fluxo)
+ * - Hábitos Emergentes (Sugere transformar tarefas recorrentes em Hábitos estruturados)
+ * - Padrões temporais de conclusão (Dias/períodos de maior sucesso)
  */
 
 export function generateInsights(tasks = [], events = []) {
   const insights = [];
+
   if (tasks.length === 0) {
-    insights.push({
-      type: 'tip',
-      emoji: '💡',
-      message: 'Comece criando a sua primeira tarefa! Dividir metas grandes em pequenos passos é o segredo do foco.'
-    });
-    return insights;
+    return [{
+      type: 'suggestion',
+      emoji: '🌱',
+      confidence: 1.0,
+      message: 'Crie sua primeira tarefa! Dividir metas grandes em pequenos passos é a chave da produtividade consistente.',
+      action: 'tasks'
+    }];
   }
 
   const completed = tasks.filter(t => t.completed);
   const pending = tasks.filter(t => !t.completed);
-  const completionRate = tasks.length > 0 ? (completed.length / tasks.length) : 0;
+  const now = Date.now();
 
-  // Insight 1: Acúmulo de tarefas pendentes vs concluídas (Procrastinação/Stagnation)
-  if (pending.length > 8 && completionRate < 0.3) {
+  // ─── 1. Detecção de Churn Preditivo (Risco de Inatividade) ───────────────────
+  // Verifica o tempo desde a última conclusão de tarefa
+  let lastCompletedTime = 0;
+  completed.forEach(t => {
+    const time = new Date(t.completedAt || t.dueDate || t.createdAt).getTime();
+    if (time > lastCompletedTime) lastCompletedTime = time;
+  });
+
+  const daysSinceLastCompletion = lastCompletedTime > 0 
+    ? (now - lastCompletedTime) / (1000 * 60 * 60 * 24) 
+    : Infinity;
+
+  // Se o usuário tem tarefas criadas, mas não conclui nada há mais de 4 dias
+  if (daysSinceLastCompletion > 4 && daysSinceLastCompletion !== Infinity && pending.length > 0) {
+    const confidence = Math.min(0.5 + (daysSinceLastCompletion * 0.08), 0.95);
     insights.push({
-      type: 'pattern',
-      emoji: '📊',
-      message: `Você acumulou ${pending.length} tarefas pendentes com apenas ${Math.round(completionRate * 100)}% de conclusão. Que tal arquivar ou priorizar apenas 3 tarefas hoje?`
+      type: 'risk',
+      emoji: '⚠️',
+      confidence,
+      message: `Detectamos uma quebra de fluxo nos últimos ${Math.floor(daysSinceLastCompletion)} dias. Risco de perda de consistência detectado. Que tal concluir uma tarefa de 2 minutos agora?`,
+      action: 'tasks'
     });
   }
 
-  // Insight 2: Taxa de conclusão excelente
-  if (tasks.length >= 5 && completionRate >= 0.75) {
+  // ─── 2. Detecção de Hábitos Emergentes (Tarefa recorrente não-oficializada) ──
+  // Agrupa tarefas concluídas por título (ignora maiúsculas/minúsculas e limpa espaços)
+  const titleCounts = {};
+  completed.forEach(t => {
+    const key = t.title.toLowerCase().trim();
+    if (key.length > 3) {
+      titleCounts[key] = (titleCounts[key] || 0) + 1;
+    }
+  });
+
+  let emergenteTitle = null;
+  let emergenteCount = 0;
+  for (const [title, count] of Object.entries(titleCounts)) {
+    if (count >= 3 && count > emergenteCount) {
+      emergenteCount = count;
+      emergenteTitle = title;
+    }
+  }
+
+  if (emergenteTitle) {
     insights.push({
-      type: 'celebrate',
-      emoji: '⭐',
-      message: `Incrível! Sua taxa de conclusão está em ${Math.round(completionRate * 100)}%. Você está mandando super bem no foco semanal.`
+      type: 'habit',
+      emoji: '🔥',
+      confidence: 0.90,
+      message: `Você completou a tarefa "${emergenteTitle}" ${emergenteCount} vezes recentemente. Que tal transformá-la em um Hábito diário oficial para ganhar mais pontos?`,
+      action: 'habits'
     });
   }
 
-  // Insight 3: Análise de categoria de maior sucesso
-  const categoryStats = {};
-  for (const t of completed) {
+  // ─── 3. Análise de Correlação Temporal (Melhor período de foco) ─────────────
+  // Analisa o horário de criação/conclusão de tarefas se disponível
+  let morningCompleted = 0;
+  let afternoonCompleted = 0;
+  let nightCompleted = 0;
+
+  completed.forEach(t => {
+    if (!t.completedAt) return;
+    const hour = new Date(t.completedAt).getHours();
+    if (hour >= 5 && hour < 12) morningCompleted++;
+    else if (hour >= 12 && hour < 18) afternoonCompleted++;
+    else nightCompleted++;
+  });
+
+  const totalHourStats = morningCompleted + afternoonCompleted + nightCompleted;
+  if (totalHourStats >= 4) {
+    let bestPeriod = '';
+    let bestCount = 0;
+    if (morningCompleted > bestCount) { bestCount = morningCompleted; bestPeriod = 'Manhã'; }
+    if (afternoonCompleted > bestCount) { bestCount = afternoonCompleted; bestPeriod = 'Tarde'; }
+    if (nightCompleted > bestCount) { bestCount = nightCompleted; bestPeriod = 'Noite'; }
+
+    const confidence = Math.round((bestCount / totalHourStats) * 100) / 100;
+    if (confidence >= 0.5) {
+      insights.push({
+        type: 'achievement',
+        emoji: '⚡',
+        confidence,
+        message: `Foco Máximo: Você é mais produtivo no período da ${bestPeriod} (${Math.round(confidence * 100)}% das suas conclusões). Agende suas tarefas difíceis para este horário!`
+      });
+    }
+  }
+
+  // ─── 4. Padrões de consistência por Categoria ───────────────────────────────
+  const catTotal = {};
+  const catDone = {};
+  tasks.forEach(t => {
     if (t.category) {
-      categoryStats[t.category] = (categoryStats[t.category] || 0) + 1;
+      catTotal[t.category] = (catTotal[t.category] || 0) + 1;
+      if (t.completed) {
+        catDone[t.category] = (catDone[t.category] || 0) + 1;
+      }
+    }
+  });
+
+  let bestCat = null;
+  let bestPct = 0;
+  for (const cat of Object.keys(catTotal)) {
+    const pct = catDone[cat] / catTotal[cat];
+    if (pct > bestPct && catTotal[cat] >= 3) {
+      bestPct = pct;
+      bestCat = cat;
     }
   }
-  let bestCategory = null;
-  let bestCount = 0;
-  for (const [cat, count] of Object.entries(categoryStats)) {
-    if (count > bestCount) {
-      bestCount = count;
-      bestCategory = cat;
-    }
-  }
-  if (bestCategory && bestCount >= 3) {
+
+  if (bestCat && bestPct >= 0.75) {
     insights.push({
-      type: 'tip',
-      emoji: '🏷️',
-      message: `Você é muito produtivo na categoria "${bestCategory}" (${bestCount} tarefas concluídas). Use isso a seu favor!`
+      type: 'achievement',
+      emoji: '🏆',
+      confidence: bestPct,
+      message: `Alta Performance na categoria "${bestCat}": você conclui ${Math.round(bestPct * 100)}% das tarefas propostas. Excelente trabalho!`
     });
   }
 
-  // Insight 4: Tarefas sem data de entrega
-  const noDueDate = pending.filter(t => !t.dueDate);
-  if (noDueDate.length >= 5) {
-    insights.push({
-      type: 'tip',
-      emoji: '📅',
-      message: `Você tem ${noDueDate.length} tarefas sem prazo definido. Definir prazos curtos ativa o cérebro e reduz a procrastinação.`
-    });
-  }
-
-  // Fallback se nenhum insight avançado foi ativado
+  // Fallback se nenhum insight avançado foi gerado
   if (insights.length === 0) {
     insights.push({
-      type: 'tip',
+      type: 'suggestion',
       emoji: '💡',
-      message: 'Revise suas tarefas diariamente pelas manhãs para definir o seu foco do dia antes de iniciar as atividades.'
+      confidence: 0.60,
+      message: 'Organizar suas tarefas por prioridade (Alta, Média, Baixa) ajuda a reduzir a fadiga de decisão no início do dia.'
     });
   }
 
