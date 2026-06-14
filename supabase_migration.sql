@@ -129,3 +129,26 @@ CREATE POLICY "Allow owner delete of avatars"
 ON storage.objects FOR DELETE 
 TO authenticated 
 USING (bucket_id = 'avatars' AND (storage.foldername(name))[1] = auth.uid()::text);
+
+-- 6. Tabela de Migrações de Schema (Fase 2)
+CREATE TABLE IF NOT EXISTS public.schema_migrations (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  version TEXT UNIQUE NOT NULL,
+  applied_at TIMESTAMPTZ DEFAULT now(),
+  checksum TEXT NOT NULL
+);
+
+-- Habilitar RLS em schema_migrations
+ALTER TABLE public.schema_migrations ENABLE ROW LEVEL SECURITY;
+
+-- Políticas RLS para schema_migrations
+DROP POLICY IF EXISTS "Allow public read of migrations" ON public.schema_migrations;
+CREATE POLICY "Allow public read of migrations" 
+ON public.schema_migrations FOR SELECT 
+TO authenticated, anon 
+USING (true);
+
+-- Registrar a migração atual
+INSERT INTO public.schema_migrations (version, checksum) 
+VALUES ('20260614_fase2', 'fase2_checksum_placeholder')
+ON CONFLICT (version) DO NOTHING;
