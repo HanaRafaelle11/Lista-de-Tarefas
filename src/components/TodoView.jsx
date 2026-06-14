@@ -363,19 +363,21 @@ export default function TodoView() {
   }, [baseFiltered]);
 
   const handleMoveKanban = (task, nextCol) => {
-    if (nextCol === 'completed') {
-      if (!task.completed) {
-        onToggleComplete(task.id);
-      }
-    } else {
-      if (task.completed) {
-        onToggleComplete(task.id);
-      }
-      const meta = parseTaskMetadata(task.description);
-      const updatedMeta = { ...meta, kanban_status: nextCol };
-      const nextDesc = `${formatDescriptionWithoutMetadata(task.description)}\n\n--flowday-meta--\n${JSON.stringify(updatedMeta)}`;
-      onUpdateTask(task.id, { description: nextDesc });
+    const isCompleted = nextCol === 'completed';
+    const wasCompleted = task.completed;
+    
+    const meta = parseTaskMetadata(task.description);
+    const updatedMeta = { ...meta, kanban_status: nextCol };
+    const nextDesc = `${formatDescriptionWithoutMetadata(task.description)}\n\n--flowday-meta--\n${JSON.stringify(updatedMeta)}`;
+    
+    // We update description and completed status in a single pass
+    const updates = { description: nextDesc };
+    if (isCompleted !== wasCompleted) {
+      updates.completed = isCompleted;
+      updates.completedAt = isCompleted ? new Date().toISOString() : null;
     }
+    
+    onUpdateTask(task.id, updates);
   };
 
   const handleDragOver = (e) => {

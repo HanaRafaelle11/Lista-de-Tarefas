@@ -44,8 +44,9 @@ export function formatDescriptionWithoutMetadata(description = '') {
 
 export function buildDescriptionWithMetadata(userDesc = '', due_time = '', recurrence = 'nenhuma') {
   const cleanDesc = formatDescriptionWithoutMetadata(userDesc);
+  const existingMeta = parseTaskMetadata(userDesc);
   const marker = '--flowday-meta--';
-  const meta = { due_time, recurrence };
+  const meta = { ...existingMeta, due_time, recurrence };
   return `${cleanDesc}\n\n${marker}\n${JSON.stringify(meta)}`;
 }
 
@@ -563,8 +564,18 @@ export function AppProvider({ children }) {
     if (!error) {
       setTasks((prev) => prev.map((t) => t.id === id ? { ...t, ...updatedData } : t));
       logEvent('task_updated', { task_id: id });
+      
+      // If completed was changed to true, log completion
+      if (updatedData.completed === true) {
+        logEvent('task_completed', { taskId: id });
+        const alreadyHadSuccess = tasks.some(t => t.id !== id && t.completed);
+        if (!alreadyHadSuccess && !firstSuccessLogged.current) {
+          firstSuccessLogged.current = true;
+          logEvent('first_success_action', { task_id: id });
+        }
+      }
     }
-  }, [currentUser?.id, logEvent]);
+  }, [currentUser?.id, logEvent, tasks]);
 
   const handleDeleteTask = useCallback(async (id) => {
     if (!currentUser?.id) return;

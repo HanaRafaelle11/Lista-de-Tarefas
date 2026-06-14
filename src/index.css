@@ -4340,6 +4340,16 @@ button[title="Sair do FocusList"]:hover {
   border-bottom-color: var(--border-light);
 }
 
+.dark .app-top-header {
+  background-color: rgba(24, 28, 26, 0.85);
+  border-bottom-color: var(--border-light);
+}
+
+.dark .app-bottom-nav {
+  background-color: rgba(24, 28, 26, 0.85);
+  border-color: var(--border-light);
+}
+
 /* Overdue card no dark */
 .dark .todo-item-card.overdue {
   border-color: #3D1F1F;

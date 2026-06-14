@@ -16,7 +16,5 @@ window.BETA_SAFE_MODE = true;
 })();
 
 createRoot(document.getElementById('root')).render(
-  <StrictMode>
-    <App />
-  </StrictMode>,
+  <App />
 )

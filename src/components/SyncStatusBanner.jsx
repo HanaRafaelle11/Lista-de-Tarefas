@@ -48,16 +48,19 @@ export default function SyncStatusBanner() {
   const isDegraded  = syncStatus === 'degraded';
   const pendingOps  = detail.pendingOps;
 
-  const bgColor     = isOffline  ? 'rgba(20,20,30,0.97)'  : 'rgba(50,40,5,0.97)';
-  const borderColor = isOffline  ? 'rgba(255,255,255,0.08)' : 'rgba(234,179,8,0.35)';
-  const textColor   = isOffline  ? '#94a3b8'              : '#fbbf24';
-  const icon        = isOffline  ? '📡'                   : '🔄';
+  const isHealthy   = syncStatus === 'healthy';
+  const bgColor     = isOffline  ? 'rgba(20,20,30,0.97)'  : isHealthy ? 'rgba(16,185,129,0.95)' : 'rgba(50,40,5,0.97)';
+  const borderColor = isOffline  ? 'rgba(255,255,255,0.08)' : isHealthy ? 'rgba(16,185,129,0.35)' : 'rgba(234,179,8,0.35)';
+  const textColor   = isOffline  ? '#94a3b8'              : isHealthy ? '#ffffff' : '#fbbf24';
+  const icon        = isOffline  ? '📡'                   : isHealthy ? '✅' : '🔄';
 
   const message = isOffline
     ? 'Modo offline — dados salvos localmente. Sincronizará quando reconectar.'
     : pendingOps > 0
       ? `Sincronizando ${pendingOps} operaç${pendingOps === 1 ? 'ão' : 'ões'}...`
-      : 'Conexão instável — reconectando...';
+      : syncStatus === 'healthy' 
+        ? 'Sincronizado com sucesso' 
+        : 'Conexão instável — reconectando...';
 
   const lastSyncText = detail.lastSync
     ? `Última sync: ${new Date(detail.lastSync).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`
