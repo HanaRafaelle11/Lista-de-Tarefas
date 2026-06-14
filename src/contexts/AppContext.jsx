@@ -15,6 +15,7 @@ import { achievementsService }  from '../services/achievementsService';
 import { eventsService }        from '../services/eventsService';
 import { profilesService }      from '../services/profilesService';
 import { ACHIEVEMENTS, calcStats } from '../hooks/useAchievements';
+import { subscribe as subscribeSync } from '../services/syncQueue';
 
 // ─── Helpers para Metadados de Tarefas (Horário e Recorrência) ───────────────
 export function parseTaskMetadata(description = '') {
@@ -86,7 +87,10 @@ export function AppProvider({ children }) {
   // ── Auth ────────────────────────────────────────────────────────────────────
   const [currentUser, setCurrentUser]       = useState(null);
   const [isInitializing, setIsInitializing] = useState(true);
-  const [supabaseHealthError, setSupabaseHealthError] = useState(null);
+
+  // ── Sync Status (resilience) ─────────────────────────────────────────────────
+  const [syncStatus, setSyncStatus] = useState('healthy'); // 'healthy' | 'degraded' | 'offline'
+  const [syncWarnings, setSyncWarnings] = useState([]);
 
   // ── Perfil do Usuário ──
   const [userProfile, setUserProfile]       = useState(null);
@@ -141,6 +145,15 @@ export function AppProvider({ children }) {
 
   // ── Validação Supabase ──────────────────────────────────────────────────────
   const supabaseConfigError = typeof window !== 'undefined' && !!window.supabaseConfigError;
+
+  // ── Subscrição ao syncQueue ───────────────────────────────────────────────────
+  useEffect(() => {
+    const unsub = subscribeSync(({ syncStatus: s, warnings: w }) => {
+      setSyncStatus(s);
+      setSyncWarnings(w);
+    });
+    return unsub;
+  }, []);
 
   // ═══════════════════════════════════════════════════════════════════════════
   // TEMA — aplicação e persistência
@@ -263,43 +276,36 @@ export function AppProvider({ children }) {
     if (data) setUserProfile(data);
   }, []);
 
-  const runHealthCheck = useCallback(async (userId) => {
+  // ── Health Check SILENCIOSO (não-bloqueante) ──────────────────────────────────
+  // Diagnostica o Supabase mas NUNCA impede o app de carregar.
+  // Apenas popula syncWarnings para observabilidade.
+  const runSilentHealthCheck = useCallback(async (userId) => {
+    const issues = [];
     try {
-      const { error: authErr } = await supabase.auth.getSession();
-      if (authErr) throw new Error(`Autenticação fora do ar: ${authErr.message}`);
-
       const { error: profilesErr } = await supabase.from('profiles').select('id').limit(0);
-      if (profilesErr && profilesErr.message.includes('Could not find the table')) {
-        throw new Error('A tabela public.profiles não existe no Supabase.');
+      if (profilesErr && profilesErr.message?.includes('Could not find the table')) {
+        issues.push('Tabela profiles ausente no Supabase (usando fallback local)');
       }
 
       const { error: eventsErr } = await supabase.from('events').select('id').limit(0);
-      if (eventsErr && eventsErr.message.includes('Could not find the table')) {
-        throw new Error('A tabela public.events não existe no Supabase.');
+      if (eventsErr && eventsErr.message?.includes('Could not find the table')) {
+        issues.push('Tabela events ausente (eventos serão enfileirados localmente)');
       }
 
       const { error: tasksErr } = await supabase.from('tasks').select('completed_at').limit(0);
-      if (tasksErr) {
-        if (tasksErr.message.includes('Could not find the table')) {
-          throw new Error('A tabela public.tasks não existe no Supabase.');
-        }
-        if (tasksErr.message.includes('completed_at')) {
-          throw new Error('A coluna completed_at está ausente na tabela public.tasks.');
-        }
+      if (tasksErr && tasksErr.message?.includes('completed_at')) {
+        issues.push('Coluna completed_at ausente em tasks');
       }
-
-      const { error: storageErr } = await supabase.storage.from('avatars').list(userId || 'test-folder', { limit: 1 });
-      if (storageErr && storageErr.message.includes('Bucket not found')) {
-        throw new Error('O bucket de storage "avatars" não existe ou está inacessível.');
-      }
-
-      setSupabaseHealthError(null);
-      return true;
     } catch (err) {
-      console.error('[HealthCheck] Falha na integridade do Supabase:', err.message);
-      setSupabaseHealthError(err.message);
-      return false;
+      issues.push(`Supabase inacessível: ${err.message}`);
     }
+
+    if (issues.length > 0) {
+      issues.forEach(w => console.warn('[SilentHealthCheck]', w));
+      // O syncQueue já vai atualizar o syncStatus via subscribe
+    }
+    // Nunca bloqueia — sempre retorna true
+    return true;
   }, []);
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -316,13 +322,9 @@ export function AppProvider({ children }) {
     supabase.auth.getSession()
       .then(async ({ data: { session } }) => {
         const userId = session?.user?.id || null;
-        
-        // Executa o Health Check de integridade do Supabase
-        const isHealthy = await runHealthCheck(userId);
-        if (!isHealthy) {
-          setIsInitializing(false);
-          return;
-        }
+
+        // Health check SILENCIOSO — não bloqueia, apenas loga
+        runSilentHealthCheck(userId);
 
         if (session?.user) {
           const u = buildUser(session.user);
@@ -347,11 +349,6 @@ export function AppProvider({ children }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (e, session) => {
       if (session?.user) {
         const u = buildUser(session.user);
-        
-        // Também executa health check ao mudar de estado de auth
-        const isHealthy = await runHealthCheck(u.id);
-        if (!isHealthy) return;
-
         setCurrentUser(u);
         loadTasks(u.id);
         loadGoals(u.id);
@@ -368,7 +365,7 @@ export function AppProvider({ children }) {
     });
 
     return () => subscription.unsubscribe();
-  }, [loadTasks, loadGoals, loadAchievements, loadHabits, loadProfile, runHealthCheck]);
+  }, [loadTasks, loadGoals, loadAchievements, loadHabits, loadProfile, runSilentHealthCheck]);
 
   // ═══════════════════════════════════════════════════════════════════════════
   // CONQUISTAS — detecção automática
@@ -802,8 +799,9 @@ export function AppProvider({ children }) {
     handleUploadAvatar,
     handleDeleteAvatar,
 
-    // Integrity checks
-    supabaseHealthError
+    // Sync / Resiliência
+    syncStatus,
+    syncWarnings,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

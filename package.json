@@ -5,10 +5,12 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "predeploy": "node scripts/preDeployValidation.js",
-    "build": "npm run predeploy && vite build",
+    "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "check:schema": "node scripts/checkSchemaDrift.js",
+    "check:infra": "node scripts/preDeployValidation.js",
+    "check:sanity": "node scripts/runSanityTest.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.108.1",

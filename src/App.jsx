@@ -12,6 +12,7 @@ import ProfileView from './components/ProfileView';
 import PerformanceView from './components/PerformanceView';
 import AdminDashboard from './components/AdminDashboard';
 import AchievementToastManager from './components/AchievementToast';
+import SyncStatusBanner from './components/SyncStatusBanner';
 
 // ─── Layout interno (usa o contexto) ─────────────────────────────────────────
 function AppLayout() {
@@ -25,7 +26,6 @@ function AppLayout() {
     supabaseConfigError,
     logEvent,
     isPro,
-    supabaseHealthError
   } = useAppContext();
 
   // Registrar visualizações analíticas ao mudar de aba
@@ -70,25 +70,6 @@ function AppLayout() {
     );
   }
 
-  // Tela de erro caso a integridade do Supabase falhe (Fase 2 Health Check Guard)
-  if (supabaseHealthError) {
-    return (
-      <div className="app-loading-container" style={{ padding: '32px', textAlign: 'center', maxWidth: '480px', margin: '100px auto' }}>
-        <span style={{ fontSize: '48px' }}>🚨</span>
-        <h2 style={{ fontSize: '20px', margin: '16px 0 8px', color: 'var(--prio-alta-text)' }}>Erro de Integridade do Supabase</h2>
-        <p style={{ fontSize: '14px', color: 'var(--text-muted)', lineHeight: '1.6' }}>
-          O runtime guard do Flowday detectou falhas na infraestrutura remota:
-        </p>
-        <div style={{ backgroundColor: 'var(--prio-alta-bg)', border: '1px solid var(--prio-alta-border)', color: 'var(--prio-alta-text)', padding: '12px', borderRadius: '8px', fontSize: '13px', margin: '12px 0', textAlign: 'left', fontFamily: 'monospace' }}>
-          {supabaseHealthError}
-        </div>
-        <p style={{ fontSize: '13px', color: 'var(--text-light)' }}>
-          Por favor, execute o script SQL contido no arquivo `supabase_migration.sql` no console do seu Supabase para regularizar o schema.
-        </p>
-      </div>
-    );
-  }
-
   if (isInitializing) {
     return (
       <div className="app-loading-container">
@@ -104,6 +85,7 @@ function AppLayout() {
 
   return (
     <div className="app-wrapper">
+      <SyncStatusBanner />
       <Navbar />
 
       <main className="app-main-content">

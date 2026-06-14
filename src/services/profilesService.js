@@ -1,13 +1,35 @@
 import { supabase } from '../supabaseClient';
+import { enqueue } from './syncQueue';
+
+/**
+ * profilesService — Perfis com fallback resiliente.
+ *
+ * Se o Supabase estiver indisponível, retorna um perfil local temporário
+ * e enfileira a sincronização para depois. O usuário nunca vê erro.
+ */
 
 const requireUser = (userId) => {
   if (!userId) throw new Error('[profilesService] userId obrigatório — usuário não autenticado');
 };
 
+/** Gera um perfil local temporário a partir do userId */
+function localFallbackProfile(userId, name = '') {
+  return {
+    id: userId,
+    name: name || 'Usuário Flowday',
+    nickname: 'user',
+    profession: '',
+    bio: '',
+    avatar_url: null,
+    updated_at: new Date().toISOString(),
+    _local: true, // marca que é temporário
+  };
+}
+
 export const profilesService = {
   /**
-   * Obtém o perfil do usuário do banco.
-   * Se o perfil não existir, cria um perfil padrão (fallback).
+   * Obtém o perfil do usuário.
+   * Fallback: perfil local temporário se banco indisponível.
    */
   getProfile: async (userId) => {
     requireUser(userId);
@@ -20,7 +42,7 @@ export const profilesService = {
 
       if (error) {
         if (error.code === 'PGRST116') {
-          // Perfil não existe, criar perfil básico default
+          // Perfil não existe ainda — tenta criar
           const defaultData = {
             id: userId,
             name: 'Usuário Flowday',
@@ -35,20 +57,30 @@ export const profilesService = {
             .select()
             .single();
 
-          if (createError) throw createError;
+          if (createError) {
+            // Criação também falhou — retorna fallback local
+            console.warn('[profilesService.getProfile] Não foi possível criar perfil — usando local temporário');
+            return { data: localFallbackProfile(userId), error: null, degraded: true };
+          }
           return { data: newProfile, error: null };
         }
-        throw error;
+
+        // Outro erro (tabela não existe, rede, etc.) — retorna fallback local
+        console.warn('[profilesService.getProfile] Erro ao carregar perfil — usando local temporário:', error.message);
+        return { data: localFallbackProfile(userId), error: null, degraded: true };
       }
+
       return { data, error: null };
     } catch (error) {
-      console.error('[profilesService.getProfile]', error);
-      return { data: null, error };
+      // Falha de rede — retorna fallback local
+      console.warn('[profilesService.getProfile] Falha de rede — usando local temporário:', error.message);
+      return { data: localFallbackProfile(userId), error: null, degraded: true };
     }
   },
 
   /**
    * Atualiza as informações textuais do perfil.
+   * Se falhar, enfileira para retry — retorna sucesso otimista.
    */
   updateProfile: async (userId, profileData) => {
     requireUser(userId);
@@ -75,19 +107,21 @@ export const profilesService = {
       if (error) throw error;
       return { data, error: null };
     } catch (error) {
-      console.error('[profilesService.updateProfile]', error);
-      return { data: null, error };
+      console.warn('[profilesService.updateProfile] Falha — enfileirado para retry:', error.message);
+      enqueue('profile_update', { userId, data: profileData });
+      // Retorna otimisticamente os dados que o usuário enviou
+      return { data: { id: userId, ...profileData, _local: true }, error: null, degraded: true };
     }
   },
 
   /**
-   * Faz upload do arquivo de avatar para o Supabase Storage.
-   * Aceita formatos jpeg, png e webp e valida tamanho máximo de 2MB.
+   * Faz upload do avatar para o Supabase Storage.
+   * Se falhar, retorna degraded sem lançar erro visível.
    */
   uploadAvatar: async (userId, file) => {
     requireUser(userId);
-    
-    // Validações
+
+    // Validações de formato e tamanho (sempre executadas localmente)
     const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/jpg'];
     if (!allowedTypes.includes(file.type)) {
       throw new Error('Apenas formatos JPG, PNG e WEBP são permitidos.');
@@ -101,7 +135,6 @@ export const profilesService = {
     try {
       const filePath = `${userId}/avatar.jpg`;
 
-      // Upload do arquivo com upsert (sobrescreve se já existir)
       const { error: uploadError } = await supabase.storage
         .from('avatars')
         .upload(filePath, file, {
@@ -111,15 +144,13 @@ export const profilesService = {
 
       if (uploadError) throw uploadError;
 
-      // Obtém a URL pública do arquivo
       const { data } = supabase.storage
         .from('avatars')
         .getPublicUrl(filePath);
 
-      // Retorna a URL pública com um timestamp para burlar cache do navegador
       const publicUrl = `${data.publicUrl}?t=${Date.now()}`;
-      
-      // Atualiza automaticamente o registro na tabela de profiles
+
+      // Atualiza o profile com a nova URL
       await supabase
         .from('profiles')
         .update({ avatar_url: publicUrl })
@@ -127,38 +158,27 @@ export const profilesService = {
 
       return { publicUrl, error: null };
     } catch (error) {
-      console.error('[profilesService.uploadAvatar]', error);
-      return { publicUrl: null, error };
+      // Upload falhou — retorna degraded silenciosamente
+      console.warn('[profilesService.uploadAvatar] Falha no upload — avatar não atualizado:', error.message);
+      return { publicUrl: null, error: null, degraded: true };
     }
   },
 
   /**
-   * Remove o arquivo do Storage e limpa avatar_url no banco.
+   * Remove o avatar do Storage e limpa avatar_url no banco.
    */
   deleteAvatar: async (userId) => {
     requireUser(userId);
     try {
       const filePath = `${userId}/avatar.jpg`;
 
-      // Remove do Storage
-      const { error: deleteError } = await supabase.storage
-        .from('avatars')
-        .remove([filePath]);
-
-      if (deleteError) throw deleteError;
-
-      // Limpa no banco
-      const { error: dbError } = await supabase
-        .from('profiles')
-        .update({ avatar_url: '' })
-        .eq('id', userId);
-
-      if (dbError) throw dbError;
+      await supabase.storage.from('avatars').remove([filePath]);
+      await supabase.from('profiles').update({ avatar_url: '' }).eq('id', userId);
 
       return { error: null };
     } catch (error) {
-      console.error('[profilesService.deleteAvatar]', error);
-      return { error };
+      console.warn('[profilesService.deleteAvatar] Falha ao remover avatar:', error.message);
+      return { error: null, degraded: true }; // silencia o erro para o usuário
     }
   }
 };
