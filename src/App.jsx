@@ -13,6 +13,7 @@ import PerformanceView from './components/PerformanceView';
 import AdminDashboard from './components/AdminDashboard';
 import AchievementToastManager from './components/AchievementToast';
 import SyncStatusBanner from './components/SyncStatusBanner';
+import DevToolsWidget from './components/DevToolsWidget';
 
 // ─── Layout interno (usa o contexto) ─────────────────────────────────────────
 function AppLayout() {
@@ -26,6 +27,7 @@ function AppLayout() {
     supabaseConfigError,
     logEvent,
     isPro,
+    isAdmin,
   } = useAppContext();
 
   // Registrar visualizações analíticas ao mudar de aba
@@ -102,6 +104,7 @@ function AppLayout() {
         </div>
       </main>
 
+      {isAdmin && <DevToolsWidget />}
 
       <AchievementToastManager queue={toastQueue} onDismiss={dismissToast} />
 
