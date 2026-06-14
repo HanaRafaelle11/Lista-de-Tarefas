@@ -55,9 +55,9 @@ export const stateEngine = {
       stage = 'churned';
     } else if (daysSinceActive > 7) {
       stage = 'at_risk';
-    } else if (!projection.onboarding.completed || projection.tasks.completedCount === 0) {
+    } else if (!projection.onboarding.completed || projection.tasks.createdCount === 0) {
       stage = 'new';
-    } else if (projection.tasks.completedCount >= 5 || projection.habits.completedCount >= 3) {
+    } else if (projection.tasks.completedCount >= 5) {
       stage = 'engaged';
     } else {
       stage = 'activated';
@@ -85,7 +85,8 @@ export const stateEngine = {
         tasksCreated:      projection.tasks.createdCount,
         tasksCompleted:    projection.tasks.completedCount,
         habitsCreated:     projection.habits.createdCount,
-        goalsCreated:      projection.goals.createdCount
+        goalsCreated:      projection.goals.createdCount,
+        sessions:          projection.sessions.count
       }
     };
   }

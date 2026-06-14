@@ -36,16 +36,42 @@ export function generateInsights(tasks = [], events = []) {
     ? (now - lastCompletedTime) / (1000 * 60 * 60 * 24) 
     : Infinity;
 
-  // Se o usuário tem tarefas criadas, mas não conclui nada há mais de 4 dias
-  if (daysSinceLastCompletion > 4 && daysSinceLastCompletion !== Infinity && pending.length > 0) {
-    const confidence = Math.min(0.5 + (daysSinceLastCompletion * 0.08), 0.95);
+  // Risco 1: Inatividade > 5 dias
+  if (daysSinceLastCompletion > 5 && daysSinceLastCompletion !== Infinity) {
     insights.push({
-      type: 'risk',
-      emoji: '⚠️',
-      confidence,
-      message: `Detectamos uma quebra de fluxo nos últimos ${Math.floor(daysSinceLastCompletion)} dias. Risco de perda de consistência detectado. Que tal concluir uma tarefa de 2 minutos agora?`,
-      action: 'tasks'
+      type: "risk",
+      emoji: "⚠️",
+      confidence: 0.85,
+      message: `Detectamos inatividade superior a 5 dias. Que tal concluir uma tarefa simples hoje para recuperar o ritmo?`,
+      action: "tasks"
     });
+  }
+
+  // Risco 2: queda > 40% na conclusão semanal de tarefas
+  const oneWeekAgo = now - 7 * 24 * 60 * 60 * 1000;
+  const twoWeeksAgo = now - 14 * 24 * 60 * 60 * 1000;
+
+  const completedThisWeek = completed.filter(t => {
+    const time = new Date(t.completedAt || t.dueDate || t.createdAt).getTime();
+    return time >= oneWeekAgo;
+  }).length;
+
+  const completedLastWeek = completed.filter(t => {
+    const time = new Date(t.completedAt || t.dueDate || t.createdAt).getTime();
+    return time >= twoWeeksAgo && time < oneWeekAgo;
+  }).length;
+
+  if (completedLastWeek >= 3) {
+    const pctDrop = (completedLastWeek - completedThisWeek) / completedLastWeek;
+    if (pctDrop > 0.40) {
+      insights.push({
+        type: "risk",
+        emoji: "⚠️",
+        confidence: 0.85,
+        message: `Sua taxa de conclusão de tarefas caiu ${Math.round(pctDrop * 100)}% esta semana em comparação com a semana anterior. Que tal retomar o foco?`,
+        action: "tasks"
+      });
+    }
   }
 
   // ─── 2. Detecção de Hábitos Emergentes (Tarefa recorrente não-oficializada) ──
@@ -110,7 +136,37 @@ export function generateInsights(tasks = [], events = []) {
     }
   }
 
-  // ─── 4. Padrões de consistência por Categoria ───────────────────────────────
+  // ─── 4. Análise de Dia de Semana Mais Produtivo ───────────────────────────────
+  const dayNames = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];
+  const dayCounts = Array(7).fill(0);
+  completed.forEach(t => {
+    if (!t.completedAt) return;
+    const day = new Date(t.completedAt).getDay();
+    dayCounts[day]++;
+  });
+
+  const totalDayStats = dayCounts.reduce((a, b) => a + b, 0);
+  if (totalDayStats >= 4) {
+    let bestDayIdx = 0;
+    let maxDayCount = 0;
+    for (let i = 0; i < 7; i++) {
+      if (dayCounts[i] > maxDayCount) {
+        maxDayCount = dayCounts[i];
+        bestDayIdx = i;
+      }
+    }
+    const dayConfidence = Math.round((maxDayCount / totalDayStats) * 100) / 100;
+    if (dayConfidence >= 0.3) {
+      insights.push({
+        type: "achievement",
+        emoji: "📅",
+        confidence: dayConfidence,
+        message: `Dia de Foco: ${dayNames[bestDayIdx]} é seu dia mais produtivo, concentrando ${Math.round(dayConfidence * 100)}% de suas conclusões.`
+      });
+    }
+  }
+
+  // ─── 5. Padrões de consistência por Categoria ───────────────────────────────
   const catTotal = {};
   const catDone = {};
   tasks.forEach(t => {
