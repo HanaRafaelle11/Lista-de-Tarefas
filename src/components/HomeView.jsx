@@ -51,7 +51,9 @@ function GoalProgressRow({ goal, linkedTasks }) {
     habitsManager, 
     consistencyScore, 
     handleCompleteOnboarding,
-    logEvent
+    logEvent,
+    insights,
+    suggestions
   } = useAppContext();
   
   const { habits, habitLogs } = habitsManager;
@@ -259,6 +261,106 @@ function GoalProgressRow({ goal, linkedTasks }) {
           Começar meu dia ⚡
         </button>
       </section>
+
+      {/* ── 2. Sugestões de Engajamento & Loops de Retenção (Fase 2.0) ─────────── */}
+      {suggestions && suggestions.length > 0 && (
+        <section className="engagement-suggestions-section animate-fade-in" style={{ marginBottom: '24px' }}>
+          <h3 style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-main)', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span>⚡</span> Sugestões recomendadas para você
+          </h3>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
+            {suggestions.map((sug) => (
+              <div 
+                key={sug.id} 
+                className="suggestion-card-premium" 
+                style={{ 
+                  padding: '16px', 
+                  borderRadius: 'var(--radius-md)', 
+                  backgroundColor: 'var(--bg-card)', 
+                  border: '1px solid var(--border-medium)',
+                  boxShadow: 'var(--shadow-sm)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'space-between',
+                  gap: '12px',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                <div>
+                  <h4 style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-main)', margin: '0 0 6px' }}>
+                    {sug.title}
+                  </h4>
+                  <p style={{ fontSize: '12.5px', color: 'var(--text-muted)', margin: 0, lineHeight: '1.5' }}>
+                    {sug.message}
+                  </p>
+                </div>
+                {sug.ctaText && (
+                  <button 
+                    onClick={() => {
+                      if (sug.actionTab) setActiveTab(sug.actionTab);
+                      if (sug.id === 'onboarding_loop') {
+                        // Inicia onboarding se clicado
+                        localStorage.setItem('flowday_onboarding_started', 'true');
+                        localStorage.setItem('flowday_onboarding_step', '1');
+                        window.location.reload(); // recarrega para pegar o state
+                      }
+                    }} 
+                    className="btn-primary-glow"
+                    style={{ 
+                      alignSelf: 'flex-start',
+                      padding: '8px 16px', 
+                      fontSize: '12px', 
+                      fontWeight: '600', 
+                      borderRadius: 'var(--radius-sm)'
+                    }}
+                  >
+                    {sug.ctaText}
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* ── 3. Insights Comportamentais Inteligentes (Fase 2.0) ────────────────── */}
+      {insights && insights.length > 0 && (
+        <section className="behavioral-insights-section animate-fade-in" style={{ marginBottom: '24px' }}>
+          <div 
+            style={{ 
+              background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(16, 185, 129, 0.05) 100%)', 
+              border: '1px solid var(--primary-light)', 
+              borderRadius: 'var(--radius-md)', 
+              padding: '20px' 
+            }}
+          >
+            <h3 style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-main)', margin: '0 0 14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              🧠 Insights de Produtividade Aura
+            </h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {insights.map((ins, idx) => (
+                <div 
+                  key={idx} 
+                  style={{ 
+                    display: 'flex', 
+                    alignItems: 'flex-start', 
+                    gap: '12px', 
+                    padding: '10px 12px', 
+                    backgroundColor: 'var(--bg-card)', 
+                    border: '1px solid var(--border-light)', 
+                    borderRadius: 'var(--radius-sm)' 
+                  }}
+                >
+                  <span style={{ fontSize: '20px', lineHeight: '1' }}>{ins.emoji}</span>
+                  <p style={{ fontSize: '13px', color: 'var(--text-main)', margin: 0, lineHeight: '1.5' }}>
+                    {ins.message}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* ── Onboarding Guiado (Guia de Boas-Vindas) ─────────────── */}
       {/* Passo 0: tela de boas-vindas */}

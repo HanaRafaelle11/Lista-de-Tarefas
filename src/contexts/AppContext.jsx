@@ -15,7 +15,10 @@ import { achievementsService }  from '../services/achievementsService';
 import { eventsService }        from '../services/eventsService';
 import { profilesService }      from '../services/profilesService';
 import { ACHIEVEMENTS, calcStats } from '../hooks/useAchievements';
-import { subscribe as subscribeSync } from '../services/syncQueue';
+import { subscribe as subscribeSync, initSyncQueue } from '../services/syncQueue';
+import { initEventBatcher } from '../services/eventBatcher';
+import { generateInsights } from '../intelligence/productIntelligence';
+import { getEngagementSuggestions } from '../intelligence/retentionEngine';
 
 // ─── Helpers para Metadados de Tarefas (Horário e Recorrência) ───────────────
 export function parseTaskMetadata(description = '') {
@@ -131,6 +134,26 @@ export function AppProvider({ children }) {
     has_first_success:   false,
   });
 
+  // ── Product Intelligence & Retention (Fase 2.0) ──
+  const [insights, setInsights]       = useState([]);
+  const [suggestions, setSuggestions] = useState([]);
+
+  useEffect(() => {
+    if (!currentUser?.id) {
+      setInsights([]);
+      setSuggestions([]);
+      return;
+    }
+    // 1. Recalcula insights comportamentais
+    const newInsights = generateInsights(tasks);
+    setInsights(newInsights);
+
+    // 2. Recalcula sugestões de retenção baseadas no progresso
+    const isObCompleted = !!currentUser?.user_metadata?.onboarding_completed;
+    const newSuggestions = getEngagementSuggestions(userState, tasks, isObCompleted);
+    setSuggestions(newSuggestions);
+  }, [tasks, userState, currentUser?.id, currentUser?.user_metadata?.onboarding_completed]);
+
   // ── Feature Flags & Assinatura (SaaS) ───────────────────────────────────────
   const [isPro, setIsPro] = useState(false);
 
@@ -160,9 +183,13 @@ export function AppProvider({ children }) {
 
   // ── Subscrição ao syncQueue ───────────────────────────────────────────────────
   useEffect(() => {
-    const unsub = subscribeSync(({ syncStatus: s, warnings: w }) => {
-      setSyncStatus(s);
-      setSyncWarnings(w);
+    // Inicialização assíncrona do IndexedDB da fila e do batcher
+    initSyncQueue().catch(err => console.error('[AppContext] Erro initSyncQueue:', err));
+    initEventBatcher().catch(err => console.error('[AppContext] Erro initEventBatcher:', err));
+
+    const unsub = subscribeSync((state) => {
+      setSyncStatus(state.supabase || state.syncStatus || 'healthy');
+      setSyncWarnings(state.warnings || []);
     });
     return unsub;
   }, []);
@@ -861,6 +888,8 @@ export function AppProvider({ children }) {
 
     // Growth & Intelligence
     userState,
+    insights,
+    suggestions,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

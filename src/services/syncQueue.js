@@ -11,6 +11,7 @@
  */
 
 import { supabase } from '../supabaseClient';
+import { localDB } from '../db/localDB';
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
 const QUEUE_KEY      = 'flowday_sync_queue';
@@ -29,6 +30,52 @@ let status = {
 let listeners  = new Set();
 let pollTimer  = null;
 
+// Fila em memória para acesso síncrono ultra-rápido reativo
+let queueMemory = [];
+let isInitialized = false;
+
+/**
+ * Inicializa a fila a partir do IndexedDB.
+ * Migra dados antigos do localStorage se existirem para evitar perda de dados.
+ */
+export async function initSyncQueue() {
+  if (isInitialized) return;
+  try {
+    const idbItems = await localDB.getAll('pendingOps');
+    
+    // Migração de localStorage legada
+    const oldStorage = localStorage.getItem(QUEUE_KEY);
+    if (oldStorage) {
+      try {
+        const oldQueue = JSON.parse(oldStorage);
+        if (Array.isArray(oldQueue) && oldQueue.length > 0) {
+          console.log(`[syncQueue] Migrando ${oldQueue.length} operações do localStorage para o IndexedDB`);
+          for (const item of oldQueue) {
+            item.id = item.idempotency_key;
+            await localDB.put('pendingOps', item);
+            idbItems.push(item);
+          }
+        }
+        localStorage.removeItem(QUEUE_KEY);
+      } catch (e) {
+        console.warn('[syncQueue] Erro na migração de localStorage:', e.message);
+      }
+    }
+
+    queueMemory = idbItems.sort((a, b) => new Date(a.enqueuedAt) - new Date(b.enqueuedAt));
+    isInitialized = true;
+    updateStatus({ pendingOps: queueMemory.length });
+    console.log('[syncQueue] IndexedDB inicializado. Ops pendentes:', queueMemory.length);
+    if (typeof navigator !== 'undefined' && navigator.onLine) {
+      flush();
+    }
+  } catch (err) {
+    console.error('[syncQueue] Erro ao carregar IndexedDB, usando fallback:', err);
+    queueMemory = [];
+    isInitialized = true;
+  }
+}
+
 // ─── Gerador de IDs (Prioridade 3 — idempotência) ────────────────────────────
 
 /**
@@ -39,7 +86,6 @@ export function generateId() {
   if (typeof crypto !== 'undefined' && crypto.randomUUID) {
     return crypto.randomUUID();
   }
-  // Fallback para ambientes sem crypto.randomUUID
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
     const r = Math.random() * 16 | 0;
     return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
@@ -48,25 +94,20 @@ export function generateId() {
 
 // ─── Persistência ────────────────────────────────────────────────────────────
 function readQueue() {
-  try {
-    return JSON.parse(localStorage.getItem(QUEUE_KEY) || '[]');
-  } catch {
-    return [];
-  }
+  return queueMemory;
 }
 
 function writeQueue(queue) {
-  try {
-    // Mantém no máximo 500 itens para não estourar localStorage
-    localStorage.setItem(QUEUE_KEY, JSON.stringify(queue.slice(-500)));
-  } catch {
-    // localStorage cheio — purga itens mais antigos
-    try {
-      localStorage.setItem(QUEUE_KEY, JSON.stringify(queue.slice(-100)));
-    } catch {
-      /* ignora silenciosamente */
-    }
-  }
+  queueMemory = queue;
+  // Sincroniza em background
+  localDB.clear('pendingOps')
+    .then(() => {
+      const items = queue.map(item => ({ ...item, id: item.idempotency_key }));
+      return localDB.putMany('pendingOps', items);
+    })
+    .catch(err => {
+      console.warn('[syncQueue] Falha ao persistir fila no IndexedDB:', err.message);
+    });
 }
 
 // ─── Backoff ─────────────────────────────────────────────────────────────────
@@ -223,7 +264,6 @@ async function trySend(item) {
   try {
     if (type === 'event') {
       const { userId, eventType, metadata } = payload;
-      // Idempotência: usa client_event_id para ON CONFLICT DO NOTHING
       const { error } = await supabase
         .from('events')
         .insert([{
@@ -232,35 +272,83 @@ async function trySend(item) {
           event_type: eventType,
           metadata:   metadata || {},
         }]);
-      // Ignora conflito de duplicata (código 23505 = unique_violation)
       if (error && error.code !== '23505') throw error;
       return true;
     }
 
     if (type === 'task_create') {
       const { userId, taskData, taskId } = payload;
+      
+      // Resolução de Conflitos para Criação/Upsert
+      try {
+        const { data: serverTask } = await supabase
+          .from('tasks')
+          .select('updated_at')
+          .eq('id', taskId || idempotency_key)
+          .single();
+
+        if (serverTask && serverTask.updated_at) {
+          const serverTime = new Date(serverTask.updated_at).getTime();
+          const localTime = new Date(taskData.updated_at || item.enqueuedAt).getTime();
+          if (serverTime > localTime) {
+            console.log(`[syncQueue] Conflito em task_create para ${taskId}. Servidor possui versão mais recente.`);
+            return true;
+          }
+        }
+      } catch {}
+
       const { error } = await supabase
         .from('tasks')
         .upsert([{
-          id:          taskId || idempotency_key,
-          user_id:     userId,
-          title:       taskData.title,
-          description: taskData.description || '',
-          category:    taskData.category,
-          priority:    taskData.priority,
-          due_date:    taskData.dueDate || null,
-          completed:   false,
-          completed_at: null,
-        }], { onConflict: 'id', ignoreDuplicates: true });
+          id:           taskId || idempotency_key,
+          user_id:      userId,
+          title:        taskData.title,
+          description:  taskData.description || '',
+          category:     taskData.category,
+          priority:     taskData.priority,
+          due_date:     taskData.dueDate || null,
+          completed:    taskData.completed || false,
+          completed_at: taskData.completedAt || null,
+          updated_at:   taskData.updated_at || new Date().toISOString()
+        }], { onConflict: 'id', ignoreDuplicates: false }); // Permite atualizar se o cliente for mais novo
+      
       if (error && error.code !== '23505') throw error;
       return true;
     }
 
     if (type === 'task_update') {
       const { userId, id, updates } = payload;
+
+      // Resolução de Conflitos para Update
+      try {
+        const { data: serverTask } = await supabase
+          .from('tasks')
+          .select('updated_at')
+          .eq('id', id)
+          .single();
+
+        if (serverTask && serverTask.updated_at) {
+          const serverTime = new Date(serverTask.updated_at).getTime();
+          const localTime = new Date(updates.updated_at || item.enqueuedAt).getTime();
+          if (serverTime > localTime) {
+            console.log(`[syncQueue] Conflito em task_update para ${id}. Servidor possui versão mais recente (${serverTask.updated_at} > ${updates.updated_at || item.enqueuedAt}). Descartando local.`);
+            return true;
+          }
+        }
+      } catch {}
+
       const { error } = await supabase
         .from('tasks')
-        .update(updates)
+        .update({
+          title:        updates.title,
+          description:  updates.description,
+          category:     updates.category,
+          priority:     updates.priority,
+          due_date:     updates.dueDate !== undefined ? (updates.dueDate || null) : undefined,
+          completed:    updates.completed,
+          completed_at: updates.completedAt,
+          updated_at:   updates.updated_at || new Date().toISOString()
+        })
         .eq('id', id)
         .eq('user_id', userId);
       if (error) throw error;
@@ -280,9 +368,31 @@ async function trySend(item) {
 
     if (type === 'profile_update') {
       const { userId, data } = payload;
+      
+      // Resolução de Conflitos para Perfil
+      try {
+        const { data: serverProfile } = await supabase
+          .from('profiles')
+          .select('updated_at')
+          .eq('id', userId)
+          .single();
+
+        if (serverProfile && serverProfile.updated_at) {
+          const serverTime = new Date(serverProfile.updated_at).getTime();
+          const localTime = new Date(data.updated_at || item.enqueuedAt).getTime();
+          if (serverTime > localTime) {
+            console.log(`[syncQueue] Conflito em profile_update para ${userId}. Servidor possui versão mais recente.`);
+            return true;
+          }
+        }
+      } catch {}
+
       const { error } = await supabase
         .from('profiles')
-        .update(data)
+        .update({
+          ...data,
+          updated_at: data.updated_at || new Date().toISOString()
+        })
         .eq('id', userId);
       if (error) throw error;
       return true;
@@ -318,14 +428,14 @@ if (typeof window !== 'undefined') {
     addWarning('Sem conexão com a internet');
   }
 
-  // Poll periódico
-  if (pollTimer) clearInterval(pollTimer);
-  pollTimer = setInterval(() => {
-    if (navigator.onLine) flush();
-  }, POLL_INTERVAL);
-
-  // Flush na abertura (itens de sessão anterior)
-  setTimeout(() => {
-    if (navigator.onLine) flush();
-  }, 3000);
+  // Executa inicialização assíncrona da fila no boot
+  initSyncQueue().then(() => {
+    // Poll periódico
+    if (pollTimer) clearInterval(pollTimer);
+    pollTimer = setInterval(() => {
+      if (navigator.onLine) flush();
+    }, POLL_INTERVAL);
+  }).catch(err => {
+    console.error('[syncQueue] Falha na inicialização do boot:', err);
+  });
 }

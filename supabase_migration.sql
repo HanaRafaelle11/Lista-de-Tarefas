@@ -1,8 +1,21 @@
--- ─── MIGRATION SQL: FLOWDAY FASE 2 ───
-
--- 1. Adicionar data de conclusão nas tarefas para análise de produtividade temporal
+-- 1. Adicionar data de conclusão e data de atualização nas tarefas para análise e sync
 ALTER TABLE public.tasks 
-ADD COLUMN IF NOT EXISTS completed_at TIMESTAMPTZ;
+ADD COLUMN IF NOT EXISTS completed_at TIMESTAMPTZ,
+ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT now();
+
+-- Trigger para atualizar updated_at automaticamente no UPDATE de tasks
+CREATE OR REPLACE FUNCTION public.set_updated_at()
+RETURNS trigger AS $$
+BEGIN
+  new.updated_at = now();
+  RETURN new;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trigger_set_updated_at ON public.tasks;
+CREATE TRIGGER trigger_set_updated_at
+  BEFORE UPDATE ON public.tasks
+  FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 
 -- 2. Criar a tabela de perfis de usuário
 CREATE TABLE IF NOT EXISTS public.profiles (
