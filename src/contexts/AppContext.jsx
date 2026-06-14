@@ -86,6 +86,7 @@ export function AppProvider({ children }) {
   // ── Auth ────────────────────────────────────────────────────────────────────
   const [currentUser, setCurrentUser]       = useState(null);
   const [isInitializing, setIsInitializing] = useState(true);
+  const [supabaseHealthError, setSupabaseHealthError] = useState(null);
 
   // ── Perfil do Usuário ──
   const [userProfile, setUserProfile]       = useState(null);
@@ -262,6 +263,45 @@ export function AppProvider({ children }) {
     if (data) setUserProfile(data);
   }, []);
 
+  const runHealthCheck = useCallback(async (userId) => {
+    try {
+      const { error: authErr } = await supabase.auth.getSession();
+      if (authErr) throw new Error(`Autenticação fora do ar: ${authErr.message}`);
+
+      const { error: profilesErr } = await supabase.from('profiles').select('id').limit(0);
+      if (profilesErr && profilesErr.message.includes('Could not find the table')) {
+        throw new Error('A tabela public.profiles não existe no Supabase.');
+      }
+
+      const { error: eventsErr } = await supabase.from('events').select('id').limit(0);
+      if (eventsErr && eventsErr.message.includes('Could not find the table')) {
+        throw new Error('A tabela public.events não existe no Supabase.');
+      }
+
+      const { error: tasksErr } = await supabase.from('tasks').select('completed_at').limit(0);
+      if (tasksErr) {
+        if (tasksErr.message.includes('Could not find the table')) {
+          throw new Error('A tabela public.tasks não existe no Supabase.');
+        }
+        if (tasksErr.message.includes('completed_at')) {
+          throw new Error('A coluna completed_at está ausente na tabela public.tasks.');
+        }
+      }
+
+      const { error: storageErr } = await supabase.storage.from('avatars').list(userId || 'test-folder', { limit: 1 });
+      if (storageErr && storageErr.message.includes('Bucket not found')) {
+        throw new Error('O bucket de storage "avatars" não existe ou está inacessível.');
+      }
+
+      setSupabaseHealthError(null);
+      return true;
+    } catch (err) {
+      console.error('[HealthCheck] Falha na integridade do Supabase:', err.message);
+      setSupabaseHealthError(err.message);
+      return false;
+    }
+  }, []);
+
   // ═══════════════════════════════════════════════════════════════════════════
   // AUTH — inicialização e listener
   // ═══════════════════════════════════════════════════════════════════════════
@@ -274,7 +314,16 @@ export function AppProvider({ children }) {
     });
 
     supabase.auth.getSession()
-      .then(({ data: { session } }) => {
+      .then(async ({ data: { session } }) => {
+        const userId = session?.user?.id || null;
+        
+        // Executa o Health Check de integridade do Supabase
+        const isHealthy = await runHealthCheck(userId);
+        if (!isHealthy) {
+          setIsInitializing(false);
+          return;
+        }
+
         if (session?.user) {
           const u = buildUser(session.user);
           setCurrentUser(u);
@@ -295,9 +344,14 @@ export function AppProvider({ children }) {
         setIsInitializing(false);
       });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((e, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (e, session) => {
       if (session?.user) {
         const u = buildUser(session.user);
+        
+        // Também executa health check ao mudar de estado de auth
+        const isHealthy = await runHealthCheck(u.id);
+        if (!isHealthy) return;
+
         setCurrentUser(u);
         loadTasks(u.id);
         loadGoals(u.id);
@@ -314,7 +368,7 @@ export function AppProvider({ children }) {
     });
 
     return () => subscription.unsubscribe();
-  }, [loadTasks, loadGoals, loadAchievements, loadHabits, loadProfile]);
+  }, [loadTasks, loadGoals, loadAchievements, loadHabits, loadProfile, runHealthCheck]);
 
   // ═══════════════════════════════════════════════════════════════════════════
   // CONQUISTAS — detecção automática
@@ -746,7 +800,10 @@ export function AppProvider({ children }) {
     userProfile,
     handleUpdateProfile,
     handleUploadAvatar,
-    handleDeleteAvatar
+    handleDeleteAvatar,
+
+    // Integrity checks
+    supabaseHealthError
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
