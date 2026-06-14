@@ -118,6 +118,18 @@ export function AppProvider({ children }) {
 
   // ── Ref para lock de conquistas ───────────────────────────────────────────────
   const achievementChecking = useRef(false);
+  // Garante que first_success_action é emitido apenas uma vez por sessão
+  const firstSuccessLogged = useRef(false);
+
+  // ── User State Intelligence (Growth) ─────────────────────────────────────────────
+  const [userState, setUserState] = useState({
+    stage:               'new',
+    activation_score:    0,
+    last_success_action: null,
+    time_to_value_ms:    null,
+    days_since_active:   0,
+    has_first_success:   false,
+  });
 
   // ── Feature Flags & Assinatura (SaaS) ───────────────────────────────────────
   const [isPro, setIsPro] = useState(false);
@@ -185,11 +197,29 @@ export function AppProvider({ children }) {
   }, [theme]);
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // LOGGER DE EVENTOS (Bloco 5)
+  // LOGGER DE EVENTOS com session tracking
   // ═══════════════════════════════════════════════════════════════════════════
   const logEvent = useCallback(async (eventType, metadata = {}) => {
     if (!currentUser?.id) return;
     await eventsService.logEvent(currentUser.id, eventType, metadata);
+  }, [currentUser?.id]);
+
+  // Session tracking: emite session_started no login e session_ended no unload
+  useEffect(() => {
+    if (!currentUser?.id) return;
+
+    eventsService.logEvent(currentUser.id, 'session_started', {
+      ts: new Date().toISOString()
+    });
+
+    const handleUnload = () => {
+      // Usa sendBeacon para garantir envio mesmo no fechamento da aba
+      eventsService.logEvent(currentUser.id, 'session_ended', {
+        ts: new Date().toISOString()
+      });
+    };
+    window.addEventListener('beforeunload', handleUnload);
+    return () => window.removeEventListener('beforeunload', handleUnload);
   }, [currentUser?.id]);
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -498,17 +528,28 @@ export function AppProvider({ children }) {
     const { data: next, completedAt } = await tasksService.toggleComplete(currentUser.id, id, task.completed);
     if (next !== null) {
       setTasks((prev) => prev.map((t) => t.id === id ? { ...t, completed: next, completedAt } : t));
-      
+
       if (next) {
         eventsService.logEvent(currentUser.id, 'task_completed', { task_id: id });
-        
-        // Trata tarefas recorrentes
+
+        // ─ Detecta first_success_action (emit apenas uma vez por usuário) ─
+        const alreadyHadSuccess = tasks.some(t => t.id !== id && t.completed);
+        if (!alreadyHadSuccess && !firstSuccessLogged.current) {
+          firstSuccessLogged.current = true;
+          eventsService.logEvent(currentUser.id, 'first_success_action', {
+            task_id: id,
+            task_title: task.title,
+            ts: new Date().toISOString(),
+          });
+        }
+
+        // ─ Trata tarefas recorrentes ─
         const meta = parseTaskMetadata(task.description);
         if (meta && meta.recurrence && meta.recurrence !== 'nenhuma') {
           const nextDueDate = calculateNextOccurrence(task.dueDate, meta.recurrence);
           const nextTask = {
             title: task.title,
-            description: task.description, // Mantém bloco de metadados
+            description: task.description,
             category: task.category,
             priority: task.priority,
             dueDate: nextDueDate,
@@ -739,6 +780,21 @@ export function AppProvider({ children }) {
   };
 
   // ═══════════════════════════════════════════════════════════════════════════
+  // USER STATE INTELLIGENCE — derivado automaticamente
+  // ═══════════════════════════════════════════════════════════════════════════
+  useEffect(() => {
+    if (!currentUser?.id) return;
+    // Busca eventos do Supabase e deriva o estado do usuário de forma assíncrona
+    import('../services/userStateService').then(({ computeUserState }) => {
+      computeUserState(currentUser.id).then(state => {
+        if (state) setUserState(state);
+        // Inicializa o flag de first_success se já tiver concluído antes
+        if (state?.has_first_success) firstSuccessLogged.current = true;
+      });
+    });
+  }, [currentUser?.id]);
+
+  // ═══════════════════════════════════════════════════════════════════════════
   // CONTEXT VALUE
   // ═══════════════════════════════════════════════════════════════════════════
   const value = {
@@ -802,6 +858,9 @@ export function AppProvider({ children }) {
     // Sync / Resiliência
     syncStatus,
     syncWarnings,
+
+    // Growth & Intelligence
+    userState,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

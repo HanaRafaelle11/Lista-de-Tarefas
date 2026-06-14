@@ -1,5 +1,5 @@
 import { supabase } from '../supabaseClient';
-import { enqueue } from './syncQueue';
+import { enqueue, generateId } from './syncQueue';
 
 // Mapper: converte registro do banco para objeto do app
 const mapTask = (t) => ({
@@ -68,19 +68,20 @@ export const tasksService = {
       return { data: mapTask(data), error: null };
     } catch (error) {
       console.warn('[tasksService.create] Falha ao criar tarefa no Supabase — modo otimista:', error.message);
-      // Retorna objeto otimista com ID temporário para a UI não travar
+      // ID real gerado no cliente (não mais temp_) para que o upsert de retry seja idêmpotente
+      const clientId = generateId();
       const optimistic = {
-        id: `temp_${Date.now()}`,
-        title: taskData.title,
+        id:          clientId,
+        title:       taskData.title,
         description: taskData.description || '',
-        category: taskData.category,
-        priority: taskData.priority,
-        dueDate: taskData.dueDate || '',
-        completed: false,
-        createdAt: new Date().toISOString(),
+        category:    taskData.category,
+        priority:    taskData.priority,
+        dueDate:     taskData.dueDate || '',
+        completed:   false,
+        createdAt:   new Date().toISOString(),
         completedAt: null,
       };
-      enqueue('task_create', { userId, taskData });
+      enqueue('task_create', { userId, taskData, taskId: clientId }, clientId);
       return { data: optimistic, error, degraded: true };
     }
   },
@@ -90,11 +91,6 @@ export const tasksService = {
    */
   update: async (userId, id, updates) => {
     requireUser(userId);
-    // Tarefas temporárias (id começa com 'temp_') não podem ser atualizadas no Supabase ainda
-    if (String(id).startsWith('temp_')) {
-      console.warn('[tasksService.update] Task temporária, update apenas local');
-      return { error: null, degraded: true };
-    }
     try {
       const payload = {};
       if (updates.title !== undefined)       payload.title = updates.title;
@@ -125,13 +121,8 @@ export const tasksService = {
    */
   toggleComplete: async (userId, id, currentCompleted) => {
     requireUser(userId);
-    const next = !currentCompleted;
+    const next        = !currentCompleted;
     const completedAt = next ? new Date().toISOString() : null;
-
-    // Tarefas temporárias: apenas retorna o novo estado (sem sync)
-    if (String(id).startsWith('temp_')) {
-      return { data: next, completedAt, error: null, degraded: true };
-    }
 
     try {
       const { error } = await supabase
@@ -144,7 +135,6 @@ export const tasksService = {
       return { data: next, completedAt, error: null };
     } catch (error) {
       console.warn('[tasksService.toggleComplete] Falha — retorno otimista + retry enfileirado:', error.message);
-      // UI atualiza imediatamente; Supabase sync fica na fila
       enqueue('task_update', { userId, id, updates: { completed: next, completedAt } });
       return { data: next, completedAt, error, degraded: true };
     }
@@ -155,10 +145,6 @@ export const tasksService = {
    */
   delete: async (userId, id) => {
     requireUser(userId);
-    // Tarefa temporária: remove apenas da UI
-    if (String(id).startsWith('temp_')) {
-      return { error: null };
-    }
     try {
       const { error } = await supabase
         .from('tasks')
@@ -169,7 +155,8 @@ export const tasksService = {
       if (error) throw error;
       return { error: null };
     } catch (error) {
-      console.warn('[tasksService.delete] Falha ao excluir tarefa:', error.message);
+      console.warn('[tasksService.delete] Falha ao excluir tarefa — enfileirado:', error.message);
+      enqueue('task_delete', { userId, id });
       return { error, degraded: true };
     }
   },

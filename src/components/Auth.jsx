@@ -50,6 +50,11 @@ export default function Auth({ onLoginSuccess }) {
             name: data.user.user_metadata?.name || data.user.email.split('@')[0],
             user_metadata: data.user.user_metadata || {},
           };
+          // Growth event: session_started no login explícito
+          eventsService.logEvent(data.user.id, 'session_started', {
+            method: 'login',
+            ts: new Date().toISOString(),
+          });
           setTimeout(() => {
             onLoginSuccess(userObj);
           }, 1000);
@@ -69,8 +74,17 @@ export default function Auth({ onLoginSuccess }) {
         if (error) {
           setError(error.message || 'Erro ao criar conta.');
         } else if (data?.user) {
-          // Registra o evento de cadastro no banco
-          eventsService.logEvent(data.user.id, 'signup');
+          // Growth event: signup_completed com metadados enriquecidos
+          eventsService.logEvent(data.user.id, 'signup_completed', {
+            method: 'email',
+            name: name,
+            ts: new Date().toISOString(),
+            platform: navigator.userAgent?.includes('Mobile') ? 'mobile' : 'desktop',
+          });
+          // Evento de onboarding iniciado automaticamente
+          eventsService.logEvent(data.user.id, 'onboarding_started', {
+            ts: new Date().toISOString()
+          });
 
           // Se o Supabase já retornar a sessão confirmada
           if (data.session) {
