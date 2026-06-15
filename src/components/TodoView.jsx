@@ -191,7 +191,8 @@ export default function TodoView() {
     categories,
     handleAddCategory,
     handleDeleteCategory,
-    habitsManager
+    habitsManager,
+    logEvent
   } = useAppContext();
 
   // Estados locais
@@ -226,10 +227,15 @@ export default function TodoView() {
   const [recurrence, setRecurrence] = useState('nenhuma');
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
 
-  // Salva modo de visualização
+  // Salva modo de visualização e rastreia analytics
   useEffect(() => {
     localStorage.setItem('flowday_tasks_view_mode', viewMode);
-  }, [viewMode]);
+    if (viewMode === 'calendar') {
+      logEvent('calendar_viewed');
+    } else if (viewMode === 'kanban') {
+      logEvent('kanban_viewed');
+    }
+  }, [viewMode, logEvent]);
 
   // Abertura automática no primeiro uso
   useEffect(() => {
@@ -871,8 +877,8 @@ export default function TodoView() {
           <div className="calendar-header">
             <h3 className="calendar-title">{getMonthName()}</h3>
             <div style={{ display: 'flex', gap: '8px' }}>
-              <button onClick={() => changeMonth(-1)} className="calendar-nav-btn"><ArrowLeft size={16} /></button>
-              <button onClick={() => changeMonth(1)} className="calendar-nav-btn"><ArrowRight size={16} /></button>
+              <button onClick={() => { changeMonth(-1); logEvent('calendar_month_selected', { direction: 'prev' }); }} className="calendar-nav-btn"><ArrowLeft size={16} /></button>
+              <button onClick={() => { changeMonth(1); logEvent('calendar_month_selected', { direction: 'next' }); }} className="calendar-nav-btn"><ArrowRight size={16} /></button>
             </div>
           </div>
 
@@ -888,7 +894,10 @@ export default function TodoView() {
               return (
                 <div 
                   key={idx}
-                  onClick={() => setSelectedCalendarDay(cell.dateStr)}
+                  onClick={() => {
+                    setSelectedCalendarDay(cell.dateStr);
+                    logEvent('calendar_day_selected', { date: cell.dateStr });
+                  }}
                   className={`calendar-day-cell ${cell.isCurrentMonth ? '' : 'other-month'} ${cell.isToday ? 'today-cell' : ''}`}
                 >
                   <span className="calendar-day-number">{cell.dayNumber}</span>

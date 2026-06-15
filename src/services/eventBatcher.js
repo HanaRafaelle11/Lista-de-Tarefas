@@ -41,17 +41,57 @@ function setupTimer() {
   flushTimer = setInterval(flushBatch, FLUSH_INTERVAL_MS);
 }
 
-/**
- * Adiciona um evento ao buffer.
- */
 export async function trackEvent(userId, eventType, metadata = {}) {
   if (!userId) return;
+
+  // Map legacy event types to new snake_case format (Objeto + Ação no passado)
+  let normalizedType = eventType;
+  const eventMappings = {
+    'signup': 'user_signed_up',
+    'signup_completed': 'user_signed_up',
+    'login': 'user_logged_in',
+    'logout': 'user_logged_out',
+    'task_uncompleted': 'task_reopened',
+    'weekly_plan_saved': 'weekly_plan_created',
+    'weekly_plan_viewed': 'weekly_plan_opened',
+    'focus_started': 'focus_session_started',
+    'focus_completed': 'focus_session_completed',
+    'pomodoro_completed': 'focus_session_completed',
+    'focus_session_completed': 'focus_session_completed'
+  };
+
+  if (eventMappings[eventType]) {
+    normalizedType = eventMappings[eventType];
+  }
+
+  // Auto-enrich metadata with platform, device, screen, and app version
+  const getDeviceType = () => {
+    if (typeof window === 'undefined') return 'server';
+    const width = window.innerWidth;
+    if (width < 768) return 'mobile';
+    if (width < 1024) return 'tablet';
+    return 'desktop';
+  };
+
+  const getScreenName = () => {
+    if (typeof window === 'undefined') return '';
+    return window.location.pathname + (window.location.hash || '');
+  };
+
+  const enrichedMetadata = {
+    ...metadata,
+    platform: 'web',
+    device_type: getDeviceType(),
+    screen: getScreenName(),
+    app_version: '2.0.0',
+    timestamp: new Date().toISOString()
+  };
 
   const event = {
     id: generateId(),
     user_id: userId,
-    event_type: eventType,
-    metadata: metadata || {},
+    event_type: normalizedType,
+    metadata: enrichedMetadata,
     created_at: new Date().toISOString()
   };
 
