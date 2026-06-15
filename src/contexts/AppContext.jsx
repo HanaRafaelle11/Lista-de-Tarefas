@@ -357,6 +357,21 @@ export function AppProvider({ children }) {
     const list = data || [];
     setUnlockedAchievements(list);
     setUnlockedKeys(new Set(list.map((a) => a.achievement_key)));
+
+    // Se houver conquistas não vistas na carga inicial, adiciona na fila de toasts
+    const unseen = list.filter(a => !a.seen);
+    if (unseen.length > 0) {
+      unseen.forEach((a, i) => {
+        const achievementInfo = ACHIEVEMENTS.find(ac => ac.key === a.achievement_key);
+        if (achievementInfo) {
+          setTimeout(() => {
+            const id = `${a.achievement_key}-${Date.now()}`;
+            setToastQueue((prev) => [...prev, { id, achievement: achievementInfo }]);
+            achievementsService.markAsSeen(userId, [a.achievement_key]);
+          }, i * 1200);
+        }
+      });
+    }
   }, []);
 
   const loadHabits = useCallback(async (userId) => {
@@ -528,10 +543,12 @@ export function AppProvider({ children }) {
             setUnlockedKeys((prev) => { const n = new Set(prev); n.add(a.key); return n; });
             setUnlockedAchievements((prev) => [
               ...(prev || []),
-              { achievement_key: a.key, unlocked_at: new Date().toISOString() },
+              { achievement_key: a.key, unlocked_at: new Date().toISOString(), seen: true, viewed_at: new Date().toISOString() },
             ]);
             const id = `${a.key}-${Date.now()}`;
             setToastQueue((prev) => [...prev, { id, achievement: a }]);
+            // Marca como visto no banco
+            achievementsService.markAsSeen(currentUser.id, [a.key]);
           }, i * 1200);
         });
       } finally {
@@ -571,7 +588,7 @@ export function AppProvider({ children }) {
       setCurrentUser(null);
       setUserProfile(null);
       setTasks([]); setGoals([]); setGoalTasks([]);
-      setUnlockedAchievements([]); setUnlockedKeys(new Set());
+      setUnlockedAchievements(null); setUnlockedKeys(null);
       setHabits([]); setHabitLogs([]);
     } catch (e) { console.error(e); }
   }, [currentUser?.id]);

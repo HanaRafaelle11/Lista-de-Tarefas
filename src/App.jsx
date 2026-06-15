@@ -4,8 +4,6 @@ import Auth from './components/Auth';
 import Navbar from './components/Navbar';
 import AchievementToastManager from './components/AchievementToast';
 import SyncStatusBanner from './components/SyncStatusBanner';
-import DevToolsWidget from './components/DevToolsWidget';
-
 const HomeView = lazy(() => import('./components/HomeView'));
 const GoalsView = lazy(() => import('./components/GoalsView'));
 const TodoView = lazy(() => import('./components/TodoView'));
@@ -15,6 +13,7 @@ const PerformanceView = lazy(() => import('./components/PerformanceView'));
 const ProfileView = lazy(() => import('./components/ProfileView'));
 const AdminDashboard = lazy(() => import('./components/AdminDashboard'));
 const SettingsView = lazy(() => import('./components/SettingsView'));
+const DevToolsWidget = lazy(() => import('./components/DevToolsWidget'));
 
 // ─── Layout interno (usa o contexto) ─────────────────────────────────────────
 function AppLayout() {
@@ -97,7 +96,11 @@ function AppLayout() {
         </div>
       </main>
 
-      {isAdmin && <DevToolsWidget />}
+      {isAdmin && (
+        <Suspense fallback={null}>
+          <DevToolsWidget />
+        </Suspense>
+      )}
 
       <AchievementToastManager queue={toastQueue} onDismiss={dismissToast} />
     </div>

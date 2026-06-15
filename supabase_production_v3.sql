@@ -575,3 +575,45 @@ BEGIN
   REFRESH MATERIALIZED VIEW mv_monetization_metrics;
 END;
 $$;
+
+-- 8. Create User Achievements Table
+CREATE TABLE IF NOT EXISTS public.user_achievements (
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  achievement_key TEXT NOT NULL,
+  unlocked_at TIMESTAMPTZ DEFAULT now(),
+  seen BOOLEAN DEFAULT FALSE,
+  viewed_at TIMESTAMPTZ DEFAULT NULL,
+  PRIMARY KEY (user_id, achievement_key)
+);
+
+-- Enable RLS on user_achievements
+ALTER TABLE public.user_achievements ENABLE ROW LEVEL SECURITY;
+
+-- Policies for user_achievements
+DROP POLICY IF EXISTS "Allow users to view own achievements" ON public.user_achievements;
+CREATE POLICY "Allow users to view own achievements"
+ON public.user_achievements FOR SELECT
+TO authenticated
+USING (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Allow users to insert own achievements" ON public.user_achievements;
+CREATE POLICY "Allow users to insert own achievements"
+ON public.user_achievements FOR INSERT
+TO authenticated
+WITH CHECK (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Allow users to update own achievements" ON public.user_achievements;
+CREATE POLICY "Allow users to update own achievements"
+ON public.user_achievements FOR UPDATE
+TO authenticated
+USING (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Allow admins to view all achievements" ON public.user_achievements;
+CREATE POLICY "Allow admins to view all achievements"
+ON public.user_achievements FOR SELECT
+TO authenticated
+USING (
+  (auth.jwt()->>'email' = 'admin@flowday.app') OR 
+  (auth.jwt()->>'email' = 'rafaelle@flowday.app') OR 
+  (auth.jwt()->>'email' = 'rafox@flowday.app')
+);

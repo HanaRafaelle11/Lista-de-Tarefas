@@ -13,7 +13,7 @@ export const achievementsService = {
     try {
       const { data, error } = await supabase
         .from('user_achievements')
-        .select('achievement_key, unlocked_at')
+        .select('achievement_key, unlocked_at, seen, viewed_at')
         .eq('user_id', userId);
 
       if (error) throw error;
@@ -42,6 +42,28 @@ export const achievementsService = {
       return { error: null };
     } catch (error) {
       console.error('[achievementsService.unlock]', error);
+      return { error };
+    }
+  },
+
+  /**
+   * Marca conquistas como visualizadas (seen = true).
+   * @param {string[]} keys - array de achievement_key
+   */
+  markAsSeen: async (userId, keys) => {
+    requireUser(userId);
+    if (!keys || keys.length === 0) return { error: null };
+    try {
+      const { error } = await supabase
+        .from('user_achievements')
+        .update({ seen: true, viewed_at: new Date().toISOString() })
+        .eq('user_id', userId)
+        .in('achievement_key', keys);
+
+      if (error) throw error;
+      return { error: null };
+    } catch (error) {
+      console.error('[achievementsService.markAsSeen]', error);
       return { error };
     }
   },

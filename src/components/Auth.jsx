@@ -67,11 +67,11 @@ export default function Auth({ onLoginSuccess }) {
           }, 1000);
         }
       } else {
-        // Processo de Cadastro no Supabase
         const { data, error } = await supabase.auth.signUp({
           email,
           password,
           options: {
+            emailRedirectTo: 'https://myflowday.vercel.app',
             data: {
               name: name
             }
@@ -127,6 +127,9 @@ export default function Auth({ onLoginSuccess }) {
       const { error } = await supabase.auth.resend({
         type: 'signup',
         email: email,
+        options: {
+          emailRedirectTo: 'https://myflowday.vercel.app'
+        }
       });
       if (error) {
         setError('Erro ao reenviar e-mail: ' + error.message);

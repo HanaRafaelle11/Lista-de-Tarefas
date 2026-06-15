@@ -608,23 +608,57 @@ function GoalProgressRow({ goal, linkedTasks }) {
                         display: 'flex', 
                         flexDirection: 'column', 
                         alignItems: 'center', 
-                        gap: '8px', 
-                        padding: '24px 16px', 
-                        backgroundColor: 'var(--bg-card)', 
-                        borderRadius: 'var(--radius-md)', 
+                        justifyContent: 'center',
+                        gap: '12px', 
+                        padding: '32px 20px', 
+                        background: 'linear-gradient(135deg, rgba(74,101,78,0.05) 0%, rgba(255,255,255,0.02) 100%)',
+                        borderRadius: 'var(--radius-lg)', 
                         border: '1px dashed var(--border-medium)', 
-                        marginTop: '8px',
+                        marginTop: '12px',
                         textAlign: 'center',
-                        width: '100%'
+                        width: '100%',
+                        position: 'relative',
+                        overflow: 'hidden'
                       }}
                     >
-                      <span style={{ fontSize: '28px' }}>🌱</span>
-                      <p style={{ fontSize: '13px', color: 'var(--text-main)', margin: 0, fontWeight: '700' }}>
-                        Nenhum progresso nos últimos 7 dias
+                      <div className="home-ritmo-empty-illustration" style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '56px', height: '56px', borderRadius: '50%', background: 'rgba(74, 101, 78, 0.1)', color: 'var(--color-primary)', marginBottom: '4px' }}>
+                        <span style={{ fontSize: '24px', zIndex: 2 }}>🌱</span>
+                        <div style={{ position: 'absolute', width: '100%', height: '100%', borderRadius: '50%', border: '1px solid rgba(74, 101, 78, 0.2)', animation: 'ping-animation 2s cubic-bezier(0, 0, 0.2, 1) infinite' }} />
+                      </div>
+                      <h4 style={{ fontSize: '15px', color: 'var(--text-main)', margin: 0, fontWeight: '700', fontFamily: 'var(--font-display)' }}>
+                        Comece hoje sua sequência
+                      </h4>
+                      <p style={{ fontSize: '12px', color: 'var(--text-light)', margin: '0 0 8px 0', maxWidth: '280px', lineHeight: '1.4' }}>
+                        Conclua tarefas por alguns dias consecutivos para desbloquear seus insights de evolução.
                       </p>
-                      <p style={{ fontSize: '12px', color: 'var(--text-light)', margin: 0 }}>
-                        Conclua tarefas com prazos para ativar seu ritmo.
-                      </p>
+                      <button 
+                        onClick={() => setActiveTab('tasks')}
+                        style={{
+                          background: 'var(--color-primary)',
+                          color: 'var(--bg-card)',
+                          border: 'none',
+                          padding: '8px 16px',
+                          borderRadius: '20px',
+                          fontSize: '12px',
+                          fontWeight: '600',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          transition: 'transform 0.2s, filter 0.2s',
+                          boxShadow: '0 4px 12px rgba(74, 101, 78, 0.2)'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.transform = 'translateY(-1px)';
+                          e.currentTarget.style.filter = 'brightness(1.1)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.transform = 'none';
+                          e.currentTarget.style.filter = 'none';
+                        }}
+                      >
+                        Ver Minhas Tarefas
+                      </button>
                     </div>
                   ) : (
                     <div className="home-ritmo-dots-row">
