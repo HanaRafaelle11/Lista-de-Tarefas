@@ -78,6 +78,9 @@ export default function Auth({ onLoginSuccess }) {
           }
         });
 
+        console.log("SIGNUP RESPONSE", data);
+        console.log("SIGNUP ERROR", error);
+
         if (error) {
           setError(error.message || 'Erro ao criar conta.');
         } else if (data?.user) {
