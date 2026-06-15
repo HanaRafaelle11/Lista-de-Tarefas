@@ -171,6 +171,7 @@ function GoalProgressRow({ goal, linkedTasks }) {
   };
 
   const handleNextStep = () => {
+    logEvent('onboarding_step_completed', { step: onboardingStep });
     const next = onboardingStep + 1;
     if (next <= ONBOARDING_TOTAL_STEPS) {
       localStorage.setItem('flowday_onboarding_step', String(next));

@@ -14,83 +14,24 @@ export default function AdminDashboard() {
   const [userDetails, setUserDetails] = useState(null);
   const [userEvents, setUserEvents] = useState([]);
   const [loadingUser, setLoadingUser] = useState(false);
+  const [error, setError] = useState(null);
   
   // Filters for individual user timeline
   const [timeFilter, setTimeFilter] = useState('all'); // '7d' | '30d' | 'all'
 
-  // 1. Fetch Global Summary Metrics
+  // 1. Fetch Global Summary Metrics (Single Source of Truth: SQL RPC Only)
   const fetchGlobalMetrics = async () => {
     setLoading(true);
+    setError(null);
     try {
-      // Try to query from RPC function get_admin_dashboard_metrics
       const { data: rpcData, error: rpcErr } = await supabase.rpc('get_admin_dashboard_metrics');
       
       if (!rpcErr && rpcData) {
         setMetrics(rpcData);
       } else {
-        console.warn('[AdminDashboard] RPC not found or failed, falling back to count queries', rpcErr);
-        // Fallback: Use HEAD count queries to avoid fetching full tables
-        const getCount = async (table, filterCol, filterVal) => {
-          let query = supabase.from(table).select('*', { count: 'exact', head: true });
-          if (filterCol && filterVal) {
-            query = query.eq(filterCol, filterVal);
-          }
-          const { count, error } = await query;
-          if (error) console.error(error);
-          return count || 0;
-        };
-
-        const totalUsers = await getCount('profiles');
-        
-        // Fetch specific event counts
-        const goalCreated = await getCount('events', 'event_type', 'goal_created');
-        const goalCompleted = await getCount('events', 'event_type', 'goal_completed');
-        const taskCreated = await getCount('events', 'event_type', 'task_created');
-        const taskCompleted = await getCount('events', 'event_type', 'task_completed');
-        const focusCompleted = await getCount('events', 'event_type', 'focus_session_completed');
-        const weeklyPlans = await getCount('events', 'event_type', 'weekly_plan_completed');
-        const calendarTasks = await getCount('events', 'event_type', 'calendar_task_completed');
-        const habitsCompleted = await getCount('events', 'event_type', 'habit_completed');
-        const paywallViews = await getCount('events', 'event_type', 'paywall_viewed');
-        const upgradeClicks = await getCount('events', 'event_type', 'upgrade_clicked');
-
-        // Estimate active users
-        const { data: activeUsersRes } = await supabase
-          .from('events')
-          .select('user_id')
-          .gt('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString());
-        
-        const activeIds = new Set((activeUsersRes || []).map(e => e.user_id));
-        const activeCount = activeIds.size;
-
-        const actRate = totalUsers > 0 ? parseFloat(((taskCompleted / totalUsers) * 100).toFixed(1)) : 0;
-
-        setMetrics({
-          total_users: totalUsers,
-          active_today: Math.max(1, Math.round(activeCount * 0.2)),
-          active_7d: Math.max(1, Math.round(activeCount * 0.6)),
-          active_30d: activeCount,
-          goal_created: goalCreated,
-          goal_completed: goalCompleted,
-          task_created: taskCreated,
-          task_completed: taskCompleted,
-          activation_rate: actRate,
-          retention_d1: 15.0,
-          retention_d7: 8.5,
-          retention_d30: 4.2,
-          stickiness_dau_mau: 22.4,
-          stickiness_dau_wau: 45.2,
-          focus_completed: focusCompleted,
-          weekly_plans: weeklyPlans,
-          calendar_tasks: calendarTasks,
-          habits_completed: habitsCompleted,
-          paywall_views: paywallViews,
-          upgrade_clicks: upgradeClicks,
-          monetization_conversion: paywallViews > 0 ? parseFloat(((upgradeClicks / paywallViews) * 100).toFixed(1)) : 0,
-          mrr: upgradeClicks * 29.90,
-          arr: upgradeClicks * 29.90 * 12,
-          churn: 4.8
-        });
+        console.error('[AdminDashboard] get_admin_dashboard_metrics failed:', rpcErr);
+        setError('Falha ao carregar métricas administrativas do banco de dados.');
+        setMetrics(null);
       }
 
       // Fetch profiles list
@@ -104,6 +45,8 @@ export default function AdminDashboard() {
       }
     } catch (err) {
       console.error('[AdminDashboard] Error fetching admin metrics:', err);
+      setError('Erro de conexão ao carregar dados do painel.');
+      setMetrics(null);
     } finally {
       setLoading(false);
     }
@@ -115,61 +58,20 @@ export default function AdminDashboard() {
     }
   }, [isAdmin]);
 
-  // 2. Fetch Individual User Details
+  // 2. Fetch Individual User Details (Single Source of Truth: SQL RPC Only)
   const handleUserClick = async (userId) => {
     setSelectedUser(userId);
     setLoadingUser(true);
+    setError(null);
     try {
-      // Try to query from RPC function get_user_detail_metrics
       const { data: rpcDetail, error: rpcErr } = await supabase.rpc('get_user_detail_metrics', { p_user_id: userId });
       
       if (!rpcErr && rpcDetail) {
         setUserDetails(rpcDetail);
       } else {
-        console.warn('[AdminDashboard] User details RPC failed or not found, falling back to aggregates', rpcErr);
-        
-        // Fallback calculations for single user details
-        const getCountForUser = async (eventType) => {
-          const { count } = await supabase
-            .from('events')
-            .select('*', { count: 'exact', head: true })
-            .eq('user_id', userId)
-            .eq('event_type', eventType);
-          return count || 0;
-        };
-
-        const goalsCreated = await getCountForUser('goal_created');
-        const goalsCompleted = await getCountForUser('goal_completed');
-        const tasksCreated = await getCountForUser('task_created');
-        const tasksCompleted = await getCountForUser('task_completed');
-        const pomodoros = await getCountForUser('focus_session_completed');
-        const weeklyPlans = await getCountForUser('weekly_plan_completed');
-
-        const { data: userEventsSample } = await supabase
-          .from('events')
-          .select('created_at')
-          .eq('user_id', userId)
-          .order('created_at', { ascending: false });
-
-        const activeDays = new Set((userEventsSample || []).map(e => e.created_at.split('T')[0])).size;
-        const lastAccess = userEventsSample && userEventsSample.length > 0 ? userEventsSample[0].created_at : 'Sem registros';
-
-        const profile = profiles.find(p => p.id === userId);
-
-        setUserDetails({
-          email: profile?.name || 'Sem e-mail',
-          created_at: profile?.created_at || new Date().toISOString(),
-          last_access: lastAccess,
-          active_days: activeDays,
-          sessions: userEventsSample?.length || 0,
-          goals_created: goalsCreated,
-          goals_completed: goalsCompleted,
-          tasks_created: tasksCreated,
-          tasks_completed: tasksCompleted,
-          pomodoros: pomodoros,
-          weekly_plans: weeklyPlans,
-          completion_rate: tasksCreated > 0 ? parseFloat(((tasksCompleted / tasksCreated) * 100).toFixed(1)) : 0
-        });
+        console.error('[AdminDashboard] get_user_detail_metrics failed:', rpcErr);
+        setError('Falha ao carregar detalhes do usuário do banco de dados.');
+        setUserDetails(null);
       }
 
       // Fetch user event timeline
@@ -191,6 +93,8 @@ export default function AdminDashboard() {
       }
     } catch (e) {
       console.error('[AdminDashboard] Error loading user details:', e);
+      setError('Erro de conexão ao carregar a timeline.');
+      setUserDetails(null);
     } finally {
       setLoadingUser(false);
     }
@@ -253,6 +157,12 @@ export default function AdminDashboard() {
           </button>
         )}
       </div>
+
+      {error && (
+        <div style={{ padding: '12px 16px', backgroundColor: '#FDE8E8', color: '#9B1C1C', borderRadius: 'var(--radius-md)', marginBottom: '20px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px', border: '1px solid #F8B4B4' }}>
+          <ShieldAlert size={16} /> {error}
+        </div>
+      )}
 
       {loading ? (
         <div style={{ textAlign: 'center', padding: '64px 0' }}>

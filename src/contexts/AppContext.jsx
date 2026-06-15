@@ -171,13 +171,27 @@ export function AppProvider({ children }) {
     return !!currentUser.user_metadata?.is_admin || adminEmails.includes(currentUser.email);
   }, [currentUser]);
 
-  useEffect(() => {
-    if (currentUser) {
-      setIsPro(!!currentUser.user_metadata?.is_pro);
-    } else {
+  const loadSubscription = useCallback(async (userId) => {
+    if (!userId) {
+      setIsPro(false);
+      return;
+    }
+    try {
+      const { data, error } = await supabase
+        .from('subscriptions')
+        .select('status')
+        .eq('user_id', userId)
+        .maybeSingle();
+      if (!error && data) {
+        setIsPro(data.status === 'active');
+      } else {
+        setIsPro(false);
+      }
+    } catch (err) {
+      console.warn('[AppContext] Erro ao carregar assinatura:', err.message);
       setIsPro(false);
     }
-  }, [currentUser]);
+  }, []);
 
   // ── Categorias Customizadas (SaaS) ──────────────────────────────────────────
   const categories = useMemo(() => {
@@ -423,6 +437,7 @@ export function AppProvider({ children }) {
             loadAchievements(u.id),
             loadHabits(u.id),
             loadProfile(u.id),
+            loadSubscription(u.id),
             rehydrateUserState(u.id),
           ]).finally(() => setIsInitializing(false));
         } else {
@@ -443,6 +458,7 @@ export function AppProvider({ children }) {
         loadAchievements(u.id);
         loadHabits(u.id);
         loadProfile(u.id);
+        loadSubscription(u.id);
         rehydrateUserState(u.id);
       } else {
         setCurrentUser(null);
@@ -450,11 +466,12 @@ export function AppProvider({ children }) {
         setTasks([]); setGoals([]); setGoalTasks([]);
         setUnlockedAchievements([]); setUnlockedKeys(new Set());
         setHabits([]); setHabitLogs([]);
+        setIsPro(false);
       }
     });
 
     return () => subscription.unsubscribe();
-  }, [loadTasks, loadGoals, loadAchievements, loadHabits, loadProfile, runSilentHealthCheck, rehydrateUserState]);
+  }, [loadTasks, loadGoals, loadAchievements, loadHabits, loadProfile, loadSubscription, runSilentHealthCheck, rehydrateUserState]);
 
   // ═══════════════════════════════════════════════════════════════════════════
   // CONQUISTAS — detecção automática (PROTEGIDA contra false positives)
@@ -536,10 +553,11 @@ export function AppProvider({ children }) {
       loadAchievements(user.id),
       loadHabits(user.id),
       loadProfile(user.id),
+      loadSubscription(user.id),
       rehydrateUserState(user.id)
     ]);
     setActiveTab('home');
-  }, [loadTasks, loadGoals, loadAchievements, loadHabits, loadProfile, rehydrateUserState]);
+  }, [loadTasks, loadGoals, loadAchievements, loadHabits, loadProfile, loadSubscription, rehydrateUserState]);
 
   const handleLogout = useCallback(async () => {
     try {
@@ -750,6 +768,9 @@ export function AppProvider({ children }) {
     if (payload) {
       setGoals((prev) => prev.map((g) => g.id === id ? { ...g, ...payload } : g));
       logEvent('goal_updated', { goal_id: id });
+      if (updatedData.status === 'completed') {
+        logEvent('goal_completed', { goal_id: id });
+      }
     }
   }, [currentUser?.id, logEvent]);
 
@@ -854,14 +875,17 @@ export function AppProvider({ children }) {
     if (!currentUser?.id) return;
     try {
       const nextPro = !isPro;
-      const { error } = await supabase.auth.updateUser({
-        data: { is_pro: nextPro }
-      });
+      const { error } = await supabase
+        .from('subscriptions')
+        .upsert({
+          user_id: currentUser.id,
+          status: nextPro ? 'active' : 'canceled',
+          plan: 'pro',
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'user_id' });
       if (error) throw error;
-      setCurrentUser(prev => ({
-        ...prev,
-        user_metadata: { ...prev.user_metadata, is_pro: nextPro }
-      }));
+      
+      setIsPro(nextPro);
       logEvent(nextPro ? 'upgrade_clicked' : 'downgrade_clicked');
     } catch (e) {
       console.error('Erro ao mudar assinatura:', e);

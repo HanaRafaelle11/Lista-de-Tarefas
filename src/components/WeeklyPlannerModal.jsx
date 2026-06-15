@@ -40,8 +40,9 @@ export default function WeeklyPlannerModal({ isOpen, onClose, tasks, onUpdateTas
       }
       // Sempre inicia na primeira aba ao abrir
       setPlannerTab('focus');
+      logEvent('weekly_plan_viewed');
     }
-  }, [currentUser, isOpen]);
+  }, [currentUser, isOpen, logEvent]);
 
   const [selectedTask, setSelectedTask] = useState(null);
 
@@ -108,6 +109,7 @@ export default function WeeklyPlannerModal({ isOpen, onClose, tasks, onUpdateTas
       }));
       
       logEvent('weekly_plan_saved', { goals_selected: selectedGoals.length });
+      logEvent('weekly_plan_completed', { goals_selected: selectedGoals.length });
       alert('Seu planejamento semanal foi salvo com sucesso! ⚡');
       setPlannerTab('schedule'); // Avança para o agendamento de tarefas
     } catch (err) {

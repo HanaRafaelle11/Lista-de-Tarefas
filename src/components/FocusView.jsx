@@ -49,6 +49,8 @@ export default function FocusView() {
     
     if (mode === 'focus') {
       logEvent('focus_timer_completed', { duration_minutes: focusTime, task_id: selectedTaskId });
+      logEvent('focus_completed', { duration_minutes: focusTime, task_id: selectedTaskId });
+      logEvent('pomodoro_completed', { duration_minutes: focusTime, task_id: selectedTaskId });
       // Envia notificação nativa se disponível
       if ('Notification' in window && Notification.permission === 'granted') {
         new Notification('Flowday ⏱️', {

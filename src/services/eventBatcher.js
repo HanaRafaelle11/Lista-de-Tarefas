@@ -20,6 +20,25 @@ const FLUSH_INTERVAL_MS = 15_000;
 
 let memoryBuffer = [];
 let flushTimer = null;
+let isFlushing = false;
+let currentSessionToken = null;
+
+// Keep track of auth session token for pagehide/visibilitychange fetch keepalive
+if (supabase && supabase.auth) {
+  supabase.auth.getSession().then(({ data: { session } }) => {
+    if (session) currentSessionToken = session.access_token;
+  }).catch(() => {});
+
+  supabase.auth.onAuthStateChange((event, session) => {
+    if (session) {
+      currentSessionToken = session.access_token;
+    } else {
+      currentSessionToken = null;
+    }
+  });
+}
+
+const APP_VERSION = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '2.0.1';
 
 // Inicializa o batcher restaurando eventos pendentes do IndexedDB
 export async function initEventBatcher() {
@@ -54,10 +73,13 @@ export async function trackEvent(userId, eventType, metadata = {}) {
     'task_uncompleted': 'task_reopened',
     'weekly_plan_saved': 'weekly_plan_created',
     'weekly_plan_viewed': 'weekly_plan_opened',
+    'calendar_viewed': 'calendar_opened',
     'focus_started': 'focus_session_started',
     'focus_completed': 'focus_session_completed',
     'pomodoro_completed': 'focus_session_completed',
-    'focus_session_completed': 'focus_session_completed'
+    'focus_session_completed': 'focus_session_completed',
+    'focus_timer_paused': 'focus_session_paused',
+    'focus_timer_reset': 'focus_session_reset'
   };
 
   if (eventMappings[eventType]) {
@@ -83,7 +105,7 @@ export async function trackEvent(userId, eventType, metadata = {}) {
     platform: 'web',
     device_type: getDeviceType(),
     screen: getScreenName(),
-    app_version: '2.0.0',
+    app_version: APP_VERSION,
     timestamp: new Date().toISOString()
   };
 
@@ -92,7 +114,7 @@ export async function trackEvent(userId, eventType, metadata = {}) {
     user_id: userId,
     event_type: normalizedType,
     metadata: enrichedMetadata,
-    created_at: new Date().toISOString()
+    created_at: enrichedMetadata.timestamp
   };
 
   memoryBuffer.push(event);
@@ -114,25 +136,21 @@ export async function trackEvent(userId, eventType, metadata = {}) {
  * Envia o lote de eventos para o Supabase.
  */
 export async function flushBatch() {
+  if (isFlushing) return;
   if (memoryBuffer.length === 0) return;
 
+  isFlushing = true;
   const batchToSend = [...memoryBuffer];
   memoryBuffer = []; // Limpa o buffer ativo imediatamente para evitar concorrência
 
-  // Limpa o IndexedDB correspondente ao lote atual
-  for (const item of batchToSend) {
-    localDB.delete('events', item.id).catch(() => {});
-  }
-
   if (typeof navigator !== 'undefined' && !navigator.onLine) {
-    // Se offline, enfileira todos na syncQueue para envio eventual individual
-    console.log('[eventBatcher] Offline: jogando', batchToSend.length, 'eventos na syncQueue');
-    enqueueBatchToSync(batchToSend);
+    console.log('[eventBatcher] Offline: mantendo', batchToSend.length, 'eventos no buffer/IndexedDB');
+    memoryBuffer = [...batchToSend, ...memoryBuffer];
+    isFlushing = false;
     return;
   }
 
   try {
-    // Insere lote completo no Supabase de uma só vez
     const payload = batchToSend.map(e => ({
       id: e.id,
       user_id: e.user_id,
@@ -143,26 +161,75 @@ export async function flushBatch() {
 
     const { error } = await supabase
       .from('events')
-      .insert(payload);
+      .upsert(payload, { onConflict: 'id' }); // Upsert for idempotency
 
     if (error) {
       throw error;
     }
     
+    // Deleta do IndexedDB apenas após confirmação de sucesso
+    for (const item of batchToSend) {
+      localDB.delete('events', item.id).catch(() => {});
+    }
     console.log('[eventBatcher] Batch enviado com sucesso:', batchToSend.length, 'eventos');
   } catch (err) {
-    console.warn('[eventBatcher] Erro ao enviar batch pro Supabase. Delegando para syncQueue:', err.message);
-    enqueueBatchToSync(batchToSend);
+    console.warn('[eventBatcher] Erro ao enviar batch pro Supabase. Retornando ao buffer:', err.message);
+    // Retorna os eventos falhos para a fila
+    memoryBuffer = [...batchToSend, ...memoryBuffer];
+  } finally {
+    isFlushing = false;
   }
 }
 
-// Fallback: joga o lote de eventos na syncQueue
-function enqueueBatchToSync(batch) {
-  for (const item of batch) {
-    enqueue('event', {
-      userId: item.user_id,
-      eventType: item.event_type,
-      metadata: item.metadata
-    }, item.id);
-  }
+// Escuta eventos de encerramento da página para forçar sincronização final via keepalive fetch
+if (typeof window !== 'undefined') {
+  const handlePageUnload = () => {
+    if (memoryBuffer.length === 0) return;
+
+    const batchToSend = [...memoryBuffer];
+    memoryBuffer = []; // Limpar buffer
+
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+    if (!supabaseUrl || !supabaseAnonKey) return;
+
+    const payload = batchToSend.map(e => ({
+      id: e.id,
+      user_id: e.user_id,
+      event_type: e.event_type,
+      metadata: e.metadata,
+      created_at: e.created_at
+    }));
+
+    const headers = {
+      'apikey': supabaseAnonKey,
+      'Content-Type': 'application/json',
+      'Prefer': 'return=minimal'
+    };
+
+    if (currentSessionToken) {
+      headers['Authorization'] = `Bearer ${currentSessionToken}`;
+    }
+
+    fetch(`${supabaseUrl}/rest/v1/events`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(payload),
+      keepalive: true
+    }).then(res => {
+      if (res.ok) {
+        for (const item of batchToSend) {
+          localDB.delete('events', item.id).catch(() => {});
+        }
+      }
+    }).catch(() => {});
+  };
+
+  window.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') {
+      handlePageUnload();
+    }
+  });
+  window.addEventListener('pagehide', handlePageUnload);
 }
+

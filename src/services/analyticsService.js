@@ -14,6 +14,7 @@
  */
 
 import { supabase } from '../supabaseClient';
+import { localDB } from '../db/localDB';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -23,19 +24,9 @@ function daysAgo(n) {
   return d;
 }
 
+// Fixed retention math: remove Math.abs to only consider positive timeline offsets
 function daysDiff(dateA, dateB) {
-  return Math.abs(new Date(dateA) - new Date(dateB)) / (1000 * 60 * 60 * 24);
-}
-
-/**
- * Lê eventos do localStorage para um usuário (fallback offline).
- */
-function getLocalEvents(userId) {
-  try {
-    return JSON.parse(localStorage.getItem(`flowday_events_${userId}`) || '[]');
-  } catch {
-    return [];
-  }
+  return (new Date(dateA) - new Date(dateB)) / (1000 * 60 * 60 * 24);
 }
 
 // ─── Computação de Métricas Individuais ──────────────────────────────────────
@@ -46,7 +37,7 @@ function getLocalEvents(userId) {
  */
 export function computeTimeToValue(events) {
   const signup = events.find(e =>
-    e.event_type === 'signup_completed' || e.event_type === 'signup'
+    e.event_type === 'user_signed_up' || e.event_type === 'signup_completed' || e.event_type === 'signup'
   );
   const firstSuccess = events.find(e =>
     e.event_type === 'first_success_action' || e.event_type === 'task_completed'
@@ -87,26 +78,27 @@ export function computeEngagementScore(events) {
 }
 
 /**
- * Retention D1: teve sessão no dia seguinte ao signup.
+ * Retention D1: teve sessão no dia seguinte ao signup (strictly posterior).
  */
 export function computeRetentionD1(events) {
   const signup = events.find(e =>
-    e.event_type === 'signup_completed' || e.event_type === 'signup'
+    e.event_type === 'user_signed_up' || e.event_type === 'signup_completed' || e.event_type === 'signup'
   );
   if (!signup) return false;
   const signupDate = new Date(signup.created_at);
   return events.some(e => {
     const diff = daysDiff(e.created_at, signupDate);
-    return diff >= 1 && diff < 2 && e.event_type !== 'signup_completed';
+    // Retention D1 is defined as returning on day 1 (between 24h and 48h after signup)
+    return diff >= 1 && diff < 2 && e.event_type !== 'user_signed_up' && e.event_type !== 'signup_completed';
   });
 }
 
 /**
- * Retention D7: teve sessão 7 dias após signup.
+ * Retention D7: teve sessão 7 dias após signup (strictly posterior).
  */
 export function computeRetentionD7(events) {
   const signup = events.find(e =>
-    e.event_type === 'signup_completed' || e.event_type === 'signup'
+    e.event_type === 'user_signed_up' || e.event_type === 'signup_completed' || e.event_type === 'signup'
   );
   if (!signup) return false;
   const signupDate = new Date(signup.created_at);
@@ -120,7 +112,7 @@ export function computeRetentionD7(events) {
 
 /**
  * Computa todas as métricas para um usuário.
- * Usa Supabase quando disponível; fallback para localStorage.
+ * Usa Supabase quando disponível; fallback para IndexedDB local cache.
  *
  * @param {string} userId
  * @returns {Promise<AnalyticsMetrics>}
@@ -129,6 +121,7 @@ export async function computeUserMetrics(userId) {
   if (!userId) return null;
 
   let events = [];
+  let source = 'supabase';
 
   try {
     const { data, error } = await supabase
@@ -140,17 +133,23 @@ export async function computeUserMetrics(userId) {
     if (!error && data?.length > 0) {
       events = data;
     } else {
-      // Fallback: eventos locais
-      events = getLocalEvents(userId);
+      // Fallback: events from local IndexedDB
+      const allLocal = await localDB.getAll('events');
+      events = (allLocal || []).filter(e => e.user_id === userId);
+      source = events.length > 0 ? 'indexeddb' : 'empty';
     }
-  } catch {
-    events = getLocalEvents(userId);
+  } catch (err) {
+    console.warn('[analyticsService] Fallback to IndexedDB events loading:', err.message);
+    const allLocal = await localDB.getAll('events');
+    events = (allLocal || []).filter(e => e.user_id === userId);
+    source = events.length > 0 ? 'indexeddb' : 'empty';
   }
 
   if (events.length === 0) {
     return {
       timeToValue:         null,
       taskCompletionRate:  null,
+      focusDurationAvg:    0,
       engagementScore:     0,
       retentionD1:         false,
       retentionD7:         false,
@@ -166,41 +165,7 @@ export async function computeUserMetrics(userId) {
     retentionD1:         computeRetentionD1(events),
     retentionD7:         computeRetentionD7(events),
     totalEvents:         events.length,
-    dataSource:          'supabase',
+    dataSource:          source,
   };
 }
 
-/**
- * Computa métricas globais (para o AdminDashboard).
- * Apenas admins têm acesso.
- *
- * @returns {Promise<GlobalMetrics>}
- */
-export async function computeGlobalMetrics() {
-  try {
-    // Total de usuários com pelo menos 1 task_completed
-    const { data: activatedUsers } = await supabase
-      .from('events')
-      .select('user_id')
-      .eq('event_type', 'task_completed');
-
-    const { data: allSignups } = await supabase
-      .from('events')
-      .select('user_id')
-      .in('event_type', ['signup', 'signup_completed']);
-
-    const activated = new Set((activatedUsers || []).map(e => e.user_id)).size;
-    const total     = new Set((allSignups    || []).map(e => e.user_id)).size;
-
-    const activationRate = total > 0 ? Math.round((activated / total) * 100) : 0;
-
-    return {
-      activationRate,
-      activatedUsers: activated,
-      totalSignups:   total,
-    };
-  } catch (err) {
-    console.warn('[analyticsService] Erro ao computar métricas globais:', err.message);
-    return { activationRate: null, activatedUsers: null, totalSignups: null };
-  }
-}
