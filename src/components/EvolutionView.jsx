@@ -1,8 +1,8 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, lazy, Suspense } from 'react';
 import { CheckCircle, Clock, AlertTriangle, BarChart3, PieChart, Target, Star, Award, ShieldAlert, Zap } from 'lucide-react';
 import { ACHIEVEMENTS, calcStats, calcStreak } from '../hooks/useAchievements';
 import { useAppContext } from '../contexts/AppContext';
-import WeeklyPlannerModal from './WeeklyPlannerModal';
+const WeeklyPlannerModal = lazy(() => import('./WeeklyPlannerModal'));
 
 // ─── Utilitários ─────────────────────────────────────────────────────────────
 function formatDate(isoStr) {
@@ -550,12 +550,14 @@ export default function EvolutionView() {
         </div>
       </section>
 
-      <WeeklyPlannerModal 
-        isOpen={isWeeklyPlannerOpen} 
-        onClose={() => setIsWeeklyPlannerOpen(false)} 
-        tasks={tasks} 
-        onUpdateTask={handleUpdateTask} 
-      />
+      <Suspense fallback={null}>
+        <WeeklyPlannerModal 
+          isOpen={isWeeklyPlannerOpen} 
+          onClose={() => setIsWeeklyPlannerOpen(false)} 
+          tasks={tasks} 
+          onUpdateTask={handleUpdateTask} 
+        />
+      </Suspense>
     </div>
   );
 }

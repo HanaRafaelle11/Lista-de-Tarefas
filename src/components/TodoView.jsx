@@ -1,11 +1,11 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useEffect, useRef, lazy, Suspense } from 'react';
 import { 
   Plus, Search, X, Calendar, ChevronDown, ChevronRight, 
   List, Columns, Grid, Trash2, Edit2, AlertCircle, ArrowLeft, ArrowRight
 } from 'lucide-react';
 import EmojiPicker from 'emoji-picker-react';
 import TodoItem from './TodoItem';
-import WeeklyPlannerModal from './WeeklyPlannerModal';
+const WeeklyPlannerModal = lazy(() => import('./WeeklyPlannerModal'));
 import { 
   useAppContext, 
   parseTaskMetadata, 
@@ -1131,12 +1131,14 @@ export default function TodoView() {
       )}
 
       {/* Modal de Planejamento Semanal */}
-      <WeeklyPlannerModal 
-        isOpen={isPlannerOpen}
-        onClose={() => setIsPlannerOpen(false)}
-        tasks={tasks}
-        onUpdateTask={onUpdateTask}
-      />
+      <Suspense fallback={null}>
+        <WeeklyPlannerModal 
+          isOpen={isPlannerOpen}
+          onClose={() => setIsPlannerOpen(false)}
+          tasks={tasks}
+          onUpdateTask={onUpdateTask}
+        />
+      </Suspense>
     </div>
   );
 }

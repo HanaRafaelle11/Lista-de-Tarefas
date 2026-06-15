@@ -1,19 +1,20 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, lazy, Suspense } from 'react';
 import { AppProvider, useAppContext } from './contexts/AppContext';
 import Auth from './components/Auth';
 import Navbar from './components/Navbar';
-import TodoView from './components/TodoView';
-import EvolutionView from './components/EvolutionView';
-import HomeView from './components/HomeView';
-import GoalsView from './components/GoalsView';
-import SettingsView from './components/SettingsView';
-import FocusView from './components/FocusView';
-import ProfileView from './components/ProfileView';
-import PerformanceView from './components/PerformanceView';
-import AdminDashboard from './components/AdminDashboard';
 import AchievementToastManager from './components/AchievementToast';
 import SyncStatusBanner from './components/SyncStatusBanner';
 import DevToolsWidget from './components/DevToolsWidget';
+
+const HomeView = lazy(() => import('./components/HomeView'));
+const GoalsView = lazy(() => import('./components/GoalsView'));
+const TodoView = lazy(() => import('./components/TodoView'));
+const FocusView = lazy(() => import('./components/FocusView'));
+const EvolutionView = lazy(() => import('./components/EvolutionView'));
+const PerformanceView = lazy(() => import('./components/PerformanceView'));
+const ProfileView = lazy(() => import('./components/ProfileView'));
+const AdminDashboard = lazy(() => import('./components/AdminDashboard'));
+const SettingsView = lazy(() => import('./components/SettingsView'));
 
 // ─── Layout interno (usa o contexto) ─────────────────────────────────────────
 function AppLayout() {
@@ -77,15 +78,22 @@ function AppLayout() {
 
       <main className="app-main-content">
         <div className="container">
-          {activeTab === 'home'        && <HomeView />}
-          {activeTab === 'goals'       && <GoalsView />}
-          {activeTab === 'tasks'       && <TodoView />}
-          {activeTab === 'focus'       && <FocusView />}
-          {activeTab === 'analytics'   && <EvolutionView />}
-          {activeTab === 'performance' && <PerformanceView />}
-          {activeTab === 'profile'     && <ProfileView />}
-          {activeTab === 'admin'       && <AdminDashboard />}
-          {activeTab === 'settings'    && <SettingsView />}
+          <Suspense fallback={
+            <div className="app-loading-container">
+              <div className="app-loading-spinner" />
+              <span className="app-loading-text">Carregando...</span>
+            </div>
+          }>
+            {activeTab === 'home'        && <HomeView />}
+            {activeTab === 'goals'       && <GoalsView />}
+            {activeTab === 'tasks'       && <TodoView />}
+            {activeTab === 'focus'       && <FocusView />}
+            {activeTab === 'analytics'   && <EvolutionView />}
+            {activeTab === 'performance' && <PerformanceView />}
+            {activeTab === 'profile'     && <ProfileView />}
+            {activeTab === 'admin'       && <AdminDashboard />}
+            {activeTab === 'settings'    && <SettingsView />}
+          </Suspense>
         </div>
       </main>
 

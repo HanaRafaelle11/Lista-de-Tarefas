@@ -27,6 +27,74 @@ export default function AdminDashboard() {
   const [timeFilter, setTimeFilter] = useState('all'); // '7d' | '30d' | 'all'
   const [eventCategoryFilter, setEventCategoryFilter] = useState('all'); // 'all' | 'onboarding' | 'goals' | 'tasks' | 'focus' | 'monetization' | 'sessions'
 
+  // Users Directory search, sort, filter and pagination states
+  const [userSearchQuery, setUserSearchQuery] = useState('');
+  const [planFilter, setPlanFilter] = useState('all'); // 'all' | 'pro' | 'free'
+  const [statusFilter, setStatusFilter] = useState('all'); // 'all' | 'active' | 'canceled' | 'inactive'
+  const [userSortKey, setUserSortKey] = useState('created_at'); // 'email' | 'created_at' | 'last_login' | 'total_events'
+  const [userSortOrder, setUserSortOrder] = useState('desc'); // 'asc' | 'desc'
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
+  // Process and memoize users list with filters and sorting
+  const processedUsers = useMemo(() => {
+    let result = [...adminUsers];
+
+    // Search by email, id, plan or registration date
+    if (userSearchQuery.trim()) {
+      const q = userSearchQuery.toLowerCase().trim();
+      result = result.filter(u => 
+        (u.email && u.email.toLowerCase().includes(q)) ||
+        (u.id && u.id.toLowerCase().includes(q)) ||
+        (u.plan && u.plan.toLowerCase().includes(q)) ||
+        (u.created_at && new Date(u.created_at).toLocaleDateString('pt-BR').includes(q))
+      );
+    }
+
+    // Filter by plan
+    if (planFilter !== 'all') {
+      result = result.filter(u => u.plan === planFilter);
+    }
+
+    // Filter by status
+    if (statusFilter !== 'all') {
+      result = result.filter(u => u.status === statusFilter);
+    }
+
+    // Sorting
+    result.sort((a, b) => {
+      let valA = a[userSortKey];
+      let valB = b[userSortKey];
+
+      if (valA === undefined || valA === null) valA = '';
+      if (valB === undefined || valB === null) valB = '';
+
+      if (typeof valA === 'string') {
+        valA = valA.toLowerCase();
+        valB = valB.toLowerCase();
+      }
+
+      if (valA < valB) return userSortOrder === 'asc' ? -1 : 1;
+      if (valA > valB) return userSortOrder === 'asc' ? 1 : -1;
+      return 0;
+    });
+
+    return result;
+  }, [adminUsers, userSearchQuery, planFilter, statusFilter, userSortKey, userSortOrder]);
+
+  // Paginated users
+  const paginatedUsers = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    return processedUsers.slice(startIndex, startIndex + itemsPerPage);
+  }, [processedUsers, currentPage]);
+
+  const totalPages = Math.max(Math.ceil(processedUsers.length / itemsPerPage), 1);
+
+  // Reset page when filters/search changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [userSearchQuery, planFilter, statusFilter]);
+
   // Fetch Global Summary Metrics & Users List (Single Source of Truth: SQL RPCs)
   const fetchGlobalData = async () => {
     setLoading(true);
@@ -539,12 +607,89 @@ export default function AdminDashboard() {
 
           {activeAdminTab === 'users' && (
             <div style={{ backgroundColor: 'var(--bg-card)', padding: '24px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-light)', boxShadow: 'var(--shadow-sm)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                <h3 style={{ fontSize: '15px', fontWeight: '800', color: 'var(--text-main)', margin: 0 }}>Diretório Completo de Beta Testers</h3>
-                <span style={{ fontSize: '12.5px', color: 'var(--text-light)' }}>Total: {adminUsers.length} usuários</span>
+              
+              {/* Header */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
+                <div>
+                  <h3 style={{ fontSize: '16px', fontWeight: '800', color: 'var(--text-main)', margin: 0 }}>Diretório Completo de Beta Testers</h3>
+                  <span style={{ fontSize: '12.5px', color: 'var(--text-light)' }}>Mostrando {processedUsers.length} de {adminUsers.length} usuários</span>
+                </div>
+              </div>
+
+              {/* Search and Filters Controls */}
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', marginBottom: '20px', backgroundColor: 'var(--bg-app)', padding: '16px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-medium)' }}>
+                {/* Search Bar */}
+                <div style={{ flex: '1 1 240px' }}>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: 'var(--text-light)', marginBottom: '6px', textTransform: 'uppercase' }}>Buscar Usuários</label>
+                  <input
+                    type="text"
+                    placeholder="Buscar por email, id, plano, data..."
+                    value={userSearchQuery}
+                    onChange={e => setUserSearchQuery(e.target.value)}
+                    style={{ width: '100%', padding: '8px 12px', fontSize: '13px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-medium)', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)' }}
+                  />
+                </div>
+
+                {/* Plan Filter */}
+                <div style={{ width: '120px' }}>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: 'var(--text-light)', marginBottom: '6px', textTransform: 'uppercase' }}>Plano</label>
+                  <select
+                    value={planFilter}
+                    onChange={e => setPlanFilter(e.target.value)}
+                    style={{ width: '100%', padding: '8px', fontSize: '13px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-medium)', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)' }}
+                  >
+                    <option value="all">Todos</option>
+                    <option value="free">Free</option>
+                    <option value="pro">Pro</option>
+                  </select>
+                </div>
+
+                {/* Status Filter */}
+                <div style={{ width: '130px' }}>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: 'var(--text-light)', marginBottom: '6px', textTransform: 'uppercase' }}>Status</label>
+                  <select
+                    value={statusFilter}
+                    onChange={e => setStatusFilter(e.target.value)}
+                    style={{ width: '100%', padding: '8px', fontSize: '13px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-medium)', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)' }}
+                  >
+                    <option value="all">Todos</option>
+                    <option value="active">Ativo</option>
+                    <option value="canceled">Cancelado</option>
+                    <option value="inactive">Inativo</option>
+                  </select>
+                </div>
+
+                {/* Sort Key */}
+                <div style={{ width: '160px' }}>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: 'var(--text-light)', marginBottom: '6px', textTransform: 'uppercase' }}>Ordenar Por</label>
+                  <select
+                    value={userSortKey}
+                    onChange={e => setUserSortKey(e.target.value)}
+                    style={{ width: '100%', padding: '8px', fontSize: '13px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-medium)', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)' }}
+                  >
+                    <option value="created_at">Data de Cadastro</option>
+                    <option value="email">E-mail</option>
+                    <option value="last_login">Último Acesso</option>
+                    <option value="total_events">Total Eventos</option>
+                  </select>
+                </div>
+
+                {/* Sort Order */}
+                <div style={{ width: '100px' }}>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: 'var(--text-light)', marginBottom: '6px', textTransform: 'uppercase' }}>Ordem</label>
+                  <select
+                    value={userSortOrder}
+                    onChange={e => setUserSortOrder(e.target.value)}
+                    style={{ width: '100%', padding: '8px', fontSize: '13px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-medium)', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)' }}
+                  >
+                    <option value="desc">Decrescente</option>
+                    <option value="asc">Crescente</option>
+                  </select>
+                </div>
               </div>
               
-              <div style={{ overflowX: 'auto' }}>
+              {/* Users Table */}
+              <div style={{ overflowX: 'auto', marginBottom: '20px' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', minWidth: '800px' }}>
                   <thead>
                     <tr style={{ borderBottom: '2px solid var(--border-medium)', textAlign: 'left', color: 'var(--text-light)' }}>
@@ -558,12 +703,12 @@ export default function AdminDashboard() {
                     </tr>
                   </thead>
                   <tbody>
-                    {adminUsers.map(usr => (
+                    {paginatedUsers.map(usr => (
                       <tr key={usr.id} style={{ borderBottom: '1px solid var(--border-light)', hover: { backgroundColor: 'var(--bg-app)' } }}>
                         <td style={{ padding: '12px' }}>
-                          <div style={{ fontWeight: '700', color: 'var(--text-main)' }}>{usr.email}</div>
-                          <div style={{ fontSize: '10px', color: 'var(--text-muted)', fontFamily: 'monospace' }}>ID: {usr.id}</div>
-                          {usr.nickname && <div style={{ fontSize: '11px', color: 'var(--text-light)', fontStyle: 'italic' }}>Nome: {usr.nickname}</div>}
+                           <div style={{ fontWeight: '700', color: 'var(--text-main)' }}>{usr.email}</div>
+                           <div style={{ fontSize: '10px', color: 'var(--text-muted)', fontFamily: 'monospace' }}>ID: {usr.id}</div>
+                           {usr.nickname && <div style={{ fontSize: '11px', color: 'var(--text-light)', fontStyle: 'italic' }}>Nome: {usr.nickname}</div>}
                         </td>
                         <td style={{ padding: '12px', color: 'var(--text-main)' }}>
                           {usr.created_at ? new Date(usr.created_at).toLocaleDateString('pt-BR') : 'N/A'}
@@ -597,14 +742,39 @@ export default function AdminDashboard() {
                         </td>
                       </tr>
                     ))}
-                    {adminUsers.length === 0 && (
+                    {paginatedUsers.length === 0 && (
                       <tr>
-                        <td colSpan="7" style={{ padding: '24px', textAlign: 'center', color: 'var(--text-light)' }}>Nenhum usuário localizado no Supabase.</td>
+                        <td colSpan="7" style={{ padding: '24px', textAlign: 'center', color: 'var(--text-light)' }}>Nenhum usuário localizado para os filtros selecionados.</td>
                       </tr>
                     )}
                   </tbody>
                 </table>
               </div>
+
+              {/* Pagination Controls */}
+              {totalPages > 1 && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '16px', borderTop: '1px solid var(--border-light)' }}>
+                  <button
+                    disabled={currentPage === 1}
+                    onClick={() => setCurrentPage(prev => prev - 1)}
+                    className="btn-secondary"
+                    style={{ fontSize: '12px', opacity: currentPage === 1 ? 0.5 : 1, cursor: currentPage === 1 ? 'not-allowed' : 'pointer' }}
+                  >
+                    ◀️ Anterior
+                  </button>
+                  <span style={{ fontSize: '13px', color: 'var(--text-main)' }}>
+                    Página <strong>{currentPage}</strong> de <strong>{totalPages}</strong>
+                  </span>
+                  <button
+                    disabled={currentPage === totalPages}
+                    onClick={() => setCurrentPage(prev => prev + 1)}
+                    className="btn-secondary"
+                    style={{ fontSize: '12px', opacity: currentPage === totalPages ? 0.5 : 1, cursor: currentPage === totalPages ? 'not-allowed' : 'pointer' }}
+                  >
+                    Próxima ▶️
+                  </button>
+                </div>
+              )}
             </div>
           )}
 
