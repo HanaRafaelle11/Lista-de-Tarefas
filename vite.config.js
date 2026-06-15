@@ -10,10 +10,10 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg'],
+      includeAssets: ['favicon.svg', 'icon.svg'],
       manifest: {
-        name: 'FocusList Aura',
-        short_name: 'FocusList',
+        name: 'Flowday',
+        short_name: 'Flowday',
         description: 'Plataforma de Progresso Pessoal',
         theme_color: '#4A654E',
         background_color: '#FAF9F6',
@@ -21,8 +21,21 @@ export default defineConfig({
         icons: [
           {
             src: 'icon.svg',
+            sizes: '192x192',
+            type: 'image/svg+xml',
+            purpose: 'any'
+          },
+          {
+            src: 'icon.svg',
+            sizes: '512x512',
+            type: 'image/svg+xml',
+            purpose: 'any'
+          },
+          {
+            src: 'icon.svg',
             sizes: '192x192 512x512',
-            type: 'image/svg+xml'
+            type: 'image/svg+xml',
+            purpose: 'maskable'
           }
         ]
       }

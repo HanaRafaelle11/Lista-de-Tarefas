@@ -8,7 +8,9 @@ export default function ProfileView() {
     userProfile, 
     handleUpdateProfile, 
     handleUploadAvatar, 
-    handleDeleteAvatar 
+    handleDeleteAvatar,
+    theme,
+    setTheme
   } = useAppContext();
 
   // Estados locais do form
@@ -256,6 +258,53 @@ export default function ProfileView() {
             {loading ? 'Processando...' : 'Salvar Alterações'}
           </button>
         </form>
+
+        {/* Bloco de Aparência (Tema) */}
+        <div style={{ backgroundColor: 'var(--bg-card)', padding: '24px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-light)', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <h3 style={{ fontSize: '16px', fontWeight: '700', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
+            🌓 Aparência
+          </h3>
+          <p style={{ fontSize: '12.5px', color: 'var(--text-light)', margin: 0 }}>
+            Escolha o tema do aplicativo (salvo localmente).
+          </p>
+          <div style={{ display: 'flex', gap: '12px', marginTop: '4px' }}>
+            <button
+              type="button"
+              onClick={() => setTheme('light')}
+              style={{
+                flex: 1,
+                padding: '10px 16px',
+                borderRadius: 'var(--radius-sm)',
+                border: theme === 'light' ? '2px solid var(--primary)' : '1px solid var(--border-medium)',
+                backgroundColor: theme === 'light' ? 'var(--primary-glow)' : 'var(--bg-card)',
+                fontWeight: theme === 'light' ? '700' : '500',
+                color: theme === 'light' ? 'var(--primary)' : 'var(--text-main)',
+                cursor: 'pointer',
+                textAlign: 'center'
+              }}
+            >
+              ☀️ Claro
+            </button>
+            <button
+              type="button"
+              onClick={() => setTheme('dark')}
+              style={{
+                flex: 1,
+                padding: '10px 16px',
+                borderRadius: 'var(--radius-sm)',
+                border: theme === 'dark' ? '2px solid var(--primary)' : '1px solid var(--border-medium)',
+                backgroundColor: theme === 'dark' ? 'var(--primary-glow)' : 'var(--bg-card)',
+                fontWeight: theme === 'dark' ? '700' : '500',
+                color: theme === 'dark' ? 'var(--primary)' : 'var(--text-main)',
+                cursor: 'pointer',
+                textAlign: 'center'
+              }}
+            >
+              🌑 Escuro
+            </button>
+          </div>
+        </div>
+
       </div>
     </div>
   );

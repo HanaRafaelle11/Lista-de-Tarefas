@@ -123,9 +123,9 @@ export default function WeeklyPlannerModal({ isOpen, onClose, tasks, onUpdateTas
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div 
-        className="modal-content animate-scale-up" 
+        className="modal-content animate-scale-up weekly-planner-modal-content" 
         onClick={e => e.stopPropagation()} 
-        style={{ maxWidth: '800px', display: 'flex', flexDirection: 'column', padding: 0 }}
+        style={{ maxWidth: '800px', width: 'calc(100vw - 32px)', maxHeight: '90vh', display: 'flex', flexDirection: 'column', padding: 0 }}
       >
         {/* Header do modal */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 24px', borderBottom: '1px solid var(--border-light)' }}>
@@ -222,7 +222,7 @@ export default function WeeklyPlannerModal({ isOpen, onClose, tasks, onUpdateTas
               {activeGoals.length === 0 ? (
                 <p style={{ fontSize: '12px', color: 'var(--text-muted)', fontStyle: 'italic' }}>Nenhum objetivo ativo cadastrado. Crie objetivos para vinculá-los aqui.</p>
               ) : (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '8px', marginTop: '6px' }}>
+                <div className="weekly-planner-goals-grid">
                   {activeGoals.map(goal => (
                     <div 
                       key={goal.id}
@@ -267,9 +267,9 @@ export default function WeeklyPlannerModal({ isOpen, onClose, tasks, onUpdateTas
 
         {/* Conteúdo da Aba 2: Distribuir Tarefas */}
         {plannerTab === 'schedule' && (
-          <div style={{ display: 'flex', flexDirection: 'row', padding: 0 }}>
+          <div className="weekly-planner-body">
             {/* Painel Esquerdo: Tarefas sem data */}
-            <div style={{ flex: 1, borderRight: '1px solid var(--border-medium)', padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px', maxHeight: '65vh', overflowY: 'auto' }}>
+            <div className="weekly-planner-left-panel">
               <div>
                 <p style={{ fontSize: '13px', color: 'var(--text-light)', marginTop: '4px' }}>
                   Selecione uma tarefa abaixo e depois clique no dia correspondente para agendá-la:
@@ -312,7 +312,7 @@ export default function WeeklyPlannerModal({ isOpen, onClose, tasks, onUpdateTas
             </div>
 
             {/* Painel Direito: Dias da Semana */}
-            <div style={{ flex: 1, padding: '24px', backgroundColor: 'var(--bg-app)', display: 'flex', flexDirection: 'column', gap: '16px', maxHeight: '65vh', overflowY: 'auto' }}>
+            <div className="weekly-planner-right-panel">
               <h4 style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-main)' }}>
                 {selectedTask ? `Onde agendar "${selectedTask.title}"?` : 'Sua Carga Semanal'}
               </h4>

@@ -2,7 +2,7 @@ import React from 'react';
 import { useAppContext } from '../contexts/AppContext';
 
 export default function Navbar() {
-  const { activeTab, setActiveTab, currentUser, handleLogout, userProfile, isAdmin } = useAppContext();
+  const { activeTab, setActiveTab, currentUser, handleLogout, userProfile, isAdmin, theme, setTheme } = useAppContext();
   const onLogout = handleLogout;
 
   const getInitials = (name) => {
@@ -49,7 +49,42 @@ export default function Navbar() {
               Olá, {(userProfile?.name || currentUser?.name)?.split(' ')[0] || 'Usuário'}
             </h1>
           </div>
+
+          {/* Desktop Navigation Links (Adequada para Desktop) */}
+          <nav className="desktop-nav-links hide-on-mobile" style={{ display: 'flex', gap: '8px', backgroundColor: 'var(--primary-light)', padding: '4px', borderRadius: 'var(--radius-md)' }}>
+            {navItems.map(({ key, icon, label }) => (
+              <button
+                key={key}
+                onClick={() => setActiveTab(key)}
+                className={`nav-tab-button ${activeTab === key ? 'active-nav-tab' : ''}`}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '6px 12px',
+                  fontSize: '13px',
+                  fontWeight: '600',
+                  borderRadius: 'calc(var(--radius-md) - 4px)',
+                  color: activeTab === key ? 'var(--primary)' : 'var(--text-muted)'
+                }}
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>{icon}</span>
+                <span>{label}</span>
+              </button>
+            ))}
+          </nav>
+
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <button
+              onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+              className="app-top-logout-btn hide-on-mobile"
+              title="Alternar Tema"
+              style={{ padding: '8px', minWidth: 'auto', display: 'inline-flex', alignItems: 'center' }}
+            >
+              <span className="material-symbols-outlined">
+                {theme === 'dark' ? 'light_mode' : 'dark_mode'}
+              </span>
+            </button>
             <button
               onClick={() => setActiveTab('settings')}
               className="app-top-logout-btn"
@@ -71,7 +106,7 @@ export default function Navbar() {
       </header>
 
       {/* ── Menu Flutuante Inferior ──────────────────────── */}
-      <nav className="app-bottom-nav" role="navigation" aria-label="Navegação principal">
+      <nav className="app-bottom-nav hide-on-desktop" role="navigation" aria-label="Navegação principal">
         {navItems.map(({ key, icon, label }) => (
           <button
             key={key}
