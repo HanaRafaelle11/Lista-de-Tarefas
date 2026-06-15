@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X } from 'lucide-react';
+import { X, Plus, Trash2 } from 'lucide-react';
 
 const COLORS = [
   { value: '#4A654E', label: 'Verde Sálvia' },
@@ -23,6 +23,7 @@ export default function GoalModal({ isOpen, onClose, onSave, editingGoal }) {
   const [color, setColor] = useState('#4A654E');
   const [icon, setIcon] = useState('🎯');
   const [targetDate, setTargetDate] = useState('');
+  const [actions, setActions] = useState([]);
 
   // Preenche o formulário ao editar
   useEffect(() => {
@@ -38,6 +39,7 @@ export default function GoalModal({ isOpen, onClose, onSave, editingGoal }) {
       setColor('#4A654E');
       setIcon('🎯');
       setTargetDate('');
+      setActions([]);
     }
   }, [editingGoal, isOpen]);
 
@@ -50,7 +52,22 @@ export default function GoalModal({ isOpen, onClose, onSave, editingGoal }) {
       color,
       icon,
       target_date: targetDate || null,
+      actions: actions.filter(a => a.trim() !== ''),
     });
+  };
+
+  const handleAddAction = () => {
+    setActions([...actions, '']);
+  };
+
+  const handleActionChange = (index, value) => {
+    const newActions = [...actions];
+    newActions[index] = value;
+    setActions(newActions);
+  };
+
+  const handleRemoveAction = (index) => {
+    setActions(actions.filter((_, i) => i !== index));
   };
 
   if (!isOpen) return null;
@@ -163,6 +180,41 @@ export default function GoalModal({ isOpen, onClose, onSave, editingGoal }) {
               />
             </div>
           </div>
+
+          {/* Ações (Tarefas vinculadas) dinâmico */}
+          {!editingGoal && (
+            <div className="todo-form-group">
+              <label className="todo-form-label">Ações Iniciais (Tarefas)</label>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {actions.map((action, index) => (
+                  <div key={index} style={{ display: 'flex', gap: '8px' }}>
+                    <input
+                      type="text"
+                      placeholder={`Ação ${index + 1}`}
+                      value={action}
+                      onChange={(e) => handleActionChange(index, e.target.value)}
+                      className="todo-modal-input"
+                      style={{ flex: 1 }}
+                    />
+                    <button 
+                      type="button" 
+                      onClick={() => handleRemoveAction(index)}
+                      style={{ padding: '8px', background: 'transparent', color: 'var(--text-light)', border: 'none', cursor: 'pointer' }}
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  onClick={handleAddAction}
+                  style={{ alignSelf: 'flex-start', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '13px', color: 'var(--primary)', background: 'transparent', border: 'none', cursor: 'pointer', padding: '4px 0' }}
+                >
+                  <Plus size={14} /> Adicionar ação
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Ações */}
           <div className="todo-modal-actions">

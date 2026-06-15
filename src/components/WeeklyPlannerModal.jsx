@@ -6,7 +6,7 @@ import { supabase } from '../supabaseClient';
 export default function WeeklyPlannerModal({ isOpen, onClose, tasks, onUpdateTask }) {
   if (!isOpen) return null;
 
-  const { goals, currentUser, logEvent } = useAppContext();
+  const { goals, currentUser, setCurrentUser, logEvent } = useAppContext();
   
   // Tab ativa
   const [plannerTab, setPlannerTab] = useState('focus'); // focus, schedule
@@ -19,19 +19,29 @@ export default function WeeklyPlannerModal({ isOpen, onClose, tasks, onUpdateTas
   const [selectedGoals, setSelectedGoals] = useState([]);
   const [saving, setSaving] = useState(false);
 
-  // Carrega planejamento semanal existente se houver
+  // Carrega planejamento semanal existente se houver e reseta tabs
   useEffect(() => {
-    if (currentUser?.user_metadata?.weekly_plan) {
-      const plan = currentUser.user_metadata.weekly_plan;
-      setWeeklyFocus(plan.focus || '');
-      if (plan.criticalPriorities && plan.criticalPriorities.length >= 3) {
-        setPriority1(plan.criticalPriorities[0] || '');
-        setPriority2(plan.criticalPriorities[1] || '');
-        setPriority3(plan.criticalPriorities[2] || '');
+    if (isOpen) {
+      if (currentUser?.user_metadata?.weekly_plan) {
+        const plan = currentUser.user_metadata.weekly_plan;
+        setWeeklyFocus(plan.focus || '');
+        if (plan.criticalPriorities && plan.criticalPriorities.length >= 3) {
+          setPriority1(plan.criticalPriorities[0] || '');
+          setPriority2(plan.criticalPriorities[1] || '');
+          setPriority3(plan.criticalPriorities[2] || '');
+        } else {
+          setPriority1(''); setPriority2(''); setPriority3('');
+        }
+        setSelectedGoals(plan.linkedGoals || []);
+      } else {
+        setWeeklyFocus('');
+        setPriority1(''); setPriority2(''); setPriority3('');
+        setSelectedGoals([]);
       }
-      setSelectedGoals(plan.linkedGoals || []);
+      // Sempre inicia na primeira aba ao abrir
+      setPlannerTab('focus');
     }
-  }, [currentUser]);
+  }, [currentUser, isOpen]);
 
   const [selectedTask, setSelectedTask] = useState(null);
 
@@ -81,13 +91,21 @@ export default function WeeklyPlannerModal({ isOpen, onClose, tasks, onUpdateTas
         linkedGoals: selectedGoals
       };
 
-      const { error } = await supabase.auth.updateUser({
+      const { data, error } = await supabase.auth.updateUser({
         data: {
           weekly_plan: planData
         }
       });
 
       if (error) throw error;
+      
+      setCurrentUser(prev => ({
+        ...prev,
+        user_metadata: {
+          ...prev.user_metadata,
+          weekly_plan: planData
+        }
+      }));
       
       logEvent('weekly_plan_saved', { goals_selected: selectedGoals.length });
       alert('Seu planejamento semanal foi salvo com sucesso! ⚡');

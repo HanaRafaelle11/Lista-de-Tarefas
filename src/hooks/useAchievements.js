@@ -151,16 +151,27 @@ export default function useAchievements({
     checking.current = true;
 
     try {
+      if (tasks.length === 0 && goals.length === 0) {
+        checking.current = false;
+        return; // Aguarda os dados reais carregarem
+      }
+
       const stats = calcStats(tasks, goals);
       const newlyUnlocked = [];
 
       for (const achievement of ACHIEVEMENTS) {
         if (!unlockedKeys.has(achievement.key) && achievement.check(stats)) {
+          // Double check: não liberar primeira conquista se o número de tasks concluídas for 0
+          if (achievement.key === 'first_task' && stats.completedTasks === 0) continue;
+          
           newlyUnlocked.push(achievement);
         }
       }
 
-      if (newlyUnlocked.length === 0) return;
+      if (newlyUnlocked.length === 0) {
+        checking.current = false;
+        return;
+      }
 
       // Gravar todas de uma vez no Supabase
       const rows = newlyUnlocked.map(a => ({

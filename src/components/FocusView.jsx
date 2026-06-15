@@ -140,7 +140,7 @@ export default function FocusView() {
         <p className="tasks-page-subtitle">Pomodoro para concentração máxima</p>
       </div>
 
-      <div className="focus-main-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: '24px' }}>
+      <div className="focus-main-grid">
         
         {/* Lado Esquerdo: O Timer Pomodoro */}
         <div className="focus-card-panel" style={{ backgroundColor: 'var(--bg-card)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-light)', padding: '40px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>

@@ -560,18 +560,25 @@ export function AppProvider({ children }) {
 
   const handleUpdateTask = useCallback(async (id, updatedData) => {
     if (!currentUser?.id) return;
-    const { error } = await tasksService.update(currentUser.id, id, updatedData);
-    if (!error) {
-      setTasks((prev) => prev.map((t) => t.id === id ? { ...t, ...updatedData } : t));
+    
+    // OPTIMISTIC UPDATE: Atualiza UI na hora
+    setTasks((prev) => prev.map((t) => t.id === id ? { ...t, ...updatedData } : t));
+    
+    const { error, degraded } = await tasksService.update(currentUser.id, id, updatedData);
+    if (!error || degraded) {
       logEvent('task_updated', { task_id: id });
       
       // If completed was changed to true, log completion
       if (updatedData.completed === true) {
         logEvent('task_completed', { taskId: id });
-        const alreadyHadSuccess = tasks.some(t => t.id !== id && t.completed);
-        if (!alreadyHadSuccess && !firstSuccessLogged.current) {
-          firstSuccessLogged.current = true;
-          logEvent('first_success_action', { task_id: id });
+        
+        // Ensure tasks are actually loaded before calculating alreadyHadSuccess
+        if (tasks.length > 0) {
+          const alreadyHadSuccess = tasks.some(t => t.id !== id && t.completed);
+          if (!alreadyHadSuccess && !firstSuccessLogged.current) {
+            firstSuccessLogged.current = true;
+            logEvent('first_success_action', { task_id: id });
+          }
         }
       }
     }
@@ -580,10 +587,13 @@ export function AppProvider({ children }) {
   const handleDeleteTask = useCallback(async (id) => {
     if (!currentUser?.id) return;
     if (!window.confirm('Excluir esta tarefa permanentemente?')) return;
-    const { error } = await tasksService.delete(currentUser.id, id);
-    if (!error) {
-      setTasks((prev) => prev.filter((t) => t.id !== id));
-      setGoalTasks((prev) => prev.filter((gt) => gt.task_id !== id));
+    
+    // OPTIMISTIC UPDATE
+    setTasks((prev) => prev.filter((t) => t.id !== id));
+    setGoalTasks((prev) => prev.filter((gt) => gt.task_id !== id));
+    
+    const { error, degraded } = await tasksService.delete(currentUser.id, id);
+    if (!error || degraded) {
       logEvent('task_deleted', { task_id: id });
     }
   }, [currentUser?.id, logEvent]);
@@ -592,16 +602,20 @@ export function AppProvider({ children }) {
     if (!currentUser?.id) return;
     const task = tasks.find((t) => t.id === id);
     if (!task) return;
-    const { error } = await tasksService.toggleComplete(currentUser.id, id, task.completed);
-    if (!error) {
-      const next = !task.completed;
-      const completedAt = next ? new Date().toISOString() : null;
-      setTasks((prev) => prev.map((t) => t.id === id ? { ...t, completed: next, completedAt } : t));
-
+    
+    const next = !task.completed;
+    const completedAt = next ? new Date().toISOString() : null;
+    
+    // OPTIMISTIC UPDATE: altera estado local antes da requisição
+    setTasks((prev) => prev.map((t) => t.id === id ? { ...t, completed: next, completedAt } : t));
+    
+    const { error, degraded } = await tasksService.toggleComplete(currentUser.id, id, task.completed);
+    
+    if (!error || degraded) {
       if (next) {
         logEvent('task_completed', { taskId: id });
 
-        // ─ Detecta first_success_action (emit apenas uma vez por usuário) ─
+        // Detecta first_success_action
         const alreadyHadSuccess = tasks.some(t => t.id !== id && t.completed);
         if (!alreadyHadSuccess && !firstSuccessLogged.current) {
           firstSuccessLogged.current = true;
@@ -612,7 +626,7 @@ export function AppProvider({ children }) {
           });
         }
 
-        // ─ Trata tarefas recorrentes ─
+        // Trata tarefas recorrentes
         const meta = parseTaskMetadata(task.description);
         if (meta && meta.recurrence && meta.recurrence !== 'nenhuma') {
           const nextDueDate = calculateNextOccurrence(task.dueDate, meta.recurrence);
@@ -630,8 +644,11 @@ export function AppProvider({ children }) {
           }
         }
       }
+    } else {
+      // Revert in case of total failure (not offline queued)
+      setTasks((prev) => prev.map((t) => t.id === id ? { ...t, completed: !next, completedAt: task.completedAt } : t));
     }
-  }, [currentUser?.id, tasks, logEvent]);
+  }, [currentUser?.id, logEvent, tasks]);
 
   const handleUpdateProfile = useCallback(async (profileData) => {
     if (!currentUser?.id) return;
@@ -665,10 +682,29 @@ export function AppProvider({ children }) {
   // ═══════════════════════════════════════════════════════════════════════════
   const handleAddGoal = useCallback(async (goalData) => {
     if (!currentUser?.id) return;
-    const { data } = await goalsService.create(currentUser.id, goalData);
+    const { actions, ...goalPayload } = goalData;
+    const { data } = await goalsService.create(currentUser.id, goalPayload);
     if (data) {
       setGoals((prev) => [data, ...prev]);
-      logEvent('goal_created', { title: goalData.title });
+      logEvent('goal_created', { title: goalPayload.title });
+
+      if (actions && actions.length > 0) {
+        for (const actionTitle of actions) {
+          const taskData = {
+            title: actionTitle,
+            description: '',
+            category: 'Trabalho',
+            priority: 'Média',
+            dueDate: null,
+          };
+          const { data: taskResponse } = await tasksService.create(currentUser.id, taskData);
+          if (taskResponse) {
+             setTasks((prev) => [taskResponse, ...prev]);
+             await goalsService.linkTask(data.id, taskResponse.id);
+             setGoalTasks((prev) => [...prev, { goal_id: data.id, task_id: taskResponse.id }]);
+          }
+        }
+      }
     }
   }, [currentUser?.id, logEvent]);
 
@@ -872,6 +908,7 @@ export function AppProvider({ children }) {
   const value = {
     // Auth
     currentUser,
+    setCurrentUser,
     isInitializing,
     handleLoginSuccess,
     handleLogout,

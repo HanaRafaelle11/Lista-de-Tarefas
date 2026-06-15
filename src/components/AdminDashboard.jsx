@@ -61,47 +61,7 @@ export default function AdminDashboard() {
 
   // Cálculos dinâmicos baseados nos eventos (com fallback mockado se o banco for novo)
   const metrics = useMemo(() => {
-    const isDbEmpty = events.length === 0;
-
-    // Se estiver vazio, exibe dados modelo realistas
-    if (isDbEmpty) {
-      return {
-        totalUsers: profilesCount > 0 ? profilesCount : 124,
-        newToday: 4,
-        newWeek: 18,
-        newMonth: 47,
-        retD1: 68,
-        retD7: 42,
-        retD30: 25,
-        createdTasks: 840,
-        completedTasks: 512,
-        createdHabits: 310,
-        completedHabits: 1450,
-        createdGoals: 95,
-        viewCalendar: 120,
-        viewKanban: 240,
-        viewFocus: 180,
-        viewAnalytics: 140,
-        funnel: {
-          signup: 124,
-          onboardingStarted: 110,
-          onboardingCompleted: 88,
-          firstTask: 74,
-          firstHabit: 52,
-          firstGoal: 40,
-          firstAnalytics: 32,
-          paywallView: 28,
-          upgradeClick: 11
-        },
-        monetization: {
-          freeCount: 113,
-          proCount: 11,
-          conversionRate: 8.8
-        }
-      };
-    }
-
-    // Processar logs do banco dinamicamente
+    // Processar logs do banco dinamicamente (removido fallback isDbEmpty)
     const totalUsers = Math.max(profilesCount, new Set(events.map(e => e.user_id)).size);
     
     // Contar novos usuários (baseado em evento 'signup' ou primeira aparição)
@@ -127,34 +87,34 @@ export default function AdminDashboard() {
     const viewFocus = events.filter(e => e.event_type === 'focus_started').length;
     const viewAnalytics = events.filter(e => e.event_type === 'analytics_viewed').length;
 
-    // Funil de Conversão (Usuários Únicos por Etapa)
+    // Funil de Conversão (Usuários Únicos por Etapa) - Dados reais
     const getUniqueCount = (evtType) => new Set(events.filter(e => e.event_type === evtType).map(e => e.user_id)).size;
 
     const funnel = {
-      signup: totalUsers || 1,
-      onboardingStarted: getUniqueCount('onboarding_started') || Math.round(totalUsers * 0.9),
-      onboardingCompleted: getUniqueCount('onboarding_completed') || Math.round(totalUsers * 0.7),
-      firstTask: getUniqueCount('task_created') || Math.round(totalUsers * 0.6),
-      firstHabit: getUniqueCount('habit_created') || Math.round(totalUsers * 0.45),
-      firstGoal: getUniqueCount('goal_created') || Math.round(totalUsers * 0.35),
-      firstAnalytics: getUniqueCount('analytics_viewed') || Math.round(totalUsers * 0.25),
-      paywallView: getUniqueCount('paywall_viewed') || Math.round(totalUsers * 0.2),
-      upgradeClick: getUniqueCount('upgrade_clicked') || Math.round(totalUsers * 0.08)
+      signup: totalUsers || 0,
+      onboardingStarted: getUniqueCount('onboarding_started'),
+      onboardingCompleted: getUniqueCount('onboarding_completed'),
+      firstTask: getUniqueCount('task_created'),
+      firstHabit: getUniqueCount('habit_created'),
+      firstGoal: getUniqueCount('goal_created'),
+      firstAnalytics: getUniqueCount('analytics_viewed'),
+      paywallView: getUniqueCount('paywall_viewed'),
+      upgradeClick: getUniqueCount('upgrade_clicked')
     };
 
-    // Monetização Simulada (Upgrade Clickers vs Total)
+    // Monetização (Apenas dados reais baseados em cliques de upgrade simulados pelo usuário)
     const proCount = funnel.upgradeClick;
     const freeCount = Math.max(0, totalUsers - proCount);
     const conversionRate = totalUsers > 0 ? parseFloat(((proCount / totalUsers) * 100).toFixed(1)) : 0;
 
     return {
       totalUsers,
-      newToday: newToday || 1,
-      newWeek: newWeek || Math.min(totalUsers, 5),
-      newMonth: newMonth || Math.min(totalUsers, 12),
-      retD1: 65, // Retenção simplificada (D1/D7/D30) simulada com base na distribuição
-      retD7: 38,
-      retD30: 22,
+      newToday: newToday || 0,
+      newWeek: newWeek || 0,
+      newMonth: newMonth || 0,
+      retD1: 0, // Removendo hardcode: sem dados de login suficientes para calcular cohort agora
+      retD7: 0,
+      retD30: 0,
       createdTasks,
       completedTasks,
       createdHabits,

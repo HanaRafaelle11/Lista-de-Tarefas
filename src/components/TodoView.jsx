@@ -1,8 +1,9 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { 
   Plus, Search, X, Calendar, ChevronDown, ChevronRight, 
   List, Columns, Grid, Trash2, Edit2, AlertCircle, ArrowLeft, ArrowRight
 } from 'lucide-react';
+import EmojiPicker from 'emoji-picker-react';
 import TodoItem from './TodoItem';
 import WeeklyPlannerModal from './WeeklyPlannerModal';
 import { 
@@ -218,11 +219,12 @@ export default function TodoView() {
   // Formulário de tarefa
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [category, setCategory] = useState('Trabalho');
+  const [category, setCategory] = useState('');
   const [priority, setPriority] = useState('Média');
   const [dueDate, setDueDate] = useState('');
   const [dueTime, setDueTime] = useState('');
   const [recurrence, setRecurrence] = useState('nenhuma');
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
 
   // Salva modo de visualização
   useEffect(() => {
@@ -286,6 +288,14 @@ export default function TodoView() {
       onAddTask(taskData);
     }
 
+    // Limpar state após salvar
+    setTitle('');
+    setDescription('');
+    setDueDate('');
+    setDueTime('');
+    setCategory('Trabalho');
+    setPriority('Média');
+    setRecurrence('nenhuma');
     setIsModalOpen(false);
   };
 
@@ -573,14 +583,22 @@ export default function TodoView() {
               className="form-input category-input-text"
               required
             />
-            <input 
-              type="text" 
-              placeholder="Emoji" 
-              value={newCatEmoji}
-              onChange={e => setNewCatEmoji(e.target.value)}
-              className="form-input category-input-emoji"
-              maxLength={2}
-            />
+            <div style={{ position: 'relative' }}>
+              <button 
+                type="button"
+                onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                className="form-input category-input-emoji"
+                style={{ width: '40px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, cursor: 'pointer' }}
+                title="Selecionar Emoji"
+              >
+                {newCatEmoji || '😀'}
+              </button>
+              {showEmojiPicker && (
+                <div style={{ position: 'absolute', zIndex: 100, bottom: '100%', left: 0, marginBottom: '8px' }}>
+                  <EmojiPicker onEmojiClick={(e) => { setNewCatEmoji(e.emoji); setShowEmojiPicker(false); }} theme="auto" />
+                </div>
+              )}
+            </div>
             <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
               {['#6B7F8A', '#7A8B7B', '#B09E86', '#A88891', '#4A654E', '#9B6B5A', '#5A6B7A', '#8A6B8A'].map(color => (
                 <button

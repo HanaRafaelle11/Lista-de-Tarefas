@@ -1,7 +1,8 @@
-import React, { useMemo } from 'react';
-import { CheckCircle, Clock, AlertTriangle, BarChart3, PieChart, Target, Star, Award, ShieldAlert } from 'lucide-react';
+import React, { useMemo, useState } from 'react';
+import { CheckCircle, Clock, AlertTriangle, BarChart3, PieChart, Target, Star, Award, ShieldAlert, Zap } from 'lucide-react';
 import { ACHIEVEMENTS, calcStats, calcStreak } from '../hooks/useAchievements';
 import { useAppContext } from '../contexts/AppContext';
+import WeeklyPlannerModal from './WeeklyPlannerModal';
 
 // ─── Utilitários ─────────────────────────────────────────────────────────────
 function formatDate(isoStr) {
@@ -188,8 +189,11 @@ export default function EvolutionView() {
     habitsManager, 
     isPro, 
     handleSimulateUpgrade, 
+    handleUpdateTask,
     currentUser 
   } = useAppContext();
+
+  const [isWeeklyPlannerOpen, setIsWeeklyPlannerOpen] = useState(false);
 
   const stats = useMemo(() => calcStats(tasks, goals), [tasks, goals]);
   const streak = stats.currentStreak;
@@ -262,7 +266,13 @@ export default function EvolutionView() {
             <Award size={20} style={{ color: 'var(--primary)' }} />
             Relatório Semanal Flowday
           </h3>
-          <span style={{ fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', color: 'var(--primary)', letterSpacing: '0.05em' }}>Ativo</span>
+          <button 
+            onClick={() => setIsWeeklyPlannerOpen(true)}
+            className="btn-primary-glow"
+            style={{ fontSize: '12px', padding: '6px 12px', display: 'flex', alignItems: 'center', gap: '4px' }}
+          >
+            <Zap size={14} /> Planejar Semana
+          </button>
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '16px' }}>
@@ -306,11 +316,26 @@ export default function EvolutionView() {
                 </div>
               </div>
             )}
+            <button 
+              onClick={() => setIsWeeklyPlannerOpen(true)}
+              style={{ marginTop: '8px', padding: '8px', fontSize: '12px', borderRadius: '6px', background: 'transparent', border: '1px solid var(--primary)', color: 'var(--primary)', cursor: 'pointer', fontWeight: '600' }}
+            >
+              Editar Planejamento
+            </button>
           </div>
         ) : (
-          <p style={{ fontSize: '12.5px', color: 'var(--text-muted)', fontStyle: 'italic', textAlign: 'center', padding: '16px 0' }}>
-            Nenhum planejamento semanal ativo. Acesse "Planejar Semana" na aba de Tarefas para preencher seu foco! ⚡
-          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', padding: '16px 0' }}>
+            <p style={{ fontSize: '12.5px', color: 'var(--text-muted)', fontStyle: 'italic', textAlign: 'center' }}>
+              Nenhum planejamento semanal ativo. Descarregue sua mente e planeje sua semana agora! ⚡
+            </p>
+            <button 
+              onClick={() => setIsWeeklyPlannerOpen(true)}
+              className="btn-primary-glow"
+              style={{ padding: '8px 16px', fontSize: '13px' }}
+            >
+              Criar Planejamento
+            </button>
+          </div>
         )}
       </section>
 
@@ -447,6 +472,13 @@ export default function EvolutionView() {
           </section>
         </div>
       </section>
+
+      <WeeklyPlannerModal 
+        isOpen={isWeeklyPlannerOpen} 
+        onClose={() => setIsWeeklyPlannerOpen(false)} 
+        tasks={tasks} 
+        onUpdateTask={handleUpdateTask} 
+      />
     </div>
   );
 }
