@@ -305,7 +305,7 @@ export default function PerformanceView() {
         <p className="tasks-page-subtitle">Descobertas comportamentais e análise de consistência pessoal</p>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', flexWrap: 'wrap' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '24px', flexWrap: 'wrap' }}>
         
         {/* Bloco 1: Score & Classificação */}
         <div style={{ backgroundColor: 'var(--bg-card)', padding: '24px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-light)', display: 'flex', flexDirection: 'column', gap: '16px' }}>

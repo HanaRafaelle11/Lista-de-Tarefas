@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { X, Plus, Trash2 } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { X, Plus, Trash2, Smile } from 'lucide-react';
+import EmojiPicker from 'emoji-picker-react';
 
 const COLORS = [
   { value: '#4A654E', label: 'Verde Sálvia' },
@@ -24,6 +25,8 @@ export default function GoalModal({ isOpen, onClose, onSave, editingGoal }) {
   const [icon, setIcon] = useState('🎯');
   const [targetDate, setTargetDate] = useState('');
   const [actions, setActions] = useState([]);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const emojiPickerRef = useRef(null);
 
   // Preenche o formulário ao editar
   useEffect(() => {
@@ -124,22 +127,47 @@ export default function GoalModal({ isOpen, onClose, onSave, editingGoal }) {
             />
           </div>
 
-          {/* Seleção de Ícone */}
+          {/* Seleção de Ícone — Emoji Picker */}
           <div className="todo-form-group">
-            <label className="todo-form-label">Ícone</label>
-            <div className="goal-icon-grid">
-              {ICONS.map(ic => (
-                <button
-                  key={ic}
-                  type="button"
-                  onClick={() => setIcon(ic)}
-                  className={`goal-icon-btn ${icon === ic ? 'selected' : ''}`}
-                  title={ic}
-                  style={icon === ic ? { borderColor: color, backgroundColor: `${color}15` } : {}}
-                >
-                  {ic}
-                </button>
-              ))}
+            <label className="todo-form-label">Ícone (Emoji)</label>
+            <div style={{ position: 'relative' }} ref={emojiPickerRef}>
+              <button
+                type="button"
+                onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '10px 16px',
+                  border: '1px solid var(--border-medium)',
+                  borderRadius: 'var(--radius-sm)',
+                  backgroundColor: 'var(--bg-app)',
+                  cursor: 'pointer',
+                  fontSize: '22px',
+                  color: 'var(--text-main)',
+                  transition: 'all 0.15s',
+                }}
+                title="Selecionar emoji"
+              >
+                <span>{icon}</span>
+                <Smile size={14} style={{ color: 'var(--text-light)', marginLeft: '4px' }} />
+              </button>
+              {showEmojiPicker && (
+                <div style={{ position: 'absolute', top: '100%', left: 0, zIndex: 9999, marginTop: '4px' }}>
+                  <EmojiPicker
+                    onEmojiClick={(emojiData) => {
+                      setIcon(emojiData.emoji);
+                      setShowEmojiPicker(false);
+                    }}
+                    autoFocusSearch={false}
+                    lazyLoadEmojis={true}
+                    height={380}
+                    width={320}
+                    searchPlaceholder="Buscar emoji..."
+                    previewConfig={{ showPreview: false }}
+                  />
+                </div>
+              )}
             </div>
           </div>
 

@@ -127,6 +127,9 @@ export function AppProvider({ children }) {
   const achievementChecking = useRef(false);
   // Garante que first_success_action é emitido apenas uma vez por sessão
   const firstSuccessLogged = useRef(false);
+  // Garante que conquistas só são verificadas APÓS o primeiro carregamento completo dos dados
+  // Isso impede o popup falso na inicialização antes dos dados carregarem do Supabase
+  const dataLoadedOnce = useRef(false);
 
   // ── User State Intelligence (Growth) ─────────────────────────────────────────────
   const [userState, setUserState] = useState({
@@ -454,17 +457,47 @@ export function AppProvider({ children }) {
   }, [loadTasks, loadGoals, loadAchievements, loadHabits, loadProfile, runSilentHealthCheck, rehydrateUserState]);
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // CONQUISTAS — detecção automática
+  // CONQUISTAS — detecção automática (PROTEGIDA contra false positives)
   // ═══════════════════════════════════════════════════════════════════════════
   useEffect(() => {
     const checkAchievements = async () => {
       if (!currentUser?.id || achievementChecking.current || unlockedKeys === null) return;
+
+      // GUARD CRÍTICO: Só verifica conquistas após os dados terem sido carregados ao menos uma vez.
+      // Isso evita o popup falso que acontecia quando tasks=[] e goals=[] logo após o login.
+      if (!dataLoadedOnce.current) {
+        // Considera dados carregados quando tasks OU goals foram populados, ou quando unlockedAchievements foi hidratado.
+        // unlockedAchievements === null significa que o fetch ainda não completou.
+        // unlockedAchievements é Array (mesmo vazio) significa que já carregou.
+        if (unlockedAchievements === null) return;
+        dataLoadedOnce.current = true;
+        // Na primeira carga, só prossegue se existem dados reais — se não, aborta silenciosamente.
+        if (tasks.length === 0 && goals.length === 0) return;
+      }
+
       achievementChecking.current = true;
       try {
         const stats = calcStats(tasks, goals);
-        const newlyUnlocked = ACHIEVEMENTS.filter(
-          (a) => !unlockedKeys.has(a.key) && a.check(stats)
-        );
+
+        // GUARD SECUNDÁRIO: conquistas que exigem ação real do usuário
+        // só disparam se há evidência real de interação (não apenas dados carregados).
+        const newlyUnlocked = ACHIEVEMENTS.filter((a) => {
+          if (unlockedKeys.has(a.key)) return false;
+          // Conquistas baseadas em tarefas concluídas: só disparam se há completedTasks > 0
+          if (['first_task', 'tasks_10', 'tasks_50', 'tasks_100'].includes(a.key)) {
+            if (stats.completedTasks === 0) return false;
+          }
+          // Conquistas baseadas em streak: só disparam se streak > 0 (ou seja, há atividade real)
+          if (['streak_3', 'streak_7', 'streak_30'].includes(a.key)) {
+            if (stats.currentStreak === 0) return false;
+          }
+          // Conquistas baseadas em objetivos concluídos
+          if (['first_goal_completed', 'goals_10'].includes(a.key)) {
+            if (stats.completedGoals === 0) return false;
+          }
+          return a.check(stats);
+        });
+
         if (newlyUnlocked.length === 0) return;
 
         const { error } = await achievementsService.unlock(
@@ -489,7 +522,7 @@ export function AppProvider({ children }) {
       }
     };
     checkAchievements();
-  }, [tasks, goals, currentUser?.id, unlockedKeys]);
+  }, [tasks, goals, currentUser?.id, unlockedKeys, unlockedAchievements]);
 
   // ═══════════════════════════════════════════════════════════════════════════
   // AUTH ACTIONS
@@ -514,6 +547,9 @@ export function AppProvider({ children }) {
         await eventsService.logEvent(currentUser.id, 'logout');
       }
       await supabase.auth.signOut();
+      // Reset do guard de conquistas para o próximo login
+      dataLoadedOnce.current = false;
+      firstSuccessLogged.current = false;
       setCurrentUser(null);
       setUserProfile(null);
       setTasks([]); setGoals([]); setGoalTasks([]);

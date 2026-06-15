@@ -190,6 +190,7 @@ export default function EvolutionView() {
     isPro, 
     handleSimulateUpgrade, 
     handleUpdateTask,
+    handleToggleComplete,
     currentUser 
   } = useAppContext();
 
@@ -229,11 +230,22 @@ export default function EvolutionView() {
     
     // Plano semanal carregado do metadata
     const weeklyPlan = currentUser?.user_metadata?.weekly_plan || null;
+
+    // Tarefas pendentes vinculadas ao plano (por objetivos selecionados)
+    let planTasks = [];
+    if (weeklyPlan?.linkedGoals?.length > 0) {
+      // Tarefas pendentes cujos objetivos estão no plano
+      planTasks = tasks.filter(t => !t.completed);
+    } else {
+      // Se não há objetivos vinculados, mostra as 5 tarefas pendentes mais recentes
+      planTasks = tasks.filter(t => !t.completed).slice(0, 5);
+    }
     
     return {
       completedTasks: recentCompletedTasks,
       completedHabits: recentHabitLogsCount,
-      plan: weeklyPlan
+      plan: weeklyPlan,
+      planTasks: planTasks.slice(0, 8), // Limita a 8 tarefas
     };
   }, [tasks, habitsManager.habitLogs, currentUser]);
 
@@ -316,6 +328,71 @@ export default function EvolutionView() {
                 </div>
               </div>
             )}
+
+            {/* NOVO: Lista interativa de tarefas pendentes desta semana */}
+            {weeklyReportData.planTasks && weeklyReportData.planTasks.length > 0 && (
+              <div>
+                <span style={{ fontSize: '12px', fontWeight: '500', color: 'var(--text-light)', display: 'block', marginBottom: '8px' }}>
+                  Tarefas desta semana ({weeklyReportData.planTasks.length} pendentes):
+                </span>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  {weeklyReportData.planTasks.map(task => (
+                    <div
+                      key={task.id}
+                      onClick={() => handleToggleComplete(task.id)}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '10px',
+                        padding: '8px 12px',
+                        backgroundColor: 'var(--bg-card)',
+                        borderRadius: 'var(--radius-sm)',
+                        border: '1px solid var(--border-light)',
+                        cursor: 'pointer',
+                        transition: 'all 0.15s',
+                        opacity: task.completed ? 0.5 : 1,
+                      }}
+                    >
+                      <div style={{
+                        width: '18px',
+                        height: '18px',
+                        borderRadius: '50%',
+                        border: `2px solid ${task.completed ? 'var(--primary)' : 'var(--border-medium)'}`,
+                        backgroundColor: task.completed ? 'var(--primary)' : 'transparent',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0,
+                        transition: 'all 0.15s',
+                      }}>
+                        {task.completed && <CheckCircle size={10} style={{ color: 'white' }} />}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <span style={{
+                          fontSize: '13px',
+                          fontWeight: '500',
+                          color: 'var(--text-main)',
+                          textDecoration: task.completed ? 'line-through' : 'none',
+                          display: 'block',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                        }}>{task.title}</span>
+                        {task.category && (
+                          <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>{task.category}</span>
+                        )}
+                      </div>
+                      {task.dueDate && (
+                        <span style={{ fontSize: '10px', color: 'var(--text-light)', flexShrink: 0 }}>
+                          {new Date(task.dueDate + 'T00:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <button 
               onClick={() => setIsWeeklyPlannerOpen(true)}
               style={{ marginTop: '8px', padding: '8px', fontSize: '12px', borderRadius: '6px', background: 'transparent', border: '1px solid var(--primary)', color: 'var(--primary)', cursor: 'pointer', fontWeight: '600' }}
