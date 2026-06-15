@@ -4803,3 +4803,103 @@ button[title="Sair do Flowday"]:hover {
   }
 }
 
+/* ================================================================
+   UNIVERSAL RESPONSIVENESS OVERRIDES (Flowday V3)
+   ================================================================ */
+
+/* Support for very small devices (320px to 360px) */
+@media (max-width: 360px) {
+  :root {
+    --space-6: 12px;
+    --space-4: 8px;
+  }
+  .container {
+    padding-left: 8px !important;
+    padding-right: 8px !important;
+  }
+  .app-bottom-nav-btn {
+    padding: 4px 2px !important;
+  }
+  .nav-text {
+    display: none !important; /* Hide label text on extremely narrow mobile layout */
+  }
+  .nav-icon {
+    font-size: 24px !important;
+  }
+  .home-evo-stats-row {
+    flex-direction: column !important;
+    gap: 8px !important;
+  }
+  .app-top-greeting {
+    display: none !important; /* Hide greeting to save space */
+  }
+}
+
+/* Support for standard mobile devices (360px to 480px) */
+@media (max-width: 480px) {
+  body {
+    font-size: 13px !important;
+  }
+  .container {
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+  }
+  /* Ensure grids collapse to 1 column on mobile */
+  .focus-main-grid,
+  .home-ritmo-section,
+  .focus-view-container .grid-2,
+  .weekly-planner-grid {
+    grid-template-columns: 1fr !important;
+    gap: 16px !important;
+  }
+  /* Remove horizontal overflows on components */
+  .home-view-container, 
+  .focus-view-container, 
+  .goals-view-container, 
+  .tasks-view-container {
+    max-width: 100% !important;
+    overflow-x: hidden !important;
+  }
+  /* Table styling for admin and lists to prevent clipping */
+  .admin-dashboard-container table,
+  .performance-view-container table {
+    display: block !important;
+    width: 100% !important;
+    overflow-x: auto !important;
+    white-space: nowrap !important;
+    -webkit-overflow-scrolling: touch;
+  }
+  /* Safe area space for floating nav */
+  .app-main-content {
+    padding-bottom: 90px !important;
+  }
+  /* Aura Assistant responsiveness */
+  .aura-assistant-card {
+    padding: 16px !important;
+    width: 100% !important;
+  }
+}
+
+/* Support for tablet devices (768px to 1024px) */
+@media (min-width: 768px) and (max-width: 1024px) {
+  .container {
+    padding-left: 24px !important;
+    padding-right: 24px !important;
+  }
+  .focus-main-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .home-ritmo-section {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* Support for large desktops (1440px to 1920px) */
+@media (min-width: 1440px) {
+  .container {
+    max-width: 1400px !important;
+  }
+  .focus-main-grid {
+    grid-template-columns: 1fr 350px !important;
+  }
+}

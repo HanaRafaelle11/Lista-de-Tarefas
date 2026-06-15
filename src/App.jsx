@@ -33,22 +33,7 @@ function AppLayout() {
   // Registrar visualizações analíticas ao mudar de aba
   useEffect(() => {
     if (currentUser?.id && activeTab) {
-      const tabEventMap = {
-        home: 'home_viewed',
-        goals: 'goals_viewed',
-        tasks: 'tasks_viewed',
-        focus: 'focus_viewed',
-        analytics: 'analytics_viewed',
-        performance: 'performance_viewed',
-        profile: 'profile_viewed',
-        admin: 'admin_viewed',
-        settings: 'settings_viewed',
-      };
-      
-      const eventName = tabEventMap[activeTab];
-      if (eventName) {
-        logEvent(eventName);
-      }
+      logEvent('screen_view', { screen: activeTab });
 
       if (activeTab === 'analytics' && !isPro) {
         logEvent('paywall_viewed');

@@ -51,6 +51,7 @@ export default function FocusView() {
       logEvent('focus_timer_completed', { duration_minutes: focusTime, task_id: selectedTaskId });
       logEvent('focus_completed', { duration_minutes: focusTime, task_id: selectedTaskId });
       logEvent('pomodoro_completed', { duration_minutes: focusTime, task_id: selectedTaskId });
+      logEvent('focus_session_completed', { duration_minutes: focusTime, task_id: selectedTaskId });
       // Envia notificação nativa se disponível
       if ('Notification' in window && Notification.permission === 'granted') {
         new Notification('Flowday ⏱️', {
@@ -75,8 +76,15 @@ export default function FocusView() {
 
   const toggleTimer = () => {
     if (!isActive) {
-      logEvent('focus_started', { mode, task_id: selectedTaskId });
+      const isResume = timeLeft < (mode === 'focus' ? focusTime : breakTime) * 60;
+      if (isResume) {
+        logEvent('focus_session_resumed', { mode, task_id: selectedTaskId, timeLeft });
+      } else {
+        logEvent('focus_session_started', { mode, task_id: selectedTaskId });
+        logEvent('focus_started', { mode, task_id: selectedTaskId });
+      }
     } else {
+      logEvent('focus_session_paused', { mode, timeLeft });
       logEvent('focus_timer_paused', { mode, timeLeft });
     }
     setIsActive(!isActive);
@@ -86,6 +94,7 @@ export default function FocusView() {
     setIsActive(false);
     setMode('focus');
     setTimeLeft(focusTime * 60);
+    logEvent('focus_session_cancelled', { mode, timeLeft });
     logEvent('focus_timer_reset');
   };
 

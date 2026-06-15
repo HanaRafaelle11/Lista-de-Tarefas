@@ -70,7 +70,6 @@ export async function trackEvent(userId, eventType, metadata = {}) {
     'signup_completed': 'user_signed_up',
     'login': 'user_logged_in',
     'logout': 'user_logged_out',
-    'task_uncompleted': 'task_reopened',
     'weekly_plan_saved': 'weekly_plan_created',
     'weekly_plan_viewed': 'weekly_plan_opened',
     'calendar_viewed': 'calendar_opened',
@@ -79,7 +78,7 @@ export async function trackEvent(userId, eventType, metadata = {}) {
     'pomodoro_completed': 'focus_session_completed',
     'focus_session_completed': 'focus_session_completed',
     'focus_timer_paused': 'focus_session_paused',
-    'focus_timer_reset': 'focus_session_reset'
+    'focus_timer_reset': 'focus_session_cancelled'
   };
 
   if (eventMappings[eventType]) {
@@ -181,6 +180,20 @@ export async function flushBatch() {
   }
 }
 
+// Fallback to sendBeacon helper
+const fallbackToBeacon = (supabaseUrl, supabaseAnonKey, payload, batchToSend) => {
+  if (typeof navigator !== 'undefined' && typeof navigator.sendBeacon === 'function') {
+    const beaconUrl = `${supabaseUrl}/rest/v1/events?apikey=${supabaseAnonKey}`;
+    const blob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
+    const sent = navigator.sendBeacon(beaconUrl, blob);
+    if (sent) {
+      for (const item of batchToSend) {
+        localDB.delete('events', item.id).catch(() => {});
+      }
+    }
+  }
+};
+
 // Escuta eventos de encerramento da página para forçar sincronização final via keepalive fetch
 if (typeof window !== 'undefined') {
   const handlePageUnload = () => {
@@ -201,28 +214,42 @@ if (typeof window !== 'undefined') {
       created_at: e.created_at
     }));
 
-    const headers = {
-      'apikey': supabaseAnonKey,
-      'Content-Type': 'application/json',
-      'Prefer': 'return=minimal'
-    };
+    let fetchSuccess = false;
+    try {
+      const headers = {
+        'apikey': supabaseAnonKey,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=minimal'
+      };
 
-    if (currentSessionToken) {
-      headers['Authorization'] = `Bearer ${currentSessionToken}`;
+      if (currentSessionToken) {
+        headers['Authorization'] = `Bearer ${currentSessionToken}`;
+      }
+
+      fetch(`${supabaseUrl}/rest/v1/events`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(payload),
+        keepalive: true
+      }).then(res => {
+        if (res.ok) {
+          for (const item of batchToSend) {
+            localDB.delete('events', item.id).catch(() => {});
+          }
+        } else {
+          fallbackToBeacon(supabaseUrl, supabaseAnonKey, payload, batchToSend);
+        }
+      }).catch(() => {
+        fallbackToBeacon(supabaseUrl, supabaseAnonKey, payload, batchToSend);
+      });
+      fetchSuccess = true;
+    } catch (e) {
+      fetchSuccess = false;
     }
 
-    fetch(`${supabaseUrl}/rest/v1/events`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(payload),
-      keepalive: true
-    }).then(res => {
-      if (res.ok) {
-        for (const item of batchToSend) {
-          localDB.delete('events', item.id).catch(() => {});
-        }
-      }
-    }).catch(() => {});
+    if (!fetchSuccess) {
+      fallbackToBeacon(supabaseUrl, supabaseAnonKey, payload, batchToSend);
+    }
   };
 
   window.addEventListener('visibilitychange', () => {

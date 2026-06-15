@@ -615,6 +615,8 @@ export function AppProvider({ children }) {
   const handleUpdateTask = useCallback(async (id, updatedData) => {
     if (!currentUser?.id) return;
     
+    const existingTask = tasks.find(t => t.id === id);
+    
     // OPTIMISTIC UPDATE: Atualiza UI na hora
     setTasks((prev) => prev.map((t) => t.id === id ? { ...t, ...updatedData } : t));
     
@@ -625,6 +627,9 @@ export function AppProvider({ children }) {
       // If completed was changed to true, log completion
       if (updatedData.completed === true) {
         logEvent('task_completed', { taskId: id });
+        if (existingTask && existingTask.dueDate) {
+          logEvent('calendar_task_completed', { taskId: id });
+        }
         
         // Ensure tasks are actually loaded before calculating alreadyHadSuccess
         if (tasks.length > 0) {
@@ -633,6 +638,17 @@ export function AppProvider({ children }) {
             firstSuccessLogged.current = true;
             logEvent('first_success_action', { task_id: id });
           }
+        }
+      }
+
+      // Check if dueDate is updated
+      if (updatedData.dueDate !== undefined) {
+        if (updatedData.dueDate && (!existingTask || !existingTask.dueDate)) {
+          logEvent('calendar_task_scheduled', { taskId: id, date: updatedData.dueDate });
+          logEvent('task_scheduled', { taskId: id, date: updatedData.dueDate });
+        } else if (existingTask && existingTask.dueDate && updatedData.dueDate && existingTask.dueDate !== updatedData.dueDate) {
+          logEvent('calendar_task_moved', { taskId: id, oldDate: existingTask.dueDate, newDate: updatedData.dueDate });
+          logEvent('task_rescheduled', { taskId: id, oldDate: existingTask.dueDate, newDate: updatedData.dueDate });
         }
       }
     }
@@ -764,15 +780,20 @@ export function AppProvider({ children }) {
 
   const handleUpdateGoal = useCallback(async (id, updatedData) => {
     if (!currentUser?.id) return;
+    const existingGoal = goals.find(g => g.id === id);
     const { data: payload } = await goalsService.update(currentUser.id, id, updatedData);
     if (payload) {
       setGoals((prev) => prev.map((g) => g.id === id ? { ...g, ...payload } : g));
       logEvent('goal_updated', { goal_id: id });
       if (updatedData.status === 'completed') {
         logEvent('goal_completed', { goal_id: id });
+      } else if (updatedData.status === 'archived') {
+        logEvent('goal_archived', { goal_id: id });
+      } else if (existingGoal && (existingGoal.status === 'completed' || existingGoal.status === 'archived') && updatedData.status === 'active') {
+        logEvent('goal_reopened', { goal_id: id });
       }
     }
-  }, [currentUser?.id, logEvent]);
+  }, [currentUser?.id, logEvent, goals]);
 
   const handleDeleteGoal = useCallback(async (id) => {
     if (!currentUser?.id) return;
@@ -875,6 +896,9 @@ export function AppProvider({ children }) {
     if (!currentUser?.id) return;
     try {
       const nextPro = !isPro;
+      logEvent(nextPro ? 'upgrade_clicked' : 'downgrade_clicked');
+      logEvent(nextPro ? 'upgrade_started' : 'downgrade_started');
+      
       const { error } = await supabase
         .from('subscriptions')
         .upsert({
@@ -886,7 +910,8 @@ export function AppProvider({ children }) {
       if (error) throw error;
       
       setIsPro(nextPro);
-      logEvent(nextPro ? 'upgrade_clicked' : 'downgrade_clicked');
+      logEvent(nextPro ? 'upgrade_completed' : 'downgrade_completed');
+      logEvent(nextPro ? 'subscription_started' : 'subscription_cancelled');
     } catch (e) {
       console.error('Erro ao mudar assinatura:', e);
     }

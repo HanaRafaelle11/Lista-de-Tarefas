@@ -199,6 +199,11 @@ function GoalProgressRow({ goal, linkedTasks }) {
     setOnboardingStep(0);
   };
 
+  const handleAbandonOnboarding = () => {
+    logEvent('onboarding_abandoned', { step: onboardingStep });
+    handleFinishOnboarding();
+  };
+
   // Cálculo de pendências do Widget "Hoje"
   const getTodayDateStr = () => {
     const d = new Date();
@@ -369,7 +374,7 @@ function GoalProgressRow({ goal, linkedTasks }) {
       {onboardingStep === 0 && !onboardingCompleted && !localStorage.getItem('flowday_onboarding_started') && (
         <section className="onboarding-card animate-fade-in" style={{ textAlign: 'center', border: '1px solid var(--primary-light)', boxShadow: 'var(--shadow-glow)' }}>
           <div className="onboarding-header" style={{ justifyContent: 'flex-end' }}>
-            <button className="onboarding-skip-btn" onClick={handleFinishOnboarding}>Pular Guia</button>
+            <button className="onboarding-skip-btn" onClick={() => { logEvent('onboarding_abandoned', { step: 0 }); handleFinishOnboarding(); }}>Pular Guia</button>
           </div>
           <div className="onboarding-body" style={{ alignItems: 'center', paddingTop: '8px' }}>
             <div style={{ fontSize: '48px', marginBottom: '8px' }}>👋</div>
@@ -389,7 +394,7 @@ function GoalProgressRow({ goal, linkedTasks }) {
         <section className="onboarding-card animate-fade-in" style={{ border: '1px solid var(--primary-light)' }}>
           <div className="onboarding-header">
             <span className="onboarding-step-badge">Jornada Flowday · Passo {onboardingStep} de {ONBOARDING_TOTAL_STEPS}</span>
-            <button className="onboarding-skip-btn" onClick={handleFinishOnboarding}>Pular Guia</button>
+            <button className="onboarding-skip-btn" onClick={handleAbandonOnboarding}>Pular Guia</button>
           </div>
           
           <div className="onboarding-body">
