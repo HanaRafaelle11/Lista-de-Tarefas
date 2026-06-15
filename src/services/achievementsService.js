@@ -67,4 +67,24 @@ export const achievementsService = {
       return { error };
     }
   },
+
+  /**
+   * Reseta todas as conquistas do usuário (deleta todas as linhas correspondentes).
+   */
+  resetAll: async (userId) => {
+    requireUser(userId);
+    try {
+      const { error } = await supabase
+        .from('user_achievements')
+        .delete()
+        .eq('user_id', userId);
+
+      if (error) throw error;
+      return { error: null };
+    } catch (error) {
+      console.error('[achievementsService.resetAll]', error);
+      return { error };
+    }
+  },
 };
+

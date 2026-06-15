@@ -150,12 +150,26 @@ export default function GoalCard({
       {/* Footer: data-alvo + botão de tarefas */}
       <div className="goal-card-footer">
         {goal.target_date ? (
-          <div className="goal-card-date">
-            <Calendar size={13} />
-            <span>Meta: {formatDate(goal.target_date)}</span>
+          <div className="goal-card-date" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '2px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <Calendar size={13} />
+              <span>Meta: {formatDate(goal.target_date)}</span>
+            </div>
+            {(goal.start_time || goal.end_time) && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: 'var(--text-light)', marginLeft: '17px' }}>
+                <span>🕒 {goal.start_time || ''} {goal.end_time ? `até ${goal.end_time}` : ''}</span>
+              </div>
+            )}
           </div>
         ) : (
-          <span className="goal-card-no-date">Sem data-alvo</span>
+          <div className="goal-card-date" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '2px' }}>
+            <span className="goal-card-no-date">Sem data-alvo</span>
+            {(goal.start_time || goal.end_time) && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: 'var(--text-light)' }}>
+                <span>🕒 {goal.start_time || ''} {goal.end_time ? `até ${goal.end_time}` : ''}</span>
+              </div>
+            )}
+          </div>
         )}
 
         {!isArchived && (

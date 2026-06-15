@@ -3990,9 +3990,10 @@ button[title="Sair do Flowday"]:hover {
 
   .achievement-toast-container {
     right: 12px;
-    left: 12px;
-    max-width: none;
-    bottom: 90px;
+    top: 12px;
+    bottom: auto;
+    left: auto;
+    max-width: 320px;
   }
 
   .home-evo-stats-row {
@@ -4726,6 +4727,45 @@ button[title="Sair do Flowday"]:hover {
 .focus-card-panel {
   min-width: 0;
   overflow: hidden;
+}
+
+.focus-card-panel.left-panel {
+  padding: 40px;
+}
+
+.focus-card-panel.right-panel {
+  padding: 24px;
+}
+
+.focus-timer-controls {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: 32px;
+}
+
+.focus-task-detail {
+  margin-top: 32px;
+  text-align: center;
+  max-width: 380px;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+@media (max-width: 768px) {
+  .focus-card-panel.left-panel {
+    padding: 24px 16px;
+  }
+  .focus-card-panel.right-panel {
+    padding: 16px;
+  }
+  .focus-timer-controls {
+    margin-top: 16px;
+  }
+  .focus-task-detail {
+    margin-top: 16px;
+  }
 }
 
 @media (max-width: 900px) {

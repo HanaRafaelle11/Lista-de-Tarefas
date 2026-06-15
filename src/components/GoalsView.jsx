@@ -63,6 +63,8 @@ export default function GoalsView() {
     handleLinkTask: onLinkTask,
     handleUnlinkTask: onUnlinkTask,
     habitsManager,
+    shouldOpenGoalModal,
+    setShouldOpenGoalModal,
   } = useAppContext();
   const [filter, setFilter] = useState('active');
   const [isGoalModalOpen, setIsGoalModalOpen] = useState(false);
@@ -70,7 +72,13 @@ export default function GoalsView() {
   const [editingGoal, setEditingGoal] = useState(null);
   const [managingGoal, setManagingGoal] = useState(null);
 
-  // Abertura automática removida para evitar popups indesejados
+  useEffect(() => {
+    if (shouldOpenGoalModal) {
+      setShouldOpenGoalModal(false);
+      setEditingGoal(null);
+      setIsGoalModalOpen(true);
+    }
+  }, [shouldOpenGoalModal, setShouldOpenGoalModal]);
 
   // Filtrar objetivos por status
   const filteredGoals = useMemo(() => {

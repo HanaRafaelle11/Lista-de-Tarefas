@@ -7,13 +7,27 @@ export default function FocusView() {
   const pendingTasks = tasks.filter(t => !t.completed);
 
   // Estados do Timer
-  const [focusTime, setFocusTime] = useState(25); // em minutos
-  const [breakTime, setBreakTime] = useState(5);  // em minutos
-  const [timeLeft, setTimeLeft] = useState(25 * 60); // em segundos
+  const [focusTime, setFocusTime] = useState(() => Number(localStorage.getItem('flowday_pomodoro_focus')) || 25);
+  const [breakTime, setBreakTime] = useState(() => Number(localStorage.getItem('flowday_pomodoro_break')) || 5);
+  const [timeLeft, setTimeLeft] = useState(() => {
+    const savedFocus = Number(localStorage.getItem('flowday_pomodoro_focus')) || 25;
+    return savedFocus * 60;
+  });
   const [isActive, setIsActive] = useState(false);
   const [mode, setMode] = useState('focus'); // 'focus' | 'break'
   const [selectedTaskId, setSelectedTaskId] = useState('');
   const [showConfig, setShowConfig] = useState(false);
+
+  // Estados temporários do painel de configuração
+  const [tempFocus, setTempFocus] = useState(focusTime);
+  const [tempBreak, setTempBreak] = useState(breakTime);
+
+  useEffect(() => {
+    if (showConfig) {
+      setTempFocus(focusTime);
+      setTempBreak(breakTime);
+    }
+  }, [showConfig, focusTime, breakTime]);
 
   const timerRef = useRef(null);
 
@@ -98,6 +112,37 @@ export default function FocusView() {
     logEvent('focus_timer_reset');
   };
 
+  const handleSaveConfig = () => {
+    const focusVal = parseInt(tempFocus, 10);
+    const breakVal = parseInt(tempBreak, 10);
+
+    if (isNaN(focusVal) || focusVal < 1 || focusVal > 120) {
+      alert('O tempo de foco deve ser entre 1 e 120 minutos.');
+      return;
+    }
+    if (isNaN(breakVal) || breakVal < 1 || breakVal > 60) {
+      alert('O tempo de pausa deve ser entre 1 e 60 minutos.');
+      return;
+    }
+
+    if (focusVal > 25 && !isPro) {
+      alert('Tempos superiores a 25 minutos estão disponíveis apenas no plano Pro!');
+      return;
+    }
+
+    setFocusTime(focusVal);
+    setBreakTime(breakVal);
+    localStorage.setItem('flowday_pomodoro_focus', String(focusVal));
+    localStorage.setItem('flowday_pomodoro_break', String(breakVal));
+    
+    if (!isActive) {
+      setTimeLeft((mode === 'focus' ? focusVal : breakVal) * 60);
+    }
+    
+    setShowConfig(false);
+    logEvent('pomodoro_config_saved', { focus_minutes: focusVal, break_minutes: breakVal });
+  };
+
   const handleTaskComplete = (taskId) => {
     handleToggleComplete(taskId);
     logEvent('task_completed_in_focus', { task_id: taskId });
@@ -154,7 +199,7 @@ export default function FocusView() {
       <div className="focus-main-grid">
         
         {/* Lado Esquerdo: O Timer Pomodoro */}
-        <div className="focus-card-panel" style={{ backgroundColor: 'var(--bg-card)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-light)', padding: '40px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+        <div className="focus-card-panel left-panel" style={{ backgroundColor: 'var(--bg-card)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-light)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
           
           <button 
             onClick={() => setShowConfig(!showConfig)}
@@ -171,34 +216,31 @@ export default function FocusView() {
               
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '12px' }}>
                 <div>
-                  <label style={{ display: 'block', color: 'var(--text-light)', marginBottom: '2px' }}>Tempo Foco (min)</label>
+                  <label style={{ display: 'block', color: 'var(--text-light)', marginBottom: '2px' }}>Tempo Foco (1-120 min)</label>
                   <input 
                     type="number" 
-                    value={focusTime} 
-                    onChange={(e) => {
-                      const v = Math.max(1, Number(e.target.value));
-                      if (v > 25 && !isPro) {
-                        alert('Tempos superiores a 25 minutos estão disponíveis apenas no plano Pro!');
-                        return;
-                      }
-                      setFocusTime(v);
-                    }}
+                    value={tempFocus} 
+                    onChange={(e) => setTempFocus(e.target.value)}
+                    min="1"
+                    max="120"
                     style={{ width: '100%', padding: '6px', border: '1px solid var(--border-medium)', borderRadius: '6px', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)' }}
                   />
                 </div>
                 <div>
-                  <label style={{ display: 'block', color: 'var(--text-light)', marginBottom: '2px' }}>Pausa Curta (min)</label>
+                  <label style={{ display: 'block', color: 'var(--text-light)', marginBottom: '2px' }}>Pausa Curta (1-60 min)</label>
                   <input 
                     type="number" 
-                    value={breakTime} 
-                    onChange={(e) => setBreakTime(Math.max(1, Number(e.target.value)))}
+                    value={tempBreak} 
+                    onChange={(e) => setTempBreak(e.target.value)}
+                    min="1"
+                    max="60"
                     style={{ width: '100%', padding: '6px', border: '1px solid var(--border-medium)', borderRadius: '6px', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)' }}
                   />
                 </div>
               </div>
               <button 
-                onClick={() => setShowConfig(false)} 
-                style={{ marginTop: '12px', width: '100%', padding: '6px', borderRadius: '6px', backgroundColor: 'var(--primary)', color: 'white', fontWeight: '600', fontSize: '11px' }}
+                onClick={handleSaveConfig} 
+                style={{ marginTop: '12px', width: '100%', padding: '6px', borderRadius: '6px', backgroundColor: 'var(--primary)', color: 'white', fontWeight: '600', fontSize: '11px', border: 'none', cursor: 'pointer' }}
               >
                 Salvar Tempos
               </button>
@@ -238,7 +280,7 @@ export default function FocusView() {
           </div>
 
           {/* Controles do Timer */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginTop: '32px' }}>
+          <div className="focus-timer-controls">
             <button 
               onClick={resetTimer}
               style={{ width: '48px', height: '48px', borderRadius: '50%', border: '1px solid var(--border-medium)', color: 'var(--text-light)', display: 'flex', alignItems: 'center', justifyContext: 'center', justifyContent: 'center', backgroundColor: 'var(--bg-app)', transition: 'all 0.2s' }}
@@ -264,7 +306,7 @@ export default function FocusView() {
           </div>
 
           {/* Detalhe da Tarefa Selecionada */}
-          <div style={{ marginTop: '32px', textAlign: 'center', maxWidth: '380px' }}>
+          <div className="focus-task-detail">
             {activeTask ? (
               <div style={{ padding: '12px 20px', borderRadius: 'var(--radius-md)', backgroundColor: 'var(--primary-glow)', border: '1px solid var(--primary-light)', display: 'flex', alignItems: 'center', gap: '12px' }}>
                 <button 
@@ -294,7 +336,7 @@ export default function FocusView() {
         </div>
 
         {/* Lado Direito: Seletor de Tarefas Pendentes */}
-        <div className="focus-card-panel" style={{ backgroundColor: 'var(--bg-card)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-light)', padding: '24px', display: 'flex', flexDirection: 'column' }}>
+        <div className="focus-card-panel right-panel" style={{ backgroundColor: 'var(--bg-card)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-light)', display: 'flex', flexDirection: 'column' }}>
           <h3 style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-main)', marginBottom: '16px' }}>Selecione a Tarefa</h3>
           
           <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '380px' }}>

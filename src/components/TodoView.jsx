@@ -273,6 +273,18 @@ export default function TodoView() {
     setIsModalOpen(true);
   };
 
+  const closeTaskModal = () => {
+    setIsModalOpen(false);
+    setEditingTask(null);
+    setTitle('');
+    setDescription('');
+    setDueDate('');
+    setDueTime('');
+    setCategory(categories[0]?.id || 'Trabalho');
+    setPriority('Média');
+    setRecurrence('nenhuma');
+  };
+
   const handleSave = (e) => {
     e.preventDefault();
     if (!title.trim()) return;
@@ -294,15 +306,7 @@ export default function TodoView() {
       onAddTask(taskData);
     }
 
-    // Limpar state após salvar
-    setTitle('');
-    setDescription('');
-    setDueDate('');
-    setDueTime('');
-    setCategory('Trabalho');
-    setPriority('Média');
-    setRecurrence('nenhuma');
-    setIsModalOpen(false);
+    closeTaskModal();
   };
 
   // Caixa de Entrada Rápida
@@ -999,7 +1003,7 @@ export default function TodoView() {
 
       {/* ── Modal de Criar / Editar Tarefa ──────────────── */}
       {isModalOpen && (
-        <div className="modal-overlay" onClick={() => setIsModalOpen(false)}>
+        <div className="modal-overlay" onClick={closeTaskModal}>
           <div className="modal-content tasks-modal animate-scale-up" onClick={e => e.stopPropagation()}>
             <div className="todo-modal-header">
               <div className="tasks-modal-title-wrap">
@@ -1008,7 +1012,7 @@ export default function TodoView() {
                   {editingTask ? 'Editar Tarefa' : 'Nova Tarefa'}
                 </h2>
               </div>
-              <button onClick={() => setIsModalOpen(false)} className="todo-modal-close-btn" aria-label="Fechar modal">
+              <button onClick={closeTaskModal} className="todo-modal-close-btn" aria-label="Fechar modal">
                 <X size={18} />
               </button>
             </div>
@@ -1116,7 +1120,7 @@ export default function TodoView() {
               <div className="todo-modal-actions">
                 <button
                   type="button"
-                  onClick={() => setIsModalOpen(false)}
+                  onClick={closeTaskModal}
                   className="todo-modal-cancel-btn"
                 >
                   Cancelar

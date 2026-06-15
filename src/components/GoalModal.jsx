@@ -56,7 +56,7 @@ export default function GoalModal({ isOpen, onClose, onSave, editingGoal }) {
     e.preventDefault();
     if (!title.trim()) return;
 
-    if (targetDate) {
+    if (!editingGoal && targetDate) {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       const selectedDate = new Date(targetDate + 'T00:00:00');

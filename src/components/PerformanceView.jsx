@@ -233,6 +233,9 @@ export default function PerformanceView() {
   // 6. Insights Automáticos
   const autoInsights = useMemo(() => {
     const list = [];
+    if (completedTasks.length === 0 && goals.length === 0) {
+      return [];
+    }
 
     // Insight de Dia
     if (radarSemanal.bestDay) {
@@ -299,6 +302,12 @@ export default function PerformanceView() {
 
   // 7. Perfil de Produtividade
   const productivityProfile = useMemo(() => {
+    if (completedTasks.length === 0) {
+      return {
+        title: 'Produtor em Início de Jornada 🌱',
+        desc: 'Você ainda não concluiu tarefas suficientes para determinarmos seu perfil de produtividade ideal. Comece a concluir tarefas para ver sua análise aqui!'
+      };
+    }
     const counts = productivityHours.counts;
     const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
     const primaryMode = sorted[0][0];
@@ -323,7 +332,7 @@ export default function PerformanceView() {
     };
 
     return profiles[primaryMode] || { title: 'Produtor Equilibrado ⚖️', desc: 'Seus horários de conclusão são distribuídos de maneira regular ao longo de todo o dia.' };
-  }, [productivityHours]);
+  }, [productivityHours, completedTasks]);
 
   return (
     <div className="performance-view-container animate-fade-in" style={{ padding: '24px 0' }}>
@@ -433,22 +442,32 @@ export default function PerformanceView() {
           <h3 style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Calendar size={18} /> Radar Semanal
           </h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            {radarSemanal.radarData.map(day => (
-              <div key={day.dayName} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 12px', backgroundColor: 'var(--bg-app)', borderRadius: '6px' }}>
-                <span style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-main)' }}>{day.dayName}</span>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span style={{ fontSize: '11px', color: 'var(--text-light)' }}>{day.count} concluídas</span>
-                  <span style={{ fontSize: '14px' }}>{day.indicator}</span>
-                </div>
+          {completedTasks.length === 0 && goals.length === 0 ? (
+            <div style={{ padding: '24px', textAlign: 'center', backgroundColor: 'var(--bg-app)', borderRadius: 'var(--radius-md)', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', border: '1px dashed var(--border-medium)' }}>
+              <span style={{ fontSize: '24px' }}>📡</span>
+              <p style={{ fontSize: '13px', color: 'var(--text-main)', fontWeight: '600', marginTop: '8px' }}>Radar inativo</p>
+              <p style={{ fontSize: '11px', color: 'var(--text-light)', textAlign: 'center' }}>Conclua tarefas ou objetivos para ativar o radar.</p>
+            </div>
+          ) : (
+            <>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {radarSemanal.radarData.map(day => (
+                  <div key={day.dayName} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 12px', backgroundColor: 'var(--bg-app)', borderRadius: '6px' }}>
+                    <span style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-main)' }}>{day.dayName}</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontSize: '11px', color: 'var(--text-light)' }}>{day.count} concluídas</span>
+                      <span style={{ fontSize: '14px' }}>{day.indicator}</span>
+                    </div>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-          <div style={{ display: 'flex', gap: '8px', fontSize: '11px', color: 'var(--text-light)', marginTop: '8px' }}>
-            <span>🚀 Melhor dia: <strong>{radarSemanal.bestDay}</strong></span>
-            <span>•</span>
-            <span>⚠️ Pior dia: <strong>{radarSemanal.worstDay}</strong></span>
-          </div>
+              <div style={{ display: 'flex', gap: '8px', fontSize: '11px', color: 'var(--text-light)', marginTop: '8px' }}>
+                <span>🚀 Melhor dia: <strong>{radarSemanal.bestDay}</strong></span>
+                <span>•</span>
+                <span>⚠️ Pior dia: <strong>{radarSemanal.worstDay}</strong></span>
+              </div>
+            </>
+          )}
         </div>
 
         {/* Bloco 6: Saúde dos Objetivos */}
@@ -456,40 +475,54 @@ export default function PerformanceView() {
           <h3 style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
             <Zap size={18} /> Saúde dos Objetivos
           </h3>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>
-            {goalHealthList.map(goal => {
-              let healthColor = '#C06C6C';
-              if (goal.health >= 80) healthColor = 'var(--primary)';
-              else if (goal.health >= 50) healthColor = '#C89658';
+          {goals.length === 0 ? (
+            <div style={{ padding: '24px', textAlign: 'center', backgroundColor: 'var(--bg-app)', borderRadius: 'var(--radius-md)', border: '1px dashed var(--border-medium)' }}>
+              <span style={{ fontSize: '24px' }}>🎯</span>
+              <p style={{ fontSize: '14px', color: 'var(--text-main)', fontWeight: '600', marginTop: '8px' }}>Sem objetivos ativos</p>
+              <p style={{ fontSize: '12px', color: 'var(--text-light)' }}>Crie seus primeiros objetivos para visualizar sua saúde de progresso.</p>
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>
+              {goalHealthList.map(goal => {
+                let healthColor = '#C06C6C';
+                if (goal.health >= 80) healthColor = 'var(--primary)';
+                else if (goal.health >= 50) healthColor = '#C89658';
 
-              return (
-                <div key={goal.id} style={{ padding: '16px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-light)', backgroundColor: 'var(--bg-app)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <span style={{ fontSize: '16px' }}>{goal.icon}</span>
-                      <strong style={{ fontSize: '14px', color: 'var(--text-main)' }}>{goal.title}</strong>
+                return (
+                  <div key={goal.id} style={{ padding: '16px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-light)', backgroundColor: 'var(--bg-app)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span style={{ fontSize: '16px' }}>{goal.icon}</span>
+                        <strong style={{ fontSize: '14px', color: 'var(--text-main)' }}>{goal.title}</strong>
+                      </div>
+                      <span style={{ fontSize: '12px', fontWeight: '800', color: healthColor }}>Saúde: {goal.health}%</span>
                     </div>
-                    <span style={{ fontSize: '12px', fontWeight: '800', color: healthColor }}>Saúde: {goal.health}%</span>
-                  </div>
 
-                  <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                    <span>Progresso: {goal.doneTasks}/{goal.totalTasks} tarefas</span>
-                    <span style={{ display: 'block', marginTop: '2px', color: goal.daysStagnant > 5 ? '#C06C6C' : 'var(--text-light)' }}>
-                      🕒 {goal.daysStagnant === 0 ? 'Movimentado hoje' : `${goal.daysStagnant} dias sem novas ações`}
-                    </span>
+                    <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                      <span>Progresso: {goal.doneTasks}/{goal.totalTasks} tarefas</span>
+                      <span style={{ display: 'block', marginTop: '2px', color: goal.daysStagnant > 5 ? '#C06C6C' : 'var(--text-light)' }}>
+                        🕒 {goal.daysStagnant === 0 ? 'Movimentado hoje' : `${goal.daysStagnant} dias sem novas ações`}
+                      </span>
+                    </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {/* Bloco 7: Insights Automáticos Cards */}
-        {autoInsights.length > 0 && (
-          <div className="perf-card-double-span" style={{ backgroundColor: 'var(--bg-card)', padding: '24px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-light)' }}>
-            <h3 style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-              <ArrowUpRight size={18} /> Insights Comportamentais Recentes
-            </h3>
+        <div className="perf-card-double-span" style={{ backgroundColor: 'var(--bg-card)', padding: '24px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-light)' }}>
+          <h3 style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+            <ArrowUpRight size={18} /> Insights Comportamentais Recentes
+          </h3>
+          {autoInsights.length === 0 ? (
+            <div style={{ padding: '24px', textAlign: 'center', backgroundColor: 'var(--bg-app)', borderRadius: 'var(--radius-md)', border: '1px dashed var(--border-medium)' }}>
+              <span style={{ fontSize: '24px' }}>💡</span>
+              <p style={{ fontSize: '14px', color: 'var(--text-main)', fontWeight: '600', marginTop: '8px' }}>Sem insights comportamentais</p>
+              <p style={{ fontSize: '12px', color: 'var(--text-light)' }}>Continue utilizando o Flowday para gerar análises sobre seu ritmo de execução.</p>
+            </div>
+          ) : (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '16px' }}>
               {autoInsights.map(insight => (
                 <div key={insight.id} style={{ padding: '14px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-light)', backgroundColor: 'var(--bg-app)', display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
@@ -498,8 +531,8 @@ export default function PerformanceView() {
                 </div>
               ))}
             </div>
-          </div>
-        )}
+          )}
+        </div>
 
       </div>
     </div>

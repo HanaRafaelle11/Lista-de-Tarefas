@@ -53,7 +53,8 @@ function GoalProgressRow({ goal, linkedTasks }) {
     handleCompleteOnboarding,
     logEvent,
     insights,
-    suggestions
+    suggestions,
+    setShouldOpenGoalModal
   } = useAppContext();
   
   const { habits, habitLogs } = habitsManager;
@@ -564,7 +565,10 @@ function GoalProgressRow({ goal, linkedTasks }) {
                     Defina para onde você quer ir e acompanhe seu progresso aqui.
                   </p>
                   <button
-                    onClick={() => setActiveTab('goals')}
+                    onClick={() => {
+                      setShouldOpenGoalModal(true);
+                      setActiveTab('goals');
+                    }}
                     className="home-goals-empty-cta"
                   >
                     <Plus size={15} />
@@ -624,7 +628,7 @@ function GoalProgressRow({ goal, linkedTasks }) {
                         overflow: 'hidden'
                       }}
                     >
-                      <div className="home-ritmo-empty-illustration" style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '56px', height: '56px', borderRadius: '50%', background: 'rgba(74, 101, 78, 0.1)', color: 'var(--color-primary)', marginBottom: '4px' }}>
+                      <div className="home-ritmo-empty-illustration" style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '56px', height: '56px', borderRadius: '50%', background: 'rgba(74, 101, 78, 0.1)', color: 'var(--primary)', marginBottom: '4px' }}>
                         <span style={{ fontSize: '24px', zIndex: 2 }}>🌱</span>
                         <div style={{ position: 'absolute', width: '100%', height: '100%', borderRadius: '50%', border: '1px solid rgba(74, 101, 78, 0.2)', animation: 'ping-animation 2s cubic-bezier(0, 0, 0.2, 1) infinite' }} />
                       </div>
@@ -637,8 +641,8 @@ function GoalProgressRow({ goal, linkedTasks }) {
                       <button 
                         onClick={() => setActiveTab('tasks')}
                         style={{
-                          background: 'var(--color-primary)',
-                          color: 'var(--bg-card)',
+                          background: 'var(--primary)',
+                          color: '#ffffff',
                           border: 'none',
                           padding: '8px 16px',
                           borderRadius: '20px',

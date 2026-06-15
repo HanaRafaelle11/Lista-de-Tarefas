@@ -104,6 +104,7 @@ export function AppProvider({ children }) {
 
   // ── Navegação ────────────────────────────────────────────────────────────────
   const [activeTab, setActiveTab] = useState('home');
+  const [shouldOpenGoalModal, setShouldOpenGoalModal] = useState(false);
 
   // ── Tema ─────────────────────────────────────────────────────────────────────
   const [theme, setTheme] = useState(localStorage.getItem('theme') || 'system');
@@ -359,15 +360,34 @@ export function AppProvider({ children }) {
     setUnlockedKeys(new Set(list.map((a) => a.achievement_key)));
 
     // Se houver conquistas não vistas na carga inicial, adiciona na fila de toasts
-    const unseen = list.filter(a => !a.seen);
+    const localSeenKey = `flowday_seen_achievements_${userId}`;
+    const localSeenSet = new Set(JSON.parse(localStorage.getItem(localSeenKey) || '[]'));
+
+    const unseen = list.filter(a => !a.seen && !localSeenSet.has(a.achievement_key));
     if (unseen.length > 0) {
       unseen.forEach((a, i) => {
         const achievementInfo = ACHIEVEMENTS.find(ac => ac.key === a.achievement_key);
         if (achievementInfo) {
-          setTimeout(() => {
+          setTimeout(async () => {
             const id = `${a.achievement_key}-${Date.now()}`;
             setToastQueue((prev) => [...prev, { id, achievement: achievementInfo }]);
-            achievementsService.markAsSeen(userId, [a.achievement_key]);
+            await achievementsService.markAsSeen(userId, [a.achievement_key]);
+            
+            // Adicionar ao localStorage para evitar re-desbloqueio nesta sessão/navegador
+            const currentSeen = JSON.parse(localStorage.getItem(localSeenKey) || '[]');
+            if (!currentSeen.includes(a.achievement_key)) {
+              currentSeen.push(a.achievement_key);
+              localStorage.setItem(localSeenKey, JSON.stringify(currentSeen));
+            }
+
+            // Atualizar estado local
+            setUnlockedAchievements((prev) =>
+              (prev || []).map((item) =>
+                item.achievement_key === a.achievement_key
+                  ? { ...item, seen: true }
+                  : item
+              )
+            );
           }, i * 1200);
         }
       });
@@ -427,6 +447,7 @@ export function AppProvider({ children }) {
   // ═══════════════════════════════════════════════════════════════════════════
   // AUTH — inicialização e listener
   // ═══════════════════════════════════════════════════════════════════════════
+  // 1. Efeito para Auth State (getSession e onAuthStateChange)
   useEffect(() => {
     const buildUser = (u) => ({
       id: u.id,
@@ -435,58 +456,81 @@ export function AppProvider({ children }) {
       user_metadata: u.user_metadata || {},
     });
 
+    let active = true;
+
     supabase.auth.getSession()
-      .then(async ({ data: { session } }) => {
+      .then(({ data: { session } }) => {
+        if (!active) return;
         const userId = session?.user?.id || null;
-
-        // Health check SILENCIOSO — não bloqueia, apenas loga
         runSilentHealthCheck(userId);
-
         if (session?.user) {
           const u = buildUser(session.user);
           setCurrentUser(u);
-          eventsService.logEvent(u.id, 'login', { method: 'session_restore' });
-          Promise.all([
-            loadTasks(u.id),
-            loadGoals(u.id),
-            loadAchievements(u.id),
-            loadHabits(u.id),
-            loadProfile(u.id),
-            loadSubscription(u.id),
-            rehydrateUserState(u.id),
-          ]).finally(() => setIsInitializing(false));
-        } else {
-          setIsInitializing(false);
+          eventsService.logEvent(u.id, 'login', { method: 'session_restore' }).catch(() => {});
         }
+        setIsInitializing(false);
       })
       .catch((err) => {
         console.error('[AppContext] Erro ao verificar sessão:', err);
-        setIsInitializing(false);
+        if (active) setIsInitializing(false);
       });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (e, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((e, session) => {
+      if (!active) return;
       if (session?.user) {
         const u = buildUser(session.user);
         setCurrentUser(u);
-        loadTasks(u.id);
-        loadGoals(u.id);
-        loadAchievements(u.id);
-        loadHabits(u.id);
-        loadProfile(u.id);
-        loadSubscription(u.id);
-        rehydrateUserState(u.id);
       } else {
         setCurrentUser(null);
-        setUserProfile(null);
-        setTasks([]); setGoals([]); setGoalTasks([]);
-        setUnlockedAchievements([]); setUnlockedKeys(new Set());
-        setHabits([]); setHabitLogs([]);
-        setIsPro(false);
       }
     });
 
-    return () => subscription.unsubscribe();
-  }, [loadTasks, loadGoals, loadAchievements, loadHabits, loadProfile, loadSubscription, runSilentHealthCheck, rehydrateUserState]);
+    return () => {
+      active = false;
+      subscription.unsubscribe();
+    };
+  }, [runSilentHealthCheck]);
+
+  // 2. Efeito central de carga de dados baseado em currentUser?.id
+  useEffect(() => {
+    if (!currentUser?.id) {
+      setUserProfile(null);
+      setTasks([]);
+      setGoals([]);
+      setGoalTasks([]);
+      setUnlockedAchievements(null);
+      setUnlockedKeys(null);
+      setHabits([]);
+      setHabitLogs([]);
+      setIsPro(false);
+      return;
+    }
+
+    const userId = currentUser.id;
+    let active = true;
+
+    const loadAll = async () => {
+      try {
+        await Promise.all([
+          loadTasks(userId),
+          loadGoals(userId),
+          loadAchievements(userId),
+          loadHabits(userId),
+          loadProfile(userId),
+          loadSubscription(userId),
+          rehydrateUserState(userId),
+        ]);
+      } catch (err) {
+        console.error('[AppContext] Erro ao carregar dados do usuário:', err);
+      }
+    };
+
+    loadAll();
+
+    return () => {
+      active = false;
+    };
+  }, [currentUser?.id, loadTasks, loadGoals, loadAchievements, loadHabits, loadProfile, loadSubscription, rehydrateUserState]);
 
   // ═══════════════════════════════════════════════════════════════════════════
   // CONQUISTAS — detecção automática (PROTEGIDA contra false positives)
@@ -547,6 +591,15 @@ export function AppProvider({ children }) {
             ]);
             const id = `${a.key}-${Date.now()}`;
             setToastQueue((prev) => [...prev, { id, achievement: a }]);
+            
+            // Registrar no localStorage
+            const localSeenKey = `flowday_seen_achievements_${currentUser.id}`;
+            const currentSeen = JSON.parse(localStorage.getItem(localSeenKey) || '[]');
+            if (!currentSeen.includes(a.key)) {
+              currentSeen.push(a.key);
+              localStorage.setItem(localSeenKey, JSON.stringify(currentSeen));
+            }
+
             // Marca como visto no banco
             achievementsService.markAsSeen(currentUser.id, [a.key]);
           }, i * 1200);
@@ -563,18 +616,9 @@ export function AppProvider({ children }) {
   // ═══════════════════════════════════════════════════════════════════════════
   const handleLoginSuccess = useCallback((user) => {
     setCurrentUser(user);
-    eventsService.logEvent(user.id, 'login', { method: 'explicit' });
-    Promise.all([
-      loadTasks(user.id),
-      loadGoals(user.id),
-      loadAchievements(user.id),
-      loadHabits(user.id),
-      loadProfile(user.id),
-      loadSubscription(user.id),
-      rehydrateUserState(user.id)
-    ]);
+    eventsService.logEvent(user.id, 'login', { method: 'explicit' }).catch(() => {});
     setActiveTab('home');
-  }, [loadTasks, loadGoals, loadAchievements, loadHabits, loadProfile, loadSubscription, rehydrateUserState]);
+  }, []);
 
   const handleLogout = useCallback(async () => {
     try {
@@ -620,6 +664,21 @@ export function AppProvider({ children }) {
   // ═══════════════════════════════════════════════════════════════════════════
   // TASKS CRUD
   // ═══════════════════════════════════════════════════════════════════════════
+  const resetAchievementsIfEmpty = useCallback(async (userId, updatedTasks, updatedGoals) => {
+    if (updatedTasks.length === 0 && updatedGoals.length === 0) {
+      console.log('[AppContext] Limpeza total de tarefas e objetivos detectada. Resetando conquistas.');
+      try {
+        await achievementsService.resetAll(userId);
+        setUnlockedAchievements([]);
+        setUnlockedKeys(new Set());
+        const localSeenKey = `flowday_seen_achievements_${userId}`;
+        localStorage.removeItem(localSeenKey);
+      } catch (err) {
+        console.warn('[AppContext] Erro ao resetar conquistas:', err);
+      }
+    }
+  }, []);
+
   const handleAddTask = useCallback(async (taskData) => {
     if (!currentUser?.id) return;
     const { data } = await tasksService.create(currentUser.id, taskData);
@@ -637,38 +696,41 @@ export function AppProvider({ children }) {
     // OPTIMISTIC UPDATE: Atualiza UI na hora
     setTasks((prev) => prev.map((t) => t.id === id ? { ...t, ...updatedData } : t));
     
-    const { error, degraded } = await tasksService.update(currentUser.id, id, updatedData);
-    if (!error || degraded) {
-      logEvent('task_updated', { task_id: id });
-      
-      // If completed was changed to true, log completion
-      if (updatedData.completed === true) {
-        logEvent('task_completed', { taskId: id });
-        if (existingTask && existingTask.dueDate) {
-          logEvent('calendar_task_completed', { taskId: id });
-        }
-        
-        // Ensure tasks are actually loaded before calculating alreadyHadSuccess
-        if (tasks.length > 0) {
-          const alreadyHadSuccess = tasks.some(t => t.id !== id && t.completed);
-          if (!alreadyHadSuccess && !firstSuccessLogged.current) {
-            firstSuccessLogged.current = true;
-            logEvent('first_success_action', { task_id: id });
-          }
-        }
+    // Dispara logs analíticos locais imediatamente (non-blocking)
+    logEvent('task_updated', { task_id: id });
+    
+    // If completed was changed to true, log completion
+    if (updatedData.completed === true) {
+      logEvent('task_completed', { taskId: id });
+      if (existingTask && existingTask.dueDate) {
+        logEvent('calendar_task_completed', { taskId: id });
       }
-
-      // Check if dueDate is updated
-      if (updatedData.dueDate !== undefined) {
-        if (updatedData.dueDate && (!existingTask || !existingTask.dueDate)) {
-          logEvent('calendar_task_scheduled', { taskId: id, date: updatedData.dueDate });
-          logEvent('task_scheduled', { taskId: id, date: updatedData.dueDate });
-        } else if (existingTask && existingTask.dueDate && updatedData.dueDate && existingTask.dueDate !== updatedData.dueDate) {
-          logEvent('calendar_task_moved', { taskId: id, oldDate: existingTask.dueDate, newDate: updatedData.dueDate });
-          logEvent('task_rescheduled', { taskId: id, oldDate: existingTask.dueDate, newDate: updatedData.dueDate });
+      
+      // Ensure tasks are actually loaded before calculating alreadyHadSuccess
+      if (tasks.length > 0) {
+        const alreadyHadSuccess = tasks.some(t => t.id !== id && t.completed);
+        if (!alreadyHadSuccess && !firstSuccessLogged.current) {
+          firstSuccessLogged.current = true;
+          logEvent('first_success_action', { task_id: id });
         }
       }
     }
+
+    // Check if dueDate is updated
+    if (updatedData.dueDate !== undefined) {
+      if (updatedData.dueDate && (!existingTask || !existingTask.dueDate)) {
+        logEvent('calendar_task_scheduled', { taskId: id, date: updatedData.dueDate });
+        logEvent('task_scheduled', { taskId: id, date: updatedData.dueDate });
+      } else if (existingTask && existingTask.dueDate && updatedData.dueDate && existingTask.dueDate !== updatedData.dueDate) {
+        logEvent('calendar_task_moved', { taskId: id, oldDate: existingTask.dueDate, newDate: updatedData.dueDate });
+        logEvent('task_rescheduled', { taskId: id, oldDate: existingTask.dueDate, newDate: updatedData.dueDate });
+      }
+    }
+
+    // Dispara atualização na rede de forma assíncrona
+    tasksService.update(currentUser.id, id, updatedData).catch(err => {
+      console.error('[AppContext] Erro ao atualizar tarefa:', err);
+    });
   }, [currentUser?.id, logEvent, tasks]);
 
   const handleDeleteTask = useCallback(async (id) => {
@@ -676,14 +738,16 @@ export function AppProvider({ children }) {
     if (!window.confirm('Excluir esta tarefa permanentemente?')) return;
     
     // OPTIMISTIC UPDATE
-    setTasks((prev) => prev.filter((t) => t.id !== id));
+    const updatedTasks = tasks.filter((t) => t.id !== id);
+    setTasks(updatedTasks);
     setGoalTasks((prev) => prev.filter((gt) => gt.task_id !== id));
     
     const { error, degraded } = await tasksService.delete(currentUser.id, id);
     if (!error || degraded) {
       logEvent('task_deleted', { task_id: id });
+      resetAchievementsIfEmpty(currentUser.id, updatedTasks, goals);
     }
-  }, [currentUser?.id, logEvent]);
+  }, [currentUser?.id, logEvent, tasks, goals, resetAchievementsIfEmpty]);
 
   const handleToggleComplete = useCallback(async (id) => {
     if (!currentUser?.id) return;
@@ -696,45 +760,53 @@ export function AppProvider({ children }) {
     // OPTIMISTIC UPDATE: altera estado local antes da requisição
     setTasks((prev) => prev.map((t) => t.id === id ? { ...t, completed: next, completedAt } : t));
     
-    const { error, degraded } = await tasksService.toggleComplete(currentUser.id, id, task.completed);
-    
-    if (!error || degraded) {
-      if (next) {
-        logEvent('task_completed', { taskId: id });
+    // Dispara logs analíticos locais imediatamente (non-blocking)
+    if (next) {
+      logEvent('task_completed', { taskId: id });
 
-        // Detecta first_success_action
-        const alreadyHadSuccess = tasks.some(t => t.id !== id && t.completed);
-        if (!alreadyHadSuccess && !firstSuccessLogged.current) {
-          firstSuccessLogged.current = true;
-          logEvent('first_success_action', {
-            task_id: id,
-            task_title: task.title,
-            ts: new Date().toISOString(),
-          });
-        }
+      // Detecta first_success_action
+      const alreadyHadSuccess = tasks.some(t => t.id !== id && t.completed);
+      if (!alreadyHadSuccess && !firstSuccessLogged.current) {
+        firstSuccessLogged.current = true;
+        logEvent('first_success_action', {
+          task_id: id,
+          task_title: task.title,
+          ts: new Date().toISOString(),
+        });
+      }
+    }
 
-        // Trata tarefas recorrentes
-        const meta = parseTaskMetadata(task.description);
-        if (meta && meta.recurrence && meta.recurrence !== 'nenhuma') {
-          const nextDueDate = calculateNextOccurrence(task.dueDate, meta.recurrence);
-          const nextTask = {
-            title: task.title,
-            description: task.description,
-            category: task.category,
-            priority: task.priority,
-            dueDate: nextDueDate,
-          };
-          const { data: createdTask } = await tasksService.create(currentUser.id, nextTask);
-          if (createdTask) {
-            setTasks((prev) => [createdTask, ...prev]);
-            logEvent('task_created', { title: nextTask.title, recurrence_parent: id });
+    // Executa chamada de rede assincronamente e lida com recorrência e reversão
+    tasksService.toggleComplete(currentUser.id, id, task.completed).then(async ({ error, degraded }) => {
+      if (!error || degraded) {
+        if (next) {
+          // Trata tarefas recorrentes
+          const meta = parseTaskMetadata(task.description);
+          if (meta && meta.recurrence && meta.recurrence !== 'nenhuma') {
+            const nextDueDate = calculateNextOccurrence(task.dueDate, meta.recurrence);
+            const nextTask = {
+              title: task.title,
+              description: task.description,
+              category: task.category,
+              priority: task.priority,
+              dueDate: nextDueDate,
+            };
+            const { data: createdTask } = await tasksService.create(currentUser.id, nextTask);
+            if (createdTask) {
+              setTasks((prev) => [createdTask, ...prev]);
+              logEvent('task_created', { title: nextTask.title, recurrence_parent: id });
+            }
           }
         }
+      } else {
+        // Revert em caso de falha real
+        setTasks((prev) => prev.map((t) => t.id === id ? { ...t, completed: !next, completedAt: task.completedAt } : t));
       }
-    } else {
-      // Revert in case of total failure (not offline queued)
+    }).catch((err) => {
+      console.error('[AppContext] Erro ao toggleComplete:', err);
+      // Revert em caso de falha real
       setTasks((prev) => prev.map((t) => t.id === id ? { ...t, completed: !next, completedAt: task.completedAt } : t));
-    }
+    });
   }, [currentUser?.id, logEvent, tasks]);
 
   const handleUpdateProfile = useCallback(async (profileData) => {
@@ -826,11 +898,13 @@ export function AppProvider({ children }) {
     if (!window.confirm('Excluir este objetivo? As tarefas vinculadas não serão afetadas.')) return;
     const { error } = await goalsService.delete(currentUser.id, id);
     if (!error) {
-      setGoals((prev) => prev.filter((g) => g.id !== id));
+      const updatedGoals = goals.filter((g) => g.id !== id);
+      setGoals(updatedGoals);
       setGoalTasks((prev) => prev.filter((gt) => gt.goal_id !== id));
       logEvent('goal_deleted', { goal_id: id });
+      resetAchievementsIfEmpty(currentUser.id, tasks, updatedGoals);
     }
-  }, [currentUser?.id, logEvent]);
+  }, [currentUser?.id, logEvent, tasks, goals, resetAchievementsIfEmpty]);
 
   const handleLinkTask = useCallback(async (goalId, taskId) => {
     if (goalTasks.some((gt) => gt.goal_id === goalId && gt.task_id === taskId)) return;
@@ -1027,6 +1101,8 @@ export function AppProvider({ children }) {
     // Navigation
     activeTab,
     setActiveTab,
+    shouldOpenGoalModal,
+    setShouldOpenGoalModal,
 
     // Theme
     theme,
