@@ -54,7 +54,7 @@ export const localDB = {
     const db = await openDB();
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(storeName, 'readonly');
-      const store = transaction.objectStore(request => storeName);
+      const store = transaction.objectStore(storeName);
       const request = store.get(id);
       request.onsuccess = () => resolve(request.result || null);
       request.onerror = () => reject(request.error);

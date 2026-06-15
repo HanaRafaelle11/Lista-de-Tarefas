@@ -114,9 +114,11 @@ export const eventReplayer = {
             }
             break;
 
+          case 'task_updated':
           case 'task_update':
-            if (normMetadata && normMetadata.taskId) {
-              const task = projection.tasks.list.find(t => t.id === normMetadata.taskId);
+            const updId = normMetadata && (normMetadata.taskId || normMetadata.task_id);
+            if (updId) {
+              const task = projection.tasks.list.find(t => t.id === updId);
               if (task) {
                 Object.assign(task, normMetadata.updates || {});
                 task.updatedAt = created_at;
@@ -124,9 +126,11 @@ export const eventReplayer = {
             }
             break;
 
+          case 'task_deleted':
           case 'task_delete':
-            if (normMetadata && normMetadata.taskId) {
-              projection.tasks.list = projection.tasks.list.filter(t => t.id !== normMetadata.taskId);
+            const delId = normMetadata && (normMetadata.taskId || normMetadata.task_id);
+            if (delId) {
+              projection.tasks.list = projection.tasks.list.filter(t => t.id !== delId);
             }
             break;
 

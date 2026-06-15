@@ -9,14 +9,30 @@ export default function FocusView() {
   // Estados do Timer
   const [focusTime, setFocusTime] = useState(() => Number(localStorage.getItem('flowday_pomodoro_focus')) || 25);
   const [breakTime, setBreakTime] = useState(() => Number(localStorage.getItem('flowday_pomodoro_break')) || 5);
+  
+  const [isActive, setIsActive] = useState(() => localStorage.getItem('flowday_pomodoro_is_active') === 'true');
+  const [mode, setMode] = useState(() => localStorage.getItem('flowday_pomodoro_mode') || 'focus');
+  const [selectedTaskId, setSelectedTaskId] = useState(() => localStorage.getItem('flowday_pomodoro_selected_task_id') || '');
+  
   const [timeLeft, setTimeLeft] = useState(() => {
+    const savedTime = localStorage.getItem('flowday_pomodoro_time_left');
+    if (savedTime !== null) {
+      const parsed = Number(savedTime);
+      const activeState = localStorage.getItem('flowday_pomodoro_is_active') === 'true';
+      const lastTick = localStorage.getItem('flowday_pomodoro_last_tick');
+      if (activeState && lastTick) {
+        const elapsed = Math.floor((Date.now() - new Date(lastTick).getTime()) / 1000);
+        const adjusted = parsed - Math.max(0, elapsed);
+        return adjusted > 0 ? adjusted : 0;
+      }
+      return parsed;
+    }
     const savedFocus = Number(localStorage.getItem('flowday_pomodoro_focus')) || 25;
     return savedFocus * 60;
   });
-  const [isActive, setIsActive] = useState(false);
-  const [mode, setMode] = useState('focus'); // 'focus' | 'break'
-  const [selectedTaskId, setSelectedTaskId] = useState('');
+
   const [showConfig, setShowConfig] = useState(false);
+  const isFirstMount = useRef(true);
 
   // Estados temporários do painel de configuração
   const [tempFocus, setTempFocus] = useState(focusTime);
@@ -31,13 +47,48 @@ export default function FocusView() {
 
   const timerRef = useRef(null);
 
-  // Sincroniza timeLeft ao alterar focusTime/breakTime se inativo
+  // Sincroniza timeLeft ao alterar focusTime/breakTime se inativo (apenas após o mount inicial)
   useEffect(() => {
+    if (isFirstMount.current) {
+      isFirstMount.current = false;
+      return;
+    }
     if (!isActive) {
       setTimeLeft((mode === 'focus' ? focusTime : breakTime) * 60);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focusTime, breakTime, mode]);
+
+  // Efeito on-mount para completar timer se terminou enquanto fora
+  useEffect(() => {
+    const activeState = localStorage.getItem('flowday_pomodoro_is_active') === 'true';
+    const lastTick = localStorage.getItem('flowday_pomodoro_last_tick');
+    const savedTime = localStorage.getItem('flowday_pomodoro_time_left');
+    if (activeState && lastTick && savedTime !== null) {
+      const parsed = Number(savedTime);
+      const elapsed = Math.floor((Date.now() - new Date(lastTick).getTime()) / 1000);
+      const adjusted = parsed - Math.max(0, elapsed);
+      if (adjusted <= 0) {
+        setTimeLeft(0);
+        setIsActive(false);
+        handleTimerComplete();
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Persiste estado do timer a cada tick/mudança
+  useEffect(() => {
+    localStorage.setItem('flowday_pomodoro_time_left', String(timeLeft));
+    localStorage.setItem('flowday_pomodoro_is_active', String(isActive));
+    localStorage.setItem('flowday_pomodoro_mode', mode);
+    localStorage.setItem('flowday_pomodoro_selected_task_id', selectedTaskId);
+    if (isActive) {
+      localStorage.setItem('flowday_pomodoro_last_tick', new Date().toISOString());
+    } else {
+      localStorage.removeItem('flowday_pomodoro_last_tick');
+    }
+  }, [timeLeft, isActive, mode, selectedTaskId]);
 
   // Efeito principal do Timer
   useEffect(() => {

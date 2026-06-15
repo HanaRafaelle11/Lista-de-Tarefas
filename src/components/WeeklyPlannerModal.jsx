@@ -432,30 +432,82 @@ export default function WeeklyPlannerModal({ isOpen, onClose, tasks, onUpdateTas
                         border: '1px solid var(--border-medium)',
                         borderRadius: 'var(--radius-sm)',
                         display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
+                        flexDirection: 'column',
+                        gap: '8px',
                         cursor: selectedTask ? 'pointer' : 'default',
                         opacity: selectedTask ? 1 : 0.85
                       }}
                     >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: '40px' }}>
-                          <span style={{ fontSize: '10px', textTransform: 'uppercase', color: day.isToday ? 'var(--primary)' : 'var(--text-light)', fontWeight: day.isToday ? '700' : '500' }}>
-                            {day.isToday ? 'Hoje' : day.isTomorrow ? 'Amanhã' : day.dayName}
-                          </span>
-                          <span style={{ fontSize: '16px', fontWeight: '700', color: 'var(--text-main)' }}>{day.label}</span>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: '40px' }}>
+                            <span style={{ fontSize: '10px', textTransform: 'uppercase', color: day.isToday ? 'var(--primary)' : 'var(--text-light)', fontWeight: day.isToday ? '700' : '500' }}>
+                              {day.isToday ? 'Hoje' : day.isTomorrow ? 'Amanhã' : day.dayName}
+                            </span>
+                            <span style={{ fontSize: '16px', fontWeight: '700', color: 'var(--text-main)' }}>{day.label}</span>
+                          </div>
+                          
+                          <div style={{ display: 'flex', flexDirection: 'column' }}>
+                            <span style={{ fontSize: '12px', fontWeight: '500', color: 'var(--text-main)' }}>
+                              {dayTasks.length} tarefa{dayTasks.length !== 1 ? 's' : ''} planejada{dayTasks.length !== 1 ? 's' : ''}
+                            </span>
+                          </div>
                         </div>
-                        
-                        <div style={{ display: 'flex', flexDirection: 'column' }}>
-                          <span style={{ fontSize: '12px', fontWeight: '500', color: 'var(--text-main)' }}>
-                            {dayTasks.length} tarefa{dayTasks.length !== 1 ? 's' : ''} planejada{dayTasks.length !== 1 ? 's' : ''}
-                          </span>
-                        </div>
+
+                        {selectedTask && (
+                          <div style={{ padding: '4px 8px', backgroundColor: 'var(--primary-light)', color: 'var(--primary)', borderRadius: '4px', fontSize: '11px', fontWeight: '600' }}>
+                            Agendar Aqui
+                          </div>
+                        )}
                       </div>
 
-                      {selectedTask && (
-                        <div style={{ padding: '4px 8px', backgroundColor: 'var(--primary-light)', color: 'var(--primary)', borderRadius: '4px', fontSize: '11px', fontWeight: '600' }}>
-                          Agendar Aqui
+                      {/* Lista de tarefas agendadas para o dia com opção de remover data */}
+                      {dayTasks.length > 0 && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', width: '100%', borderTop: '1px solid var(--border-light)', paddingTop: '8px', marginTop: '4px' }}>
+                          {dayTasks.map(t => (
+                            <div 
+                              key={t.id} 
+                              onClick={(e) => e.stopPropagation()} // impede agendamento acidental ao clicar na tarefa
+                              style={{ 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                justifyContent: 'space-between', 
+                                gap: '8px', 
+                                fontSize: '12px', 
+                                color: 'var(--text-main)', 
+                                backgroundColor: 'var(--bg-app)', 
+                                padding: '6px 10px', 
+                                borderRadius: '4px',
+                                border: '1px solid var(--border-light)'
+                              }}
+                            >
+                              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '85%' }}>
+                                {t.title}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onUpdateTask(t.id, { dueDate: null });
+                                }}
+                                style={{ 
+                                  background: 'transparent', 
+                                  border: 'none', 
+                                  cursor: 'pointer', 
+                                  color: '#E53E3E', 
+                                  display: 'flex', 
+                                  alignItems: 'center', 
+                                  padding: '2px',
+                                  borderRadius: '50%'
+                                }}
+                                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(229, 62, 62, 0.1)'}
+                                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                                title="Remover tarefa deste dia"
+                              >
+                                <X size={14} />
+                              </button>
+                            </div>
+                          ))}
                         </div>
                       )}
                     </div>

@@ -42,15 +42,15 @@ export function getEngagementSuggestions(userState = {}, tasks = [], onboardingC
 
   // 3. Loop de Hábitos (Usuários ativados que precisam consistência)
   if (userState.stage === 'activated' && completed.length >= 3) {
-    suggestions.push({
-      id: 'habit_reinforcement_loop',
-      type: 'habit',
-      title: '🔥 Automatize sua Rotina',
-      message: 'Você já concluiu tarefas importantes! Oficialize suas rotinas como Hábitos para rastreamento contínuo.',
-      ctaText: 'Configurar Hábito',
-      actionTab: 'habits'
-    });
-  }
+     suggestions.push({
+       id: 'habit_reinforcement_loop',
+       type: 'habit',
+       title: '🔥 Automatize sua Rotina',
+       message: 'Você já concluiu tarefas importantes! Oficialize suas rotinas como Hábitos para rastreamento contínuo.',
+       ctaText: 'Configurar Hábito',
+       actionTab: 'goals'
+     });
+   }
 
   // 4. Loop de Engajamento Alto (Reforço positivo para streaks ativos)
   if (userState.stage === 'engaged') {

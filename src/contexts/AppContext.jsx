@@ -22,6 +22,7 @@ import { getEngagementSuggestions } from '../intelligence/retentionEngine';
 import { eventStore } from '../services/eventStore';
 import { stateEngine } from '../services/stateEngine';
 import { eventEmitter } from '../services/eventEmitter';
+import { localDB } from '../db/localDB';
 
 // ─── Helpers para Metadados de Tarefas (Horário e Recorrência) ───────────────
 export function parseTaskMetadata(description = '') {
@@ -634,6 +635,13 @@ export function AppProvider({ children }) {
       setTasks([]); setGoals([]); setGoalTasks([]);
       setUnlockedAchievements(null); setUnlockedKeys(null);
       setHabits([]); setHabitLogs([]);
+
+      // Limpa caches locais no IndexedDB para isolamento multiusuário
+      await localDB.clear('tasks').catch(() => {});
+      await localDB.clear('goals').catch(() => {});
+      await localDB.clear('habits').catch(() => {});
+      await localDB.clear('profile').catch(() => {});
+      await localDB.clear('events').catch(() => {});
     } catch (e) { console.error(e); }
   }, [currentUser?.id]);
 
