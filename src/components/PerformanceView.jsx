@@ -81,7 +81,17 @@ export default function PerformanceView() {
   const radarSemanal = useMemo(() => {
     const days = [0, 0, 0, 0, 0, 0, 0]; // Dom=0, Seg=1...
     completedTasks.forEach(task => {
-      const date = task.dueDate || task.createdAt?.split('T')[0];
+      const date = task.dueDate || task.completedAt?.split('T')[0] || task.createdAt?.split('T')[0];
+      if (date) {
+        const d = new Date(date + 'T00:00:00');
+        days[d.getDay()]++;
+      }
+    });
+
+    // Contabiliza objetivos concluídos
+    const completedGoals = goals.filter(g => g.status === 'completed');
+    completedGoals.forEach(goal => {
+      const date = goal.updated_at?.split('T')[0] || goal.created_at?.split('T')[0];
       if (date) {
         const d = new Date(date + 'T00:00:00');
         days[d.getDay()]++;
@@ -104,7 +114,7 @@ export default function PerformanceView() {
     const worstDay = dayNames[sortedDays[sortedDays.length - 1].idx];
 
     return { radarData, bestDay, worstDay };
-  }, [completedTasks]);
+  }, [completedTasks, goals]);
 
   // 4. Saúde dos Objetivos
   const goalHealthList = useMemo(() => {
@@ -141,6 +151,9 @@ export default function PerformanceView() {
       }
 
       // Cálculo de Saúde (reduz 5% por dia estagnado)
+      // NOTA TÉCNICA: A fórmula de Saúde possui peso de 70% para o progresso de tarefas (progressPct) 
+      // e 30% para a consistência (ritmo de atividade).
+      // A inatividade penaliza em 5% os 30% de consistência a cada dia inativo (daysStagnant).
       let health = Math.round(progressPct * 0.7 + (100 - Math.min(100, daysStagnant * 5)) * 0.3);
       if (linked.length === 0) health = 40; // Sem tarefas é saúde neutra/baixa
 
@@ -263,8 +276,26 @@ export default function PerformanceView() {
       });
     });
 
+    // Insight de Horário de Objetivos
+    const completedGoals = goals.filter(g => g.status === 'completed');
+    const goalsWithTime = completedGoals.filter(g => g.start_time && g.end_time);
+    if (goalsWithTime.length > 0) {
+      const hourCounts = {};
+      goalsWithTime.forEach(g => {
+        const hour = parseInt(g.start_time.split(':')[0], 10);
+        hourCounts[hour] = (hourCounts[hour] || 0) + 1;
+      });
+      const bestHour = Object.keys(hourCounts).reduce((a, b) => hourCounts[a] > hourCounts[b] ? a : b);
+      const endHour = parseInt(bestHour) + 3;
+      list.push({
+        id: 'goal_time_insight',
+        emoji: '🎯',
+        text: `Maior concentração de agendamento de objetivos concluídos entre ${bestHour}h e ${endHour}h.`
+      });
+    }
+
     return list.slice(0, 4); // Limita a 4 insights principais
-  }, [radarSemanal, productivityHours, habits, habitLogs, stagnantGoals]);
+  }, [radarSemanal, productivityHours, habits, habitLogs, stagnantGoals, goals]);
 
   // 7. Perfil de Produtividade
   const productivityProfile = useMemo(() => {
@@ -305,7 +336,7 @@ export default function PerformanceView() {
         <p className="tasks-page-subtitle">Descobertas comportamentais e análise de consistência pessoal</p>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '24px', flexWrap: 'wrap' }}>
+      <div className="perf-grid-container">
         
         {/* Bloco 1: Score & Classificação */}
         <div style={{ backgroundColor: 'var(--bg-card)', padding: '24px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-light)', display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -353,7 +384,7 @@ export default function PerformanceView() {
         </div>
 
         {/* Bloco 3: Perfil de Produtividade */}
-        <div style={{ backgroundColor: 'var(--bg-card)', padding: '24px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-light)', gridColumn: 'span 2' }}>
+        <div className="perf-card-double-span" style={{ backgroundColor: 'var(--bg-card)', padding: '24px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-light)' }}>
           <h3 style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
             <Zap size={18} className="text-primary" /> Perfil de Produtor
           </h3>
@@ -421,7 +452,7 @@ export default function PerformanceView() {
         </div>
 
         {/* Bloco 6: Saúde dos Objetivos */}
-        <div style={{ backgroundColor: 'var(--bg-card)', padding: '24px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-light)', gridColumn: 'span 2' }}>
+        <div className="perf-card-double-span" style={{ backgroundColor: 'var(--bg-card)', padding: '24px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-light)' }}>
           <h3 style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
             <Zap size={18} /> Saúde dos Objetivos
           </h3>
@@ -455,7 +486,7 @@ export default function PerformanceView() {
 
         {/* Bloco 7: Insights Automáticos Cards */}
         {autoInsights.length > 0 && (
-          <div style={{ backgroundColor: 'var(--bg-card)', padding: '24px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-light)', gridColumn: 'span 2' }}>
+          <div className="perf-card-double-span" style={{ backgroundColor: 'var(--bg-card)', padding: '24px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-light)' }}>
             <h3 style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
               <ArrowUpRight size={18} /> Insights Comportamentais Recentes
             </h3>

@@ -125,7 +125,7 @@ export default function WeeklyPlannerModal({ isOpen, onClose, tasks, onUpdateTas
       <div 
         className="modal-content animate-scale-up weekly-planner-modal-content" 
         onClick={e => e.stopPropagation()} 
-        style={{ maxWidth: '800px', width: 'calc(100vw - 32px)', maxHeight: '90vh', display: 'flex', flexDirection: 'column', padding: 0 }}
+        style={{ display: 'flex', flexDirection: 'column', padding: 0 }}
       >
         {/* Header do modal */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 24px', borderBottom: '1px solid var(--border-light)' }}>

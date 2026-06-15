@@ -774,6 +774,9 @@ export function AppProvider({ children }) {
     if (data) {
       setGoals((prev) => [data, ...prev]);
       logEvent('goal_created', { title: goalPayload.title });
+      if (goalPayload.start_time && goalPayload.end_time) {
+        logEvent('goal_scheduled', { title: goalPayload.title, start_time: goalPayload.start_time, end_time: goalPayload.end_time });
+      }
 
       if (actions && actions.length > 0) {
         for (const actionTitle of actions) {
@@ -802,8 +805,14 @@ export function AppProvider({ children }) {
     if (payload) {
       setGoals((prev) => prev.map((g) => g.id === id ? { ...g, ...payload } : g));
       logEvent('goal_updated', { goal_id: id });
+      if (updatedData.start_time !== undefined && existingGoal.start_time !== updatedData.start_time) {
+        logEvent('goal_time_updated', { goal_id: id, start_time: updatedData.start_time, end_time: updatedData.end_time });
+      }
       if (updatedData.status === 'completed') {
         logEvent('goal_completed', { goal_id: id });
+        if (existingGoal.start_time) {
+          logEvent('goal_completed_with_schedule', { goal_id: id });
+        }
       } else if (updatedData.status === 'archived') {
         logEvent('goal_archived', { goal_id: id });
       } else if (existingGoal && (existingGoal.status === 'completed' || existingGoal.status === 'archived') && updatedData.status === 'active') {

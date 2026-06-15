@@ -617,3 +617,7 @@ USING (
   (auth.jwt()->>'email' = 'rafaelle@flowday.app') OR 
   (auth.jwt()->>'email' = 'rafox@flowday.app')
 );
+
+-- 9. Goals Schedule Support
+ALTER TABLE public.goals ADD COLUMN IF NOT EXISTS start_time TIME;
+ALTER TABLE public.goals ADD COLUMN IF NOT EXISTS end_time TIME;

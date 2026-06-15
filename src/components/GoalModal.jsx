@@ -24,6 +24,8 @@ export default function GoalModal({ isOpen, onClose, onSave, editingGoal }) {
   const [color, setColor] = useState('#4A654E');
   const [icon, setIcon] = useState('🎯');
   const [targetDate, setTargetDate] = useState('');
+  const [startTime, setStartTime] = useState('');
+  const [endTime, setEndTime] = useState('');
   const [actions, setActions] = useState([]);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const emojiPickerRef = useRef(null);
@@ -36,12 +38,16 @@ export default function GoalModal({ isOpen, onClose, onSave, editingGoal }) {
       setColor(editingGoal.color || '#4A654E');
       setIcon(editingGoal.icon || '🎯');
       setTargetDate(editingGoal.target_date || '');
+      setStartTime(editingGoal.start_time || '');
+      setEndTime(editingGoal.end_time || '');
     } else {
       setTitle('');
       setDescription('');
       setColor('#4A654E');
       setIcon('🎯');
       setTargetDate('');
+      setStartTime('');
+      setEndTime('');
       setActions([]);
     }
   }, [editingGoal, isOpen]);
@@ -49,12 +55,34 @@ export default function GoalModal({ isOpen, onClose, onSave, editingGoal }) {
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!title.trim()) return;
+
+    if (targetDate) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const selectedDate = new Date(targetDate + 'T00:00:00');
+      if (selectedDate < today) {
+        alert('Objetivos não podem ser criados em datas passadas.');
+        return;
+      }
+    }
+
+    if (startTime && endTime) {
+      const start = new Date(`1970-01-01T${startTime}:00`);
+      const end = new Date(`1970-01-01T${endTime}:00`);
+      if (end <= start) {
+        alert('O horário final deve ser posterior ao horário inicial.');
+        return;
+      }
+    }
+
     onSave({
       title: title.trim(),
       description: description.trim(),
       color,
       icon,
       target_date: targetDate || null,
+      start_time: startTime || null,
+      end_time: endTime || null,
       actions: actions.filter(a => a.trim() !== ''),
     });
   };
@@ -204,8 +232,39 @@ export default function GoalModal({ isOpen, onClose, onSave, editingGoal }) {
                 type="date"
                 value={targetDate}
                 onChange={e => setTargetDate(e.target.value)}
+                min={new Date().toISOString().split('T')[0]}
                 className="todo-modal-date-input"
               />
+            </div>
+          </div>
+
+          {/* Horários */}
+          <div className="todo-form-group" style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+            <div style={{ flex: '1 1 calc(50% - 8px)', minWidth: '140px' }}>
+              <label className="todo-form-label" htmlFor="goal-start-time">Horário Inicial (opcional)</label>
+              <div className="todo-date-input-wrapper">
+                <span className="todo-date-icon" style={{ fontSize: '14px', left: '12px', position: 'absolute', color: 'var(--text-light)' }}>🕒</span>
+                <input
+                  id="goal-start-time"
+                  type="time"
+                  value={startTime}
+                  onChange={e => setStartTime(e.target.value)}
+                  className="todo-modal-date-input"
+                />
+              </div>
+            </div>
+            <div style={{ flex: '1 1 calc(50% - 8px)', minWidth: '140px' }}>
+              <label className="todo-form-label" htmlFor="goal-end-time">Horário Final (opcional)</label>
+              <div className="todo-date-input-wrapper">
+                <span className="todo-date-icon" style={{ fontSize: '14px', left: '12px', position: 'absolute', color: 'var(--text-light)' }}>🕒</span>
+                <input
+                  id="goal-end-time"
+                  type="time"
+                  value={endTime}
+                  onChange={e => setEndTime(e.target.value)}
+                  className="todo-modal-date-input"
+                />
+              </div>
             </div>
           </div>
 

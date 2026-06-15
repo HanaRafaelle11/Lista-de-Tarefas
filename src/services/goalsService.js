@@ -52,6 +52,8 @@ export const goalsService = {
           color: goalData.color || '#4A654E',
           icon: goalData.icon || '🎯',
           target_date: goalData.target_date || null,
+          start_time: goalData.start_time || null,
+          end_time: goalData.end_time || null,
           status: 'active',
         }])
         .select()
@@ -72,7 +74,7 @@ export const goalsService = {
     requireUser(userId);
     try {
       const payload = {};
-      ['title', 'description', 'color', 'icon', 'status'].forEach((k) => {
+      ['title', 'description', 'color', 'icon', 'status', 'start_time', 'end_time'].forEach((k) => {
         if (updates[k] !== undefined) payload[k] = updates[k];
       });
       if (updates.target_date !== undefined) payload.target_date = updates.target_date || null;

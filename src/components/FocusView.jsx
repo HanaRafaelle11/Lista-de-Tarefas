@@ -280,9 +280,14 @@ export default function FocusView() {
                 </div>
               </div>
             ) : (
-              <p style={{ fontSize: '13px', color: 'var(--text-light)', fontStyle: 'italic' }}>
-                Selecione uma tarefa na barra lateral para iniciar seu ciclo de foco.
-              </p>
+              <>
+                <p className="focus-helper-text-desktop" style={{ fontSize: '13px', color: 'var(--text-light)', fontStyle: 'italic' }}>
+                  Selecione uma tarefa na barra lateral para iniciar seu ciclo de foco.
+                </p>
+                <p className="focus-helper-text-mobile" style={{ fontSize: '13px', color: 'var(--text-light)', fontStyle: 'italic', display: 'none' }}>
+                  Suas tarefas estão abaixo
+                </p>
+              </>
             )}
           </div>
 

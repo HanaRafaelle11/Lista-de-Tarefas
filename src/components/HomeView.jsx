@@ -139,34 +139,37 @@ function GoalProgressRow({ goal, linkedTasks }) {
   const ONBOARDING_TOTAL_STEPS = 5;
 
   const onboardingCompleted = !!currentUser?.user_metadata?.onboarding_completed;
+  
+  const startedKey = `flowday_onboarding_started_${currentUser?.id || 'guest'}`;
+  const stepKey = `flowday_onboarding_step_${currentUser?.id || 'guest'}`;
 
   useEffect(() => {
     if (onboardingCompleted) {
       setOnboardingStep(0);
       return;
     }
-    const savedStep = localStorage.getItem('flowday_onboarding_step');
+    const savedStep = localStorage.getItem(stepKey);
     if (savedStep) {
       setOnboardingStep(Number(savedStep));
       return;
     }
-    const hasSeenIntro = localStorage.getItem('flowday_onboarding_started');
+    const hasSeenIntro = localStorage.getItem(startedKey);
     if (!hasSeenIntro) {
       setOnboardingStep(0); // mostra a tela de boas-vindas
     } else {
       setOnboardingStep(1);
     }
-  }, [onboardingCompleted]);
+  }, [onboardingCompleted, currentUser?.id, startedKey, stepKey]);
 
   const handleStartOnboarding = () => {
-    localStorage.setItem('flowday_onboarding_started', 'true');
-    localStorage.setItem('flowday_onboarding_step', '1');
+    localStorage.setItem(startedKey, 'true');
+    localStorage.setItem(stepKey, '1');
     setOnboardingStep(1);
     logEvent('onboarding_started');
   };
 
   const handleGoToStep = (step, tab) => {
-    localStorage.setItem('flowday_onboarding_step', String(step));
+    localStorage.setItem(stepKey, String(step));
     setOnboardingStep(step);
     if (tab) setActiveTab(tab);
   };
@@ -175,7 +178,7 @@ function GoalProgressRow({ goal, linkedTasks }) {
     logEvent('onboarding_step_completed', { step: onboardingStep });
     const next = onboardingStep + 1;
     if (next <= ONBOARDING_TOTAL_STEPS) {
-      localStorage.setItem('flowday_onboarding_step', String(next));
+      localStorage.setItem(stepKey, String(next));
       setOnboardingStep(next);
     } else {
       handleFinishOnboarding();
@@ -185,17 +188,17 @@ function GoalProgressRow({ goal, linkedTasks }) {
   const handlePrevStep = () => {
     const prev = onboardingStep - 1;
     if (prev >= 1) {
-      localStorage.setItem('flowday_onboarding_step', String(prev));
+      localStorage.setItem(stepKey, String(prev));
       setOnboardingStep(prev);
     } else {
-      localStorage.removeItem('flowday_onboarding_started');
-      localStorage.removeItem('flowday_onboarding_step');
+      localStorage.removeItem(startedKey);
+      localStorage.removeItem(stepKey);
       setOnboardingStep(0);
     }
   };
 
   const handleFinishOnboarding = () => {
-    localStorage.removeItem('flowday_onboarding_step');
+    localStorage.removeItem(stepKey);
     handleCompleteOnboarding(); // Persiste no Supabase Auth metadata
     setOnboardingStep(0);
   };
@@ -271,7 +274,7 @@ function GoalProgressRow({ goal, linkedTasks }) {
 
       {/* ── Onboarding Guiado (Guia de Boas-Vindas) ─────────────── */}
       {/* Passo 0: tela de boas-vindas */}
-      {onboardingStep === 0 && !onboardingCompleted && !localStorage.getItem('flowday_onboarding_started') && (
+      {onboardingStep === 0 && !onboardingCompleted && !localStorage.getItem(startedKey) && (
         <section className="onboarding-card animate-fade-in" style={{ textAlign: 'center', border: '1px solid var(--primary-light)', boxShadow: 'var(--shadow-glow)' }}>
           <div className="onboarding-header" style={{ justifyContent: 'flex-end' }}>
             <button className="onboarding-skip-btn" onClick={() => { logEvent('onboarding_abandoned', { step: 0 }); handleFinishOnboarding(); }}>Pular Guia</button>
@@ -740,8 +743,8 @@ function GoalProgressRow({ goal, linkedTasks }) {
                           onClick={() => {
                             if (sug.actionTab) setActiveTab(sug.actionTab);
                             if (sug.id === 'onboarding_guided_loop' || sug.id === 'onboarding_loop') {
-                              localStorage.setItem('flowday_onboarding_started', 'true');
-                              localStorage.setItem('flowday_onboarding_step', '1');
+                              localStorage.setItem(startedKey, 'true');
+                              localStorage.setItem(stepKey, '1');
                               setOnboardingStep(1);
                               logEvent('onboarding_started');
                             }
