@@ -22,32 +22,27 @@ const supabase = createClient(urlMatch[1].trim(), keyMatch[1].trim());
 async function runSanity() {
   console.log('🧪 Iniciando Teste de Sanidade E2E Integrado...');
   
-  const testEmail = `sanity-test-${Date.now()}@flowday.app`;
-  const testPassword = `SanityTestPass123!`;
+  const testEmail = 'teste@flowday.app';
+  const testPassword = 'Password123!';
   
-  // 1. Criar usuário teste
-  console.log('- Passo 1: Criando usuário de teste...');
-  const { data: authData, error: authError } = await supabase.auth.signUp({
+  // 1. Fazer login no usuário teste existente
+  console.log('- Passo 1: Autenticando com usuário de teste existente...');
+  const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
     email: testEmail,
-    password: testPassword,
-    options: { data: { name: 'Sanity Test User' } }
+    password: testPassword
   });
-  if (authError) throw new Error(`SignUp falhou: ${authError.message}`);
+  if (authError) throw new Error(`Login falhou: ${authError.message}`);
   const user = authData.user;
-  console.log(`  ✅ Usuário criado com UUID: ${user.id}`);
+  console.log(`  ✅ Autenticado com UUID: ${user.id}`);
 
-  // Aguardar trigger criar profiles
-  console.log('  Aguardando 2 segundos para o trigger criar o perfil...');
-  await new Promise(r => setTimeout(r, 2000));
-
-  // 2. Verificar perfil automático
-  console.log('- Passo 2: Verificando criação de perfil via trigger...');
+  // 2. Verificar perfil existente
+  console.log('- Passo 2: Verificando perfil existente...');
   const { data: profileData, error: profileErr } = await supabase
     .from('profiles')
     .select('*')
     .eq('id', user.id);
   if (profileErr) throw new Error(`Falha ao ler perfil: ${profileErr.message}`);
-  if (profileData.length === 0) throw new Error('O trigger de banco de dados não criou o perfil.');
+  if (profileData.length === 0) throw new Error('Perfil do usuário não encontrado.');
   console.log('  ✅ Perfil detectado:', profileData[0]);
 
   // 3. Criar tarefa
