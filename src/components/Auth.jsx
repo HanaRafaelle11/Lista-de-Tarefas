@@ -3,7 +3,10 @@ import { Shield, Lock, Mail, User, CheckCircle2, ArrowLeft } from 'lucide-react'
 import { supabase } from '../supabaseClient';
 import { eventsService } from '../services/eventsService';
 
+import { useAppContext } from '../contexts/AppContext';
+
 export default function Auth({ onLoginSuccess }) {
+  const { theme } = useAppContext();
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -190,10 +193,13 @@ export default function Auth({ onLoginSuccess }) {
       <div style={styles.authCard}>
         {/* Top Header com Gradiente */}
         <div style={{ position: 'relative', ...styles.cardHeader }}>
-          <div style={{ ...styles.logoContainer, marginTop: '0', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px' }} className="auth-brand-container">
-            <img src="/branding/logo.svg" alt="MyFlowDay Symbol" style={{ height: '64px', width: 'auto', objectFit: 'contain' }} />
-            <h1 className="auth-brand-text" style={{ fontSize: '48px', fontWeight: 700, margin: '8px 0 0 0', letterSpacing: '-1px', color: 'var(--text-main)' }}>MyFlowDay</h1>
-            <p style={{ fontSize: '18px', color: 'var(--text-light)', margin: '8px 0 32px 0' }}>
+          <div style={{ ...styles.logoContainer, marginTop: '0', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '0' }} className="auth-brand-container">
+            <img 
+              src={theme === 'dark' ? '/branding/logo-dark.svg' : '/branding/logo.svg'} 
+              alt="MyFlowDay Logo" 
+              style={{ height: '72px', width: 'auto', objectFit: 'contain' }} 
+            />
+            <p style={{ fontSize: '18px', color: 'var(--text-main)', fontWeight: '600', opacity: '0.9', margin: '16px 0 24px 0' }}>
               Planeje. Execute. Evolua.
             </p>
           </div>

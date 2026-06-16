@@ -46,14 +46,12 @@ export default function Navbar() {
               )}
             </div>
           </div>
-          
           <div className="navbar-brand" style={{ display: 'flex', alignItems: 'center', marginLeft: '16px', gap: '8px', maxWidth: '220px' }}>
             <img 
-              src="/branding/logo.svg" 
-              alt="MyFlowDay Symbol" 
-              style={{ height: '28px', width: 'auto', objectFit: 'contain' }}
+              src={theme === 'dark' ? '/branding/logo-dark.svg' : '/branding/logo.svg'}
+              alt="MyFlowDay Logo" 
+              style={{ height: '32px', width: 'auto', objectFit: 'contain' }}
             />
-            <span className="hide-on-mobile" style={{ fontSize: '22px', fontWeight: 700, letterSpacing: '-0.5px', color: 'var(--text-main)', margin: 0 }}>MyFlowDay</span>
           </div>
 
           {/* Desktop Navigation Links (Adequada para Desktop) */}
@@ -80,7 +78,6 @@ export default function Navbar() {
               </button>
             ))}
           </nav>
-
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <button
               onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}

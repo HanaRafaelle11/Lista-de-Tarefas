@@ -2,6 +2,7 @@ import React, { useEffect, lazy, Suspense } from 'react';
 import { AppProvider, useAppContext } from './contexts/AppContext';
 import Auth from './components/Auth';
 import Navbar from './components/Navbar';
+
 import AchievementToastManager from './components/AchievementToast';
 import SyncStatusBanner from './components/SyncStatusBanner';
 const HomeView = lazy(() => import('./components/HomeView'));

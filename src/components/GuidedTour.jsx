@@ -25,31 +25,37 @@ export default function GuidedTour() {
       title: 'Mapa de Produtividade',
       content: 'Acompanhe sua produtividade através dos indicadores gerados automaticamente com base em suas tarefas concluídas, hábitos e objetivos.',
       disableBeacon: true,
+      placement: isMobile ? 'top' : 'bottom',
     },
     {
       target: `${targetPrefix}home`,
       title: 'Radar Semanal',
       content: 'Visualize rapidamente seus pontos fortes, áreas de atenção e evolução da semana.',
+      placement: isMobile ? 'top' : 'bottom',
     },
     {
       target: `${targetPrefix}goals`,
       title: 'Objetivos',
       content: 'Defina metas de curto, médio e longo prazo para direcionar suas ações.',
+      placement: isMobile ? 'top' : 'bottom',
     },
     {
       target: `${targetPrefix}goals`,
       title: 'Hábitos',
       content: 'Construa consistência registrando hábitos diários e acompanhando suas sequências.',
+      placement: isMobile ? 'top' : 'bottom',
     },
     {
       target: `${targetPrefix}tasks`,
       title: 'Kanban',
       content: 'Organize tarefas por etapas e acompanhe o progresso visualmente.',
+      placement: isMobile ? 'top' : 'bottom',
     },
     {
       target: `${targetPrefix}analytics`,
       title: 'Relatórios',
       content: 'Analise sua evolução e desempenho através de métricas e históricos.',
+      placement: isMobile ? 'top' : 'bottom',
     }
   ];
 
