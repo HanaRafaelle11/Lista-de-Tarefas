@@ -191,8 +191,17 @@ export default function Auth({ onLoginSuccess }) {
         {/* Top Header com Gradiente */}
         <div style={{ position: 'relative', ...styles.cardHeader }}>
           <div style={{ ...styles.logoContainer, marginTop: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px' }} className="auth-brand-container">
-            <img src="/branding/logo.svg" alt="MyFlowDay" style={{ height: '40px', width: 'auto', objectFit: 'contain' }} />
-            <h1 style={{ fontSize: '32px', fontWeight: 800, margin: 0, letterSpacing: '-1px', color: 'var(--text-main)' }}>MyFlowDay</h1>
+            <div style={{ 
+              width: '40px', height: '40px', 
+              backgroundColor: 'var(--bg-card)', 
+              borderRadius: '10px', 
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+              border: '1px solid var(--border)'
+            }}>
+              <img src="/branding/logo.svg" alt="MyFlowDay Symbol" style={{ height: '20px', width: 'auto', objectFit: 'contain' }} />
+            </div>
+            <h1 style={{ fontSize: '28px', fontWeight: 700, margin: 0, letterSpacing: '-0.5px', color: 'var(--text-main)' }}>MyFlowDay</h1>
           </div>
           <p style={styles.subtitle}>
             {isLogin 
