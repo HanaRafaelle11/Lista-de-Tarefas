@@ -457,7 +457,7 @@ async function trySend(item) {
       try {
         const { data: serverTask } = await supabase
           .from('tasks')
-          .select('updated_at')
+          .select('id')
           .eq('id', taskId || idempotency_key)
           .single();
 
@@ -484,8 +484,7 @@ async function trySend(item) {
           priority:     taskData.priority,
           due_date:     taskData.dueDate || null,
           completed:    taskData.completed || false,
-          completed_at: taskData.completedAt || null,
-          updated_at:   taskData.updated_at || new Date().toISOString()
+          completed_at: taskData.completedAt || null
         }], { onConflict: 'id', ignoreDuplicates: false }); // Permite atualizar se o cliente for mais novo
       
       if (error && error.code !== '23505') throw error;
@@ -579,8 +578,7 @@ async function trySend(item) {
           priority:     updates.priority,
           due_date:     updates.dueDate !== undefined ? (updates.dueDate || null) : undefined,
           completed:    updates.completed,
-          completed_at: updates.completedAt,
-          updated_at:   updates.updated_at || new Date().toISOString()
+          completed_at: updates.completedAt
         })
         .eq('id', id)
         .eq('user_id', userId);
