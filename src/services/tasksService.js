@@ -141,7 +141,7 @@ export const tasksService = {
 
     // 2. Tenta sincronizar com o Supabase
     try {
-      const payload = { updated_at: nowIso };
+      const payload = {};
       if (updates.title !== undefined)       payload.title = updates.title;
       if (updates.description !== undefined) payload.description = updates.description || '';
       if (updates.category !== undefined)    payload.category = updates.category;
