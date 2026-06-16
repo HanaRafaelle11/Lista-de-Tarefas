@@ -148,9 +148,14 @@ export default function WeeklyPlannerModal({ isOpen, onClose, tasks, onUpdateTas
     }
   };
 
+  const [confirmClear, setConfirmClear] = useState(false);
+
   const handleClearWeeklyPlan = async () => {
     if (!currentUser?.id) return;
-    if (!window.confirm('Tem certeza que deseja apagar todo o planejamento desta semana?')) return;
+    if (!confirmClear) {
+      setConfirmClear(true);
+      return;
+    }
 
     setSaving(true);
     try {
@@ -166,7 +171,8 @@ export default function WeeklyPlannerModal({ isOpen, onClose, tasks, onUpdateTas
       setWeeklyFocus('');
       setCriticalPriorities(['']);
       setSelectedGoals([]);
-      alert('Planejamento limpo com sucesso.');
+      setConfirmClear(false);
+      onClose();
     } catch (err) {
       console.error('[WeeklyPlannerModal] Erro ao limpar plano:', err);
     } finally {
@@ -343,10 +349,10 @@ export default function WeeklyPlannerModal({ isOpen, onClose, tasks, onUpdateTas
                 type="button" 
                 onClick={handleClearWeeklyPlan}
                 className="btn-secondary" 
-                style={{ width: '100%', padding: '12px', fontSize: '15px', color: '#E53E3E', borderColor: '#E53E3E' }}
+                style={{ width: '100%', padding: '12px', fontSize: '15px', color: '#E53E3E', borderColor: '#E53E3E', backgroundColor: confirmClear ? '#FFF5F5' : 'transparent' }}
                 disabled={saving}
               >
-                Limpar Planejamento
+                {confirmClear ? 'Tem certeza? Clique para confirmar' : 'Limpar Planejamento'}
               </button>
             </div>
           </form>

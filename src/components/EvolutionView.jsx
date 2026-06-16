@@ -195,6 +195,12 @@ export default function EvolutionView() {
   } = useAppContext();
 
   const [isWeeklyPlannerOpen, setIsWeeklyPlannerOpen] = useState(false);
+  const [showGuide, setShowGuide] = useState(() => localStorage.getItem('flowday_hide_evo_guide') !== 'true');
+
+  const dismissGuide = () => {
+    setShowGuide(false);
+    localStorage.setItem('flowday_hide_evo_guide', 'true');
+  };
 
   const stats = useMemo(() => calcStats(tasks, goals), [tasks, goals]);
   const streak = stats.currentStreak;
@@ -271,6 +277,32 @@ export default function EvolutionView() {
         </div>
       </section>
 
+      {/* ── Guia Rápido ─────────────────────────── */}
+      {showGuide && (
+        <section className="evo-card" style={{ backgroundColor: 'color-mix(in srgb, var(--primary) 5%, var(--bg-card))', position: 'relative' }}>
+          <button 
+            onClick={dismissGuide} 
+            style={{ position: 'absolute', top: '12px', right: '12px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}
+            aria-label="Fechar guia"
+          >
+            ✕
+          </button>
+          <h3 style={{ fontSize: '15px', fontWeight: 'bold', marginBottom: '8px', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <Star size={16} style={{ color: 'var(--primary)' }} /> Desempenho e Evolução
+          </h3>
+          <p style={{ fontSize: '13px', lineHeight: '1.5', color: 'var(--text-main)', marginBottom: '12px' }}>
+            Acompanhe sua evolução ao longo do tempo. Nesta tela você visualiza seus resultados, hábitos concluídos, metas alcançadas e indicadores de progresso. Use essas informações para identificar melhorias, manter a consistência e ajustar seu plano de ação sempre que necessário.
+          </p>
+          <h4 style={{ fontSize: '13px', fontWeight: 'bold', marginBottom: '6px', color: 'var(--text-main)' }}>O que você encontra aqui:</h4>
+          <ul style={{ fontSize: '13px', lineHeight: '1.5', color: 'var(--text-muted)', paddingLeft: '20px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            <li>Indicadores de desempenho.</li>
+            <li>Histórico da sua evolução.</li>
+            <li>Progresso das metas e objetivos.</li>
+            <li>Tendências e resultados ao longo das semanas.</li>
+          </ul>
+        </section>
+      )}
+
       {/* ── Relatório Semanal (Bloco 5) ─────────────────── */}
       <section className="evo-card" style={{ background: 'linear-gradient(135deg, var(--bg-card) 0%, var(--primary-glow) 100%)', border: '1px solid var(--primary-light)' }}>
         <div className="evo-card-header">
@@ -299,7 +331,7 @@ export default function EvolutionView() {
         </div>
 
         {weeklyReportData.plan ? (
-          <div style={{ padding: '16px', backgroundColor: 'rgba(255,255,255,0.4)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-light)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          <div style={{ padding: '16px', backgroundColor: 'var(--bg-app)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-light)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
             <span style={{ fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', color: 'var(--text-muted)' }}>Plano de Ação Semanal</span>
             <div>
               <span style={{ fontSize: '12px', fontWeight: '500', color: 'var(--text-light)', display: 'block' }}>Foco da Semana:</span>

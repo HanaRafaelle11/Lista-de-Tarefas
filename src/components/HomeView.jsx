@@ -329,7 +329,7 @@ function GoalProgressRow({ goal, linkedTasks }) {
                     Criar Tarefa 💼
                   </button>
                   <button onClick={handlePrevStep} className="onboarding-complete-btn" style={{ padding: '10px 16px', border: '1px solid var(--border-medium)', borderRadius: 'var(--radius-md)', background: 'transparent', color: 'var(--text-main)', cursor: 'pointer', fontWeight: '500' }}>
-                    ➔ Voltar
+                    ← Voltar
                   </button>
                   <button onClick={handleNextStep} className="onboarding-complete-btn" style={{ padding: '10px 16px', border: '1px solid var(--border-medium)', borderRadius: 'var(--radius-md)', background: 'transparent', color: 'var(--text-main)', cursor: 'pointer', fontWeight: '500' }}>
                     Avançar ➔
@@ -348,7 +348,7 @@ function GoalProgressRow({ goal, linkedTasks }) {
                     Criar Hábito 🌱
                   </button>
                   <button onClick={handlePrevStep} className="onboarding-complete-btn" style={{ padding: '10px 16px', border: '1px solid var(--border-medium)', borderRadius: 'var(--radius-md)', background: 'transparent', color: 'var(--text-main)', cursor: 'pointer', fontWeight: '500' }}>
-                    ➔ Voltar
+                    ← Voltar
                   </button>
                   <button onClick={handleNextStep} className="onboarding-complete-btn" style={{ padding: '10px 16px', border: '1px solid var(--border-medium)', borderRadius: 'var(--radius-md)', background: 'transparent', color: 'var(--text-main)', cursor: 'pointer', fontWeight: '500' }}>
                     Avançar ➔
@@ -367,7 +367,7 @@ function GoalProgressRow({ goal, linkedTasks }) {
                     Ver Evolução 📈
                   </button>
                   <button onClick={handlePrevStep} className="onboarding-complete-btn" style={{ padding: '10px 16px', border: '1px solid var(--border-medium)', borderRadius: 'var(--radius-md)', background: 'transparent', color: 'var(--text-main)', cursor: 'pointer', fontWeight: '500' }}>
-                    ➔ Voltar
+                    ← Voltar
                   </button>
                   <button onClick={handleNextStep} className="onboarding-complete-btn" style={{ padding: '10px 16px', border: '1px solid var(--border-medium)', borderRadius: 'var(--radius-md)', background: 'transparent', color: 'var(--text-main)', cursor: 'pointer', fontWeight: '500' }}>
                     Avançar ➔
@@ -383,7 +383,7 @@ function GoalProgressRow({ goal, linkedTasks }) {
                 </p>
                 <div className="onboarding-actions" style={{ display: 'flex', gap: '12px', marginTop: '16px' }}>
                   <button onClick={handlePrevStep} className="onboarding-complete-btn" style={{ padding: '10px 16px', border: '1px solid var(--border-medium)', borderRadius: 'var(--radius-md)', background: 'transparent', color: 'var(--text-main)', cursor: 'pointer', fontWeight: '500' }}>
-                    ➔ Voltar
+                    ← Voltar
                   </button>
                   <button onClick={handleFinishOnboarding} className="onboarding-complete-btn" style={{ padding: '10px 20px', borderRadius: 'var(--radius-md)', backgroundColor: 'var(--success-light)', color: 'var(--success-text)', border: 'none', cursor: 'pointer', fontWeight: '600' }}>
                     Concluir Onboarding ✨
