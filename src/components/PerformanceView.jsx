@@ -155,7 +155,11 @@ export default function PerformanceView() {
       // e 30% para a consistência (ritmo de atividade).
       // A inatividade penaliza em 5% os 30% de consistência a cada dia inativo (daysStagnant).
       let health = Math.round(progressPct * 0.7 + (100 - Math.min(100, daysStagnant * 5)) * 0.3);
-      if (linked.length === 0) health = 40; // Sem tarefas é saúde neutra/baixa
+      
+      // Se não há NENHUMA tarefa concluída ou vinculada, a saúde do objetivo não pode ser avaliada como positiva.
+      if (done.length === 0) {
+        health = 0;
+      }
 
       return {
         ...goal,

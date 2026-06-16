@@ -148,6 +148,42 @@ export default function WeeklyPlannerModal({ isOpen, onClose, tasks, onUpdateTas
     }
   };
 
+  const handleClearWeeklyPlan = async () => {
+    if (!currentUser?.id) return;
+    if (!window.confirm('Tem certeza que deseja apagar todo o planejamento desta semana?')) return;
+
+    setSaving(true);
+    try {
+      const { error } = await supabase.auth.updateUser({
+        data: { weekly_plan: null }
+      });
+      if (error) throw error;
+      
+      setCurrentUser(prev => ({
+        ...prev,
+        user_metadata: { ...prev.user_metadata, weekly_plan: null }
+      }));
+      setWeeklyFocus('');
+      setCriticalPriorities(['']);
+      setSelectedGoals([]);
+      alert('Planejamento limpo com sucesso.');
+    } catch (err) {
+      console.error('[WeeklyPlannerModal] Erro ao limpar plano:', err);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && isOpen) {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div 
@@ -204,120 +240,60 @@ export default function WeeklyPlannerModal({ isOpen, onClose, tasks, onUpdateTas
         {plannerTab === 'focus' && (
           <form onSubmit={handleSaveWeeklyPlan} style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '65vh', overflowY: 'auto' }}>
             
-            {/* Accordion 1: Foco Principal */}
-            <div style={{ border: '1px solid var(--border-medium)', borderRadius: 'var(--radius-md)', overflow: 'hidden' }}>
-              <div 
-                type="button"
-                onClick={() => setActiveAccordion(activeAccordion === 'focus' ? null : 'focus')}
-                style={{ 
-                  padding: '12px 16px', 
-                  backgroundColor: 'var(--bg-app)', 
-                  display: 'flex', 
-                  justifyContent: 'space-between', 
-                  alignItems: 'center', 
-                  cursor: 'pointer',
-                  fontWeight: '600',
-                  fontSize: '14px',
-                  color: 'var(--text-main)'
-                }}
-              >
-                <span>🎯 Passo 1: Foco Principal da Semana</span>
-                <span style={{ fontSize: '12px', color: 'var(--text-light)' }}>{activeAccordion === 'focus' ? '▲' : '▼'}</span>
-              </div>
-              {activeAccordion === 'focus' && (
-                <div style={{ padding: '16px', backgroundColor: 'var(--bg-card)' }}>
+            {/* Passo 1: Foco Principal */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <label style={{ fontWeight: '600', fontSize: '14px', color: 'var(--text-main)' }}>🎯 Passo 1: Foco Principal da Semana</label>
+              <input 
+                type="text" 
+                placeholder="Ex: Entregar versão beta do aplicativo SaaS" 
+                value={weeklyFocus}
+                onChange={e => setWeeklyFocus(e.target.value)}
+                className="form-input"
+                required
+                style={{ width: '100%' }}
+              />
+            </div>
+
+            {/* Passo 2: Prioridades Críticas */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '12px' }}>
+              <label style={{ fontWeight: '600', fontSize: '14px', color: 'var(--text-main)' }}>🔥 Passo 2: Prioridades Críticas ({criticalPriorities.filter(p => p.trim()).length})</label>
+              {criticalPriorities.map((priority, index) => (
+                <div key={index} style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                   <input 
                     type="text" 
-                    placeholder="Ex: Entregar versão beta do aplicativo SaaS" 
-                    value={weeklyFocus}
-                    onChange={e => setWeeklyFocus(e.target.value)}
+                    placeholder={`Prioridade ${index + 1}`} 
+                    value={priority}
+                    onChange={e => handlePriorityChange(index, e.target.value)}
                     className="form-input"
                     required
-                    style={{ width: '100%' }}
+                    style={{ flex: 1 }}
                   />
+                  {criticalPriorities.length > 1 && (
+                    <button 
+                      type="button" 
+                      onClick={() => handleRemovePriority(index)}
+                      style={{ padding: '8px', color: 'var(--text-light)', border: 'none', background: 'transparent', cursor: 'pointer' }}
+                      title="Remover Prioridade"
+                    >
+                      <Trash2 size={16} style={{ color: '#E53E3E' }} />
+                    </button>
+                  )}
                 </div>
-              )}
+              ))}
+              <button 
+                type="button" 
+                onClick={handleAddPriority}
+                className="btn-secondary"
+                style={{ padding: '8px', fontSize: '12px', width: 'fit-content', alignSelf: 'flex-start', marginTop: '4px' }}
+              >
+                + Adicionar Prioridade
+              </button>
             </div>
 
-            {/* Accordion 2: Prioridades Críticas */}
-            <div style={{ border: '1px solid var(--border-medium)', borderRadius: 'var(--radius-md)', overflow: 'hidden' }}>
-              <div 
-                type="button"
-                onClick={() => setActiveAccordion(activeAccordion === 'priorities' ? null : 'priorities')}
-                style={{ 
-                  padding: '12px 16px', 
-                  backgroundColor: 'var(--bg-app)', 
-                  display: 'flex', 
-                  justifyContent: 'space-between', 
-                  alignItems: 'center', 
-                  cursor: 'pointer',
-                  fontWeight: '600',
-                  fontSize: '14px',
-                  color: 'var(--text-main)'
-                }}
-              >
-                <span>🔥 Passo 2: Prioridades Críticas ({criticalPriorities.filter(p => p.trim()).length})</span>
-                <span style={{ fontSize: '12px', color: 'var(--text-light)' }}>{activeAccordion === 'priorities' ? '▲' : '▼'}</span>
-              </div>
-              {activeAccordion === 'priorities' && (
-                <div style={{ padding: '16px', backgroundColor: 'var(--bg-card)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  {criticalPriorities.map((priority, index) => (
-                    <div key={index} style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                      <input 
-                        type="text" 
-                        placeholder={`Prioridade ${index + 1}`} 
-                        value={priority}
-                        onChange={e => handlePriorityChange(index, e.target.value)}
-                        className="form-input"
-                        required
-                        style={{ flex: 1 }}
-                      />
-                      {criticalPriorities.length > 1 && (
-                        <button 
-                          type="button" 
-                          onClick={() => handleRemovePriority(index)}
-                          style={{ padding: '8px', color: 'var(--text-light)', border: 'none', background: 'transparent', cursor: 'pointer' }}
-                          title="Remover Prioridade"
-                        >
-                          <Trash2 size={16} style={{ color: '#E53E3E' }} />
-                        </button>
-                      )}
-                    </div>
-                  ))}
-                  <button 
-                    type="button" 
-                    onClick={handleAddPriority}
-                    className="btn-secondary"
-                    style={{ padding: '8px', fontSize: '12px', width: 'fit-content', alignSelf: 'flex-start', marginTop: '4px' }}
-                  >
-                    + Adicionar Prioridade
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {/* Accordion 3: Objetivos */}
-            <div style={{ border: '1px solid var(--border-medium)', borderRadius: 'var(--radius-md)', overflow: 'hidden' }}>
-              <div 
-                type="button"
-                onClick={() => setActiveAccordion(activeAccordion === 'goals' ? null : 'goals')}
-                style={{ 
-                  padding: '12px 16px', 
-                  backgroundColor: 'var(--bg-app)', 
-                  display: 'flex', 
-                  justifyContent: 'space-between', 
-                  alignItems: 'center', 
-                  cursor: 'pointer',
-                  fontWeight: '600',
-                  fontSize: '14px',
-                  color: 'var(--text-main)'
-                }}
-              >
-                <span>⭐ Passo 3: Objetivos Vinculados ({selectedGoals.length})</span>
-                <span style={{ fontSize: '12px', color: 'var(--text-light)' }}>{activeAccordion === 'goals' ? '▲' : '▼'}</span>
-              </div>
-              {activeAccordion === 'goals' && (
-                <div style={{ padding: '16px', backgroundColor: 'var(--bg-card)' }}>
+            {/* Passo 3: Objetivos Vinculados */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '12px' }}>
+              <label style={{ fontWeight: '600', fontSize: '14px', color: 'var(--text-main)' }}>⭐ Passo 3: Objetivos Vinculados ({selectedGoals.length})</label>
+              <div style={{ padding: '8px 0' }}>
                   {activeGoals.length === 0 ? (
                     <p style={{ fontSize: '12px', color: 'var(--text-muted)', fontStyle: 'italic' }}>Nenhum objetivo ativo cadastrado. Crie objetivos para vinculá-los aqui.</p>
                   ) : (
@@ -352,17 +328,27 @@ export default function WeeklyPlannerModal({ isOpen, onClose, tasks, onUpdateTas
                     </div>
                   )}
                 </div>
-              )}
             </div>
 
-            <button 
-              type="submit" 
-              className="btn-primary-glow" 
-              disabled={saving}
-              style={{ width: '100%', padding: '12px', marginTop: '12px', fontSize: '14px' }}
-            >
-              {saving ? 'Salvando...' : 'Salvar Planejamento & Avançar ➔'}
-            </button>
+            <div style={{ display: 'flex', gap: '12px', marginTop: '16px', flexDirection: 'column' }}>
+              <button 
+                type="submit" 
+                className="btn-primary-glow" 
+                style={{ width: '100%', padding: '12px', fontSize: '15px', fontWeight: 'bold' }}
+                disabled={saving || !weeklyFocus.trim() || criticalPriorities.filter(p => p.trim()).length === 0}
+              >
+                {saving ? 'Salvando...' : 'Salvar Planejamento e Avançar ➔'}
+              </button>
+              <button 
+                type="button" 
+                onClick={handleClearWeeklyPlan}
+                className="btn-secondary" 
+                style={{ width: '100%', padding: '12px', fontSize: '15px', color: '#E53E3E', borderColor: '#E53E3E' }}
+                disabled={saving}
+              >
+                Limpar Planejamento
+              </button>
+            </div>
           </form>
         )}
 

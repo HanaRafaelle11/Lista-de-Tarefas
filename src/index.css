@@ -4304,9 +4304,9 @@ button[title="Sair do Flowday"]:hover {
   --bg-card-hover:    #1E2320;
 
   /* Textos */
-  --text-main:        #E8EBE8;
-  --text-muted:       #A8B2A8;
-  --text-light:       #6B7A6B;
+  --text-main:        #F0F4F0;
+  --text-muted:       #BAC4BA;
+  --text-light:       #8A9A8A;
 
   /* Bordas */
   --border-light:     #252A25;

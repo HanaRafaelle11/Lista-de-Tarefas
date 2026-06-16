@@ -10,19 +10,19 @@
 export function generateInsights(tasks = [], events = []) {
   const insights = [];
 
-  if (tasks.length === 0) {
-    return [{
-      type: 'suggestion',
-      emoji: '🌱',
-      confidence: 1.0,
-      message: 'Crie sua primeira tarefa! Dividir metas grandes em pequenos passos é a chave da produtividade consistente.',
-      action: 'tasks'
-    }];
-  }
-
   const completed = tasks.filter(t => t.completed);
   const pending = tasks.filter(t => !t.completed);
   const now = Date.now();
+
+  if (completed.length < 3) {
+    return [{
+      type: 'info',
+      emoji: '📊',
+      confidence: 1.0,
+      message: 'Dados insuficientes para gerar insights. Conclua pelo menos 3 tarefas para liberar análises sobre seu ritmo.',
+      action: 'tasks'
+    }];
+  }
 
   // ─── 1. Detecção de Churn Preditivo (Risco de Inatividade) ───────────────────
   // Verifica o tempo desde a última conclusão de tarefa

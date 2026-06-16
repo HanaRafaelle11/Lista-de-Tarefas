@@ -189,8 +189,28 @@ export default function Auth({ onLoginSuccess }) {
     <div style={styles.authContainer} className="animate-fade-in">
       <div style={styles.authCard}>
         {/* Top Header com Gradiente */}
-        <div style={styles.cardHeader}>
-          <div style={styles.logoContainer}>
+        <div style={{ position: 'relative', ...styles.cardHeader }}>
+          <button
+            onClick={() => window.location.href = 'https://flowday.app'}
+            style={{
+              position: 'absolute',
+              top: '20px',
+              left: '20px',
+              background: 'transparent',
+              border: 'none',
+              color: 'var(--text-light)',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              fontSize: '13px'
+            }}
+            title="Voltar para a Landing Page"
+          >
+            <ArrowLeft size={16} /> Voltar
+          </button>
+          
+          <div style={{ ...styles.logoContainer, marginTop: '20px' }}>
             <CheckCircle2 size={32} color="var(--primary)" />
             <h1 style={styles.logoText}>Flowday</h1>
           </div>

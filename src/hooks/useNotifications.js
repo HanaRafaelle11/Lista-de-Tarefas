@@ -86,9 +86,20 @@ export function useNotifications() {
     localStorage.setItem(STORAGE_KEY, 'false');
   }, []);
 
-  const sendNotification = useCallback((title, options = {}) => {
+  const sendNotification = useCallback(async (title, options = {}) => {
     if (!isSupported || !isEnabled || Notification.permission !== 'granted') return;
     try {
+      if ('serviceWorker' in navigator) {
+        const reg = await navigator.serviceWorker.ready;
+        if (reg && reg.showNotification) {
+          reg.showNotification(title, {
+            icon: '/favicon.svg',
+            badge: '/icon.svg',
+            ...options,
+          });
+          return;
+        }
+      }
       new Notification(title, {
         icon: '/favicon.svg',
         badge: '/icon.svg',

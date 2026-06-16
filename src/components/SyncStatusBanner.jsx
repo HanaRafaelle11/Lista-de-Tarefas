@@ -28,9 +28,9 @@ export default function SyncStatusBanner() {
     });
   }, [syncStatus]);
 
-  // Gerencia visibilidade: mostra quando degraded/offline, oculta ao recuperar
+  // Gerencia visibilidade: mostra quando degraded/offline/pending, oculta ao recuperar
   useEffect(() => {
-    if (syncStatus === 'healthy') {
+    if (syncStatus === 'healthy' && detail.pendingOps === 0) {
       // Pequeno delay para não piscar se for temporário
       const t = setTimeout(() => {
         setVisible(false);
@@ -40,7 +40,7 @@ export default function SyncStatusBanner() {
     } else {
       setVisible(true);
     }
-  }, [syncStatus]);
+  }, [syncStatus, detail.pendingOps]);
 
   if (!visible || dismissed) return null;
 

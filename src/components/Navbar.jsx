@@ -77,7 +77,7 @@ export default function Navbar() {
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <button
               onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-              className="app-top-logout-btn hide-on-mobile"
+              className="app-top-logout-btn"
               title="Alternar Tema"
               style={{ padding: '8px', minWidth: 'auto', display: 'inline-flex', alignItems: 'center' }}
             >

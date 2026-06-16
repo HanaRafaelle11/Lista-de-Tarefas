@@ -225,6 +225,7 @@ export default function TodoView() {
   const [dueDate, setDueDate] = useState('');
   const [dueTime, setDueTime] = useState('');
   const [recurrence, setRecurrence] = useState('nenhuma');
+  const [linkedGoal, setLinkedGoal] = useState('');
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
 
   // Salva modo de visualização e rastreia analytics
@@ -237,12 +238,7 @@ export default function TodoView() {
     }
   }, [viewMode, logEvent]);
 
-  // Abertura automática no primeiro uso
-  useEffect(() => {
-    if (tasks.length === 0) {
-      setIsModalOpen(true);
-    }
-  }, [tasks.length]);
+  // Removido o Abertura automática no primeiro uso para evitar reaberturas após deletar a última tarefa
 
   const openNewTaskModal = () => {
     setEditingTask(null);
@@ -253,6 +249,7 @@ export default function TodoView() {
     setDueDate('');
     setDueTime('');
     setRecurrence('nenhuma');
+    setLinkedGoal('');
     setIsModalOpen(true);
   };
 
@@ -285,6 +282,16 @@ export default function TodoView() {
     setRecurrence('nenhuma');
   };
 
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && isModalOpen) {
+        closeTaskModal();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isModalOpen]);
+
   const handleSave = (e) => {
     e.preventDefault();
     if (!title.trim()) return;
@@ -297,7 +304,8 @@ export default function TodoView() {
       description: metaDescription,
       category,
       priority,
-      dueDate: dueDate || null
+      dueDate: dueDate || null,
+      goal_id: linkedGoal || null
     };
 
     if (editingTask) {
@@ -748,135 +756,138 @@ export default function TodoView() {
         </>
       )}
 
-      {viewMode === 'kanban' && (
-        <div className="kanban-view-container animate-fade-in">
-          {/* Coluna 1: A Fazer */}
-          <div className="kanban-column" onDragOver={handleDragOver} onDrop={(e) => handleDrop(e, 'todo')}>
-            <div className="kanban-column-header">
-              <span className="kanban-column-title">📌 A Fazer</span>
-              <span className="kanban-column-count">{kanbanTasks.todo.length}</span>
-            </div>
-            <div className="kanban-cards-list">
-              {kanbanTasks.todo.map(task => {
-                const meta = parseTaskMetadata(task.description);
-                const cleanDesc = formatDescriptionWithoutMetadata(task.description);
-                return (
-                  <div key={task.id} className="kanban-card" draggable onDragStart={(e) => handleDragStart(e, task.id)}>
-                    <span className="kanban-card-title">{task.title}</span>
-                    {cleanDesc && <span style={{ fontSize: '11px', color: 'var(--text-light)' }}>{cleanDesc}</span>}
-                    <div className="kanban-card-meta">
-                      <span className={`badge-category ${task.category.toLowerCase()}`} style={{ fontSize: '9px', padding: '2px 6px' }}>
-                        {task.category}
-                      </span>
-                      <span className={`badge-priority ${task.priority.toLowerCase()}`} style={{ fontSize: '9px', padding: '2px 6px' }}>
-                        {task.priority}
-                      </span>
-                    </div>
-                    {task.dueDate && (
-                      <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
-                        📅 {task.dueDate} {meta.due_time ? `às ${meta.due_time}` : ''}
-                      </span>
-                    )}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '6px', alignItems: 'center' }}>
-                      <button 
-                        onClick={() => handleMoveKanban(task, 'in_progress')}
-                        className="todo-item-action-btn edit-btn"
-                        style={{ display: 'flex', alignItems: 'center', gap: '2px', fontSize: '11px', padding: '4px 8px' }}
-                      >
-                        Fazer ➔
-                      </button>
-                      <div style={{ display: 'flex', gap: '4px' }}>
-                        <button onClick={() => openEditTaskModal(task)} className="todo-item-action-btn edit-btn"><Edit2 size={13} /></button>
-                        <button onClick={() => onDeleteTask(task.id)} className="todo-item-action-btn delete-btn"><Trash2 size={13} /></button>
+      {viewMode === 'kanban' ? (
+        (() => {
+          const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
+          return (
+            <div className="kanban-view-container animate-fade-in">
+              {/* Coluna 1: A Fazer */}
+              <div className="kanban-column" onDragOver={handleDragOver} onDrop={(e) => handleDrop(e, 'todo')}>
+                <div className="kanban-column-header">
+                  <span className="kanban-column-title">📌 A Fazer</span>
+                  <span className="kanban-column-count">{kanbanTasks.todo.length}</span>
+                </div>
+                <div className="kanban-cards-list">
+                  {kanbanTasks.todo.map(task => {
+                    const meta = parseTaskMetadata(task.description);
+                    const cleanDesc = formatDescriptionWithoutMetadata(task.description);
+                    return (
+                      <div key={task.id} className="kanban-card" draggable={!isMobile} onDragStart={(e) => handleDragStart(e, task.id)}>
+                        <span className="kanban-card-title">{task.title}</span>
+                        {cleanDesc && <span style={{ fontSize: '11px', color: 'var(--text-light)' }}>{cleanDesc}</span>}
+                        <div className="kanban-card-meta">
+                          <span className={`badge-category ${task.category.toLowerCase()}`} style={{ fontSize: '9px', padding: '2px 6px' }}>
+                            {task.category}
+                          </span>
+                          <span className={`badge-priority ${task.priority.toLowerCase()}`} style={{ fontSize: '9px', padding: '2px 6px' }}>
+                            {task.priority}
+                          </span>
+                        </div>
+                        {task.dueDate && (
+                          <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
+                            📅 {task.dueDate} {meta.due_time ? `às ${meta.due_time}` : ''}
+                          </span>
+                        )}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '6px', alignItems: 'center' }}>
+                          <button 
+                            onClick={() => handleMoveKanban(task, 'in_progress')}
+                            className="todo-item-action-btn edit-btn"
+                            style={{ display: 'flex', alignItems: 'center', gap: '2px', fontSize: '11px', padding: '4px 8px' }}
+                          >
+                            Fazer ➔
+                          </button>
+                          <div style={{ display: 'flex', gap: '4px' }}>
+                            <button onClick={() => openEditTaskModal(task)} className="todo-item-action-btn edit-btn"><Edit2 size={13} /></button>
+                            <button onClick={() => onDeleteTask(task.id)} className="todo-item-action-btn delete-btn"><Trash2 size={13} /></button>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+                    );
+                  })}
+                </div>
+              </div>
 
-          {/* Coluna 2: Em Progresso */}
-          <div className="kanban-column" onDragOver={handleDragOver} onDrop={(e) => handleDrop(e, 'in_progress')}>
-            <div className="kanban-column-header">
-              <span className="kanban-column-title">⚡ Em Progresso</span>
-              <span className="kanban-column-count">{kanbanTasks.inProgress.length}</span>
-            </div>
-            <div className="kanban-cards-list">
-              {kanbanTasks.inProgress.map(task => {
-                const meta = parseTaskMetadata(task.description);
-                const cleanDesc = formatDescriptionWithoutMetadata(task.description);
-                return (
-                  <div key={task.id} className="kanban-card" draggable onDragStart={(e) => handleDragStart(e, task.id)}>
-                    <span className="kanban-card-title">{task.title}</span>
-                    {cleanDesc && <span style={{ fontSize: '11px', color: 'var(--text-light)' }}>{cleanDesc}</span>}
-                    <div className="kanban-card-meta">
-                      <span className={`badge-category ${task.category.toLowerCase()}`} style={{ fontSize: '9px', padding: '2px 6px' }}>
-                        {task.category}
-                      </span>
-                      <span className={`badge-priority ${task.priority.toLowerCase()}`} style={{ fontSize: '9px', padding: '2px 6px' }}>
-                        {task.priority}
-                      </span>
-                    </div>
-                    {task.dueDate && (
-                      <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
-                        📅 {task.dueDate} {meta.due_time ? `às ${meta.due_time}` : ''}
-                      </span>
-                    )}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '6px', alignItems: 'center' }}>
-                      <div style={{ display: 'flex', gap: '4px' }}>
-                        <button onClick={() => handleMoveKanban(task, 'todo')} className="todo-item-action-btn edit-btn" style={{ fontSize: '11px', padding: '4px 8px' }}>
-                          ⬅️
-                        </button>
-                        <button onClick={() => handleMoveKanban(task, 'completed')} className="todo-item-action-btn edit-btn" style={{ fontSize: '11px', padding: '4px 8px' }}>
-                          Concluir ➔
-                        </button>
+              {/* Coluna 2: Em Progresso */}
+              <div className="kanban-column" onDragOver={handleDragOver} onDrop={(e) => handleDrop(e, 'in_progress')}>
+                <div className="kanban-column-header">
+                  <span className="kanban-column-title">⚡ Em Progresso</span>
+                  <span className="kanban-column-count">{kanbanTasks.inProgress.length}</span>
+                </div>
+                <div className="kanban-cards-list">
+                  {kanbanTasks.inProgress.map(task => {
+                    const meta = parseTaskMetadata(task.description);
+                    const cleanDesc = formatDescriptionWithoutMetadata(task.description);
+                    return (
+                      <div key={task.id} className="kanban-card" draggable={!isMobile} onDragStart={(e) => handleDragStart(e, task.id)}>
+                        <span className="kanban-card-title">{task.title}</span>
+                        {cleanDesc && <span style={{ fontSize: '11px', color: 'var(--text-light)' }}>{cleanDesc}</span>}
+                        <div className="kanban-card-meta">
+                          <span className={`badge-category ${task.category.toLowerCase()}`} style={{ fontSize: '9px', padding: '2px 6px' }}>
+                            {task.category}
+                          </span>
+                          <span className={`badge-priority ${task.priority.toLowerCase()}`} style={{ fontSize: '9px', padding: '2px 6px' }}>
+                            {task.priority}
+                          </span>
+                        </div>
+                        {task.dueDate && (
+                          <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
+                            📅 {task.dueDate} {meta.due_time ? `às ${meta.due_time}` : ''}
+                          </span>
+                        )}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '6px', alignItems: 'center' }}>
+                          <div style={{ display: 'flex', gap: '4px' }}>
+                            <button onClick={() => handleMoveKanban(task, 'todo')} className="todo-item-action-btn edit-btn" style={{ fontSize: '11px', padding: '4px 8px' }}>
+                              ⬅️
+                            </button>
+                            <button onClick={() => handleMoveKanban(task, 'completed')} className="todo-item-action-btn edit-btn" style={{ fontSize: '11px', padding: '4px 8px' }}>
+                              Concluir ➔
+                            </button>
+                          </div>
+                          <div style={{ display: 'flex', gap: '4px' }}>
+                            <button onClick={() => openEditTaskModal(task)} className="todo-item-action-btn edit-btn"><Edit2 size={13} /></button>
+                            <button onClick={() => onDeleteTask(task.id)} className="todo-item-action-btn delete-btn"><Trash2 size={13} /></button>
+                          </div>
+                        </div>
                       </div>
-                      <div style={{ display: 'flex', gap: '4px' }}>
-                        <button onClick={() => openEditTaskModal(task)} className="todo-item-action-btn edit-btn"><Edit2 size={13} /></button>
-                        <button onClick={() => onDeleteTask(task.id)} className="todo-item-action-btn delete-btn"><Trash2 size={13} /></button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Coluna 3: Concluídas */}
+              <div className="kanban-column" onDragOver={handleDragOver} onDrop={(e) => handleDrop(e, 'completed')}>
+                <div className="kanban-column-header">
+                  <span className="kanban-column-title">✅ Concluído</span>
+                  <span className="kanban-column-count">{kanbanTasks.completed.length}</span>
+                </div>
+                <div className="kanban-cards-list">
+                  {kanbanTasks.completed.map(task => {
+                    const meta = parseTaskMetadata(task.description);
+                    const cleanDesc = formatDescriptionWithoutMetadata(task.description);
+                    return (
+                      <div key={task.id} className="kanban-card" style={{ opacity: 0.75 }} draggable={!isMobile} onDragStart={(e) => handleDragStart(e, task.id)}>
+                        <span className="kanban-card-title" style={{ textDecoration: 'line-through' }}>{task.title}</span>
+                        {cleanDesc && <span style={{ fontSize: '11px', color: 'var(--text-light)' }}>{cleanDesc}</span>}
+                        <div className="kanban-card-meta">
+                          <span className={`badge-category ${task.category.toLowerCase()}`} style={{ fontSize: '9px', padding: '2px 6px' }}>
+                            {task.category}
+                          </span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '6px', alignItems: 'center' }}>
+                          <button onClick={() => handleMoveKanban(task, 'in_progress')} className="todo-item-action-btn edit-btn" style={{ fontSize: '11px', padding: '4px 8px' }}>
+                            ⬅️ Reabrir
+                          </button>
+                          <button onClick={() => onDeleteTask(task.id)} className="todo-item-action-btn delete-btn"><Trash2 size={13} /></button>
+                        </div>
                       </div>
-                    </div>
-                  </div>
-                );
-              })}
+                    );
+                  })}
+                </div>
+              </div>
             </div>
-          </div>
-
-          {/* Coluna 3: Concluídas */}
-          <div className="kanban-column" onDragOver={handleDragOver} onDrop={(e) => handleDrop(e, 'completed')}>
-            <div className="kanban-column-header">
-              <span className="kanban-column-title">✅ Concluído</span>
-              <span className="kanban-column-count">{kanbanTasks.completed.length}</span>
-            </div>
-            <div className="kanban-cards-list">
-              {kanbanTasks.completed.map(task => {
-                const meta = parseTaskMetadata(task.description);
-                const cleanDesc = formatDescriptionWithoutMetadata(task.description);
-                return (
-                  <div key={task.id} className="kanban-card" style={{ opacity: 0.75 }} draggable onDragStart={(e) => handleDragStart(e, task.id)}>
-                    <span className="kanban-card-title" style={{ textDecoration: 'line-through' }}>{task.title}</span>
-                    {cleanDesc && <span style={{ fontSize: '11px', color: 'var(--text-light)' }}>{cleanDesc}</span>}
-                    <div className="kanban-card-meta">
-                      <span className={`badge-category ${task.category.toLowerCase()}`} style={{ fontSize: '9px', padding: '2px 6px' }}>
-                        {task.category}
-                      </span>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '6px', alignItems: 'center' }}>
-                      <button onClick={() => handleMoveKanban(task, 'in_progress')} className="todo-item-action-btn edit-btn" style={{ fontSize: '11px', padding: '4px 8px' }}>
-                        ⬅️ Reabrir
-                      </button>
-                      <button onClick={() => onDeleteTask(task.id)} className="todo-item-action-btn delete-btn"><Trash2 size={13} /></button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {viewMode === 'calendar' && (
+          );
+        })()
+      ) : viewMode === 'calendar' ? (
         <div className="calendar-view-container animate-fade-in">
           <div className="calendar-header">
             <h3 className="calendar-title">{getMonthName()}</h3>
@@ -939,14 +950,21 @@ export default function TodoView() {
                 <p style={{ fontSize: '12px', color: 'var(--text-muted)', fontStyle: 'italic' }}>Nenhuma tarefa agendada.</p>
               ) : (
                 tasks.filter(t => t.dueDate === selectedCalendarDay).map(task => (
-                  <div key={task.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px', border: '1px solid var(--border-light)', borderRadius: 'var(--radius-sm)', backgroundColor: 'var(--bg-app)' }}>
+                  <div key={task.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px', border: '1px solid var(--border-light)', borderRadius: 'var(--radius-sm)', backgroundColor: 'var(--bg-app)', opacity: task.completed ? 0.6 : 1 }}>
                     <input 
                       type="checkbox" 
                       checked={task.completed} 
                       onChange={() => onToggleComplete(task.id)}
                       style={{ cursor: 'pointer' }}
                     />
-                    <span style={{ fontSize: '13px', textDecoration: task.completed ? 'line-through' : 'none', color: 'var(--text-main)', flex: 1 }}>{task.title}</span>
+                    <span style={{ fontSize: '13px', textDecoration: task.completed ? 'line-through' : 'none', color: task.completed ? 'var(--text-muted)' : 'var(--text-main)', flex: 1 }}>{task.title}</span>
+                    <button 
+                      onClick={() => onDeleteTask(task.id)} 
+                      style={{ padding: '4px', color: 'var(--text-light)', background: 'transparent', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center' }} 
+                      title="Excluir tarefa"
+                    >
+                      <Trash2 size={14} />
+                    </button>
                   </div>
                 ))
               )}
@@ -1072,6 +1090,23 @@ export default function TodoView() {
                   </select>
                 </div>
               </div>
+
+              {!editingTask && goals.length > 0 && (
+                <div className="todo-form-group">
+                  <label className="todo-form-label" htmlFor="task-goal">Vincular a um Objetivo (opcional)</label>
+                  <select
+                    id="task-goal"
+                    value={linkedGoal}
+                    onChange={e => setLinkedGoal(e.target.value)}
+                    className="todo-modal-select"
+                  >
+                    <option value="">Nenhum objetivo</option>
+                    {goals.filter(g => g.status === 'active').map(g => (
+                      <option key={g.id} value={g.id}>{g.icon} {g.title}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
               {/* Data, Horário e Recorrência (Bloco 4) */}
               <div className="todo-form-row">
