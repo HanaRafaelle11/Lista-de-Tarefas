@@ -191,22 +191,11 @@ export default function Auth({ onLoginSuccess }) {
         {/* Top Header com Gradiente */}
         <div style={{ position: 'relative', ...styles.cardHeader }}>
           <div style={{ ...styles.logoContainer, marginTop: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px' }} className="auth-brand-container">
-            <div style={{ 
-              width: '40px', height: '40px', 
-              backgroundColor: 'var(--bg-card)', 
-              borderRadius: '10px', 
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
-              border: '1px solid var(--border)'
-            }}>
-              <img src="/branding/logo.svg" alt="MyFlowDay Symbol" style={{ height: '20px', width: 'auto', objectFit: 'contain' }} />
-            </div>
-            <h1 style={{ fontSize: '28px', fontWeight: 700, margin: 0, letterSpacing: '-0.5px', color: 'var(--text-main)' }}>MyFlowDay</h1>
+            <img src="/branding/logo.svg" alt="MyFlowDay Symbol" style={{ height: '48px', width: 'auto', objectFit: 'contain' }} />
+            <h1 className="auth-brand-text" style={{ fontWeight: 700, margin: 0, letterSpacing: '-1px', color: 'var(--text-main)' }}>MyFlowDay</h1>
           </div>
-          <p style={styles.subtitle}>
-            {isLogin 
-              ? 'Um sistema de evolução pessoal que conecta suas tarefas, hábitos e metas.' 
-              : 'Comece hoje sua jornada de consistência e evolução contínua.'}
+          <p style={{ ...styles.subtitle, fontSize: '18px', marginTop: '16px' }}>
+            Planeje. Execute. Evolua.
           </p>
         </div>
 
