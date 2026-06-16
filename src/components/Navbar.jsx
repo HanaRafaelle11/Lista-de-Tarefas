@@ -45,18 +45,15 @@ export default function Navbar() {
                 getInitials(userProfile?.name || currentUser?.name)
               )}
             </div>
-            <h1 className="app-top-greeting">
-              Olá, {(userProfile?.name || currentUser?.name)?.split(' ')[0] || 'Usuário'}
-            </h1>
           </div>
           
           <div className="navbar-brand" style={{ display: 'flex', alignItems: 'center', marginLeft: '16px', gap: '8px', maxWidth: '220px' }}>
             <img 
               src="/branding/logo.svg" 
               alt="MyFlowDay Symbol" 
-              style={{ height: '24px', width: 'auto', objectFit: 'contain' }}
+              style={{ height: '28px', width: 'auto', objectFit: 'contain' }}
             />
-            <span className="hide-on-mobile" style={{ fontSize: '28px', fontWeight: 700, letterSpacing: '-0.5px', color: 'var(--text-main)', margin: 0 }}>MyFlowDay</span>
+            <span className="hide-on-mobile" style={{ fontSize: '22px', fontWeight: 700, letterSpacing: '-0.5px', color: 'var(--text-main)', margin: 0 }}>MyFlowDay</span>
           </div>
 
           {/* Desktop Navigation Links (Adequada para Desktop) */}

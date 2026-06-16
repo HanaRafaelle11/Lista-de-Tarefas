@@ -190,13 +190,13 @@ export default function Auth({ onLoginSuccess }) {
       <div style={styles.authCard}>
         {/* Top Header com Gradiente */}
         <div style={{ position: 'relative', ...styles.cardHeader }}>
-          <div style={{ ...styles.logoContainer, marginTop: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px' }} className="auth-brand-container">
-            <img src="/branding/logo.svg" alt="MyFlowDay Symbol" style={{ height: '48px', width: 'auto', objectFit: 'contain' }} />
-            <h1 className="auth-brand-text" style={{ fontWeight: 700, margin: 0, letterSpacing: '-1px', color: 'var(--text-main)' }}>MyFlowDay</h1>
+          <div style={{ ...styles.logoContainer, marginTop: '0', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px' }} className="auth-brand-container">
+            <img src="/branding/logo.svg" alt="MyFlowDay Symbol" style={{ height: '64px', width: 'auto', objectFit: 'contain' }} />
+            <h1 className="auth-brand-text" style={{ fontSize: '48px', fontWeight: 700, margin: '8px 0 0 0', letterSpacing: '-1px', color: 'var(--text-main)' }}>MyFlowDay</h1>
+            <p style={{ fontSize: '18px', color: 'var(--text-light)', margin: '8px 0 32px 0' }}>
+              Planeje. Execute. Evolua.
+            </p>
           </div>
-          <p style={{ ...styles.subtitle, fontSize: '18px', marginTop: '16px' }}>
-            Planeje. Execute. Evolua.
-          </p>
         </div>
 
         {/* Formulário */}
