@@ -16,8 +16,10 @@
     "@supabase/supabase-js": "^2.108.1",
     "emoji-picker-react": "^4.19.1",
     "lucide-react": "^1.17.0",
+    "mobile-drag-drop": "^3.0.0-rc.0",
     "react": "^19.2.6",
-    "react-dom": "^19.2.6"
+    "react-dom": "^19.2.6",
+    "react-joyride": "^3.1.0"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

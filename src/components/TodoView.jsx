@@ -773,7 +773,7 @@ export default function TodoView() {
                     const meta = parseTaskMetadata(task.description);
                     const cleanDesc = formatDescriptionWithoutMetadata(task.description);
                     return (
-                      <div key={task.id} className="kanban-card" draggable={!isMobile} onDragStart={(e) => handleDragStart(e, task.id)}>
+                      <div key={task.id} className="kanban-card" draggable="true" onDragStart={(e) => handleDragStart(e, task.id)}>
                         <span className="kanban-card-title">{task.title}</span>
                         {cleanDesc && <span style={{ fontSize: '11px', color: 'var(--text-light)' }}>{cleanDesc}</span>}
                         <div className="kanban-card-meta">
@@ -819,7 +819,7 @@ export default function TodoView() {
                     const meta = parseTaskMetadata(task.description);
                     const cleanDesc = formatDescriptionWithoutMetadata(task.description);
                     return (
-                      <div key={task.id} className="kanban-card" draggable={!isMobile} onDragStart={(e) => handleDragStart(e, task.id)}>
+                      <div key={task.id} className="kanban-card" draggable="true" onDragStart={(e) => handleDragStart(e, task.id)}>
                         <span className="kanban-card-title">{task.title}</span>
                         {cleanDesc && <span style={{ fontSize: '11px', color: 'var(--text-light)' }}>{cleanDesc}</span>}
                         <div className="kanban-card-meta">
@@ -866,7 +866,7 @@ export default function TodoView() {
                     const meta = parseTaskMetadata(task.description);
                     const cleanDesc = formatDescriptionWithoutMetadata(task.description);
                     return (
-                      <div key={task.id} className="kanban-card" style={{ opacity: 0.75 }} draggable={!isMobile} onDragStart={(e) => handleDragStart(e, task.id)}>
+                      <div key={task.id} className="kanban-card" style={{ opacity: 0.75 }} draggable="true" onDragStart={(e) => handleDragStart(e, task.id)}>
                         <span className="kanban-card-title" style={{ textDecoration: 'line-through' }}>{task.title}</span>
                         {cleanDesc && <span style={{ fontSize: '11px', color: 'var(--text-light)' }}>{cleanDesc}</span>}
                         <div className="kanban-card-meta">

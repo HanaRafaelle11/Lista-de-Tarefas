@@ -3,6 +3,18 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.jsx'
 
+// Drag and drop polyfill for mobile
+import { polyfill } from "mobile-drag-drop";
+import { scrollBehaviourDragImageTranslateOverride } from "mobile-drag-drop/scroll-behaviour";
+import "mobile-drag-drop/default.css";
+
+polyfill({
+    dragImageTranslateOverride: scrollBehaviourDragImageTranslateOverride
+});
+
+// Safari issue fix for drag and drop polyfill
+window.addEventListener('touchmove', function() {}, {passive: false});
+
 // Habilita o modo de segurança Beta globalmente
 window.BETA_SAFE_MODE = true;
 

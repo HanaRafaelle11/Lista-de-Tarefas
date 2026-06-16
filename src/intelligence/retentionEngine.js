@@ -34,7 +34,7 @@ export function getEngagementSuggestions(userState = {}, tasks = [], onboardingC
       message: step === 1 
         ? 'Defina seu primeiro grande Objetivo para conectar suas tarefas a metas maiores.'
         : 'Crie suas primeiras tarefas de foco diário para iniciar sua rotina.',
-      ctaText: 'Continuar Guia 🚀',
+      ctaText: step === 1 ? 'Criar Primeiro Objetivo 🎯' : 'Começar Agora 🚀',
       actionTab: step === 1 ? 'goals' : 'tasks',
       autoTrigger: 'open_onboarding_helper'
     });

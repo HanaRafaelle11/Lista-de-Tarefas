@@ -55,6 +55,7 @@ export default function Navbar() {
             {navItems.map(({ key, icon, label }) => (
               <button
                 key={key}
+                id={`tour-nav-desktop-${key}`}
                 onClick={() => setActiveTab(key)}
                 className={`nav-tab-button ${activeTab === key ? 'active-nav-tab' : ''}`}
                 style={{
@@ -110,6 +111,7 @@ export default function Navbar() {
         {navItems.map(({ key, icon, label }) => (
           <button
             key={key}
+            id={`tour-nav-mobile-${key}`}
             onClick={() => setActiveTab(key)}
             className={`app-bottom-nav-btn ${activeTab === key ? 'active' : ''}`}
             aria-current={activeTab === key ? 'page' : undefined}

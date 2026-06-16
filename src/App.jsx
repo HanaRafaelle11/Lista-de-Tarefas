@@ -14,9 +14,13 @@ const ProfileView = lazy(() => import('./components/ProfileView'));
 const AdminDashboard = lazy(() => import('./components/AdminDashboard'));
 const SettingsView = lazy(() => import('./components/SettingsView'));
 const DevToolsWidget = lazy(() => import('./components/DevToolsWidget'));
+const GuidedTour = lazy(() => import('./components/GuidedTour'));
+const NotificationEngine = lazy(() => import('./components/NotificationEngine'));
+const PwaInstallPrompt = lazy(() => import('./components/PwaInstallPrompt'));
 
 // ─── Layout interno (usa o contexto) ─────────────────────────────────────────
 function AppLayout() {
+  console.error("DEBUG_APP_LAYOUT_MOUNT");
   const {
     currentUser,
     isInitializing,
@@ -103,6 +107,11 @@ function AppLayout() {
       )}
 
       <AchievementToastManager queue={toastQueue} onDismiss={dismissToast} />
+      <Suspense fallback={null}>
+        <GuidedTour />
+        <NotificationEngine />
+        <PwaInstallPrompt />
+      </Suspense>
     </div>
   );
 }

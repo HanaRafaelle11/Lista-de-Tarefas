@@ -273,134 +273,7 @@ function GoalProgressRow({ goal, linkedTasks }) {
         </button>
       </section>
 
-      {/* ── Onboarding Guiado (Guia de Boas-Vindas) ─────────────── */}
-      {/* Passo 0: tela de boas-vindas */}
-      {onboardingStep === 0 && !onboardingCompleted && !localStorage.getItem(startedKey) && (
-        <section className="onboarding-card animate-fade-in" style={{ textAlign: 'center', border: '1px solid var(--primary-light)', boxShadow: 'var(--shadow-glow)' }}>
-          <div className="onboarding-header" style={{ justifyContent: 'flex-end' }}>
-            <button className="onboarding-skip-btn" onClick={() => { logEvent('onboarding_abandoned', { step: 0 }); handleFinishOnboarding(); }}>Pular Guia</button>
-          </div>
-          <div className="onboarding-body" style={{ alignItems: 'center', paddingTop: '8px' }}>
-            <div style={{ fontSize: '48px', marginBottom: '8px' }}>👋</div>
-            <h4 className="onboarding-title" style={{ fontSize: '20px' }}>Bem-vindo ao Flowday!</h4>
-            <p className="onboarding-desc" style={{ maxWidth: '420px', margin: '8px auto 0' }}>
-              O Flowday é seu sistema de evolução pessoal. Vamos configurar sua jornada em 5 passos rápidos.
-            </p>
-            <button onClick={handleStartOnboarding} className="onboarding-cta-btn btn-primary-glow" style={{ marginTop: '20px' }}>
-              Iniciar Jornada 🚀
-            </button>
-          </div>
-        </section>
-      )}
-
-      {/* Passos 1–5: progressão do guia */}
-      {onboardingStep > 0 && !onboardingCompleted && (
-        <section className="onboarding-card animate-fade-in" style={{ border: '1px solid var(--primary-light)' }}>
-          <div className="onboarding-header">
-            <span className="onboarding-step-badge">Jornada Flowday · Passo {onboardingStep} de {ONBOARDING_TOTAL_STEPS}</span>
-            <button className="onboarding-skip-btn" onClick={handleAbandonOnboarding}>Pular Guia</button>
-          </div>
-          
-          <div className="onboarding-body">
-            {onboardingStep === 1 && (
-              <>
-                <h4 className="onboarding-title">🎯 Passo 1 — Crie seu primeiro Objetivo</h4>
-                <p className="onboarding-desc">
-                  Objetivos são as suas grandes metas de vida. Defina para onde você quer caminhar e o app calculará a evolução automaticamente.
-                </p>
-                <div className="onboarding-actions" style={{ display: 'flex', gap: '12px', marginTop: '16px' }}>
-                  <button onClick={() => handleGoToStep(2, 'goals')} className="onboarding-cta-btn btn-primary-glow" style={{ margin: 0 }}>
-                    Criar Objetivo 🎯
-                  </button>
-                  <button onClick={handleNextStep} className="onboarding-complete-btn" style={{ padding: '10px 16px', border: '1px solid var(--border-medium)', borderRadius: 'var(--radius-md)', background: 'transparent', color: 'var(--text-main)', cursor: 'pointer', fontWeight: '500' }}>
-                    Avançar ➔
-                  </button>
-                </div>
-              </>
-            )}
-            {onboardingStep === 2 && (
-              <>
-                <h4 className="onboarding-title">💼 Passo 2 — Adicione sua primeira Tarefa</h4>
-                <p className="onboarding-desc">
-                  Tarefas são ações diretas. Adicione o que precisa fazer e vincule-a ao seu objetivo.
-                </p>
-                <div className="onboarding-actions" style={{ display: 'flex', gap: '12px', marginTop: '16px' }}>
-                  <button onClick={() => handleGoToStep(3, 'tasks')} className="onboarding-cta-btn btn-primary-glow" style={{ margin: 0 }}>
-                    Criar Tarefa 💼
-                  </button>
-                  <button onClick={handlePrevStep} className="onboarding-complete-btn" style={{ padding: '10px 16px', border: '1px solid var(--border-medium)', borderRadius: 'var(--radius-md)', background: 'transparent', color: 'var(--text-main)', cursor: 'pointer', fontWeight: '500' }}>
-                    ← Voltar
-                  </button>
-                  <button onClick={handleNextStep} className="onboarding-complete-btn" style={{ padding: '10px 16px', border: '1px solid var(--border-medium)', borderRadius: 'var(--radius-md)', background: 'transparent', color: 'var(--text-main)', cursor: 'pointer', fontWeight: '500' }}>
-                    Avançar ➔
-                  </button>
-                </div>
-              </>
-            )}
-            {onboardingStep === 3 && (
-              <>
-                <h4 className="onboarding-title">🌱 Passo 3 — Crie seu primeiro Hábito</h4>
-                <p className="onboarding-desc">
-                  Hábitos constroem consistência a longo prazo. Configure hábitos diários na aba de Objetivos.
-                </p>
-                <div className="onboarding-actions" style={{ display: 'flex', gap: '12px', marginTop: '16px' }}>
-                  <button onClick={() => handleGoToStep(4, 'goals')} className="onboarding-cta-btn btn-primary-glow" style={{ margin: 0 }}>
-                    Criar Hábito 🌱
-                  </button>
-                  <button onClick={handlePrevStep} className="onboarding-complete-btn" style={{ padding: '10px 16px', border: '1px solid var(--border-medium)', borderRadius: 'var(--radius-md)', background: 'transparent', color: 'var(--text-main)', cursor: 'pointer', fontWeight: '500' }}>
-                    ← Voltar
-                  </button>
-                  <button onClick={handleNextStep} className="onboarding-complete-btn" style={{ padding: '10px 16px', border: '1px solid var(--border-medium)', borderRadius: 'var(--radius-md)', background: 'transparent', color: 'var(--text-main)', cursor: 'pointer', fontWeight: '500' }}>
-                    Avançar ➔
-                  </button>
-                </div>
-              </>
-            )}
-            {onboardingStep === 4 && (
-              <>
-                <h4 className="onboarding-title">📈 Passo 4 — Acompanhe sua Evolução</h4>
-                <p className="onboarding-desc">
-                  Veja seu progresso detalhado, estatísticas de conclusão e insígnias conquistadas.
-                </p>
-                <div className="onboarding-actions" style={{ display: 'flex', gap: '12px', marginTop: '16px' }}>
-                  <button onClick={() => handleGoToStep(5, 'analytics')} className="onboarding-cta-btn btn-primary-glow" style={{ margin: 0 }}>
-                    Ver Evolução 📈
-                  </button>
-                  <button onClick={handlePrevStep} className="onboarding-complete-btn" style={{ padding: '10px 16px', border: '1px solid var(--border-medium)', borderRadius: 'var(--radius-md)', background: 'transparent', color: 'var(--text-main)', cursor: 'pointer', fontWeight: '500' }}>
-                    ← Voltar
-                  </button>
-                  <button onClick={handleNextStep} className="onboarding-complete-btn" style={{ padding: '10px 16px', border: '1px solid var(--border-medium)', borderRadius: 'var(--radius-md)', background: 'transparent', color: 'var(--text-main)', cursor: 'pointer', fontWeight: '500' }}>
-                    Avançar ➔
-                  </button>
-                </div>
-              </>
-            )}
-            {onboardingStep === 5 && (
-              <>
-                <h4 className="onboarding-title">✨ Passo 5 — Pronto para Começar</h4>
-                <p className="onboarding-desc">
-                  Tudo configurado! Conclua o guia para salvar seu progresso no banco de dados.
-                </p>
-                <div className="onboarding-actions" style={{ display: 'flex', gap: '12px', marginTop: '16px' }}>
-                  <button onClick={handlePrevStep} className="onboarding-complete-btn" style={{ padding: '10px 16px', border: '1px solid var(--border-medium)', borderRadius: 'var(--radius-md)', background: 'transparent', color: 'var(--text-main)', cursor: 'pointer', fontWeight: '500' }}>
-                    ← Voltar
-                  </button>
-                  <button onClick={handleFinishOnboarding} className="onboarding-complete-btn" style={{ padding: '10px 20px', borderRadius: 'var(--radius-md)', backgroundColor: 'var(--success-light)', color: 'var(--success-text)', border: 'none', cursor: 'pointer', fontWeight: '600' }}>
-                    Concluir Onboarding ✨
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
-          
-          <div className="onboarding-progress-track">
-            <div 
-              className="onboarding-progress-fill" 
-              style={{ width: `${(onboardingStep / ONBOARDING_TOTAL_STEPS) * 100}%` }}
-            />
-          </div>
-        </section>
-      )}
+      {/* O Guia Estático foi removido em favor do Tour Interativo (react-joyride) */}
 
       {/* ── 2. Hero Card — Prioridade máxima ─────────────── */}
       <section className="home-hero-section">
@@ -497,7 +370,7 @@ function GoalProgressRow({ goal, linkedTasks }) {
               cursor: 'pointer'
             }}
           >
-            🧠 Aura Insights
+            🧠 Central de Insights
           </button>
         </div>
 
@@ -783,7 +656,7 @@ function GoalProgressRow({ goal, linkedTasks }) {
                   }}
                 >
                   <h3 style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-main)', margin: '0 0 14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    🧠 Insights de Produtividade Aura
+                    🧠 Insights do MyFlowDay
                   </h3>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                     {insights.map((ins, idx) => (
