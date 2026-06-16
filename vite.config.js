@@ -10,36 +10,41 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.svg', 'icon.svg'],
+      includeAssets: ['favicon.ico', 'favicon.svg', 'icon.svg'],
       manifest: {
-        name: 'Flowday',
-        short_name: 'Flowday',
+        name: 'MyFlowDay',
+        short_name: 'MyFlowDay',
         description: 'Plataforma de Progresso Pessoal',
-        theme_color: '#4A654E',
-        background_color: '#FAF9F6',
+        theme_color: '#0F172A',
+        background_color: '#0F172A',
         display: 'standalone',
+        orientation: 'portrait',
         icons: [
           {
-            src: 'icon.svg',
+            src: '/branding/icon-152.png',
+            sizes: '152x152',
+            type: 'image/png'
+          },
+          {
+            src: '/branding/icon-192.png',
             sizes: '192x192',
-            type: 'image/svg+xml',
-            purpose: 'any'
+            type: 'image/png'
           },
           {
-            src: 'icon.svg',
+            src: '/branding/icon-512.png',
             sizes: '512x512',
-            type: 'image/svg+xml',
-            purpose: 'any'
+            type: 'image/png'
           },
           {
-            src: 'icon.svg',
-            sizes: '192x192 512x512',
-            type: 'image/svg+xml',
-            purpose: 'maskable'
+            src: '/branding/icon-1024.png',
+            sizes: '1024x1024',
+            type: 'image/png'
           }
         ]
       },
       workbox: {
+        maximumFileSizeToCacheInBytes: 5000000,
+        globIgnores: ['**/branding-source*'],
         cleanupOutdatedCaches: true,
         navigateFallback: '/index.html',
         globPatterns: ['**/*.{js,css,html,ico,png,svg,webp}'],
@@ -61,5 +66,5 @@ export default defineConfig({
         ]
       }
     })
-  ],
+  ]
 })

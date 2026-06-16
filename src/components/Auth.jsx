@@ -210,9 +210,8 @@ export default function Auth({ onLoginSuccess }) {
             <ArrowLeft size={16} /> Voltar
           </button>
           
-          <div style={{ ...styles.logoContainer, marginTop: '20px' }}>
-            <CheckCircle2 size={32} color="var(--primary)" />
-            <h1 style={styles.logoText}>Flowday</h1>
+          <div style={{ ...styles.logoContainer, marginTop: '20px' }} className="auth-brand-container">
+            <img src="/branding/logo-dark.svg" alt="MyFlowDay" style={{ height: '56px', width: 'auto', objectFit: 'contain', borderRadius: '8px' }} />
           </div>
           <p style={styles.subtitle}>
             {isLogin 

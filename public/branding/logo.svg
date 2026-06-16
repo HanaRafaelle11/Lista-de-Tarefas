@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2400 800" width="2400" height="800">
+  <defs>
+    <linearGradient id="flow" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#2563EB" />
+      <stop offset="50%" stop-color="#38BDF8" />
+      <stop offset="100%" stop-color="#5EEAD4" />
+    </linearGradient>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@600&amp;display=swap');
+      .text { font-family: 'Inter', sans-serif; font-weight: 600; font-size: 320px; fill: #0F172A; letter-spacing: -8px; }
+    </style>
+  </defs>
+  <g transform="translate(100, 150) scale(0.5)">
+    <path d="M 100 700 L 280 340 L 430 540 L 580 340 L 730 540 L 880 340" fill="none" stroke="url(#flow)" stroke-width="130" stroke-linecap="round" stroke-linejoin="round" />
+    <circle cx="950" cy="200" r="70" fill="#5EEAD4" />
+  </g>
+  <text x="750" y="520" class="text">MyFlowDay</text>
+</svg>

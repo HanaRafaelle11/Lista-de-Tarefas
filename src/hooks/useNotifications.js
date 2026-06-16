@@ -93,16 +93,16 @@ export function useNotifications() {
         const reg = await navigator.serviceWorker.ready;
         if (reg && reg.showNotification) {
           reg.showNotification(title, {
-            icon: '/favicon.svg',
-            badge: '/icon.svg',
+            icon: '/favicon.ico',
+            badge: '/branding/icon-192.png',
             ...options,
           });
           return;
         }
       }
       new Notification(title, {
-        icon: '/favicon.svg',
-        badge: '/icon.svg',
+        icon: '/favicon.ico',
+        badge: '/branding/icon-192.png',
         ...options,
       });
     } catch (e) {

@@ -16,10 +16,10 @@
   --border-light: #F4F4F2;
   --border-medium: #EFEEEA;
   
-  --primary: #4A654E; /* Sage Green do Stitch */
-  --primary-light: #CCEACE;
-  --primary-hover: #334D38;
-  --primary-glow: rgba(74, 101, 78, 0.1);
+  --primary: #2563EB;
+  --primary-light: #DBEAFE;
+  --primary-hover: #1D4ED8;
+  --primary-glow: rgba(37, 99, 235, 0.1);
   
   /* Cores de Categorias (Tons pastéis e elegantes) */
   --cat-trabalho: #6B7F8A;
@@ -4296,26 +4296,26 @@ button[title="Sair do Flowday"]:hover {
    ================================================================ */
 .dark {
   /* Fundos */
-  --bg-app:           #0F1110;
-  --bg-app-glass:     rgba(15, 17, 16, 0.85);
-  --bg-nav-glass:     rgba(24, 28, 26, 0.85);
-  --bg-card:          #181C1A;
-  --bg-card-hover:    #1E2320;
+  --bg-app:           #0F172A;
+  --bg-app-glass:     rgba(15, 23, 42, 0.85);
+  --bg-nav-glass:     rgba(15, 23, 42, 0.85);
+  --bg-card:          #1E293B;
+  --bg-card-hover:    #334155;
 
   /* Textos */
-  --text-main:        #F0F4F0;
-  --text-muted:       #BAC4BA;
-  --text-light:       #8A9A8A;
+  --text-main:        #F8FAFC;
+  --text-muted:       #94A3B8;
+  --text-light:       #64748B;
 
   /* Bordas */
-  --border-light:     #252A25;
-  --border-medium:    #2D352D;
+  --border-light:     #334155;
+  --border-medium:    #475569;
 
-  /* Primário adaptado ao dark */
-  --primary:          #6DB876;
-  --primary-light:    rgba(109, 184, 118, 0.12);
-  --primary-hover:    #85CC8E;
-  --primary-glow:     rgba(109, 184, 118, 0.15);
+  /* Primário adaptado ao dark (Cor Secundária Cyan) */
+  --primary:          #22D3EE;
+  --primary-light:    rgba(34, 211, 238, 0.12);
+  --primary-hover:    #06B6D4;
+  --primary-glow:     rgba(34, 211, 238, 0.15);
 
   /* Categorias dark */
   --cat-trabalho-bg:  #1A2025;

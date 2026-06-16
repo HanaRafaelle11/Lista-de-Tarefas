@@ -45,7 +45,16 @@ export default function Navbar() {
                 getInitials(userProfile?.name || currentUser?.name)
               )}
             </div>
-            <h1 className="app-top-greeting">
+            
+            <div className="navbar-brand hide-on-mobile" style={{ marginLeft: '12px', display: 'flex', alignItems: 'center' }}>
+              <img 
+                src={theme === 'dark' ? '/branding/logo-dark.svg' : '/branding/logo-light.svg'} 
+                alt="MyFlowDay" 
+                style={{ height: '32px', width: 'auto', objectFit: 'contain', borderRadius: '4px' }}
+              />
+            </div>
+
+            <h1 className="app-top-greeting" style={{ marginLeft: '12px' }}>
               Olá, {(userProfile?.name || currentUser?.name)?.split(' ')[0] || 'Usuário'}
             </h1>
           </div>
