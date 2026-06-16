@@ -29,33 +29,20 @@ export default function Navbar() {
     <>
       {/* ── Cabeçalho Superior ──────────────────────────── */}
       <header className="app-top-header">
-        <div className="app-top-header-container">
-          <div 
-            className={`app-top-profile ${activeTab === 'profile' ? 'active' : ''}`}
-            onClick={() => setActiveTab('profile')}
-          >
-            <div className="app-top-avatar" title={userProfile?.name || currentUser?.name}>
-              {userProfile?.avatar_url ? (
-                <img 
-                  src={userProfile.avatar_url} 
-                  alt="Avatar" 
-                  style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }}
-                />
-              ) : (
-                getInitials(userProfile?.name || currentUser?.name)
-              )}
-            </div>
-          </div>
-          <div className="navbar-brand" style={{ display: 'flex', alignItems: 'center', marginLeft: '16px', gap: '8px', maxWidth: '220px' }}>
+        <div className="app-top-header-container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', maxWidth: '1200px', margin: '0 auto', padding: '0 24px', height: '64px' }}>
+          
+          {/* Logo */}
+          <div className="navbar-brand" style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }} onClick={() => setActiveTab('home')}>
             <img 
               src={theme === 'dark' ? '/branding/logo-dark.svg' : '/branding/logo.svg'}
               alt="MyFlowDay Logo" 
-              style={{ height: '32px', width: 'auto', objectFit: 'contain' }}
+              style={{ height: '28px', width: 'auto', objectFit: 'contain' }}
             />
+            <span className="hide-on-mobile" style={{ fontSize: '18px', fontWeight: 700, letterSpacing: '-0.5px', color: 'var(--text-main)', margin: 0 }}>MyFlowDay</span>
           </div>
 
-          {/* Desktop Navigation Links (Adequada para Desktop) */}
-          <nav className="desktop-nav-links hide-on-mobile" style={{ display: 'flex', gap: '8px', backgroundColor: 'var(--primary-light)', padding: '4px', borderRadius: 'var(--radius-md)' }}>
+          {/* Navegação */}
+          <nav className="desktop-nav-links hide-on-mobile" style={{ display: 'flex', gap: '24px', height: '100%' }}>
             {navItems.map(({ key, icon, label }) => (
               <button
                 key={key}
@@ -66,11 +53,15 @@ export default function Navbar() {
                   display: 'flex',
                   alignItems: 'center',
                   gap: '6px',
-                  padding: '6px 12px',
-                  fontSize: '13px',
+                  padding: '0 4px',
+                  height: '100%',
+                  fontSize: '14px',
                   fontWeight: '600',
-                  borderRadius: 'calc(var(--radius-md) - 4px)',
-                  color: activeTab === key ? 'var(--primary)' : 'var(--text-muted)'
+                  color: activeTab === key ? 'var(--primary)' : 'var(--text-muted)',
+                  borderBottom: activeTab === key ? '2px solid var(--primary)' : '2px solid transparent',
+                  borderRadius: '0',
+                  backgroundColor: 'transparent',
+                  cursor: 'pointer'
                 }}
               >
                 <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>{icon}</span>
@@ -78,16 +69,16 @@ export default function Navbar() {
               </button>
             ))}
           </nav>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+
+          {/* Ações */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <button
               onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
               className="app-top-logout-btn"
               title="Alternar Tema"
               style={{ padding: '8px', minWidth: 'auto', display: 'inline-flex', alignItems: 'center' }}
             >
-              <span className="material-symbols-outlined">
-                {theme === 'dark' ? 'light_mode' : 'dark_mode'}
-              </span>
+              <span className="material-symbols-outlined">{theme === 'dark' ? 'light_mode' : 'dark_mode'}</span>
             </button>
             <button
               onClick={() => setActiveTab('settings')}
@@ -97,14 +88,22 @@ export default function Navbar() {
             >
               <span className="material-symbols-outlined">settings</span>
             </button>
-            <button
-              onClick={onLogout}
-              className="app-top-logout-btn hide-on-mobile"
-              title="Sair do Flowday"
+            
+            <div 
+              className={`app-top-profile ${activeTab === 'profile' ? 'active' : ''}`}
+              onClick={() => setActiveTab('profile')}
+              style={{ cursor: 'pointer', marginLeft: '8px' }}
             >
-              <span className="material-symbols-outlined">logout</span>
-              <span className="logout-text">Sair</span>
-            </button>
+              <div className="app-top-avatar" title={userProfile?.name || currentUser?.name} style={{ width: '32px', height: '32px', borderRadius: '50%', overflow: 'hidden', border: '1px solid var(--border)' }}>
+                {userProfile?.avatar_url ? (
+                  <img src={userProfile.avatar_url} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                ) : (
+                  <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'var(--primary-light)', color: 'var(--primary)', fontWeight: 'bold', fontSize: '12px' }}>
+                    {getInitials(userProfile?.name || currentUser?.name)}
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       </header>

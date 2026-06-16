@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
-import { Shield, Lock, Mail, User, CheckCircle2, ArrowLeft } from 'lucide-react';
+import { Shield, Lock, Mail, User, CheckCircle2, ArrowLeft, Chrome } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import { eventsService } from '../services/eventsService';
 
 import { useAppContext } from '../contexts/AppContext';
 
-export default function Auth({ onLoginSuccess }) {
-  const { theme } = useAppContext();
-  const [isLogin, setIsLogin] = useState(true);
+export default function Auth({ onLoginSuccess, initialMode = 'login' }) { // Revert to initialMode prop
+  const { theme } = useAppContext(); // Keep theme from remote
+  const [mode, setMode] = useState(initialMode); // 'login', 'signup', 'recovery', 'updatePassword'
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
@@ -17,13 +17,84 @@ export default function Auth({ onLoginSuccess }) {
   const [showResendButton, setShowResendButton] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  const handleGoogleSignIn = async () => {
+    setError('');
+    setSuccess('');
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: window.location.origin, // Redireciona de volta para a raiz do app
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          }
+        },
+      });
+      if (error) {
+        setError(error.message);
+      }
+      // Supabase irá lidar com o redirecionamento, então nenhuma ação adicional aqui em caso de sucesso
+    } catch (err) {
+      setError('Erro ao autenticar com Google: ' + err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setSuccess('');
     setShowResendButton(false);
 
-    if (!email || !password || (!isLogin && !name)) {
+    if (mode === 'recovery') {
+      if (!email) {
+        setError('Por favor, informe seu e-mail.');
+        return;
+      }
+      setLoading(true);
+      try {
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: window.location.origin + '/#type=recovery',
+        });
+        if (error) {
+          setError(error.message);
+        } else {
+          setSuccess('E-mail de recuperação enviado! Verifique sua caixa de entrada.');
+        }
+      } catch (err) {
+        setError('Erro ao processar: ' + err.message);
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
+    if (mode === 'updatePassword') {
+      if (!password || password.length < 6) {
+        setError('A senha deve ter pelo menos 6 caracteres.');
+        return;
+      }
+      setLoading(true);
+      try {
+        const { error } = await supabase.auth.updateUser({ password });
+        if (error) {
+          setError(error.message);
+        } else {
+          setSuccess('Senha atualizada com sucesso! Você já pode acessar sua conta.');
+          setTimeout(() => setMode('login'), 2000);
+        }
+      } catch (err) {
+        setError('Erro ao atualizar: ' + err.message);
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
+    if (!email || !password || (mode === 'signup' && !name)) {
       setError('Por favor, preencha todos os campos.');
       return;
     }
@@ -31,7 +102,7 @@ export default function Auth({ onLoginSuccess }) {
     setLoading(true);
 
     try {
-      if (isLogin) {
+      if (mode === 'login') {
         // Processo de Login no Supabase
         const { data, error } = await supabase.auth.signInWithPassword({
           email,
@@ -69,7 +140,7 @@ export default function Auth({ onLoginSuccess }) {
             onLoginSuccess(userObj);
           }, 1000);
         }
-      } else {
+      } else if (mode === 'signup') {
         const { data, error } = await supabase.auth.signUp({
           email,
           password,
@@ -173,7 +244,7 @@ export default function Auth({ onLoginSuccess }) {
               <button 
                 onClick={() => {
                   setIsWaitingConfirmation(false);
-                  setIsLogin(true);
+                  setMode('login'); // Revert to setMode
                   setError('');
                   setSuccess('');
                 }} 
@@ -191,7 +262,7 @@ export default function Auth({ onLoginSuccess }) {
   return (
     <div style={styles.authContainer} className="animate-fade-in">
       <div style={styles.authCard}>
-        {/* Top Header com Gradiente */}
+        {/* Top Header com Gradiente - Merged from remote */}
         <div style={{ position: 'relative', ...styles.cardHeader }}>
           <div style={{ ...styles.logoContainer, marginTop: '0', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '0' }} className="auth-brand-container">
             <img 
@@ -200,7 +271,8 @@ export default function Auth({ onLoginSuccess }) {
               style={{ height: '72px', width: 'auto', objectFit: 'contain' }} 
             />
             <p style={{ fontSize: '18px', color: 'var(--text-main)', fontWeight: '600', opacity: '0.9', margin: '16px 0 24px 0' }}>
-              Planeje. Execute. Evolua.
+              {/* Dynamic subtitle from my version with remote's text */}
+              {mode === 'updatePassword' ? 'Crie sua nova senha de acesso.' : 'Planeje. Execute. Evolua.'}
             </p>
           </div>
         </div>
@@ -210,7 +282,7 @@ export default function Auth({ onLoginSuccess }) {
           {error && <div style={styles.errorMessage}>{error}</div>}
           {success && <div style={styles.successMessage}>{success}</div>}
 
-          {!isLogin && (
+          {mode === 'signup' && ( // Condition based on 'mode'
             <div style={styles.inputGroup}>
               <label style={styles.label}>Nome Completo</label>
               <div style={styles.inputWrapper}>
@@ -228,43 +300,99 @@ export default function Auth({ onLoginSuccess }) {
             </div>
           )}
 
-          <div style={styles.inputGroup}>
-            <label style={styles.label}>E-mail</label>
-            <div style={styles.inputWrapper}>
-              <span style={styles.inputIcon}><Mail size={18} /></span>
-              <input
-                type="email"
-                placeholder="usuario@email.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                style={styles.input}
-                className="form-input"
-                disabled={loading}
-              />
+          {mode !== 'updatePassword' && ( // Condition based on 'mode'
+            <div style={styles.inputGroup}>
+              <label style={styles.label}>E-mail</label>
+              <div style={styles.inputWrapper}>
+                <span style={styles.inputIcon}><Mail size={18} /></span>
+                <input
+                  type="email"
+                  placeholder="usuario@email.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  style={styles.input}
+                  className="form-input"
+                  disabled={loading}
+                />
+              </div>
             </div>
-          </div>
+          )}
 
-          <div style={styles.inputGroup}>
-            <label style={styles.label}>Senha</label>
-            <div style={styles.inputWrapper}>
-              <span style={styles.inputIcon}><Lock size={18} /></span>
-              <input
-                type="password"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                style={styles.input}
-                className="form-input"
-                disabled={loading}
-              />
+          {mode !== 'recovery' && ( // Condition based on 'mode'
+            <div style={styles.inputGroup}>
+              <label style={styles.label}>{mode === 'updatePassword' ? 'Nova Senha' : 'Senha'}</label>
+              <div style={styles.inputWrapper}>
+                <span style={styles.inputIcon}><Lock size={18} /></span>
+                <input
+                  type="password"
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  style={styles.input}
+                  className="form-input"
+                  disabled={loading}
+                />
+              </div>
+              {mode === 'login' && ( // Condition based on 'mode'
+                <button 
+                  type="button" 
+                  onClick={() => {
+                    setMode('recovery');
+                    setError('');
+                    setSuccess('');
+                  }}
+                  style={{ ...styles.toggleBtn, alignSelf: 'flex-end', marginTop: '4px', fontSize: '12px' }}
+                >
+                  Esqueci minha senha
+                </button>
+              )}
             </div>
-          </div>
+          )}
 
           <button type="submit" className="btn-primary-glow" style={styles.submitBtn} disabled={loading}>
-            {loading ? 'Processando...' : isLogin ? 'Acessar Conta' : 'Criar Conta'}
+            {loading ? 'Processando...' : 
+             mode === 'recovery' ? 'Enviar Link de Recuperação' : 
+             mode === 'updatePassword' ? 'Redefinir Senha' :
+             mode === 'login' ? 'Acessar Conta' : 'Criar Conta'}
           </button>
 
-          {showResendButton && (
+          {(mode === 'login' || mode === 'signup') && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', marginTop: '20px' }}>
+              <button
+                type="button"
+                onClick={handleGoogleSignIn}
+                disabled={loading}
+                style={{
+                  ...styles.submitBtn, // Re-use basic button styling
+                  backgroundColor: '#4285F4', // Google blue
+                  color: 'white',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '10px',
+                }}
+              >
+                {/* Removed Chrome icon as it caused build error */}
+                Entrar com o Google
+              </button>
+            </div>
+          )}
+
+          {(mode === 'recovery' || mode === 'updatePassword') && (
+            <button 
+              type="button" 
+              onClick={() => {
+                setMode('login');
+                setError('');
+                setSuccess('');
+              }} 
+              style={{ ...styles.toggleBtn, margin: '8px auto 0', display: 'flex', alignItems: 'center', gap: '4px' }}
+            >
+              <ArrowLeft size={14} /> Voltar para o Login
+            </button>
+          )}
+
+          {mode === 'login' && showResendButton && (
             <button 
               type="button" 
               onClick={handleResendConfirmation} 
@@ -276,27 +404,25 @@ export default function Auth({ onLoginSuccess }) {
         </form>
 
         {/* Rodapé Alternador */}
-        <div style={styles.cardFooter}>
-          <p style={styles.footerText}>
-            {isLogin ? 'Não tem uma conta?' : 'Já possui uma conta?'}
-            <button
-              onClick={() => {
-                setIsLogin(!isLogin);
-                setError('');
-                setSuccess('');
-                setShowResendButton(false);
-              }}
-              style={styles.toggleBtn}
-              disabled={loading}
-            >
-              {isLogin ? 'Cadastre-se' : 'Faça Login'}
-            </button>
-          </p>
-          <div style={styles.demoBanner}>
-            <Shield size={12} style={{ marginRight: 4 }} />
-            <span>Dados criptografados e integrados com segurança.</span>
+        {mode !== 'updatePassword' && ( // Condition based on 'mode'
+          <div style={styles.cardFooter}>
+            <p style={styles.footerText}>
+              {mode === 'login' ? 'Não tem uma conta?' : 'Já possui uma conta?'}
+              <button
+                onClick={() => {
+                  setMode(mode === 'login' ? 'signup' : 'login');
+                  setError('');
+                  setSuccess('');
+                  setShowResendButton(false);
+                }}
+                style={styles.toggleBtn}
+                disabled={loading}
+              >
+                {mode === 'login' ? 'Cadastre-se' : 'Faça Login'}
+              </button>
+            </p>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );
@@ -318,7 +444,7 @@ const styles = {
     boxShadow: 'var(--shadow-lg)',
     border: '1px solid var(--border-light)',
     width: '100%',
-    maxWidth: '440px',
+    maxWidth: '480px',
     overflow: 'hidden',
     padding: '40px 32px',
   },
@@ -380,7 +506,8 @@ const styles = {
   },
   submitBtn: {
     width: '100%',
-    padding: '12px',
+    height: '52px',
+    borderRadius: '12px',
     fontSize: '15px',
     fontWeight: '600',
     marginTop: '10px',

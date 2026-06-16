@@ -1,27 +1,29 @@
-/* Design System & Global Styles — Flowday */
+/* Design System & Global Styles â€” Flowday */
 /* Fontes carregadas via <link> no index.html (Inter + Plus Jakarta Sans) */
 
 
 :root {
-  /* Cores Globais (Modo Claro - Aura v2 do Stitch) */
-  --bg-app: #F5F5F0;
-  --bg-app-glass: rgba(250, 250, 247, 0.85);
+  /* Cores Globais (Modo Claro - MyFlowDay 4.0 Linear Style) */
+  --bg-app: #F8FAFC;
+  --bg-app-glass: rgba(248, 250, 252, 0.85);
   --bg-nav-glass: rgba(255, 255, 255, 0.85);
   --bg-card: #FFFFFF;
-  --bg-card-hover: #FAFAF7;
-  --text-main: #1A1C1A;
-  --text-muted: #424842;
-  --text-light: #737972;
+  --bg-card-hover: #F8FAFC;
+  --text-main: #0F172A;
+  --text-muted: #475569;
+  --text-light: #64748B;
   
-  --border-light: #F4F4F2;
-  --border-medium: #EFEEEA;
+  --border-light: #F1F5F9;
+  --border-medium: #E2E8F0;
   
   --primary: #2563EB;
   --primary-light: #DBEAFE;
   --primary-hover: #1D4ED8;
-  --primary-glow: rgba(37, 99, 235, 0.1);
+  --primary-glow: transparent;
   
-  /* Cores de Categorias (Tons pastéis e elegantes) */
+  --secondary: #22D3EE;
+  
+  /* Cores de Categorias */
   --cat-trabalho: #6B7F8A;
   --cat-trabalho-bg: #F0F4F6;
   --cat-pessoal: #7A8B7B;
@@ -32,29 +34,29 @@
   --cat-lazer-bg: #F6F1F3;
   
   /* Cores de Prioridades */
-  --prio-alta-text: #C06C6C;
-  --prio-alta-bg: #FAF0F0;
-  --prio-alta-border: #ECD0D0;
+  --prio-alta-text: #EF4444;
+  --prio-alta-bg: #FEF2F2;
+  --prio-alta-border: #FEE2E2;
   
-  --prio-media-text: #C89658;
-  --prio-media-bg: #FBF7F0;
-  --prio-media-border: #F0E5D3;
+  --prio-media-text: #F59E0B;
+  --prio-media-bg: #FFFBEB;
+  --prio-media-border: #FEF3C7;
   
-  --prio-baixa-text: #6E736E;
-  --prio-baixa-bg: #FAF9F6;
-  --prio-baixa-border: #E5E4DE;
+  --prio-baixa-text: #64748B;
+  --prio-baixa-bg: #F8FAFC;
+  --prio-baixa-border: #F1F5F9;
 
-  /* Efeitos e Sombras Orgânicas (Aura v2) */
-  --shadow-sm: 0 1px 3px rgba(45, 45, 42, 0.02);
-  --shadow-md: 0 8px 30px rgba(45, 45, 42, 0.04); /* Sombra do Stitch */
-  --shadow-lg: 0 16px 40px rgba(45, 45, 42, 0.06);
-  --shadow-glow: 0 0 15px rgba(74, 101, 78, 0.04);
+  /* Efeitos e Sombras OrgÃ¢nicas */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  --shadow-glow: none;
   --radius-sm: 8px;
-  --radius-md: 16px; 
-  --radius-lg: 24px; 
+  --radius-md: 12px; 
+  --radius-lg: 20px; 
   
-  /* Fontes elegantes e limpas */
-  --font-display: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  /* Fontes elegantes e limpas (ObrigatÃ³rio Inter) */
+  --font-display: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-body: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   
   /* Grid & Spacing */
@@ -109,7 +111,7 @@ a {
   text-decoration: none;
 }
 
-/* Utilitários Globais */
+/* UtilitÃ¡rios Globais */
 .container {
   width: 100%;
   max-width: 1200px;
@@ -117,7 +119,7 @@ a {
   padding: 0 var(--space-6);
 }
 
-/* Animações */
+/* AnimaÃ§Ãµes */
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: translateY(0); }
@@ -264,7 +266,7 @@ a {
   border-color: var(--prio-alta-border);
 }
 
-.badge-priority.média {
+.badge-priority.mÃ©dia {
   color: var(--prio-media-text);
   background-color: var(--prio-media-bg);
   border-color: var(--prio-media-border);
@@ -304,7 +306,7 @@ a {
   animation: scaleUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
 }
 
-/* Elementos de Input padrão premium */
+/* Elementos de Input padrÃ£o premium */
 .form-input {
   width: 100%;
   padding: 10px var(--space-4);
@@ -321,7 +323,7 @@ a {
   box-shadow: 0 0 0 3px var(--primary-glow);
 }
 
-/* Efeito Glow para botões principais */
+/* Efeito Glow para botÃµes principais */
 .btn-primary-glow {
   background-color: var(--primary);
   color: white;
@@ -347,13 +349,13 @@ a {
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Botão de excluir - hover vermelho */
+/* BotÃ£o de excluir - hover vermelho */
 .delete-btn:hover {
   color: #ef4444 !important;
   background-color: #fef2f2 !important;
 }
 
-/* Botão de editar - hover primary */
+/* BotÃ£o de editar - hover primary */
 .edit-btn:hover {
   background-color: var(--primary-light) !important;
 }
@@ -361,13 +363,13 @@ a {
   color: var(--primary) !important;
 }
 
-/* Modal header reutilizável */
+/* Modal header reutilizÃ¡vel */
 .modal-content .modalHeader,
 .modal-content > div:first-child {
   border-bottom: 1px solid var(--border-light);
 }
 
-/* Animação de Spinner de Loading */
+/* AnimaÃ§Ã£o de Spinner de Loading */
 @keyframes spin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
@@ -385,7 +387,7 @@ a {
     gap: 8px;
   }
 
-  /* Calendário - células menores */
+  /* CalendÃ¡rio - cÃ©lulas menores */
   .dayCell {
     min-height: 56px !important;
   }
@@ -403,7 +405,7 @@ a {
 }
 
 @media (max-width: 480px) {
-  /* Navbar - esconder texto e mostrar só ícones */
+  /* Navbar - esconder texto e mostrar sÃ³ Ã­cones */
   header nav button span {
     display: none;
   }
@@ -423,19 +425,19 @@ textarea:focus-visible {
   outline-offset: 2px;
 }
 
-/* Seleção de texto premium */
+/* SeleÃ§Ã£o de texto premium */
 ::selection {
   background-color: var(--primary-light);
   color: var(--primary);
 }
 
-/* Transição suave para inputs do modal */
+/* TransiÃ§Ã£o suave para inputs do modal */
 input:focus, select:focus, textarea:focus {
   border-color: var(--primary);
   box-shadow: 0 0 0 3px var(--primary-glow);
 }
 
-/* Botão de logout hover */
+/* BotÃ£o de logout hover */
 .logoutBtn:hover,
 button[title="Sair do Flowday"]:hover {
   color: #ef4444;
@@ -1309,7 +1311,7 @@ button[title="Sair do Flowday"]:hover {
   display: flex;
   flex-direction: column;
   gap: 40px;
-  padding-bottom: 80px; /* para não sumir atrás do menu inferior */
+  padding-bottom: 80px; /* para nÃ£o sumir atrÃ¡s do menu inferior */
 }
 
 /* Greeting Section */
@@ -1392,7 +1394,7 @@ button[title="Sair do Flowday"]:hover {
   opacity: 0.8;
 }
 
-/* Hero Section / Prioridade Máxima */
+/* Hero Section / Prioridade MÃ¡xima */
 .home-hero-card {
   position: relative;
   background-color: var(--bg-card);
@@ -1500,7 +1502,7 @@ button[title="Sair do Flowday"]:hover {
   flex-shrink: 0;
 }
 
-/* Gráfico Decorativo Geométrico e Neutro */
+/* GrÃ¡fico Decorativo GeomÃ©trico e Neutro */
 .home-graphic-circle {
   width: 120px;
   height: 120px;
@@ -1798,7 +1800,7 @@ button[title="Sair do Flowday"]:hover {
   overflow: hidden;
 }
 
-/* Efeito Ripple Geométrico Decorativo */
+/* Efeito Ripple GeomÃ©trico Decorativo */
 .home-ritmo-wave-container {
   width: 140px;
   height: 140px;
@@ -1844,9 +1846,9 @@ button[title="Sair do Flowday"]:hover {
   }
 }
 
-/* ═══════════════════════════════════════════════════════════
-   SPRINT 2 — Tela de Tarefas (Aura v2 Design System)
-   ═══════════════════════════════════════════════════════════ */
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+   SPRINT 2 â€” Tela de Tarefas (Aura v2 Design System)
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 
 /* Container principal */
 .tasks-view {
@@ -1856,7 +1858,7 @@ button[title="Sair do Flowday"]:hover {
   padding-bottom: 100px;
 }
 
-/* ── Page Header ──────────────────────────────────────────── */
+/* â”€â”€ Page Header â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .tasks-page-header {
   display: flex;
   align-items: flex-end;
@@ -1916,7 +1918,7 @@ button[title="Sair do Flowday"]:hover {
   min-width: 34px;
 }
 
-/* ── Controles (Busca + Botão) ────────────────────────────── */
+/* â”€â”€ Controles (Busca + BotÃ£o) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .tasks-controls {
   display: flex;
   align-items: center;
@@ -1994,7 +1996,7 @@ button[title="Sair do Flowday"]:hover {
   border-radius: var(--radius-md);
 }
 
-/* ── Filtros de Status e Categoria ───────────────────────── */
+/* â”€â”€ Filtros de Status e Categoria â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .tasks-filter-row {
   display: flex;
   flex-direction: column;
@@ -2084,7 +2086,7 @@ button[title="Sair do Flowday"]:hover {
   font-weight: 650;
 }
 
-/* ── Seções Temporais ─────────────────────────────────────── */
+/* â”€â”€ SeÃ§Ãµes Temporais â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .tasks-sections-wrapper {
   display: flex;
   flex-direction: column;
@@ -2218,7 +2220,7 @@ button[title="Sair do Flowday"]:hover {
   background-color: #FFF5F5;
 }
 
-/* ── Estados Vazios ───────────────────────────────────────── */
+/* â”€â”€ Estados Vazios â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .tasks-empty-state {
   display: flex;
   flex-direction: column;
@@ -2291,7 +2293,7 @@ button[title="Sair do Flowday"]:hover {
   box-shadow: 0 6px 18px rgba(74, 101, 78, 0.3);
 }
 
-/* ── Modal refinado ───────────────────────────────────────── */
+/* â”€â”€ Modal refinado â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .tasks-modal {
   max-width: 520px;
 }
@@ -2306,7 +2308,7 @@ button[title="Sair do Flowday"]:hover {
   font-size: 20px;
 }
 
-/* ── Responsividade Mobile ────────────────────────────────── */
+/* â”€â”€ Responsividade Mobile â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 @media (max-width: 768px) {
   .tasks-page-header {
     flex-direction: column;
@@ -2359,11 +2361,11 @@ button[title="Sair do Flowday"]:hover {
 }
 
 
-/* ═══════════════════════════════════════════════════════════
-   SPRINT 3 — Sistema de Objetivos (Aura v2)
-   ═══════════════════════════════════════════════════════════ */
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+   SPRINT 3 â€” Sistema de Objetivos (Aura v2)
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 
-/* ── GoalsView — Tela Principal ─────────────────────────── */
+/* â”€â”€ GoalsView â€” Tela Principal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .goals-view {
   display: flex;
   flex-direction: column;
@@ -2412,7 +2414,7 @@ button[title="Sair do Flowday"]:hover {
   border-radius: var(--radius-md);
 }
 
-/* ── Filtros de Objetivos ────────────────────────────────── */
+/* â”€â”€ Filtros de Objetivos â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .goals-filter-row {
   display: flex;
   align-items: center;
@@ -2463,14 +2465,14 @@ button[title="Sair do Flowday"]:hover {
   color: var(--text-light);
 }
 
-/* ── Grid de GoalCards ───────────────────────────────────── */
+/* â”€â”€ Grid de GoalCards â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .goals-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(min(340px, 100%), 1fr));
   gap: 16px;
 }
 
-/* ── GoalCard ────────────────────────────────────────────── */
+/* â”€â”€ GoalCard â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .goal-card {
   position: relative;
   background-color: var(--bg-card);
@@ -2505,7 +2507,7 @@ button[title="Sair do Flowday"]:hover {
   box-shadow: 0 0 0 2px rgba(74, 101, 78, 0.08), var(--shadow-sm);
 }
 
-/* Borda colorida à esquerda */
+/* Borda colorida Ã  esquerda */
 .goal-card-accent {
   position: absolute;
   left: 0;
@@ -2686,7 +2688,7 @@ button[title="Sair do Flowday"]:hover {
   background-color: color-mix(in srgb, var(--goal-color, var(--primary)) 10%, transparent);
 }
 
-/* ── Menu de opções do GoalCard ──────────────────────────── */
+/* â”€â”€ Menu de opÃ§Ãµes do GoalCard â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .goal-menu-wrap {
   position: relative;
 }
@@ -2760,7 +2762,7 @@ button[title="Sair do Flowday"]:hover {
   margin: 4px 0;
 }
 
-/* ── GoalModal ───────────────────────────────────────────── */
+/* â”€â”€ GoalModal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .goal-modal {
   max-width: 520px;
 }
@@ -2787,7 +2789,7 @@ button[title="Sair do Flowday"]:hover {
   color: var(--text-main);
 }
 
-/* Grid de ícones */
+/* Grid de Ã­cones */
 .goal-icon-grid {
   display: grid;
   grid-template-columns: repeat(8, 1fr);
@@ -2850,7 +2852,7 @@ button[title="Sair do Flowday"]:hover {
   transform: scale(1.1);
 }
 
-/* ── GoalTasksModal ──────────────────────────────────────── */
+/* â”€â”€ GoalTasksModal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .goal-tasks-modal {
   max-width: 560px;
   max-height: 80vh;
@@ -3017,7 +3019,7 @@ button[title="Sair do Flowday"]:hover {
   font-family: var(--font-display);
 }
 
-/* ── GoalsEmptyState ─────────────────────────────────────── */
+/* â”€â”€ GoalsEmptyState â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .goals-empty-state {
   display: flex;
   flex-direction: column;
@@ -3085,7 +3087,7 @@ button[title="Sair do Flowday"]:hover {
   box-shadow: 0 6px 18px rgba(74, 101, 78, 0.3);
 }
 
-/* ── Widget de Objetivos na Home ─────────────────────────── */
+/* â”€â”€ Widget de Objetivos na Home â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .home-goals-section {
   display: flex;
   flex-direction: column;
@@ -3262,7 +3264,7 @@ button[title="Sair do Flowday"]:hover {
   color: white;
 }
 
-/* ── Responsividade Sprint 3 ─────────────────────────────── */
+/* â”€â”€ Responsividade Sprint 3 â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 @media (max-width: 768px) {
   .goals-page-header {
     flex-direction: column;
@@ -3325,11 +3327,11 @@ button[title="Sair do Flowday"]:hover {
 }
 
 
-/* ═══════════════════════════════════════════════════════════
-   SPRINT 4 — Evolução e Conquistas (Aura v2)
-   ═══════════════════════════════════════════════════════════ */
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+   SPRINT 4 â€” EvoluÃ§Ã£o e Conquistas (Aura v2)
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 
-/* ── EvolutionView — Container ──────────────────────────── */
+/* â”€â”€ EvolutionView â€” Container â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .evo-view {
   display: flex;
   flex-direction: column;
@@ -3337,7 +3339,7 @@ button[title="Sair do Flowday"]:hover {
   padding-bottom: 100px;
 }
 
-/* ── Banner motivacional ─────────────────────────────────── */
+/* â”€â”€ Banner motivacional â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .evo-motivation-banner {
   display: flex;
   align-items: center;
@@ -3374,7 +3376,7 @@ button[title="Sair do Flowday"]:hover {
   margin-top: 2px;
 }
 
-/* ── Grid de métricas ────────────────────────────────────── */
+/* â”€â”€ Grid de mÃ©tricas â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .evo-metrics-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(200px, 100%), 1fr));
@@ -3431,7 +3433,7 @@ button[title="Sair do Flowday"]:hover {
   font-family: var(--font-display);
 }
 
-/* ── Cards da tela Evolução ──────────────────────────────── */
+/* â”€â”€ Cards da tela EvoluÃ§Ã£o â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .evo-card {
   background-color: var(--bg-card);
   border: 1px solid var(--border-light);
@@ -3468,7 +3470,7 @@ button[title="Sair do Flowday"]:hover {
   letter-spacing: 0.05em;
 }
 
-/* ── Sequência (streak) ──────────────────────────────────── */
+/* â”€â”€ SequÃªncia (streak) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .evo-streak-badge {
   font-size: 13px;
   font-weight: 700;
@@ -3524,7 +3526,7 @@ button[title="Sair do Flowday"]:hover {
   transition: width 0.8s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-/* ── Mapa de Ritmo na Evolução ───────────────────────────── */
+/* â”€â”€ Mapa de Ritmo na EvoluÃ§Ã£o â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .evo-rhythm-row {
   display: flex;
   align-items: flex-end;
@@ -3546,7 +3548,7 @@ button[title="Sair do Flowday"]:hover {
   letter-spacing: 0.04em;
 }
 
-/* ── Conquistas ──────────────────────────────────────────── */
+/* â”€â”€ Conquistas â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .evo-achievements-count {
   font-size: 12.5px;
   font-weight: 600;
@@ -3633,7 +3635,7 @@ button[title="Sair do Flowday"]:hover {
   overflow: hidden;
 }
 
-/* ── Objetivos concluídos ────────────────────────────────── */
+/* â”€â”€ Objetivos concluÃ­dos â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .evo-completed-goals-list {
   display: flex;
   flex-direction: column;
@@ -3673,7 +3675,7 @@ button[title="Sair do Flowday"]:hover {
   white-space: nowrap;
 }
 
-/* ── Gráficos ────────────────────────────────────────────── */
+/* â”€â”€ GrÃ¡ficos â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .evo-charts-row {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr));
@@ -3774,7 +3776,7 @@ button[title="Sair do Flowday"]:hover {
   transition: width 0.7s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-/* ── AchievementToast ────────────────────────────────────── */
+/* â”€â”€ AchievementToast â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .achievement-toast-container {
   position: fixed;
   bottom: 100px;
@@ -3912,7 +3914,7 @@ button[title="Sair do Flowday"]:hover {
   line-height: 1.45;
 }
 
-/* ── Bloco Evolução na Home ──────────────────────────────── */
+/* â”€â”€ Bloco EvoluÃ§Ã£o na Home â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .home-evo-block {
   display: flex;
   flex-direction: column;
@@ -3977,7 +3979,7 @@ button[title="Sair do Flowday"]:hover {
   white-space: nowrap;
 }
 
-/* ── Responsividade Sprint 4 ─────────────────────────────── */
+/* â”€â”€ Responsividade Sprint 4 â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 @media (max-width: 768px) {
   .evo-metrics-grid {
     grid-template-columns: repeat(2, 1fr);
@@ -4025,7 +4027,7 @@ button[title="Sair do Flowday"]:hover {
 }
 
 
-/* ── Onboarding (Guia de Boas-Vindas) ────────────────────────── */
+/* â”€â”€ Onboarding (Guia de Boas-Vindas) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .onboarding-card {
   background: linear-gradient(135deg, var(--primary-light) 0%, var(--bg-card) 100%);
   border: 1px dashed rgba(74, 101, 78, 0.4);
@@ -4292,7 +4294,7 @@ button[title="Sair do Flowday"]:hover {
 }
 
 /* ================================================================
-   DARK MODE — Variáveis sobrescritas quando <html class="dark">
+   DARK MODE â€” VariÃ¡veis sobrescritas quando <html class="dark">
    ================================================================ */
 .dark {
   /* Fundos */
@@ -4311,7 +4313,7 @@ button[title="Sair do Flowday"]:hover {
   --border-light:     #334155;
   --border-medium:    #475569;
 
-  /* Primário adaptado ao dark (Cor Secundária Cyan) */
+  /* PrimÃ¡rio adaptado ao dark (Cor SecundÃ¡ria Cyan) */
   --primary:          #22D3EE;
   --primary-light:    rgba(34, 211, 238, 0.12);
   --primary-hover:    #06B6D4;
@@ -4389,7 +4391,7 @@ button[title="Sair do Flowday"]:hover {
   background-color: #200F0F;
 }
 
-/* ─── ESTILOS ADICIONAIS FLOWDAY (KANBAN, CALENDÁRIO, INBOX, PAYWALL) ─── */
+/* â”€â”€â”€ ESTILOS ADICIONAIS FLOWDAY (KANBAN, CALENDÃRIO, INBOX, PAYWALL) â”€â”€â”€ */
 
 .quick-inbox-container {
   display: flex;
@@ -4805,13 +4807,13 @@ button[title="Sair do Flowday"]:hover {
 }
 
 /* ================================================================
-   SAFE AREA � Mobile Bottom Nav
+   SAFE AREA ï¿½ Mobile Bottom Nav
    ================================================================ */
 .app-bottom-nav {
   padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 6px);
 }
 
-/* ── Flowday V2: Additional Safe Areas & Responsiveness ── */
+/* â”€â”€ Flowday V2: Additional Safe Areas & Responsiveness â”€â”€ */
 .safe-area-inset {
   padding-top: env(safe-area-inset-top, 0px);
   padding-bottom: env(safe-area-inset-bottom, 0px);
@@ -5096,7 +5098,7 @@ body,
   box-sizing: border-box !important;
 }
 
-/* Fase 3: Calendário Mobile */
+/* Fase 3: CalendÃ¡rio Mobile */
 @media (max-width: 768px) {
   .calendar-view-container {
     padding: var(--space-2) !important;
@@ -5192,3 +5194,38 @@ body,
   }
 }
 
+/* MyFlowDay 4.0 Strict Overrides */
+.home-hero-card, .onboarding-card, .goal-progress-row, .home-evo-card, .stat-card, .goal-modal-content, .focus-card {
+  border-radius: 20px !important;
+  padding: 24px !important;
+  background-color: var(--bg-card) !important;
+  border: 1px solid var(--border-medium) !important;
+  box-shadow: var(--shadow-sm) !important;
+  transition: transform 150ms ease !important;
+}
+
+.home-hero-card:hover, .onboarding-card:hover, .goal-progress-row:hover, .home-evo-card:hover, .stat-card:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: var(--shadow-md) !important;
+}
+
+.dark .home-hero-card, .dark .onboarding-card, .dark .goal-progress-row, .dark .home-evo-card, .dark .stat-card, .dark .focus-card {
+  background-color: #1E293B !important;
+  border-color: #334155 !important;
+}
+
+/* Auth e Brand Overrides */
+.auth-brand-text {
+  background: none !important;
+  color: var(--text-main) !important;
+  -webkit-text-fill-color: var(--text-main) !important;
+}
+.dark .auth-brand-text {
+  color: #FFFFFF !important;
+  -webkit-text-fill-color: #FFFFFF !important;
+}
+
+/* Foco */
+.focus-circle-progress {
+  stroke-linecap: round;
+}
