@@ -2482,7 +2482,6 @@ button[title="Sair do Flowday"]:hover {
   flex-direction: column;
   gap: 16px;
   transition: box-shadow 0.25s, transform 0.25s;
-  overflow: hidden;
   min-width: 0;
   width: 100%;
 }

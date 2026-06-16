@@ -192,7 +192,8 @@ export default function TodoView() {
     handleAddCategory,
     handleDeleteCategory,
     habitsManager,
-    logEvent
+    logEvent,
+    goals
   } = useAppContext();
 
   // Estados locais
