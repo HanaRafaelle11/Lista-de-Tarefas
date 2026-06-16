@@ -756,7 +756,7 @@ export default function TodoView() {
         </>
       )}
 
-      {viewMode === 'kanban' ? (
+      {viewMode === 'kanban' && (
         (() => {
           const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
           return (
@@ -887,7 +887,9 @@ export default function TodoView() {
             </div>
           );
         })()
-      ) : viewMode === 'calendar' ? (
+      )}
+
+      {viewMode === 'calendar' && (
         <div className="calendar-view-container animate-fade-in">
           <div className="calendar-header">
             <h3 className="calendar-title">{getMonthName()}</h3>
