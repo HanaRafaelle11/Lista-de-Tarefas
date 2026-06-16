@@ -211,7 +211,8 @@ export default function Auth({ onLoginSuccess }) {
           </button>
           
           <div style={{ ...styles.logoContainer, marginTop: '20px' }} className="auth-brand-container">
-            <img src="/branding/logo-dark.svg" alt="MyFlowDay" style={{ height: '56px', width: 'auto', objectFit: 'contain', borderRadius: '8px' }} />
+            <img src="/branding/logo-light.svg" alt="MyFlowDay" className="auth-logo-img light-only" style={{ height: '48px', width: 'auto', objectFit: 'contain' }} />
+            <img src="/branding/logo-dark.svg" alt="MyFlowDay" className="auth-logo-img dark-only" style={{ height: '48px', width: 'auto', objectFit: 'contain', display: 'none' }} />
           </div>
           <p style={styles.subtitle}>
             {isLogin 

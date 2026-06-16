@@ -45,7 +45,6 @@ const logoLight = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2400 800
 
 // 3. Versão dark (#0F172A)
 const logoDark = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2400 800" width="2400" height="800">
-  <rect width="2400" height="800" fill="#0F172A" />
   <defs>
     <linearGradient id="flow" x1="0%" y1="100%" x2="100%" y2="0%">
       <stop offset="0%" stop-color="#2563EB" />

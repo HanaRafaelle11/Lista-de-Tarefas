@@ -4338,6 +4338,10 @@ button[title="Sair do Flowday"]:hover {
   --shadow-glow:      0 0 15px rgba(109, 184, 118, 0.08);
 }
 
+/* Auth Logo visibilidade */
+.dark .auth-brand-container .light-only { display: none !important; }
+.dark .auth-brand-container .dark-only { display: block !important; }
+
 /* Navbar com fundo escuro */
 .dark .navbar-header {
   background-color: rgba(24, 28, 26, 0.90);
