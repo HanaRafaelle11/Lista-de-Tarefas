@@ -179,7 +179,7 @@ export default function GoalCard({
             title="Gerenciar tarefas vinculadas"
           >
             <Link2 size={13} />
-            <span>{totalTasks === 0 ? 'Adicionar tarefas' : 'Gerenciar tarefas'}</span>
+            <span>{totalTasks === 0 ? 'Vincular tarefas' : 'Gerenciar tarefas'}</span>
           </button>
         )}
       </div>

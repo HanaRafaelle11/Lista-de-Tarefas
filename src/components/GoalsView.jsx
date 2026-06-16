@@ -233,6 +233,7 @@ export default function GoalsView() {
           isOpen={isGoalModalOpen}
           onClose={() => { setIsGoalModalOpen(false); setEditingGoal(null); }}
           onSave={handleSaveGoal}
+          onDelete={() => { onDeleteGoal(editingGoal.id); setIsGoalModalOpen(false); setEditingGoal(null); }}
           editingGoal={editingGoal}
         />
       )}

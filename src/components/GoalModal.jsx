@@ -18,7 +18,7 @@ const ICONS = [
   '❤️', '🎨', '🎵', '🏋️', '✈️', '🌱', '📈', '⭐',
 ];
 
-export default function GoalModal({ isOpen, onClose, onSave, editingGoal }) {
+export default function GoalModal({ isOpen, onClose, onSave, onDelete, editingGoal }) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [color, setColor] = useState('#4A654E');
@@ -304,17 +304,32 @@ export default function GoalModal({ isOpen, onClose, onSave, editingGoal }) {
           )}
 
           {/* Ações */}
-          <div className="todo-modal-actions">
-            <button type="button" onClick={onClose} className="todo-modal-cancel-btn">
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              className="todo-modal-save-btn btn-primary-glow"
-              style={{ backgroundColor: color }}
-            >
-              {editingGoal ? 'Salvar Alterações' : 'Criar Objetivo'}
-            </button>
+          <div className="todo-modal-actions" style={{ justifyContent: 'space-between', width: '100%' }}>
+            <div>
+              {editingGoal && onDelete && (
+                <button
+                  type="button"
+                  onClick={onDelete}
+                  className="todo-modal-cancel-btn"
+                  style={{ color: 'var(--danger)' }}
+                >
+                  <Trash2 size={16} style={{ marginRight: '6px' }} />
+                  Excluir
+                </button>
+              )}
+            </div>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button type="button" onClick={onClose} className="todo-modal-cancel-btn">
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                className="todo-modal-save-btn btn-primary-glow"
+                style={{ backgroundColor: color }}
+              >
+                {editingGoal ? 'Salvar Alterações' : 'Criar Objetivo'}
+              </button>
+            </div>
           </div>
         </form>
       </div>

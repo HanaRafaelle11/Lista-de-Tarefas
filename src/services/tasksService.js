@@ -102,8 +102,7 @@ export const tasksService = {
           priority:    taskData.priority,
           due_date:    taskData.dueDate || null,
           completed:   false,
-          completed_at: null,
-          updated_at:   nowIso
+          completed_at: null
         }])
         .select()
         .single();
