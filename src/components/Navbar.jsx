@@ -50,12 +50,13 @@ export default function Navbar() {
             </h1>
           </div>
           
-          <div className="navbar-brand" style={{ display: 'flex', alignItems: 'center', marginLeft: '16px' }}>
+          <div className="navbar-brand" style={{ display: 'flex', alignItems: 'center', marginLeft: '16px', gap: '8px' }}>
             <img 
-              src={theme === 'dark' ? '/branding/logo-dark.svg' : '/branding/logo-light.svg'} 
-              alt="MyFlowDay" 
-              style={{ height: '32px', width: 'auto', objectFit: 'contain' }}
+              src="/branding/logo.svg" 
+              alt="MyFlowDay Symbol" 
+              style={{ height: '24px', width: 'auto', objectFit: 'contain' }}
             />
+            <span className="hide-on-mobile" style={{ fontSize: '18px', fontWeight: 800, letterSpacing: '-0.5px', color: 'var(--text-main)', margin: 0 }}>MyFlowDay</span>
           </div>
 
           {/* Desktop Navigation Links (Adequada para Desktop) */}

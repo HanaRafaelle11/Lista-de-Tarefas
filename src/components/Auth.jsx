@@ -190,29 +190,9 @@ export default function Auth({ onLoginSuccess }) {
       <div style={styles.authCard}>
         {/* Top Header com Gradiente */}
         <div style={{ position: 'relative', ...styles.cardHeader }}>
-          <button
-            onClick={() => window.location.href = 'https://flowday.app'}
-            style={{
-              position: 'absolute',
-              top: '20px',
-              left: '20px',
-              background: 'transparent',
-              border: 'none',
-              color: 'var(--text-light)',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px',
-              fontSize: '13px'
-            }}
-            title="Voltar para a Landing Page"
-          >
-            <ArrowLeft size={16} /> Voltar
-          </button>
-          
-          <div style={{ ...styles.logoContainer, marginTop: '20px' }} className="auth-brand-container">
-            <img src="/branding/logo-light.svg" alt="MyFlowDay" className="auth-logo-img light-only" style={{ height: '48px', width: 'auto', objectFit: 'contain' }} />
-            <img src="/branding/logo-dark.svg" alt="MyFlowDay" className="auth-logo-img dark-only" style={{ height: '48px', width: 'auto', objectFit: 'contain', display: 'none' }} />
+          <div style={{ ...styles.logoContainer, marginTop: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px' }} className="auth-brand-container">
+            <img src="/branding/logo.svg" alt="MyFlowDay" style={{ height: '40px', width: 'auto', objectFit: 'contain' }} />
+            <h1 style={{ fontSize: '32px', fontWeight: 800, margin: 0, letterSpacing: '-1px', color: 'var(--text-main)' }}>MyFlowDay</h1>
           </div>
           <p style={styles.subtitle}>
             {isLogin 
