@@ -1,8 +1,74 @@
-import React from 'react';
-import { Calendar, Trash2, Edit2, AlertCircle } from 'lucide-react';
+import React, { useState } from 'react';
+import { Calendar, Trash2, Edit2, AlertCircle, CalendarPlus, Check } from 'lucide-react';
 import { parseTaskMetadata, formatDescriptionWithoutMetadata } from '../contexts/AppContext';
 
+// ─── Gera e faz download de um arquivo .ics (iCalendar) para a tarefa ─────────
+function exportTaskToCalendar(task) {
+  const now = new Date();
+  const uid = `flowday-${task.id}-${Date.now()}@myflowday.app`;
+
+  // Formata data no padrão iCal: YYYYMMDD
+  const formatICalDate = (dateStr) => {
+    if (!dateStr) return null;
+    return dateStr.replace(/-/g, '');
+  };
+
+  // Formata timestamp no padrão iCal: YYYYMMDDTHHmmssZ
+  const formatICalDateTime = (date) => {
+    return date.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+  };
+
+  const dtStamp = formatICalDateTime(now);
+  const startDate = task.dueDate ? formatICalDate(task.dueDate) : formatICalDate(now.toISOString().split('T')[0]);
+
+  // Constrói o conteúdo do arquivo .ics
+  const lines = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//MyFlowDay//MyFlowDay App//PT',
+    'CALSCALE:GREGORIAN',
+    'METHOD:PUBLISH',
+    'BEGIN:VEVENT',
+    `UID:${uid}`,
+    `DTSTAMP:${dtStamp}`,
+    `DTSTART;VALUE=DATE:${startDate}`,
+    `DTEND;VALUE=DATE:${startDate}`,
+    `SUMMARY:${task.title}`,
+    task.description ? `DESCRIPTION:${task.description.replace(/\n/g, '\\n').substring(0, 255)}` : '',
+    `CATEGORIES:${task.category || 'Geral'},${task.priority || 'Normal'}`,
+    `STATUS:${task.completed ? 'COMPLETED' : 'CONFIRMED'}`,
+    `PRIORITY:${task.priority === 'Alta' ? 1 : task.priority === 'Média' ? 5 : 9}`,
+    'BEGIN:VALARM',
+    'TRIGGER:-PT30M',
+    'ACTION:DISPLAY',
+    'DESCRIPTION:Lembrete — MyFlowDay',
+    'END:VALARM',
+    'END:VEVENT',
+    'END:VCALENDAR',
+  ].filter(Boolean).join('\r\n');
+
+  // Cria e dispara o download do arquivo .ics
+  const blob = new Blob([lines], { type: 'text/calendar;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `${task.title.replace(/[^a-zA-Z0-9\u00C0-\u017F ]/g, '').trim().substring(0, 40)}.ics`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
+
 export default function TodoItem({ item, onToggleComplete, onDelete, onEdit }) {
+  const [calExported, setCalExported] = useState(false);
+
+  const handleExportCalendar = () => {
+    exportTaskToCalendar(item);
+    setCalExported(true);
+    setTimeout(() => setCalExported(false), 2500);
+  };
+
   // Verificar se a tarefa está atrasada
   const isOverdue = () => {
     if (item.completed) return false;
@@ -97,8 +163,22 @@ export default function TodoItem({ item, onToggleComplete, onDelete, onEdit }) {
         </div>
       </div>
 
-      {/* Ações (Editar / Excluir) */}
+      {/* Ações (Agenda / Editar / Excluir) */}
       <div className="todo-item-actions">
+        {/* Botão Adicionar à Agenda */}
+        <button
+          onClick={handleExportCalendar}
+          className="todo-item-action-btn"
+          title={calExported ? 'Adicionado!' : 'Adicionar à Agenda (.ics)'}
+          aria-label={calExported ? 'Tarefa exportada para agenda' : 'Exportar para agenda'}
+          style={{
+            color: calExported ? '#22c55e' : 'var(--text-light)',
+            transition: 'color 0.3s',
+          }}
+        >
+          {calExported ? <Check size={15} /> : <CalendarPlus size={15} />}
+        </button>
+
         {!item.completed && (
           <button 
             onClick={() => onEdit(item)}
@@ -117,6 +197,7 @@ export default function TodoItem({ item, onToggleComplete, onDelete, onEdit }) {
           <Trash2 size={15} />
         </button>
       </div>
+
     </div>
   );
 }

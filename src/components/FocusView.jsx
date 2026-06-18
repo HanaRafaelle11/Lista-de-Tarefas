@@ -42,6 +42,7 @@ export default function FocusView() {
   const [ambientSoundFile, setAmbientSoundFile] = useState(() => localStorage.getItem('flowday_ambient_sound_file') || 'none');
   const [ambientSoundVolume, setAmbientSoundVolume] = useState(() => Number(localStorage.getItem('flowday_ambient_sound_volume')) || 0.5);
   const [isAmbientPlaying, setIsAmbientPlaying] = useState(() => localStorage.getItem('flowday_ambient_is_playing') === 'true');
+  const [audioBlocked, setAudioBlocked] = useState(false); // Rastreia bloqueio de autoplay do navegador
   const audioRef = useRef(null);
 
   // Efeito para controle do áudio ambiente
@@ -52,6 +53,7 @@ export default function FocusView() {
       audioRef.current.pause();
       audioRef.current.src = '';
       setIsAmbientPlaying(false);
+      setAudioBlocked(false);
       localStorage.setItem('flowday_ambient_is_playing', 'false');
       localStorage.setItem('flowday_ambient_sound_file', 'none');
       return;
@@ -62,18 +64,38 @@ export default function FocusView() {
     
     if (!currentSrc.includes(newSrc)) {
       audioRef.current.src = newSrc;
-      audioRef.current.load(); // Recarrega o áudio para o novo src
+      audioRef.current.load();
       if (isAmbientPlaying) {
-        audioRef.current.play().catch(e => console.error("Erro ao tocar áudio ambiente:", e));
+        audioRef.current.play()
+          .then(() => setAudioBlocked(false))
+          .catch(e => {
+            if (e.name === 'NotAllowedError') {
+              // Bloqueio de autoplay do navegador — requer interação do usuário
+              setAudioBlocked(true);
+              setIsAmbientPlaying(false);
+              console.info('[Audio] Autoplay bloqueado pelo navegador. Aguardando interação do usuário.');
+            } else {
+              console.error('[Audio] Erro ao tocar áudio ambiente:', e);
+            }
+          });
       }
     } else if (isAmbientPlaying) {
-      audioRef.current.play().catch(e => console.error("Erro ao tocar áudio ambiente:", e));
+      audioRef.current.play()
+        .then(() => setAudioBlocked(false))
+        .catch(e => {
+          if (e.name === 'NotAllowedError') {
+            setAudioBlocked(true);
+            setIsAmbientPlaying(false);
+          } else {
+            console.error('[Audio] Erro ao tocar áudio ambiente:', e);
+          }
+        });
     } else {
       audioRef.current.pause();
     }
 
     audioRef.current.volume = ambientSoundVolume;
-    audioRef.current.loop = true; // Sons ambientes devem fazer loop
+    audioRef.current.loop = true;
 
     localStorage.setItem('flowday_ambient_sound_file', ambientSoundFile);
     localStorage.setItem('flowday_ambient_sound_volume', ambientSoundVolume);
@@ -292,8 +314,18 @@ export default function FocusView() {
 
   return (
     <div className="focus-view-container animate-fade-in">
-      {/* Elemento de áudio ambiente (oculto) */}
-      <audio ref={audioRef} />
+      {/* Elemento de áudio ambiente (oculto) — erros são tratados com feedback visual */}
+      <audio
+        ref={audioRef}
+        onError={() => {
+          if (ambientSoundFile !== 'none') {
+            setAudioBlocked(true);
+            setIsAmbientPlaying(false);
+            console.warn(`[Audio] Arquivo não encontrado: /assets/audio/${ambientSoundFile}. Coloque o arquivo em public/assets/audio/`);
+          }
+        }}
+      />
+
 
       <div className="tasks-page-header" style={{ marginBottom: '24px' }}>
         <h1 className="tasks-page-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -443,7 +475,19 @@ export default function FocusView() {
               {/* Controles de Play/Pause e Volume */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <button 
-                  onClick={() => setIsAmbientPlaying(!isAmbientPlaying)}
+                  onClick={() => {
+                    const newPlaying = !isAmbientPlaying;
+                    setIsAmbientPlaying(newPlaying);
+                    // Tenta tocar imediatamente ao clicar (resolve bloqueio de autoplay)
+                    if (newPlaying && audioRef.current && ambientSoundFile !== 'none') {
+                      audioRef.current.play()
+                        .then(() => setAudioBlocked(false))
+                        .catch(e => console.warn('[Audio] Play manual falhou:', e));
+                    } else if (!newPlaying && audioRef.current) {
+                      audioRef.current.pause();
+                      setAudioBlocked(false);
+                    }
+                  }}
                   disabled={ambientSoundFile === 'none'}
                   style={{ 
                     width: '36px', 
@@ -478,6 +522,22 @@ export default function FocusView() {
                 />
                 {ambientSoundVolume === 0 && <VolumeX size={18} color="var(--text-light)" />}
               </div>
+
+              {/* Banner de aviso de autoplay bloqueado */}
+              {audioBlocked && (
+                <div style={{
+                  display: 'flex', alignItems: 'center', gap: '8px',
+                  padding: '8px 12px', borderRadius: '8px',
+                  backgroundColor: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)',
+                  fontSize: '12px', color: '#92400e',
+                }}>
+                  <span>🔇</span>
+                  <span>
+                    <strong>Clique para ativar o som.</strong>{' '}
+                    O navegador bloqueou a reprodução automática. Clique no botão ▶ acima para iniciar.
+                  </span>
+                </div>
+              )}
             </div>
           </div>
 

@@ -3,6 +3,7 @@ import { AppProvider, useAppContext } from './contexts/AppContext';
 import { supabase } from './supabaseClient';
 import Auth from './components/Auth';
 import Navbar from './components/Navbar';
+import LandingPage from './components/LandingPage';
 
 import AchievementToastManager from './components/AchievementToast';
 import SyncStatusBanner from './components/SyncStatusBanner';
@@ -37,6 +38,11 @@ function AppLayout() {
   } = useAppContext();
 
   const [authMode, setAuthMode] = React.useState('login');
+  // Controla se o usuário está na landing page pública (apenas para não-autenticados)
+  const [showLanding, setShowLanding] = React.useState(() => {
+    // Verifica se veio de um link direto para o app (ex: ?app=1)
+    return !window.location.search.includes('app=1');
+  });
 
   // Detectar hash de recuperação de senha (fallback)
   useEffect(() => {
@@ -100,7 +106,11 @@ function AppLayout() {
   }
 
   if (!currentUser) {
-    return <Auth onLoginSuccess={handleLoginSuccess} initialMode={authMode} />;
+    // Exibe landing page pública antes da tela de autenticação
+    if (showLanding) {
+      return <LandingPage onEnterApp={() => setShowLanding(false)} />;
+    }
+    return <Auth onLoginSuccess={handleLoginSuccess} initialMode={authMode} onBackToLanding={() => setShowLanding(true)} />;
   }
 
   return (

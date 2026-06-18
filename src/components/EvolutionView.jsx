@@ -268,6 +268,105 @@ export default function EvolutionView() {
   };
   const motivation = getMotivation();
 
+  // Redireciona para a aba de tarefas ao clicar no CTA
+  const { setActiveTab } = useAppContext();
+
+  // ─── Empty State Global ─────────────────────────────────────────────────────
+  const hasAnyData = tasks.length > 0 || goals.length > 0;
+
+  if (!hasAnyData) {
+    return (
+      <div className="evo-view animate-fade-in">
+        {/* Banner motivacional mesmo no empty state */}
+        <section className="evo-motivation-banner">
+          <div className="evo-motivation-icon">📊</div>
+          <div>
+            <h2 className="evo-motivation-title">Sua jornada começa aqui.</h2>
+            <p className="evo-motivation-desc">Registre suas primeiras tarefas para desbloquear seus insights de evolução.</p>
+          </div>
+        </section>
+
+        {/* Empty State Card */}
+        <section className="evo-card" style={{ padding: '48px 32px', textAlign: 'center', position: 'relative', overflow: 'hidden' }}>
+          {/* Decorative background glow */}
+          <div style={{
+            position: 'absolute', top: '-40px', left: '50%', transform: 'translateX(-50%)',
+            width: '300px', height: '300px', borderRadius: '50%',
+            background: 'radial-gradient(circle, rgba(99,102,241,0.08) 0%, transparent 70%)',
+            pointerEvents: 'none',
+          }} />
+
+          {/* Illustration */}
+          <div style={{
+            position: 'relative', display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+            width: '96px', height: '96px', borderRadius: '50%',
+            background: 'var(--primary-glow, rgba(99,102,241,0.1))',
+            border: '2px solid var(--primary-light)',
+            marginBottom: '24px',
+          }}>
+            <span style={{ fontSize: '40px', lineHeight: 1 }}>📈</span>
+            <div style={{
+              position: 'absolute', width: '100%', height: '100%', borderRadius: '50%',
+              border: '1px solid rgba(99,102,241,0.2)',
+              animation: 'ping-animation 2.5s cubic-bezier(0, 0, 0.2, 1) infinite',
+            }} />
+          </div>
+
+          <h3 style={{
+            fontSize: '22px', fontWeight: 800, letterSpacing: '-0.5px',
+            color: 'var(--text-main)', fontFamily: 'var(--font-display)',
+            marginBottom: '12px',
+          }}>
+            Seus insights aparecem aqui
+          </h3>
+
+          <p style={{
+            fontSize: '15px', color: 'var(--text-muted)', lineHeight: 1.65,
+            maxWidth: '420px', margin: '0 auto 32px',
+          }}>
+            Comece a registrar suas tarefas para ver seus insights aqui. Acompanhe sua sequência, conquistas, taxas de conclusão e muito mais.
+          </p>
+
+          {/* Feature pills */}
+          <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', flexWrap: 'wrap', marginBottom: '32px' }}>
+            {['🔥 Sequências de dias', '🏆 Conquistas', '📊 Gráficos de análise', '📅 Relatório semanal'].map((pill, i) => (
+              <span key={i} style={{
+                padding: '6px 14px', borderRadius: '99px', fontSize: '13px', fontWeight: 500,
+                background: 'var(--bg-app)', border: '1px solid var(--border-light)',
+                color: 'var(--text-muted)',
+              }}>
+                {pill}
+              </span>
+            ))}
+          </div>
+
+          <button
+            onClick={() => setActiveTab('tasks')}
+            className="btn-primary-glow"
+            style={{ padding: '14px 32px', fontSize: '15px', fontWeight: 700 }}
+          >
+            Criar minha primeira tarefa ⚡
+          </button>
+        </section>
+
+        {/* Conquistas — exibe mesmo sem tarefas */}
+        <section className="evo-card">
+          <div className="evo-card-header">
+            <h3 className="evo-card-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <MFIcon name="achievements" size={20} style={{ color: 'var(--accent-yellow, #eab308)' }} /> Suas Conquistas
+            </h3>
+            <span className="evo-achievements-count">0 de {ACHIEVEMENTS.length} desbloqueadas</span>
+          </div>
+          <div className="evo-achievements-grid">
+            {ACHIEVEMENTS.map(a => (
+              <AchievementBadge key={a.key} achievement={a} unlocked={false} />
+            ))}
+          </div>
+        </section>
+      </div>
+    );
+  }
+
   return (
     <div className="evo-view animate-fade-in">
 

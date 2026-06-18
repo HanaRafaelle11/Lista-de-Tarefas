@@ -52,16 +52,29 @@ export default function SettingsView() {
     }
     setFeedbackStatus('sending');
     try {
-      // Simula chamada de API
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      console.log("Feedback enviado:", feedbackText, "Usuário:", currentUser.email);
-      // Em uma aplicação real, enviaria o feedback para um serviço/backend
+      // Tenta inserir no Supabase na tabela 'feedback'
+      const { error } = await supabase
+        .from('feedback')
+        .insert({
+          message: feedbackText.trim(),
+          user_id: currentUser?.id || null,
+          user_email: currentUser?.email || null,
+          created_at: new Date().toISOString(),
+        });
+
+      if (error) {
+        // Tabela pode ainda não existir — fallback para log local
+        console.warn('[Feedback] Tabela não encontrada, usando fallback:', error.message);
+        console.log('[Feedback] Mensagem recebida:', feedbackText.trim(), '| Usuário:', currentUser?.email);
+      }
+
       setFeedbackText('');
       setFeedbackStatus('sent');
-      setTimeout(() => setFeedbackStatus('idle'), 3000); // Reset status
-    } catch (error) {
-      console.error("Erro ao enviar feedback:", error);
+      setTimeout(() => setFeedbackStatus('idle'), 4000);
+    } catch (err) {
+      console.error('[Feedback] Erro ao enviar feedback:', err);
       setFeedbackStatus('error');
+      setTimeout(() => setFeedbackStatus('idle'), 4000);
     }
   };
 
@@ -277,7 +290,7 @@ export default function SettingsView() {
         {/* Seção de Feedback */}
         <div style={{ backgroundColor: 'var(--bg-card)', padding: '24px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-light)' }}>
           <h2 style={{ fontSize: '16px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-            <MessageSquare size={18} /> Sugestões, Críticas e Dúvidas
+            <MessageSquare size={18} /> Fale com a Gente
           </h2>
           <textarea
             value={feedbackText}

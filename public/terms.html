@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Termos de Serviço — MyFlowDay</title>
+  <meta name="description" content="Termos de Serviço do MyFlowDay. Leia as condições de uso da plataforma de produtividade pessoal." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --primary: #6366f1;
+      --primary-light: #e0e7ff;
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --text-light: #94a3b8;
+      --bg: #f8fafc;
+      --bg-card: #ffffff;
+      --border: #e2e8f0;
+      --radius: 12px;
+      --shadow: 0 1px 3px rgba(0,0,0,.06), 0 4px 16px rgba(0,0,0,.06);
+    }
+
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text-main);
+      line-height: 1.7;
+      font-size: 16px;
+    }
+
+    /* ── Header ── */
+    header {
+      background: var(--bg-card);
+      border-bottom: 1px solid var(--border);
+      padding: 0 24px;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    .header-inner {
+      max-width: 760px;
+      margin: 0 auto;
+      height: 64px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .logo-badge {
+      width: 32px; height: 32px;
+      background: linear-gradient(135deg, #6366f1, #818cf8);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px;
+    }
+    .logo-name { font-weight: 700; font-size: 17px; color: var(--text-main); letter-spacing: -0.3px; }
+    .logo-name span { color: var(--primary); }
+
+    /* ── Doc nav ── */
+    .doc-nav {
+      max-width: 760px;
+      margin: 0 auto;
+      display: flex;
+      gap: 4px;
+      margin-left: auto;
+      padding-left: 24px;
+    }
+    .doc-nav a {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-muted);
+      text-decoration: none;
+      padding: 4px 12px;
+      border-radius: 99px;
+      transition: background .15s, color .15s;
+    }
+    .doc-nav a:hover { background: var(--primary-light); color: var(--primary); }
+    .doc-nav a.active { background: var(--primary); color: white; }
+    .header-inner { justify-content: space-between; }
+    .header-left { display: flex; align-items: center; gap: 10px; }
+
+    /* ── Hero ── */
+    .hero {
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
+      padding: 64px 24px;
+      text-align: center;
+      color: white;
+    }
+    .hero-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: rgba(255,255,255,0.12);
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 99px;
+      padding: 4px 14px;
+      font-size: 12px; font-weight: 600;
+      letter-spacing: 0.5px; text-transform: uppercase;
+      margin-bottom: 20px;
+    }
+    .hero h1 { font-size: clamp(26px, 5vw, 38px); font-weight: 700; letter-spacing: -0.5px; margin-bottom: 12px; }
+    .hero p { font-size: 15px; opacity: 0.75; max-width: 480px; margin: 0 auto; }
+    .hero-meta { margin-top: 28px; display: flex; justify-content: center; gap: 24px; flex-wrap: wrap; }
+    .hero-meta span { font-size: 13px; opacity: 0.7; display: flex; align-items: center; gap: 5px; }
+
+    /* ── Main ── */
+    main { max-width: 760px; margin: 0 auto; padding: 48px 24px 80px; }
+
+    /* ── TOC ── */
+    .toc {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 24px 28px;
+      margin-bottom: 40px; box-shadow: var(--shadow);
+    }
+    .toc-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text-light); margin-bottom: 14px; }
+    .toc ol { list-style: none; display: flex; flex-direction: column; gap: 6px; counter-reset: toc; }
+    .toc li { counter-increment: toc; }
+    .toc a { color: var(--primary); text-decoration: none; font-size: 14px; font-weight: 500; display: flex; align-items: center; gap: 8px; }
+    .toc a::before { content: counter(toc, decimal-leading-zero); font-size: 11px; color: var(--text-light); font-weight: 600; min-width: 22px; }
+    .toc a:hover { text-decoration: underline; }
+
+    /* ── Sections ── */
+    section {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 32px;
+      margin-bottom: 20px; box-shadow: var(--shadow); scroll-margin-top: 80px;
+    }
+    .section-header { display: flex; align-items: flex-start; gap: 14px; margin-bottom: 20px; padding-bottom: 18px; border-bottom: 1px solid var(--border); }
+    .section-icon { width: 40px; height: 40px; min-width: 40px; background: var(--primary-light); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+    .section-number { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; color: var(--primary); margin-bottom: 2px; }
+    h2 { font-size: 18px; font-weight: 700; color: var(--text-main); letter-spacing: -0.2px; }
+    p { color: var(--text-muted); font-size: 15px; margin-bottom: 14px; }
+    p:last-child { margin-bottom: 0; }
+
+    /* ── Lists ── */
+    ul.policy-list { list-style: none; display: flex; flex-direction: column; gap: 8px; margin: 12px 0; }
+    ul.policy-list li { display: flex; align-items: flex-start; gap: 10px; font-size: 15px; color: var(--text-muted); }
+    ul.policy-list li::before { content: '✓'; color: #10b981; font-weight: 700; font-size: 13px; margin-top: 2px; min-width: 16px; }
+
+    ul.cross-list { list-style: none; display: flex; flex-direction: column; gap: 8px; margin: 12px 0; }
+    ul.cross-list li { display: flex; align-items: flex-start; gap: 10px; font-size: 15px; color: var(--text-muted); }
+    ul.cross-list li::before { content: '✕'; color: #ef4444; font-weight: 700; font-size: 13px; margin-top: 2px; min-width: 16px; }
+
+    /* ── Highlight boxes ── */
+    .highlight { border-left: 3px solid var(--primary); background: #f5f3ff; border-radius: 0 8px 8px 0; padding: 14px 18px; margin: 16px 0; font-size: 14px; color: #4338ca; font-weight: 500; }
+    .highlight-amber { border-left-color: #f59e0b; background: #fffbeb; color: #92400e; }
+    .highlight-green { border-left-color: #10b981; background: #ecfdf5; color: #065f46; }
+    .highlight-red { border-left-color: #ef4444; background: #fef2f2; color: #991b1b; }
+
+    /* ── Plan table ── */
+    .plan-table { width: 100%; border-collapse: collapse; font-size: 14px; margin: 16px 0; }
+    .plan-table th { background: #f1f5f9; text-align: left; padding: 10px 14px; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); border-bottom: 1px solid var(--border); }
+    .plan-table th:first-child { border-radius: 8px 0 0 0; } .plan-table th:last-child { border-radius: 0 8px 0 0; }
+    .plan-table td { padding: 10px 14px; border-bottom: 1px solid var(--border); color: var(--text-muted); vertical-align: top; }
+    .plan-table tr:last-child td { border-bottom: none; } .plan-table tr:hover td { background: #f8fafc; }
+
+    /* ── Contact card ── */
+    .contact-card { display: flex; align-items: center; gap: 16px; background: #f8fafc; border: 1px solid var(--border); border-radius: 10px; padding: 18px 20px; margin-top: 16px; }
+    .contact-avatar { width: 44px; height: 44px; background: linear-gradient(135deg, #6366f1, #818cf8); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; color: white; flex-shrink: 0; }
+    .contact-info p { margin: 0; }
+    .contact-info .name { font-weight: 600; font-size: 15px; color: var(--text-main); }
+    .contact-info .detail { font-size: 13px; color: var(--primary); }
+
+    /* ── Doc switcher (bottom) ── */
+    .doc-switcher {
+      display: flex; gap: 16px; margin-top: 48px; flex-wrap: wrap;
+    }
+    .doc-link {
+      flex: 1; min-width: 220px;
+      display: flex; align-items: center; gap: 14px;
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 20px 22px;
+      text-decoration: none; color: var(--text-main);
+      box-shadow: var(--shadow);
+      transition: border-color .2s, box-shadow .2s, transform .15s;
+    }
+    .doc-link:hover { border-color: var(--primary); box-shadow: 0 4px 20px rgba(99,102,241,.12); transform: translateY(-2px); }
+    .doc-link-icon { width: 44px; height: 44px; min-width: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+    .doc-link-icon.purple { background: #ede9fe; }
+    .doc-link-icon.slate { background: #f1f5f9; }
+    .doc-link-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-light); margin-bottom: 2px; }
+    .doc-link-title { font-size: 15px; font-weight: 600; color: var(--text-main); }
+    .doc-link-arrow { margin-left: auto; color: var(--text-light); font-size: 18px; }
+    .doc-link.active-doc { border-color: var(--primary); background: #faf5ff; pointer-events: none; }
+    .doc-link.active-doc .doc-link-title { color: var(--primary); }
+
+    /* ── Footer ── */
+    footer { text-align: center; padding: 32px 24px; border-top: 1px solid var(--border); color: var(--text-light); font-size: 13px; }
+    footer a { color: var(--primary); text-decoration: none; }
+    footer a:hover { text-decoration: underline; }
+
+    @media (max-width: 600px) {
+      section { padding: 22px 18px; }
+      .doc-switcher { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ── Header ── -->
+  <header>
+    <div class="header-inner">
+      <div class="header-left">
+        <div class="logo-badge">🌊</div>
+        <div class="logo-name">My<span>Flow</span>Day</div>
+      </div>
+      <nav class="doc-nav">
+        <a href="/privacy.html">Privacidade</a>
+        <a href="/terms.html" class="active">Termos</a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- ── Hero ── -->
+  <div class="hero">
+    <div class="hero-badge">📋 Documento Legal</div>
+    <h1>Termos de Serviço</h1>
+    <p>As condições que regem o uso da plataforma MyFlowDay. Leia com atenção antes de utilizar o app.</p>
+    <div class="hero-meta">
+      <span>📅 Vigência: 18 de junho de 2025</span>
+      <span>🌐 Versão: 1.0</span>
+      <span>🇧🇷 LGPD Compliant</span>
+    </div>
+  </div>
+
+  <!-- ── Main ── -->
+  <main>
+
+    <!-- TOC -->
+    <nav class="toc" aria-label="Sumário">
+      <div class="toc-title">Sumário</div>
+      <ol>
+        <li><a href="#s1">Aceitação dos Termos</a></li>
+        <li><a href="#s2">Descrição do Serviço</a></li>
+        <li><a href="#s3">Uso Aceitável</a></li>
+        <li><a href="#s4">Propriedade Intelectual</a></li>
+        <li><a href="#s5">Planos e Assinaturas</a></li>
+        <li><a href="#s6">Limitação de Responsabilidade</a></li>
+        <li><a href="#s7">Cancelamento e Encerramento de Conta</a></li>
+        <li><a href="#s8">Modificações do Serviço</a></li>
+        <li><a href="#s9">Lei Aplicável</a></li>
+        <li><a href="#s10">Fale com a Gente</a></li>
+      </ol>
+    </nav>
+
+    <!-- 1. Aceitação -->
+    <section id="s1">
+      <div class="section-header">
+        <div class="section-icon">✅</div>
+        <div>
+          <div class="section-number">Seção 01</div>
+          <h2>Aceitação dos Termos</h2>
+        </div>
+      </div>
+      <p>Bem-vindo ao <strong>MyFlowDay</strong>. Ao acessar, instalar ou utilizar a plataforma — seja via navegador web, Progressive Web App (PWA) ou qualquer outro meio de acesso disponibilizado — você declara ter lido, compreendido e concordado integralmente com estes Termos de Serviço.</p>
+      <p>Se você utiliza o MyFlowDay em nome de uma organização ou empresa, você declara ter autoridade para vincular essa entidade a estes termos.</p>
+      <div class="highlight highlight-amber">
+        ⚠️ Se você não concordar com qualquer parte destes termos, por favor, não utilize o MyFlowDay. O uso contínuo da plataforma após alterações nos termos constitui aceitação das novas condições.
+      </div>
+      <p>A idade mínima para utilizar o MyFlowDay é de <strong>13 anos</strong>. Usuários entre 13 e 18 anos devem ter autorização de um responsável legal.</p>
+    </section>
+
+    <!-- 2. Descrição -->
+    <section id="s2">
+      <div class="section-header">
+        <div class="section-icon">🌊</div>
+        <div>
+          <div class="section-number">Seção 02</div>
+          <h2>Descrição do Serviço</h2>
+        </div>
+      </div>
+      <p>O MyFlowDay é uma plataforma de produtividade pessoal que oferece as seguintes funcionalidades:</p>
+      <ul class="policy-list">
+        <li>Gerenciamento de tarefas com priorização e categorização</li>
+        <li>Criação e acompanhamento de metas e objetivos pessoais</li>
+        <li>Modo Foco com cronômetro Pomodoro integrado</li>
+        <li>Painel de Evolução com métricas e histórico de produtividade</li>
+        <li>Sincronização em tempo real entre dispositivos via conta Google</li>
+        <li>Funcionalidades premium no plano Pro (análises avançadas, sem limites de tarefas)</li>
+      </ul>
+      <p>O serviço é fornecido "como está" e pode sofrer atualizações, melhorias ou descontinuação de funcionalidades específicas a qualquer momento, conforme descrito na Seção 8.</p>
+    </section>
+
+    <!-- 3. Uso Aceitável -->
+    <section id="s3">
+      <div class="section-header">
+        <div class="section-icon">⚖️</div>
+        <div>
+          <div class="section-number">Seção 03</div>
+          <h2>Uso Aceitável</h2>
+        </div>
+      </div>
+      <p>O MyFlowDay é uma ferramenta de produtividade pessoal. Ao utilizá-lo, você se compromete a:</p>
+      <ul class="policy-list">
+        <li>Usar a plataforma exclusivamente para fins de organização, produtividade e gestão de tempo pessoal</li>
+        <li>Manter a confidencialidade das credenciais da sua conta</li>
+        <li>Notificar imediatamente em caso de acesso não autorizado à sua conta</li>
+        <li>Fornecer informações verídicas no cadastro e perfil</li>
+        <li>Respeitar os direitos de propriedade intelectual da plataforma</li>
+      </ul>
+
+      <p style="margin-top: 20px; font-weight: 600; color: var(--text-main);">É expressamente proibido:</p>
+      <ul class="cross-list">
+        <li>Utilizar o app para atividades ilegais, fraudulentas ou antiéticas</li>
+        <li>Tentar acessar sistemas, dados ou contas de outros usuários</li>
+        <li>Realizar engenharia reversa, descompilar ou modificar o código-fonte da plataforma</li>
+        <li>Automatizar o acesso de forma abusiva (bots, scrapers, requisições em massa)</li>
+        <li>Transmitir vírus, malware ou qualquer código malicioso</li>
+        <li>Revender, sublicenciar ou comercializar o acesso ao serviço sem autorização expressa</li>
+        <li>Usar o serviço para spam, assédio ou qualquer comunicação não solicitada</li>
+      </ul>
+
+      <div class="highlight highlight-red">
+        Violações destas regras podem resultar na suspensão imediata da conta, sem direito a reembolso das assinaturas pagas, e eventual responsabilização civil ou criminal.
+      </div>
+    </section>
+
+    <!-- 4. Propriedade Intelectual -->
+    <section id="s4">
+      <div class="section-header">
+        <div class="section-icon">©️</div>
+        <div>
+          <div class="section-number">Seção 04</div>
+          <h2>Propriedade Intelectual</h2>
+        </div>
+      </div>
+      <p>Todo o conteúdo, design e tecnologia do MyFlowDay são de propriedade exclusiva da marca <strong>MyFlowDay</strong> e protegidos pelas leis de propriedade intelectual vigentes no Brasil e internacionalmente.</p>
+      <p>Isso inclui, sem limitação:</p>
+      <ul class="policy-list">
+        <li>Nome, logotipo, identidade visual e elementos de marca do MyFlowDay</li>
+        <li>Interface, layout e design da plataforma (UI/UX)</li>
+        <li>Código-fonte, algoritmos e arquitetura do sistema</li>
+        <li>Textos, ícones, ilustrações e demais materiais visuais originais</li>
+        <li>Metodologias de produtividade e fluxos proprietários do app</li>
+      </ul>
+      <div class="highlight">
+        É concedida ao usuário uma licença pessoal, intransferível e não exclusiva para utilizar a plataforma conforme estes Termos. Esta licença não transfere qualquer direito de propriedade sobre o MyFlowDay.
+      </div>
+      <p>Os <strong>dados inseridos pelo usuário</strong> (tarefas, metas, notas) permanecem de sua propriedade. O MyFlowDay não reivindica propriedade sobre o conteúdo criado por você na plataforma.</p>
+    </section>
+
+    <!-- 5. Planos e Assinaturas -->
+    <section id="s5">
+      <div class="section-header">
+        <div class="section-icon">💳</div>
+        <div>
+          <div class="section-number">Seção 05</div>
+          <h2>Planos e Assinaturas</h2>
+        </div>
+      </div>
+      <p>O MyFlowDay oferece dois planos de acesso:</p>
+
+      <table class="plan-table" aria-label="Comparação de planos">
+        <thead>
+          <tr>
+            <th>Recurso</th>
+            <th>Gratuito</th>
+            <th>Pro</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Tarefas e metas</td>
+            <td>Até 50 tarefas ativas</td>
+            <td>Ilimitadas</td>
+          </tr>
+          <tr>
+            <td>Modo Foco</td>
+            <td>Básico</td>
+            <td>Avançado com estatísticas</td>
+          </tr>
+          <tr>
+            <td>Painel de Evolução</td>
+            <td>Últimos 7 dias</td>
+            <td>Histórico completo</td>
+          </tr>
+          <tr>
+            <td>Sincronização</td>
+            <td>✓</td>
+            <td>✓ Prioritária</td>
+          </tr>
+          <tr>
+            <td>Suporte</td>
+            <td>Comunidade</td>
+            <td>E-mail prioritário</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <p>As assinaturas Pro são cobradas de forma recorrente (mensal ou anual) e renovadas automaticamente ao final de cada período, salvo cancelamento antecipado conforme a Seção 7.</p>
+      <div class="highlight highlight-green">
+        Todos os preços são exibidos em Reais (BRL) e podem ser atualizados mediante aviso prévio de 30 dias por e-mail.
+      </div>
+    </section>
+
+    <!-- 6. Limitação de Responsabilidade -->
+    <section id="s6">
+      <div class="section-header">
+        <div class="section-icon">⚠️</div>
+        <div>
+          <div class="section-number">Seção 06</div>
+          <h2>Limitação de Responsabilidade</h2>
+        </div>
+      </div>
+      <p>O MyFlowDay é fornecido <strong>"como está"</strong> (<em>as is</em>) e <strong>"conforme disponível"</strong> (<em>as available</em>), sem garantias de qualquer natureza, expressas ou implícitas.</p>
+      <p>Em particular, não garantimos:</p>
+      <ul class="cross-list">
+        <li>Resultados específicos de produtividade ou desempenho pessoal decorrentes do uso da plataforma</li>
+        <li>Disponibilidade ininterrupta do serviço (manutenções e interrupções podem ocorrer)</li>
+        <li>Ausência de erros, bugs ou falhas técnicas em todas as situações de uso</li>
+        <li>Compatibilidade com todos os navegadores, dispositivos ou sistemas operacionais</li>
+      </ul>
+      <p>A responsabilidade total do MyFlowDay perante qualquer usuário, em qualquer hipótese, está limitada ao valor pago pelo usuário ao serviço nos <strong>últimos 3 meses</strong> anteriores ao evento gerador do dano.</p>
+      <div class="highlight highlight-amber">
+        O MyFlowDay não se responsabiliza por perda de dados, lucros cessantes, danos indiretos ou consequenciais decorrentes do uso ou impossibilidade de uso da plataforma.
+      </div>
+    </section>
+
+    <!-- 7. Cancelamento -->
+    <section id="s7">
+      <div class="section-header">
+        <div class="section-icon">🔚</div>
+        <div>
+          <div class="section-number">Seção 07</div>
+          <h2>Cancelamento e Encerramento de Conta</h2>
+        </div>
+      </div>
+
+      <p><strong>Cancelamento pelo usuário (assinatura Pro):</strong></p>
+      <ul class="policy-list">
+        <li>Pode ser realizado a qualquer momento nas Configurações da conta → "Gerenciar Assinatura"</li>
+        <li>O acesso Pro permanece ativo até o fim do período já pago</li>
+        <li>Não há reembolso proporcional por períodos não utilizados, exceto nos casos previstos pelo Código de Defesa do Consumidor (CDC)</li>
+        <li>Dentro de 7 dias corridos após a contratação, o usuário pode exercer o direito de arrependimento e receber reembolso integral (Art. 49 do CDC)</li>
+      </ul>
+
+      <p style="margin-top: 16px;"><strong>Encerramento de conta:</strong></p>
+      <ul class="policy-list">
+        <li>O usuário pode solicitar a exclusão completa da conta a qualquer momento via e-mail para o suporte</li>
+        <li>Após a solicitação, os dados pessoais serão excluídos conforme descrito na Política de Privacidade</li>
+        <li>Dados anonimizados podem ser mantidos para fins estatísticos internos</li>
+      </ul>
+
+      <p style="margin-top: 16px;"><strong>Encerramento pelo MyFlowDay:</strong></p>
+      <p>Podemos suspender ou encerrar contas que violem estes Termos, mediante notificação prévia sempre que possível, exceto em casos de violações graves que exijam ação imediata.</p>
+
+      <div class="highlight highlight-green">
+        Em caso de encerramento do serviço MyFlowDay como um todo, os usuários serão notificados com no mínimo 60 dias de antecedência, e os dados poderão ser exportados durante esse período.
+      </div>
+    </section>
+
+    <!-- 8. Modificações -->
+    <section id="s8">
+      <div class="section-header">
+        <div class="section-icon">🔄</div>
+        <div>
+          <div class="section-number">Seção 08</div>
+          <h2>Modificações do Serviço e dos Termos</h2>
+        </div>
+      </div>
+      <p>O MyFlowDay reserva-se o direito de modificar, suspender ou descontinuar qualquer funcionalidade da plataforma a qualquer momento, com ou sem aviso prévio para mudanças não materiais.</p>
+      <p>Para alterações significativas nos Termos de Serviço:</p>
+      <ul class="policy-list">
+        <li>A data de "Vigência" no topo desta página será atualizada</li>
+        <li>Uma notificação será exibida com destaque dentro do app por pelo menos 7 dias</li>
+        <li>Alterações que afetem diretamente os direitos dos assinantes Pro serão comunicadas por e-mail com 30 dias de antecedência</li>
+      </ul>
+      <p>O uso continuado do serviço após a publicação das alterações constitui aceitação dos novos termos. Se você discordar das alterações, poderá cancelar sua conta sem penalidades dentro do prazo de 30 dias após a notificação.</p>
+    </section>
+
+    <!-- 9. Lei Aplicável -->
+    <section id="s9">
+      <div class="section-header">
+        <div class="section-icon">🏛️</div>
+        <div>
+          <div class="section-number">Seção 09</div>
+          <h2>Lei Aplicável e Foro</h2>
+        </div>
+      </div>
+      <p>Estes Termos de Serviço são regidos pelas leis da <strong>República Federativa do Brasil</strong>, em especial:</p>
+      <ul class="policy-list">
+        <li>Código de Defesa do Consumidor (Lei nº 8.078/1990)</li>
+        <li>Lei Geral de Proteção de Dados — LGPD (Lei nº 13.709/2018)</li>
+        <li>Marco Civil da Internet (Lei nº 12.965/2014)</li>
+        <li>Código Civil Brasileiro (Lei nº 10.406/2002)</li>
+      </ul>
+      <p>Para dirimir quaisquer controvérsias decorrentes destes termos, fica eleito o foro da Comarca de <strong>São Paulo/SP</strong>, com renúncia expressa a qualquer outro, por mais privilegiado que seja.</p>
+      <div class="highlight">
+        Antes de qualquer medida judicial, encorajamos a resolução de conflitos via nosso canal de suporte (Seção 10), buscando uma solução amigável em até 15 dias úteis.
+      </div>
+    </section>
+
+    <!-- 10. Fale com a gente -->
+    <section id="s10">
+      <div class="section-header">
+        <div class="section-icon">💬</div>
+        <div>
+          <div class="section-number">Seção 10</div>
+          <h2>Fale com a Gente</h2>
+        </div>
+      </div>
+      <p>Nossa equipe está pronta para ajudar com dúvidas sobre estes Termos de Serviço, sua assinatura, uso da plataforma ou qualquer outra questão. Escolha o canal mais conveniente:</p>
+
+      <div class="contact-card">
+        <div class="contact-avatar">💬</div>
+        <div class="contact-info">
+          <p class="name">Suporte Geral — Fale com a Gente</p>
+          <p class="detail">suporte@myflowday.app</p>
+        </div>
+      </div>
+
+      <div class="contact-card" style="margin-top: 12px;">
+        <div class="contact-avatar">⚖️</div>
+        <div class="contact-info">
+          <p class="name">Questões Jurídicas e Privacidade</p>
+          <p class="detail">juridico@myflowday.app</p>
+        </div>
+      </div>
+
+      <p style="margin-top: 20px;">Comprometemo-nos a responder todas as mensagens em até <strong>3 dias úteis</strong> para suporte geral, e até <strong>15 dias úteis</strong> para questões jurídicas e de dados pessoais.</p>
+    </section>
+
+    <!-- ── Navegação entre documentos ── -->
+    <div class="doc-switcher" aria-label="Navegar entre documentos legais">
+      <a href="/privacy.html" class="doc-link">
+        <div class="doc-link-icon purple">🔒</div>
+        <div>
+          <div class="doc-link-label">Leia também</div>
+          <div class="doc-link-title">Política de Privacidade</div>
+        </div>
+        <div class="doc-link-arrow">→</div>
+      </a>
+      <div class="doc-link active-doc">
+        <div class="doc-link-icon slate">📋</div>
+        <div>
+          <div class="doc-link-label">Você está aqui</div>
+          <div class="doc-link-title">Termos de Serviço</div>
+        </div>
+        <div class="doc-link-arrow">✓</div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ── Footer ── -->
+  <footer>
+    <p>© 2025 MyFlowDay. Todos os direitos reservados.</p>
+    <p style="margin-top: 6px;">
+      <a href="/privacy.html">Política de Privacidade</a> ·
+      <a href="/terms.html">Termos de Serviço</a> ·
+      Em conformidade com a <strong>LGPD (Lei nº 13.709/2018)</strong> e o <strong>CDC (Lei nº 8.078/1990)</strong>.
+    </p>
+  </footer>
+
+</body>
+</html>
+

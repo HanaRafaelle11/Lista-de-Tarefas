@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Política de Privacidade — MyFlowDay</title>
+  <meta name="description" content="Política de Privacidade do MyFlowDay. Saiba como coletamos, usamos e protegemos seus dados pessoais." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --primary: #6366f1;
+      --primary-light: #e0e7ff;
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --text-light: #94a3b8;
+      --bg: #f8fafc;
+      --bg-card: #ffffff;
+      --border: #e2e8f0;
+      --radius: 12px;
+      --shadow: 0 1px 3px rgba(0,0,0,.06), 0 4px 16px rgba(0,0,0,.06);
+    }
+
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text-main);
+      line-height: 1.7;
+      font-size: 16px;
+    }
+
+    /* ── Header ── */
+    header {
+      background: var(--bg-card);
+      border-bottom: 1px solid var(--border);
+      padding: 0 24px;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    .header-inner {
+      max-width: 760px;
+      margin: 0 auto;
+      height: 64px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .logo-badge {
+      width: 32px;
+      height: 32px;
+      background: linear-gradient(135deg, #6366f1, #818cf8);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+    }
+    .logo-name {
+      font-weight: 700;
+      font-size: 17px;
+      color: var(--text-main);
+      letter-spacing: -0.3px;
+    }
+    .logo-name span {
+      color: var(--primary);
+    }
+
+    /* ── Hero ── */
+    .hero {
+      background: linear-gradient(135deg, #6366f1 0%, #818cf8 50%, #a5b4fc 100%);
+      padding: 64px 24px;
+      text-align: center;
+      color: white;
+    }
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(255,255,255,0.18);
+      border: 1px solid rgba(255,255,255,0.3);
+      border-radius: 99px;
+      padding: 4px 14px;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      margin-bottom: 20px;
+    }
+    .hero h1 {
+      font-size: clamp(26px, 5vw, 38px);
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      margin-bottom: 12px;
+    }
+    .hero p {
+      font-size: 15px;
+      opacity: 0.85;
+      max-width: 480px;
+      margin: 0 auto;
+    }
+    .hero-meta {
+      margin-top: 28px;
+      display: flex;
+      justify-content: center;
+      gap: 24px;
+      flex-wrap: wrap;
+    }
+    .hero-meta span {
+      font-size: 13px;
+      opacity: 0.8;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    /* ── Main Content ── */
+    main {
+      max-width: 760px;
+      margin: 0 auto;
+      padding: 48px 24px 80px;
+    }
+
+    /* ── TOC ── */
+    .toc {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px 28px;
+      margin-bottom: 40px;
+      box-shadow: var(--shadow);
+    }
+    .toc-title {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--text-light);
+      margin-bottom: 14px;
+    }
+    .toc ol {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .toc li { counter-increment: toc; }
+    .toc a {
+      color: var(--primary);
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .toc a::before {
+      content: counter(toc, decimal-leading-zero);
+      font-size: 11px;
+      color: var(--text-light);
+      font-weight: 600;
+      min-width: 22px;
+    }
+    .toc a:hover { text-decoration: underline; }
+
+    /* ── Sections ── */
+    section {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 32px;
+      margin-bottom: 20px;
+      box-shadow: var(--shadow);
+      scroll-margin-top: 80px;
+    }
+    .section-header {
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      margin-bottom: 20px;
+      padding-bottom: 18px;
+      border-bottom: 1px solid var(--border);
+    }
+    .section-icon {
+      width: 40px;
+      height: 40px;
+      min-width: 40px;
+      background: var(--primary-light);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+    }
+    .section-number {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: var(--primary);
+      margin-bottom: 2px;
+    }
+    h2 {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text-main);
+      letter-spacing: -0.2px;
+    }
+    p { color: var(--text-muted); font-size: 15px; margin-bottom: 14px; }
+    p:last-child { margin-bottom: 0; }
+
+    /* ── Data Table ── */
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+      margin: 16px 0;
+    }
+    .data-table th {
+      background: #f1f5f9;
+      text-align: left;
+      padding: 10px 14px;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border);
+    }
+    .data-table th:first-child { border-radius: 8px 0 0 0; }
+    .data-table th:last-child { border-radius: 0 8px 0 0; }
+    .data-table td {
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+      color: var(--text-muted);
+      vertical-align: top;
+    }
+    .data-table tr:last-child td { border-bottom: none; }
+    .data-table tr:hover td { background: #f8fafc; }
+
+    /* ── Tags ── */
+    .tag {
+      display: inline-block;
+      padding: 2px 10px;
+      border-radius: 99px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .tag-google { background: #dbeafe; color: #1d4ed8; }
+    .tag-supabase { background: #d1fae5; color: #065f46; }
+    .tag-internal { background: #f3f4f6; color: #374151; }
+
+    /* ── Highlight boxes ── */
+    .highlight {
+      border-left: 3px solid var(--primary);
+      background: #f5f3ff;
+      border-radius: 0 8px 8px 0;
+      padding: 14px 18px;
+      margin: 16px 0;
+      font-size: 14px;
+      color: #4338ca;
+      font-weight: 500;
+    }
+    .highlight-green {
+      border-left-color: #10b981;
+      background: #ecfdf5;
+      color: #065f46;
+    }
+
+    /* ── List ── */
+    ul.policy-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin: 12px 0;
+    }
+    ul.policy-list li {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      font-size: 15px;
+      color: var(--text-muted);
+    }
+    ul.policy-list li::before {
+      content: '✓';
+      color: #10b981;
+      font-weight: 700;
+      font-size: 13px;
+      margin-top: 2px;
+      min-width: 16px;
+    }
+
+    /* ── Contact card ── */
+    .contact-card {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 18px 20px;
+      margin-top: 16px;
+    }
+    .contact-avatar {
+      width: 44px;
+      height: 44px;
+      background: linear-gradient(135deg, #6366f1, #818cf8);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      color: white;
+      flex-shrink: 0;
+    }
+    .contact-info p { margin: 0; }
+    .contact-info .name { font-weight: 600; font-size: 15px; color: var(--text-main); }
+    .contact-info .email { font-size: 13px; color: var(--primary); }
+
+    /* ── Doc nav ── */
+    .doc-nav a {
+      font-size: 13px; font-weight: 500; color: var(--text-muted);
+      text-decoration: none; padding: 4px 12px; border-radius: 99px;
+      transition: background .15s, color .15s;
+    }
+    .doc-nav a:hover { background: var(--primary-light); color: var(--primary); }
+    .doc-nav a.active { background: var(--primary); color: white; }
+    .header-inner { justify-content: space-between; }
+    .header-left { display: flex; align-items: center; gap: 10px; }
+
+    /* ── Doc switcher ── */
+    .doc-switcher { display: flex; gap: 16px; margin-top: 48px; flex-wrap: wrap; }
+    .doc-link { flex: 1; min-width: 220px; display: flex; align-items: center; gap: 14px; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px 22px; text-decoration: none; color: var(--text-main); box-shadow: var(--shadow); transition: border-color .2s, box-shadow .2s, transform .15s; }
+    .doc-link:hover { border-color: var(--primary); box-shadow: 0 4px 20px rgba(99,102,241,.12); transform: translateY(-2px); }
+    .doc-link-icon { width: 44px; height: 44px; min-width: 44px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+    .doc-link-icon.purple { background: #ede9fe; } .doc-link-icon.slate { background: #f1f5f9; }
+    .doc-link-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-light); margin-bottom: 2px; }
+    .doc-link-title { font-size: 15px; font-weight: 600; color: var(--text-main); }
+    .doc-link-arrow { margin-left: auto; color: var(--text-light); font-size: 18px; }
+    .doc-link.active-doc { border-color: var(--primary); background: #faf5ff; pointer-events: none; }
+    .doc-link.active-doc .doc-link-title { color: var(--primary); }
+
+    /* ── Footer ── */
+    footer {
+      text-align: center;
+      padding: 32px 24px;
+      border-top: 1px solid var(--border);
+      color: var(--text-light);
+      font-size: 13px;
+    }
+    footer a { color: var(--primary); text-decoration: none; }
+    footer a:hover { text-decoration: underline; }
+    @media (max-width: 600px) { .doc-switcher { flex-direction: column; } }
+
+    @media (max-width: 600px) {
+      section { padding: 22px 18px; }
+      .data-table { font-size: 13px; }
+      .data-table th, .data-table td { padding: 8px 10px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ── Header ── -->
+  <header>
+    <div class="header-inner">
+      <div class="header-left">
+        <div class="logo-badge">🌊</div>
+        <div class="logo-name">My<span>Flow</span>Day</div>
+      </div>
+      <nav class="doc-nav">
+        <a href="/privacy.html" class="active">Privacidade</a>
+        <a href="/terms.html">Termos</a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- ── Hero ── -->
+  <div class="hero">
+    <div class="hero-badge">🔒 Documento Legal</div>
+    <h1>Política de Privacidade</h1>
+    <p>Transparência total sobre como coletamos, usamos e protegemos seus dados pessoais.</p>
+    <div class="hero-meta">
+      <span>📅 Vigência: 18 de junho de 2025</span>
+      <span>🌐 Versão: 1.0</span>
+      <span>🇧🇷 LGPD Compliant</span>
+    </div>
+  </div>
+
+  <!-- ── Main ── -->
+  <main>
+
+    <!-- TOC -->
+    <nav class="toc" aria-label="Sumário">
+      <div class="toc-title">Sumário</div>
+      <ol style="counter-reset: toc">
+        <li><a href="#s1">Quem somos</a></li>
+        <li><a href="#s2">Dados que coletamos</a></li>
+        <li><a href="#s3">Como usamos seus dados</a></li>
+        <li><a href="#s4">Armazenamento e segurança</a></li>
+        <li><a href="#s5">Compartilhamento de dados</a></li>
+        <li><a href="#s6">Retenção de dados</a></li>
+        <li><a href="#s7">Seus direitos (LGPD)</a></li>
+        <li><a href="#s8">Cookies e rastreamento</a></li>
+        <li><a href="#s9">Alterações nesta política</a></li>
+        <li><a href="#s10">Contato</a></li>
+      </ol>
+    </nav>
+
+    <!-- 1. Quem somos -->
+    <section id="s1">
+      <div class="section-header">
+        <div class="section-icon">🏢</div>
+        <div>
+          <div class="section-number">Seção 01</div>
+          <h2>Quem somos</h2>
+        </div>
+      </div>
+      <p>O <strong>MyFlowDay</strong> é um aplicativo web de produtividade pessoal que oferece gerenciamento de tarefas, acompanhamento de metas, calendário integrado e modo foco. Acessível via navegador e como Progressive Web App (PWA).</p>
+      <p>Este documento rege a relação entre o MyFlowDay e você, usuário, no que diz respeito ao tratamento de dados pessoais, em conformidade com a <strong>Lei Geral de Proteção de Dados (LGPD — Lei nº 13.709/2018)</strong> e as <strong>Políticas de Dados do Google OAuth 2.0</strong>.</p>
+      <div class="highlight">
+        Ao utilizar o MyFlowDay e autenticar-se via Google, você concorda com os termos desta Política de Privacidade.
+      </div>
+    </section>
+
+    <!-- 2. Dados coletados -->
+    <section id="s2">
+      <div class="section-header">
+        <div class="section-icon">📊</div>
+        <div>
+          <div class="section-number">Seção 02</div>
+          <h2>Dados que coletamos</h2>
+        </div>
+      </div>
+      <p>Coletamos apenas os dados estritamente necessários para o funcionamento do serviço:</p>
+
+      <table class="data-table" aria-label="Tabela de dados coletados">
+        <thead>
+          <tr>
+            <th>Dado</th>
+            <th>Origem</th>
+            <th>Finalidade</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Endereço de e-mail</strong></td>
+            <td><span class="tag tag-google">Google OAuth</span></td>
+            <td>Identificação única da conta e comunicações do serviço</td>
+          </tr>
+          <tr>
+            <td><strong>Nome completo</strong></td>
+            <td><span class="tag tag-google">Google OAuth</span></td>
+            <td>Personalização da interface e experiência do usuário</td>
+          </tr>
+          <tr>
+            <td><strong>Foto de perfil</strong></td>
+            <td><span class="tag tag-google">Google OAuth</span></td>
+            <td>Exibição no avatar dentro do app (opcional)</td>
+          </tr>
+          <tr>
+            <td><strong>Eventos de uso</strong></td>
+            <td><span class="tag tag-internal">App interno</span></td>
+            <td>Sessões iniciadas, metas criadas, tarefas completadas, tempo em modo foco</td>
+          </tr>
+          <tr>
+            <td><strong>Status de assinatura</strong></td>
+            <td><span class="tag tag-supabase">Supabase</span></td>
+            <td>Controle de acesso a funcionalidades premium</td>
+          </tr>
+          <tr>
+            <td><strong>Progresso de tarefas e metas</strong></td>
+            <td><span class="tag tag-supabase">Supabase</span></td>
+            <td>Sincronização entre dispositivos e histórico de produtividade</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <p>Não coletamos dados de localização, contatos, arquivos do dispositivo, mensagens ou qualquer informação não listada acima.</p>
+    </section>
+
+    <!-- 3. Como usamos -->
+    <section id="s3">
+      <div class="section-header">
+        <div class="section-icon">⚙️</div>
+        <div>
+          <div class="section-number">Seção 03</div>
+          <h2>Como usamos seus dados</h2>
+        </div>
+      </div>
+      <p>Os dados coletados são utilizados exclusivamente para:</p>
+      <ul class="policy-list">
+        <li>Autenticar e identificar sua conta de forma segura via Google OAuth 2.0</li>
+        <li>Sincronizar suas tarefas, metas e histórico de foco entre dispositivos</li>
+        <li>Personalizar a interface com seu nome e foto de perfil</li>
+        <li>Calcular métricas de produtividade exibidas no painel de Evolução</li>
+        <li>Gerenciar o acesso diferenciado a funcionalidades do plano gratuito e pro</li>
+        <li>Melhorar a performance e estabilidade do app com base em padrões de uso anônimos</li>
+      </ul>
+      <div class="highlight highlight-green">
+        ✦ Jamais utilizamos seus dados para publicidade, criação de perfis comportamentais ou qualquer finalidade diferente das listadas acima.
+      </div>
+    </section>
+
+    <!-- 4. Armazenamento e segurança -->
+    <section id="s4">
+      <div class="section-header">
+        <div class="section-icon">🛡️</div>
+        <div>
+          <div class="section-number">Seção 04</div>
+          <h2>Armazenamento e segurança</h2>
+        </div>
+      </div>
+      <p>Todos os dados são armazenados na infraestrutura do <strong>Supabase</strong>, uma plataforma backend-as-a-service com sede nos Estados Unidos, que adota os seguintes padrões de segurança:</p>
+      <ul class="policy-list">
+        <li>Dados em repouso criptografados com AES-256</li>
+        <li>Conexões protegidas por TLS 1.2+ em trânsito</li>
+        <li>Row Level Security (RLS) ativo: cada usuário acessa somente seus próprios dados</li>
+        <li>Infraestrutura hospedada na AWS com certificação SOC 2 Type II</li>
+        <li>Backups automáticos e plano de recuperação de desastres</li>
+      </ul>
+      <p>O acesso administrativo ao banco de dados é estritamente limitado aos administradores do serviço MyFlowDay, protegido por autenticação multifator e auditado por logs.</p>
+      <div class="highlight">
+        Os tokens de autenticação Google OAuth nunca são armazenados em nossos servidores. O fluxo de autenticação é gerenciado inteiramente pelo Supabase Auth, que atua como intermediário seguro.
+      </div>
+    </section>
+
+    <!-- 5. Compartilhamento -->
+    <section id="s5">
+      <div class="section-header">
+        <div class="section-icon">🚫</div>
+        <div>
+          <div class="section-number">Seção 05</div>
+          <h2>Compartilhamento de dados</h2>
+        </div>
+      </div>
+      <p><strong>Seus dados pessoais não são vendidos, alugados ou comercializados</strong> com terceiros sob nenhuma circunstância.</p>
+      <p>Compartilhamos dados somente com os seguintes prestadores de serviço essenciais ao funcionamento do app, todos operando sob acordos de processamento de dados:</p>
+      <ul class="policy-list">
+        <li><strong>Supabase Inc.</strong> — Banco de dados, autenticação e armazenamento de backend</li>
+        <li><strong>Google LLC</strong> — Provedor de identidade OAuth 2.0 (processo de login)</li>
+        <li><strong>Vercel Inc.</strong> — Hospedagem do frontend e entrega de conteúdo (CDN)</li>
+      </ul>
+      <p>Em caso de exigência legal (ordem judicial, regulatória ou autoridade competente), podemos ser obrigados a divulgar dados. Nesse caso, notificaremos o usuário afetado sempre que legalmente permitido.</p>
+    </section>
+
+    <!-- 6. Retenção -->
+    <section id="s6">
+      <div class="section-header">
+        <div class="section-icon">🗓️</div>
+        <div>
+          <div class="section-number">Seção 06</div>
+          <h2>Retenção de dados</h2>
+        </div>
+      </div>
+      <p>Seus dados são mantidos enquanto sua conta estiver ativa. Ao solicitar a exclusão da conta:</p>
+      <ul class="policy-list">
+        <li>Dados de perfil (nome, e-mail) são excluídos em até <strong>7 dias úteis</strong></li>
+        <li>Dados de tarefas, metas e sessões de foco são excluídos em até <strong>30 dias</strong></li>
+        <li>Logs de auditoria anonimizados podem ser mantidos por até <strong>12 meses</strong> por requisito legal</li>
+      </ul>
+      <p>Para solicitar a exclusão completa da sua conta, entre em contato através do e-mail listado na Seção 10.</p>
+    </section>
+
+    <!-- 7. Direitos LGPD -->
+    <section id="s7">
+      <div class="section-header">
+        <div class="section-icon">⚖️</div>
+        <div>
+          <div class="section-number">Seção 07</div>
+          <h2>Seus direitos (LGPD)</h2>
+        </div>
+      </div>
+      <p>Nos termos da Lei Geral de Proteção de Dados (LGPD), você tem os seguintes direitos:</p>
+      <ul class="policy-list">
+        <li><strong>Acesso:</strong> solicitar uma cópia de todos os dados pessoais que mantemos sobre você</li>
+        <li><strong>Correção:</strong> solicitar a atualização de dados incorretos ou desatualizados</li>
+        <li><strong>Exclusão:</strong> solicitar a remoção de seus dados pessoais da nossa plataforma</li>
+        <li><strong>Portabilidade:</strong> receber seus dados em formato estruturado e legível por máquina</li>
+        <li><strong>Revogação:</strong> revogar o consentimento para tratamento de dados a qualquer momento</li>
+        <li><strong>Informação:</strong> ser informado sobre com quem seus dados foram compartilhados</li>
+        <li><strong>Oposição:</strong> opor-se a determinados tipos de tratamento de dados</li>
+      </ul>
+      <p>Para exercer qualquer um desses direitos, entre em contato através do e-mail indicado na Seção 10. Responderemos em até <strong>15 dias úteis</strong>.</p>
+    </section>
+
+    <!-- 8. Cookies -->
+    <section id="s8">
+      <div class="section-header">
+        <div class="section-icon">🍪</div>
+        <div>
+          <div class="section-number">Seção 08</div>
+          <h2>Cookies e rastreamento</h2>
+        </div>
+      </div>
+      <p>O MyFlowDay utiliza apenas cookies <strong>estritamente necessários</strong> para o funcionamento do app:</p>
+      <ul class="policy-list">
+        <li><strong>Sessão de autenticação:</strong> cookies de curta duração gerenciados pelo Supabase Auth para manter sua sessão ativa</li>
+        <li><strong>Preferências locais:</strong> dados como tema (claro/escuro) armazenados no <code>localStorage</code> do seu navegador, sem envio a servidores</li>
+      </ul>
+      <p><strong>Não utilizamos</strong> cookies de rastreamento, publicidade, analytics de terceiros (Google Analytics, Hotjar, Meta Pixel) ou qualquer tecnologia de fingerprinting.</p>
+    </section>
+
+    <!-- 9. Alterações -->
+    <section id="s9">
+      <div class="section-header">
+        <div class="section-icon">📝</div>
+        <div>
+          <div class="section-number">Seção 09</div>
+          <h2>Alterações nesta política</h2>
+        </div>
+      </div>
+      <p>Podemos atualizar esta Política de Privacidade periodicamente para refletir mudanças nos nossos serviços ou requisitos legais. Quando alterações significativas forem realizadas:</p>
+      <ul class="policy-list">
+        <li>A data de "Vigência" no topo desta página será atualizada</li>
+        <li>Uma notificação será exibida dentro do app por pelo menos 7 dias</li>
+        <li>Alterações materiais que afetem seus direitos serão comunicadas por e-mail</li>
+      </ul>
+      <p>O uso continuado do serviço após a publicação das alterações constitui aceitação dos novos termos.</p>
+    </section>
+
+    <!-- 10. Contato -->
+    <section id="s10">
+      <div class="section-header">
+        <div class="section-icon">📬</div>
+        <div>
+          <div class="section-number">Seção 10</div>
+          <h2>Contato</h2>
+        </div>
+      </div>
+      <p>Para dúvidas, solicitações relacionadas a dados pessoais ou exercício dos seus direitos garantidos pela LGPD, entre em contato com o responsável pelo tratamento de dados:</p>
+      <div class="contact-card">
+        <div class="contact-avatar">👤</div>
+        <div class="contact-info">
+          <p class="name">Equipe MyFlowDay — Encarregado de Dados (DPO)</p>
+          <p class="email">privacidade@myflowday.app</p>
+        </div>
+      </div>
+      <p style="margin-top: 16px;">Comprometemo-nos a responder todas as solicitações em até <strong>15 dias úteis</strong> a partir do recebimento.</p>
+    </section>
+
+    <!-- ── Navegação entre documentos ── -->
+    <div class="doc-switcher" aria-label="Navegar entre documentos legais">
+      <div class="doc-link active-doc">
+        <div class="doc-link-icon purple">🔒</div>
+        <div>
+          <div class="doc-link-label">Você está aqui</div>
+          <div class="doc-link-title">Política de Privacidade</div>
+        </div>
+        <div class="doc-link-arrow">✓</div>
+      </div>
+      <a href="/terms.html" class="doc-link">
+        <div class="doc-link-icon slate">📋</div>
+        <div>
+          <div class="doc-link-label">Leia também</div>
+          <div class="doc-link-title">Termos de Serviço</div>
+        </div>
+        <div class="doc-link-arrow">→</div>
+      </a>
+    </div>
+
+  </main>
+
+  <!-- ── Footer ── -->
+  <footer>
+    <p>© 2025 MyFlowDay. Todos os direitos reservados.</p>
+    <p style="margin-top: 6px;">
+      <a href="/privacy.html">Política de Privacidade</a> ·
+      <a href="/terms.html">Termos de Serviço</a> ·
+      Em conformidade com a <strong>LGPD (Lei nº 13.709/2018)</strong> e as
+      <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noopener">Políticas de Dados do Google OAuth</a>.
+    </p>
+  </footer>
+
+</body>
+</html>
+

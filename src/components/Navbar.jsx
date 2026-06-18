@@ -1,4 +1,5 @@
 import React from 'react';
+import { Sun, Moon } from 'lucide-react';
 import { useAppContext } from '../contexts/AppContext';
 import MFIcon from './MFIcon';
 
@@ -32,14 +33,13 @@ export default function Navbar() {
       <header className="app-top-header">
         <div className="app-top-header-container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', maxWidth: '1200px', margin: '0 auto', padding: '0 24px', height: '64px' }}>
           
-          {/* Logo */}
+          {/* Logo — apenas o SVG, sem texto duplicado */}
           <div className="navbar-brand" style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }} onClick={() => setActiveTab('home')}>
             <img 
               src={theme === 'dark' ? '/branding/logo-dark.svg' : '/branding/logo.svg'}
               alt="MyFlowDay Logo" 
               style={{ height: '28px', width: 'auto', objectFit: 'contain' }}
             />
-            <span className="hide-on-mobile" style={{ fontSize: '18px', fontWeight: 700, letterSpacing: '-0.5px', color: 'var(--text-main)', margin: 0 }}>MyFlowDay</span>
           </div>
 
           {/* Navegação */}
@@ -76,10 +76,13 @@ export default function Navbar() {
             <button
               onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
               className="app-top-logout-btn"
-              title="Alternar Tema"
+              title={theme === 'dark' ? 'Modo Claro' : 'Modo Escuro'}
+              aria-label={theme === 'dark' ? 'Ativar modo claro' : 'Ativar modo escuro'}
               style={{ padding: '8px', minWidth: 'auto', display: 'inline-flex', alignItems: 'center' }}
             >
-              <MFIcon name={theme === 'dark' ? 'consistency' : 'focus'} size={18} />
+              {theme === 'dark'
+                ? <Sun size={18} aria-hidden="true" />
+                : <Moon size={18} aria-hidden="true" />}
             </button>
             <button
               onClick={() => setActiveTab('settings')}
