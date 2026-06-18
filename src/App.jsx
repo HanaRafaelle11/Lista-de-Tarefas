@@ -1,5 +1,6 @@
 import React, { useEffect, lazy, Suspense } from 'react';
 import { AppProvider, useAppContext } from './contexts/AppContext';
+import { supabase } from './supabaseClient';
 import Auth from './components/Auth';
 import Navbar from './components/Navbar';
 

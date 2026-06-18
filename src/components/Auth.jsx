@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Shield, Lock, Mail, User, CheckCircle2, ArrowLeft, Chrome } from 'lucide-react';
+import { Shield, Lock, Mail, User, CheckCircle2, ArrowLeft } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import { eventsService } from '../services/eventsService';
 
