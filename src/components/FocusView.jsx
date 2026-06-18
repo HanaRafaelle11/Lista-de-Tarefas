@@ -304,13 +304,14 @@ export default function FocusView() {
   const activeTask = pendingTasks.find(t => t.id === selectedTaskId);
 
   const ambientSounds = [
-    { value: 'none', label: 'Nenhum', emoji: '🔇' },
-    { value: 'rain.mp3', label: 'Chuva', emoji: '🌧️' },
-    { value: 'forest.mp3', label: 'Floresta', emoji: '🌲' },
-    { value: 'cafe.mp3', label: 'Cafeteria', emoji: '☕' },
-    { value: 'ocean.mp3', label: 'Ondas do Mar', emoji: '🌊' },
-    { value: 'white-noise.mp3', label: 'Ruído Branco', emoji: '🤍' },
+    { value: 'none',            label: 'Nenhum',       emoji: '🔇' },
+    { value: 'rain.wav',        label: 'Chuva',        emoji: '🌧️' },
+    { value: 'forest.wav',      label: 'Floresta',     emoji: '🌲' },
+    { value: 'cafe.wav',        label: 'Cafeteria',    emoji: '☕' },
+    { value: 'ocean.wav',       label: 'Ondas do Mar', emoji: '🌊' },
+    { value: 'white-noise.wav', label: 'Ruído Branco', emoji: '🤍' },
   ];
+
 
   return (
     <div className="focus-view-container animate-fade-in">
