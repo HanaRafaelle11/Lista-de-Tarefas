@@ -392,15 +392,32 @@ a {
     min-height: 56px !important;
   }
 
-  /* Modal mais largo */
+  /* Modal mais largo e com margem inferior para teclado */
   .modal-content {
     max-width: 95%;
     margin: auto;
+    max-height: 90vh;
+    overflow-y: auto;
   }
 
   /* Filtros - scroll horizontal em mobile */
   .filtersGroup {
     overflow-x: auto;
+  }
+
+  /* Aumentar alvos de toque em mobile */
+  .todo-item-action-btn {
+    padding: 12px;
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .nav-tab-button, .app-bottom-nav-btn {
+    min-height: 48px;
+  }
+
+  .quick-inbox-input {
+    font-size: 16px; /* Evita zoom automÃ¡tico no iOS */
   }
 }
 
@@ -414,6 +431,10 @@ a {
   section[style*="flex-wrap"] {
     flex-direction: column;
   }
+
+  .todo-item-meta-row {
+    gap: 4px;
+  }
 }
 
 /* Focus visible - acessibilidade */
@@ -421,8 +442,9 @@ button:focus-visible,
 input:focus-visible,
 select:focus-visible,
 textarea:focus-visible {
-  outline: 2px solid var(--primary);
+  outline: 3px solid var(--primary);
   outline-offset: 2px;
+  box-shadow: 0 0 0 4px var(--primary-glow);
 }
 
 /* SeleÃ§Ã£o de texto premium */

@@ -2,6 +2,7 @@ import React, { useMemo, useState, lazy, Suspense } from 'react';
 import { CheckCircle, Clock, AlertTriangle, BarChart3, PieChart, Target, Star, Award, ShieldAlert, Zap } from 'lucide-react';
 import { ACHIEVEMENTS, calcStats, calcStreak } from '../hooks/useAchievements';
 import { useAppContext } from '../contexts/AppContext';
+import MFIcon from './MFIcon';
 const WeeklyPlannerModal = lazy(() => import('./WeeklyPlannerModal'));
 
 // ─── Utilitários ─────────────────────────────────────────────────────────────
@@ -12,10 +13,12 @@ function formatDate(isoStr) {
 }
 
 // ─── Card de Métrica ─────────────────────────────────────────────────────────
-function MetricCard({ emoji, value, label, highlight }) {
+function MetricCard({ iconName, iconColor, value, label, highlight }) {
   return (
     <div className={`evo-metric-card ${highlight ? 'evo-metric-card--highlight' : ''}`}>
-      <div className="evo-metric-icon">{emoji}</div>
+      <div className="evo-metric-icon" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <MFIcon name={iconName} size={28} color={iconColor} />
+      </div>
       <div className="evo-metric-info">
         <span className="evo-metric-value">{value}</span>
         <span className="evo-metric-label">{label}</span>
@@ -450,18 +453,20 @@ export default function EvolutionView() {
 
       {/* ── Grid de métricas ────────────────────────────── */}
       <section className="evo-metrics-grid">
-        <MetricCard emoji="✅" value={stats.completedTasks} label="Tarefas concluídas" />
-        <MetricCard emoji="📊" value={`${stats.completionRate}%`} label="Taxa de conclusão" />
-        <MetricCard emoji="🔥" value={streak > 0 ? `${streak} dias` : '—'} label="Sequência atual" highlight={streak >= 3} />
-        <MetricCard emoji="🎯" value={stats.activeGoals} label="Objetivos ativos" />
-        <MetricCard emoji="🏆" value={stats.completedGoals} label="Objetivos concluídos" />
-        <MetricCard emoji="🏅" value={`${unlockedCount}/${ACHIEVEMENTS.length}`} label="Conquistas" />
+        <MetricCard iconName="tasks" value={stats.completedTasks} label="Tarefas concluídas" />
+        <MetricCard iconName="performance" value={`${stats.completionRate}%`} label="Taxa de conclusão" />
+        <MetricCard iconName="streak" iconColor="var(--accent-orange, #f97316)" value={streak > 0 ? `${streak} dias` : '—'} label="Sequência atual" highlight={streak >= 3} />
+        <MetricCard iconName="objectives" value={stats.activeGoals} label="Objetivos ativos" />
+        <MetricCard iconName="consistency" value={stats.completedGoals} label="Objetivos concluídos" />
+        <MetricCard iconName="achievements" iconColor="var(--accent-yellow, #eab308)" value={`${unlockedCount}/${ACHIEVEMENTS.length}`} label="Conquistas" />
       </section>
 
       {/* ── Sequência atual ─────────────────────────────── */}
       <section className="evo-card">
         <div className="evo-card-header">
-          <h3 className="evo-card-title">🔥 Sequência atual</h3>
+          <h3 className="evo-card-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <MFIcon name="streak" size={20} style={{ color: 'var(--accent-orange, #f97316)' }} /> Sequência atual
+          </h3>
           {streak > 0 && (
             <span className="evo-streak-badge">{streak} {streak === 1 ? 'dia' : 'dias'}</span>
           )}
@@ -476,7 +481,9 @@ export default function EvolutionView() {
             {nextMilestone && (
               <div className="evo-streak-progress-wrap">
                 <div className="evo-streak-progress-labels">
-                  <span className="evo-streak-progress-current">🔥 {streak} dias</span>
+                  <span className="evo-streak-progress-current" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                    <MFIcon name="streak" size={14} style={{ color: 'var(--accent-orange, #f97316)' }} /> {streak} dias
+                  </span>
                   <span className="evo-streak-progress-next">Próximo marco: {nextMilestone} dias</span>
                 </div>
                 <div className="evo-streak-track">
@@ -494,7 +501,9 @@ export default function EvolutionView() {
       {/* ── Conquistas ──────────────────────────────────── */}
       <section className="evo-card">
         <div className="evo-card-header">
-          <h3 className="evo-card-title">🏅 Suas Conquistas</h3>
+          <h3 className="evo-card-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <MFIcon name="achievements" size={20} style={{ color: 'var(--accent-yellow, #eab308)' }} /> Suas Conquistas
+          </h3>
           <span className="evo-achievements-count">
             {unlockedCount} de {ACHIEVEMENTS.length} desbloqueadas
           </span>
@@ -516,7 +525,9 @@ export default function EvolutionView() {
       {completedGoals.length > 0 && (
         <section className="evo-card">
           <div className="evo-card-header">
-            <h3 className="evo-card-title">🏆 Objetivos alcançados</h3>
+            <h3 className="evo-card-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <MFIcon name="consistency" size={20} style={{ color: 'var(--primary)' }} /> Objetivos alcançados
+            </h3>
             <span className="evo-achievements-count">{completedGoals.length}</span>
           </div>
           <div className="evo-completed-goals-list">

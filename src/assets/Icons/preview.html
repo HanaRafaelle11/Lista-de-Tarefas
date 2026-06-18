@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MyFlow Icons — Preview v1.0</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #F8FAFC;
+      --surface: #FFFFFF;
+      --border: #E2E8F0;
+      --text: #0F172A;
+      --text-muted: #64748B;
+      --text-light: #94A3B8;
+      --primary: #2563EB;
+      --cyan: #22D3EE;
+      --radius: 16px;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      padding: 48px 32px;
+      min-height: 100vh;
+    }
+
+    /* ── Header ── */
+    .header {
+      max-width: 960px;
+      margin: 0 auto 56px;
+    }
+
+    .header-eyebrow {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--primary);
+      margin-bottom: 8px;
+    }
+
+    .header h1 {
+      font-size: 36px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      margin-bottom: 12px;
+    }
+
+    .header p {
+      font-size: 16px;
+      color: var(--text-muted);
+      line-height: 1.6;
+      max-width: 560px;
+    }
+
+    /* ── Spec Bar ── */
+    .spec-bar {
+      max-width: 960px;
+      margin: 0 auto 48px;
+      display: flex;
+      gap: 24px;
+      flex-wrap: wrap;
+    }
+
+    .spec-pill {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      font-size: 13px;
+    }
+
+    .spec-pill-label {
+      color: var(--text-light);
+      font-weight: 500;
+    }
+
+    .spec-pill-value {
+      color: var(--text);
+      font-weight: 600;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+    }
+
+    /* ── Category ── */
+    .category {
+      max-width: 960px;
+      margin: 0 auto 48px;
+    }
+
+    .category-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 24px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .category-title {
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+
+    .category-count {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 22px;
+      height: 22px;
+      background: var(--primary);
+      color: white;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    /* ── Icon Grid ── */
+    .icon-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 20px;
+    }
+
+    /* ── Icon Card ── */
+    .icon-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px 16px 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+      cursor: default;
+      transition: all 150ms ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .icon-card:hover {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.08);
+      transform: translateY(-2px);
+    }
+
+    /* Size switcher preview (hover shows 3 sizes) */
+    .icon-sizes {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      height: 56px;
+    }
+
+    .icon-sizes svg { color: var(--text); transition: color 150ms; }
+    .icon-card:hover .icon-sizes svg { color: var(--primary); }
+
+    .icon-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text);
+      text-align: center;
+    }
+
+    .icon-concept {
+      font-size: 11px;
+      color: var(--text-light);
+      text-align: center;
+      line-height: 1.5;
+    }
+
+    .icon-filename {
+      font-size: 10px;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      color: var(--text-light);
+      background: var(--bg);
+      padding: 3px 8px;
+      border-radius: 4px;
+      border: 1px solid var(--border);
+    }
+
+    /* ── Dark mode toggle ── */
+    .controls {
+      max-width: 960px;
+      margin: 0 auto 40px;
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .toggle-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 20px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      font-family: 'Inter', sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      color: var(--text);
+      transition: all 150ms;
+    }
+
+    .toggle-btn:hover { border-color: var(--primary); color: var(--primary); }
+    .toggle-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
+
+    /* ── Dark Mode ── */
+    body.dark {
+      --bg: #0F172A;
+      --surface: #1E293B;
+      --border: #334155;
+      --text: #F8FAFC;
+      --text-muted: #94A3B8;
+      --text-light: #64748B;
+    }
+
+    /* ── Footer ── */
+    .footer {
+      max-width: 960px;
+      margin: 64px auto 0;
+      padding-top: 24px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+      color: var(--text-light);
+    }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-eyebrow">MyFlow Icons — v1.0</div>
+  <h1>Biblioteca de Ícones</h1>
+  <p>15 ícones SVG proprietários desenhados para o MyFlowDay. Outline monoline, 24×24px, stroke 2px. Aguardando aprovação antes da integração.</p>
+</div>
+
+<div class="controls">
+  <button class="toggle-btn" onclick="toggleDark(this)">🌙 Dark Mode</button>
+  <span style="font-size:13px;color:var(--text-muted)">Passe o mouse sobre os cards para ver o estado ativo.</span>
+</div>
+
+<div class="spec-bar">
+  <div class="spec-pill"><span class="spec-pill-label">ViewBox</span><span class="spec-pill-value">0 0 24 24</span></div>
+  <div class="spec-pill"><span class="spec-pill-label">Stroke</span><span class="spec-pill-value">2px</span></div>
+  <div class="spec-pill"><span class="spec-pill-label">Linecap</span><span class="spec-pill-value">round</span></div>
+  <div class="spec-pill"><span class="spec-pill-label">Linejoin</span><span class="spec-pill-value">round</span></div>
+  <div class="spec-pill"><span class="spec-pill-label">Fill</span><span class="spec-pill-value">none</span></div>
+  <div class="spec-pill"><span class="spec-pill-label">Cor</span><span class="spec-pill-value">currentColor</span></div>
+  <div class="spec-pill"><span class="spec-pill-label">Total</span><span class="spec-pill-value">15 ícones</span></div>
+</div>
+
+<!-- ── Categoria 1: Conceitos Centrais ── -->
+<div class="category">
+  <div class="category-header">
+    <div class="category-title">Conceitos Centrais</div>
+    <div class="category-count">5</div>
+  </div>
+  <div class="icon-grid">
+
+    <div class="icon-card">
+      <div class="icon-sizes">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+      </div>
+      <div class="icon-label">Objectives</div>
+      <div class="icon-concept">Direção · Propósito · Visão</div>
+      <div class="icon-filename">mf-objectives.svg</div>
+    </div>
+
+    <div class="icon-card">
+      <div class="icon-sizes">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="5" ry="5"/><polyline points="7.5,12.5 10.5,15.5 16.5,8.5"/></svg>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="5" ry="5"/><polyline points="7.5,12.5 10.5,15.5 16.5,8.5"/></svg>
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="5" ry="5"/><polyline points="7.5,12.5 10.5,15.5 16.5,8.5"/></svg>
+      </div>
+      <div class="icon-label">Tasks</div>
+      <div class="icon-concept">Execução · Ação · Progresso</div>
+      <div class="icon-filename">mf-tasks.svg</div>
+    </div>
+
+    <div class="icon-card">
+      <div class="icon-sizes">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/></svg>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/></svg>
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/></svg>
+      </div>
+      <div class="icon-label">Focus</div>
+      <div class="icon-concept">Concentração · Presença · Flow</div>
+      <div class="icon-filename">mf-focus.svg</div>
+    </div>
+
+    <div class="icon-card">
+      <div class="icon-sizes">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4,20 12,11 20,3"/><polyline points="14,3 20,3 20,9"/></svg>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4,20 12,11 20,3"/><polyline points="14,3 20,3 20,9"/></svg>
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4,20 12,11 20,3"/><polyline points="14,3 20,3 20,9"/></svg>
+      </div>
+      <div class="icon-label">Evolution</div>
+      <div class="icon-concept">Crescimento · Melhoria Contínua</div>
+      <div class="icon-filename">mf-evolution.svg</div>
+    </div>
+
+    <div class="icon-card">
+      <div class="icon-sizes">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 L15.5 9 L22 12 L15.5 15 L12 22 L8.5 15 L2 12 L8.5 9 Z"/></svg>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 L15.5 9 L22 12 L15.5 15 L12 22 L8.5 15 L2 12 L8.5 9 Z"/></svg>
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 L15.5 9 L22 12 L15.5 15 L12 22 L8.5 15 L2 12 L8.5 9 Z"/></svg>
+      </div>
+      <div class="icon-label">Consistency</div>
+      <div class="icon-concept">Disciplina · Repetição · Hábitos</div>
+      <div class="icon-filename">mf-consistency.svg</div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ── Categoria 2: Métricas e Sistema ── -->
+<div class="category">
+  <div class="category-header">
+    <div class="category-title">Métricas e Sistema</div>
+    <div class="category-count">5</div>
+  </div>
+  <div class="icon-grid">
+
+    <div class="icon-card">
+      <div class="icon-sizes">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/></svg>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/></svg>
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/></svg>
+      </div>
+      <div class="icon-label">Achievements</div>
+      <div class="icon-concept">Reconhecimento · Marcos</div>
+      <div class="icon-filename">mf-achievements.svg</div>
+    </div>
+
+    <div class="icon-card">
+      <div class="icon-sizes">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/><line x1="12" y1="9" x2="12" y2="2"/></svg>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/><line x1="12" y1="9" x2="12" y2="2"/></svg>
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/><line x1="12" y1="9" x2="12" y2="2"/></svg>
+      </div>
+      <div class="icon-label">Insights</div>
+      <div class="icon-concept">Aprendizado · Autoconsciência</div>
+      <div class="icon-filename">mf-insights.svg</div>
+    </div>
+
+    <div class="icon-card">
+      <div class="icon-sizes">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/><polyline points="7.5,13 9.5,11 11.5,15 13.5,11.5 15.5,13"/></svg>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/><polyline points="7.5,13 9.5,11 11.5,15 13.5,11.5 15.5,13"/></svg>
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/><polyline points="7.5,13 9.5,11 11.5,15 13.5,11.5 15.5,13"/></svg>
+      </div>
+      <div class="icon-label">Goal Health</div>
+      <div class="icon-concept">Equilíbrio · Sustentabilidade</div>
+      <div class="icon-filename">mf-goal-health.svg</div>
+    </div>
+
+    <div class="icon-card">
+      <div class="icon-sizes">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="3" ry="3"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="16" y1="2" x2="16" y2="6"/><circle cx="8.5" cy="15" r="1" fill="currentColor"/><circle cx="12" cy="15" r="1" fill="currentColor"/><circle cx="15.5" cy="15" r="1" fill="currentColor"/><circle cx="8.5" cy="19" r="1" fill="currentColor"/><circle cx="12" cy="19" r="1" fill="currentColor"/></svg>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="3" ry="3"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="16" y1="2" x2="16" y2="6"/><circle cx="8.5" cy="15" r="1" fill="currentColor"/><circle cx="12" cy="15" r="1" fill="currentColor"/><circle cx="15.5" cy="15" r="1" fill="currentColor"/><circle cx="8.5" cy="19" r="1" fill="currentColor"/><circle cx="12" cy="19" r="1" fill="currentColor"/></svg>
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="3" ry="3"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="16" y1="2" x2="16" y2="6"/><circle cx="8.5" cy="15" r="1" fill="currentColor"/><circle cx="12" cy="15" r="1" fill="currentColor"/><circle cx="15.5" cy="15" r="1" fill="currentColor"/><circle cx="8.5" cy="19" r="1" fill="currentColor"/><circle cx="12" cy="19" r="1" fill="currentColor"/></svg>
+      </div>
+      <div class="icon-label">Calendar</div>
+      <div class="icon-concept">Planejamento · Scheduling</div>
+      <div class="icon-filename">mf-calendar.svg</div>
+    </div>
+
+    <div class="icon-card">
+      <div class="icon-sizes">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="21" x2="21" y2="21"/><rect x="5" y="14" width="3.5" height="7"/><rect x="10.25" y="9" width="3.5" height="12"/><rect x="15.5" y="4" width="3.5" height="17"/></svg>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="21" x2="21" y2="21"/><rect x="5" y="14" width="3.5" height="7"/><rect x="10.25" y="9" width="3.5" height="12"/><rect x="15.5" y="4" width="3.5" height="17"/></svg>
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="21" x2="21" y2="21"/><rect x="5" y="14" width="3.5" height="7"/><rect x="10.25" y="9" width="3.5" height="12"/><rect x="15.5" y="4" width="3.5" height="17"/></svg>
+      </div>
+      <div class="icon-label">Performance</div>
+      <div class="icon-concept">Ritmo · Regularidade · Produtividade</div>
+      <div class="icon-filename">mf-performance.svg</div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ── Categoria 3: Identidade e Fluxo ── -->
+<div class="category">
+  <div class="category-header">
+    <div class="category-title">Identidade e Fluxo</div>
+    <div class="category-count">5</div>
+  </div>
+  <div class="icon-grid">
+
+    <div class="icon-card">
+      <div class="icon-sizes">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5 C15 5 17 7 17 10 C17 13 15 15 12 15 L12 19 C15 19 18 20 18 22 L7 22"/><path d="M7 22 L7 5 C7 3.3 8.8 2 11 2 C13.2 2 15 3.3 15 5"/></svg>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5 C15 5 17 7 17 10 C17 13 15 15 12 15 L12 19 C15 19 18 20 18 22 L7 22"/><path d="M7 22 L7 5 C7 3.3 8.8 2 11 2 C13.2 2 15 3.3 15 5"/></svg>
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5 C15 5 17 7 17 10 C17 13 15 15 12 15 L12 19 C15 19 18 20 18 22 L7 22"/><path d="M7 22 L7 5 C7 3.3 8.8 2 11 2 C13.2 2 15 3.3 15 5"/></svg>
+      </div>
+      <div class="icon-label">Profile</div>
+      <div class="icon-concept">Identidade · Pessoa</div>
+      <div class="icon-filename">mf-profile.svg</div>
+    </div>
+
+    <div class="icon-card">
+      <div class="icon-sizes">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12 C4.5 7 7 17 10 12 C13 7 15.5 17 18 12 C19.5 9 21 10.5 22 12"/></svg>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12 C4.5 7 7 17 10 12 C13 7 15.5 17 18 12 C19.5 9 21 10.5 22 12"/></svg>
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12 C4.5 7 7 17 10 12 C13 7 15.5 17 18 12 C19.5 9 21 10.5 22 12"/></svg>
+      </div>
+      <div class="icon-label">Flow Score</div>
+      <div class="icon-concept">Ritmo · Regularidade · Fluxo</div>
+      <div class="icon-filename">mf-flow-score.svg</div>
+    </div>
+
+    <div class="icon-card">
+      <div class="icon-sizes">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="18" r="2"/><circle cx="12" cy="11" r="2"/><circle cx="19" cy="4" r="2"/><path d="M7 17 C9 14 10 13 10 11"/><path d="M14 10 C16 7 17 6 17 4"/></svg>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="18" r="2"/><circle cx="12" cy="11" r="2"/><circle cx="19" cy="4" r="2"/><path d="M7 17 C9 14 10 13 10 11"/><path d="M14 10 C16 7 17 6 17 4"/></svg>
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="18" r="2"/><circle cx="12" cy="11" r="2"/><circle cx="19" cy="4" r="2"/><path d="M7 17 C9 14 10 13 10 11"/><path d="M14 10 C16 7 17 6 17 4"/></svg>
+      </div>
+      <div class="icon-label">Streak</div>
+      <div class="icon-concept">Continuidade · Persistência</div>
+      <div class="icon-filename">mf-streak.svg</div>
+    </div>
+
+    <div class="icon-card">
+      <div class="icon-sizes">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8.5 12 C8.5 10 9.8 9 11 9 C12.5 9 13 10.5 12 12 C11 13.5 11.5 15 13 15 C14.2 15 15.5 14 15.5 12 C15.5 10 14.2 9 13 9 C11.5 9 11 10.5 12 12 C13 13.5 12.5 15 11 15 C9.8 15 8.5 14 8.5 12 Z"/></svg>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8.5 12 C8.5 10 9.8 9 11 9 C12.5 9 13 10.5 12 12 C11 13.5 11.5 15 13 15 C14.2 15 15.5 14 15.5 12 C15.5 10 14.2 9 13 9 C11.5 9 11 10.5 12 12 C13 13.5 12.5 15 11 15 C9.8 15 8.5 14 8.5 12 Z"/></svg>
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8.5 12 C8.5 10 9.8 9 11 9 C12.5 9 13 10.5 12 12 C11 13.5 11.5 15 13 15 C14.2 15 15.5 14 15.5 12 C15.5 10 14.2 9 13 9 C11.5 9 11 10.5 12 12 C13 13.5 12.5 15 11 15 C9.8 15 8.5 14 8.5 12 Z"/></svg>
+      </div>
+      <div class="icon-label">Flow Mode</div>
+      <div class="icon-concept">Estado de Flow · Presença Total</div>
+      <div class="icon-filename">mf-flow-mode.svg</div>
+    </div>
+
+    <div class="icon-card">
+      <div class="icon-sizes">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="4" cy="20" r="2"/><circle cx="20" cy="4" r="2"/><path d="M5.4 18.6 C7 14 11 10 18.6 5.4"/></svg>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="4" cy="20" r="2"/><circle cx="20" cy="4" r="2"/><path d="M5.4 18.6 C7 14 11 10 18.6 5.4"/></svg>
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="4" cy="20" r="2"/><circle cx="20" cy="4" r="2"/><path d="M5.4 18.6 C7 14 11 10 18.6 5.4"/></svg>
+      </div>
+      <div class="icon-label">Journey</div>
+      <div class="icon-concept">Trajetória · Transformação Pessoal</div>
+      <div class="icon-filename">mf-journey.svg</div>
+    </div>
+
+  </div>
+</div>
+
+<div class="footer">
+  <span>MyFlow Icons v1.0 · 15 ícones · Stroke 2px · currentColor · viewBox 0 0 24 24</span>
+  <span>Aguardando aprovação — sem integração ao sistema ainda</span>
+</div>
+
+<script>
+  function toggleDark(btn) {
+    document.body.classList.toggle('dark');
+    btn.classList.toggle('active');
+    btn.textContent = document.body.classList.contains('dark') ? '☀️ Light Mode' : '🌙 Dark Mode';
+  }
+</script>
+</body>
+</html>

@@ -1,5 +1,6 @@
 import React from 'react';
 import { useAppContext } from '../contexts/AppContext';
+import MFIcon from './MFIcon';
 
 export default function Navbar() {
   const { activeTab, setActiveTab, currentUser, handleLogout, userProfile, isAdmin, theme, setTheme } = useAppContext();
@@ -13,16 +14,16 @@ export default function Navbar() {
   };
 
   const navItems = [
-    { key: 'home',        icon: 'home_max',     label: 'Início'    },
-    { key: 'goals',       icon: 'target',       label: 'Objetivos' },
-    { key: 'tasks',       icon: 'check_circle', label: 'Tarefas'   },
-    { key: 'focus',       icon: 'timer',        label: 'Foco'      },
-    { key: 'analytics',   icon: 'auto_graph',   label: 'Evolução'  },
-    { key: 'performance', icon: 'trending_up',  label: 'Desempenho'},
+    { key: 'home',        icon: 'consistency',  label: 'Início'    },
+    { key: 'goals',       icon: 'objectives',   label: 'Objetivos' },
+    { key: 'tasks',       icon: 'tasks',        label: 'Tarefas'   },
+    { key: 'focus',       icon: 'focus',        label: 'Foco'      },
+    { key: 'analytics',   icon: 'evolution',    label: 'Evolução'  },
+    { key: 'performance', icon: 'performance',  label: 'Desempenho'},
   ];
 
   if (isAdmin) {
-    navItems.push({ key: 'admin', icon: 'admin_panel_settings', label: 'Admin' });
+    navItems.push({ key: 'admin', icon: 'profile', label: 'Admin' });
   }
 
   return (
@@ -64,7 +65,7 @@ export default function Navbar() {
                   cursor: 'pointer'
                 }}
               >
-                <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>{icon}</span>
+                <MFIcon name={icon} size={18} />
                 <span>{label}</span>
               </button>
             ))}
@@ -78,15 +79,15 @@ export default function Navbar() {
               title="Alternar Tema"
               style={{ padding: '8px', minWidth: 'auto', display: 'inline-flex', alignItems: 'center' }}
             >
-              <span className="material-symbols-outlined">{theme === 'dark' ? 'light_mode' : 'dark_mode'}</span>
+              <MFIcon name={theme === 'dark' ? 'consistency' : 'focus'} size={18} />
             </button>
             <button
               onClick={() => setActiveTab('settings')}
               className="app-top-logout-btn"
               title="Configurações"
-              style={{ padding: '8px', minWidth: 'auto', color: activeTab === 'settings' ? 'var(--primary)' : 'var(--text-light)' }}
+              style={{ padding: '8px', minWidth: 'auto', color: activeTab === 'settings' ? 'var(--primary)' : 'var(--text-light)', display: 'inline-flex', alignItems: 'center' }}
             >
-              <span className="material-symbols-outlined">settings</span>
+              <MFIcon name="profile" size={18} />
             </button>
             
             <div 
@@ -118,7 +119,7 @@ export default function Navbar() {
             className={`app-bottom-nav-btn ${activeTab === key ? 'active' : ''}`}
             aria-current={activeTab === key ? 'page' : undefined}
           >
-            <span className="material-symbols-outlined nav-icon">{icon}</span>
+            <MFIcon name={icon} size={20} className="nav-icon" />
             <span className="nav-text">{label}</span>
           </button>
         ))}

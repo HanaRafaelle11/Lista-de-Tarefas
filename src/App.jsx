@@ -35,6 +35,33 @@ function AppLayout() {
     isAdmin,
   } = useAppContext();
 
+  const [authMode, setAuthMode] = React.useState('login');
+
+  // Detectar hash de recuperação de senha (fallback)
+  useEffect(() => {
+    const handleHash = () => {
+      if (window.location.hash.includes('type=recovery')) {
+        setAuthMode('updatePassword');
+      }
+    };
+    handleHash();
+    window.addEventListener('hashchange', handleHash);
+    return () => window.removeEventListener('hashchange', handleHash);
+  }, []);
+
+  // Escutar eventos de autenticação do Supabase (prioritário)
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        setAuthMode('updatePassword');
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []); // Roda apenas uma vez no mount
+
   // Registrar visualizações analíticas ao mudar de aba
   useEffect(() => {
     if (currentUser?.id && activeTab) {
@@ -72,7 +99,7 @@ function AppLayout() {
   }
 
   if (!currentUser) {
-    return <Auth onLoginSuccess={handleLoginSuccess} />;
+    return <Auth onLoginSuccess={handleLoginSuccess} initialMode={authMode} />;
   }
 
   return (

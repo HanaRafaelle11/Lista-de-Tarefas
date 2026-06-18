@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <!-- Performance: ascending bar chart — rhythm, regularity, sustainable productivity -->
+  <line x1="3" y1="21" x2="21" y2="21"/>
+  <rect x="5" y="14" width="3.5" height="7"/>
+  <rect x="10.25" y="9" width="3.5" height="12"/>
+  <rect x="15.5" y="4" width="3.5" height="17"/>
+</svg>

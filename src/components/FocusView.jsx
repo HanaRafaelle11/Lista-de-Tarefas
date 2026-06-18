@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Play, Pause, RotateCcw, CheckCircle2, Moon, Sun, Volume2, Settings } from 'lucide-react';
+import { Play, Pause, RotateCcw, CheckCircle2, Moon, Sun, Volume2, Settings, VolumeX, Music } from 'lucide-react';
 import { useAppContext, parseTaskMetadata } from '../contexts/AppContext';
 
 export default function FocusView() {
@@ -37,6 +37,49 @@ export default function FocusView() {
   // Estados temporários do painel de configuração
   const [tempFocus, setTempFocus] = useState(focusTime);
   const [tempBreak, setTempBreak] = useState(breakTime);
+
+  // Estados do Áudio Ambiente
+  const [ambientSoundFile, setAmbientSoundFile] = useState(() => localStorage.getItem('flowday_ambient_sound_file') || 'none');
+  const [ambientSoundVolume, setAmbientSoundVolume] = useState(() => Number(localStorage.getItem('flowday_ambient_sound_volume')) || 0.5);
+  const [isAmbientPlaying, setIsAmbientPlaying] = useState(() => localStorage.getItem('flowday_ambient_is_playing') === 'true');
+  const audioRef = useRef(null);
+
+  // Efeito para controle do áudio ambiente
+  useEffect(() => {
+    if (!audioRef.current) return;
+
+    if (ambientSoundFile === 'none') {
+      audioRef.current.pause();
+      audioRef.current.src = '';
+      setIsAmbientPlaying(false);
+      localStorage.setItem('flowday_ambient_is_playing', 'false');
+      localStorage.setItem('flowday_ambient_sound_file', 'none');
+      return;
+    }
+
+    const currentSrc = audioRef.current.src;
+    const newSrc = `/assets/audio/${ambientSoundFile}`;
+    
+    if (!currentSrc.includes(newSrc)) {
+      audioRef.current.src = newSrc;
+      audioRef.current.load(); // Recarrega o áudio para o novo src
+      if (isAmbientPlaying) {
+        audioRef.current.play().catch(e => console.error("Erro ao tocar áudio ambiente:", e));
+      }
+    } else if (isAmbientPlaying) {
+      audioRef.current.play().catch(e => console.error("Erro ao tocar áudio ambiente:", e));
+    } else {
+      audioRef.current.pause();
+    }
+
+    audioRef.current.volume = ambientSoundVolume;
+    audioRef.current.loop = true; // Sons ambientes devem fazer loop
+
+    localStorage.setItem('flowday_ambient_sound_file', ambientSoundFile);
+    localStorage.setItem('flowday_ambient_sound_volume', ambientSoundVolume);
+    localStorage.setItem('flowday_ambient_is_playing', String(isAmbientPlaying));
+
+  }, [ambientSoundFile, ambientSoundVolume, isAmbientPlaying]);
 
   useEffect(() => {
     if (showConfig) {
@@ -238,8 +281,20 @@ export default function FocusView() {
 
   const activeTask = pendingTasks.find(t => t.id === selectedTaskId);
 
+  const ambientSounds = [
+    { value: 'none', label: 'Nenhum', emoji: '🔇' },
+    { value: 'rain.mp3', label: 'Chuva', emoji: '🌧️' },
+    { value: 'forest.mp3', label: 'Floresta', emoji: '🌲' },
+    { value: 'cafe.mp3', label: 'Cafeteria', emoji: '☕' },
+    { value: 'ocean.mp3', label: 'Ondas do Mar', emoji: '🌊' },
+    { value: 'white-noise.mp3', label: 'Ruído Branco', emoji: '🤍' },
+  ];
+
   return (
     <div className="focus-view-container animate-fade-in">
+      {/* Elemento de áudio ambiente (oculto) */}
+      <audio ref={audioRef} />
+
       <div className="tasks-page-header" style={{ marginBottom: '24px' }}>
         <h1 className="tasks-page-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           ⏱️ Modo Foco
@@ -354,6 +409,76 @@ export default function FocusView() {
             >
               <Volume2 size={18} />
             </button>
+          </div>
+
+          {/* Controles de Áudio Ambiente */}
+          <div style={{ marginTop: '32px', width: '80%', display: 'flex', flexDirection: 'column', gap: '15px', padding: '15px', border: '1px solid var(--border-medium)', borderRadius: 'var(--radius-md)', backgroundColor: 'var(--bg-app)' }}>
+            <h4 style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '5px' }}>
+              <Music size={16} /> Sons Ambientes
+            </h4>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {/* Seletor de som */}
+              <div>
+                <label htmlFor="ambient-sound-selector" style={{ display: 'block', color: 'var(--text-light)', fontSize: '12px', marginBottom: '5px' }}>Escolha o Som:</label>
+                <select 
+                  id="ambient-sound-selector"
+                  value={ambientSoundFile} 
+                  onChange={(e) => {
+                    setAmbientSoundFile(e.target.value);
+                    if (e.target.value !== 'none') {
+                      setIsAmbientPlaying(true);
+                    } else {
+                      setIsAmbientPlaying(false);
+                    }
+                  }}
+                  style={{ width: '100%', padding: '8px', border: '1px solid var(--border-medium)', borderRadius: '6px', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)', fontSize: '13px' }}
+                >
+                  {ambientSounds.map(sound => (
+                    <option key={sound.value} value={sound.value}>{sound.emoji} {sound.label}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Controles de Play/Pause e Volume */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <button 
+                  onClick={() => setIsAmbientPlaying(!isAmbientPlaying)}
+                  disabled={ambientSoundFile === 'none'}
+                  style={{ 
+                    width: '36px', 
+                    height: '36px', 
+                    borderRadius: '50%', 
+                    backgroundColor: isAmbientPlaying ? 'var(--prio-alta-text)' : 'var(--primary)', 
+                    color: 'white', 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center', 
+                    border: 'none', 
+                    cursor: 'pointer',
+                    opacity: ambientSoundFile === 'none' ? 0.5 : 1
+                  }}
+                  title={isAmbientPlaying ? 'Pausar som ambiente' : 'Tocar som ambiente'}
+                  aria-label={isAmbientPlaying ? 'Pausar som ambiente' : 'Tocar som ambiente'}
+                >
+                  {isAmbientPlaying ? <Pause size={18} fill="white" /> : <Play size={18} fill="white" style={{ marginLeft: '2px' }} />}
+                </button>
+                
+                <Volume2 size={18} color="var(--text-light)" />
+                <input 
+                  type="range" 
+                  min="0" 
+                  max="1" 
+                  step="0.1" 
+                  value={ambientSoundVolume} 
+                  onChange={(e) => setAmbientSoundVolume(Number(e.target.value))}
+                  aria-label="Volume do som ambiente"
+                  disabled={ambientSoundFile === 'none'}
+                  style={{ flex: 1, height: '4px', backgroundColor: 'var(--border-medium)', borderRadius: '2px', outline: 'none', WebkitAppearance: 'none', appearance: 'none', cursor: ambientSoundFile === 'none' ? 'default' : 'pointer' }}
+                />
+                {ambientSoundVolume === 0 && <VolumeX size={18} color="var(--text-light)" />}
+              </div>
+            </div>
           </div>
 
           {/* Detalhe da Tarefa Selecionada */}

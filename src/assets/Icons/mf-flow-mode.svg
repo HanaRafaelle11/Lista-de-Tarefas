@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <!-- Flow Mode: circle containing an infinity/lemniscate symbol — deep work, total presence -->
+  <circle cx="12" cy="12" r="10"/>
+  <path d="M8.5 12 C8.5 10 9.8 9 11 9 C12.5 9 13 10.5 12 12 C11 13.5 11.5 15 13 15 C14.2 15 15.5 14 15.5 12 C15.5 10 14.2 9 13 9 C11.5 9 11 10.5 12 12 C13 13.5 12.5 15 11 15 C9.8 15 8.5 14 8.5 12 Z"/>
+</svg>

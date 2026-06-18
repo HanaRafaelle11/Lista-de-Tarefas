@@ -5,8 +5,8 @@ import { eventsService } from '../services/eventsService';
 
 import { useAppContext } from '../contexts/AppContext';
 
-export default function Auth({ onLoginSuccess, initialMode = 'login' }) { // Revert to initialMode prop
-  const { theme } = useAppContext(); // Keep theme from remote
+export default function Auth({ onLoginSuccess, initialMode = 'login' }) {
+  const { theme } = useAppContext();
   const [mode, setMode] = useState(initialMode); // 'login', 'signup', 'recovery', 'updatePassword'
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -244,7 +244,7 @@ export default function Auth({ onLoginSuccess, initialMode = 'login' }) { // Rev
               <button 
                 onClick={() => {
                   setIsWaitingConfirmation(false);
-                  setMode('login'); // Revert to setMode
+                  setMode('login');
                   setError('');
                   setSuccess('');
                 }} 
@@ -262,16 +262,16 @@ export default function Auth({ onLoginSuccess, initialMode = 'login' }) { // Rev
   return (
     <div style={styles.authContainer} className="animate-fade-in">
       <div style={styles.authCard}>
-        {/* Top Header com Gradiente - Merged from remote */}
-        <div style={{ position: 'relative', ...styles.cardHeader }}>
-          <div style={{ ...styles.logoContainer, marginTop: '0', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '0' }} className="auth-brand-container">
+        {/* Top Header com Gradiente */}
+        <div style={{ position: 'relative', ...styles.cardHeader, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <div style={{ marginTop: '0', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px' }} className="auth-brand-container">
             <img 
               src={theme === 'dark' ? '/branding/logo-dark.svg' : '/branding/logo.svg'} 
               alt="MyFlowDay Logo" 
-              style={{ height: '72px', width: 'auto', objectFit: 'contain' }} 
+              style={{ height: '64px', width: 'auto', objectFit: 'contain' }} 
             />
-            <p style={{ fontSize: '18px', color: 'var(--text-main)', fontWeight: '600', opacity: '0.9', margin: '16px 0 24px 0' }}>
-              {/* Dynamic subtitle from my version with remote's text */}
+            <h1 className="auth-brand-text" style={{ fontSize: '42px', fontWeight: 700, margin: '8px 0 0 0', letterSpacing: '-1px', color: 'var(--text-main)' }}>MyFlowDay</h1>
+            <p style={{ fontSize: '18px', color: 'var(--text-light)', margin: '8px 0 32px 0' }}>
               {mode === 'updatePassword' ? 'Crie sua nova senha de acesso.' : 'Planeje. Execute. Evolua.'}
             </p>
           </div>
@@ -282,7 +282,7 @@ export default function Auth({ onLoginSuccess, initialMode = 'login' }) { // Rev
           {error && <div style={styles.errorMessage}>{error}</div>}
           {success && <div style={styles.successMessage}>{success}</div>}
 
-          {mode === 'signup' && ( // Condition based on 'mode'
+          {mode === 'signup' && (
             <div style={styles.inputGroup}>
               <label style={styles.label}>Nome Completo</label>
               <div style={styles.inputWrapper}>
@@ -300,7 +300,7 @@ export default function Auth({ onLoginSuccess, initialMode = 'login' }) { // Rev
             </div>
           )}
 
-          {mode !== 'updatePassword' && ( // Condition based on 'mode'
+          {mode !== 'updatePassword' && (
             <div style={styles.inputGroup}>
               <label style={styles.label}>E-mail</label>
               <div style={styles.inputWrapper}>
@@ -318,7 +318,7 @@ export default function Auth({ onLoginSuccess, initialMode = 'login' }) { // Rev
             </div>
           )}
 
-          {mode !== 'recovery' && ( // Condition based on 'mode'
+          {mode !== 'recovery' && (
             <div style={styles.inputGroup}>
               <label style={styles.label}>{mode === 'updatePassword' ? 'Nova Senha' : 'Senha'}</label>
               <div style={styles.inputWrapper}>
@@ -333,7 +333,7 @@ export default function Auth({ onLoginSuccess, initialMode = 'login' }) { // Rev
                   disabled={loading}
                 />
               </div>
-              {mode === 'login' && ( // Condition based on 'mode'
+              {mode === 'login' && (
                 <button 
                   type="button" 
                   onClick={() => {
@@ -363,7 +363,7 @@ export default function Auth({ onLoginSuccess, initialMode = 'login' }) { // Rev
                 onClick={handleGoogleSignIn}
                 disabled={loading}
                 style={{
-                  ...styles.submitBtn, // Re-use basic button styling
+                  ...styles.submitBtn,
                   backgroundColor: '#4285F4', // Google blue
                   color: 'white',
                   display: 'flex',
@@ -372,7 +372,6 @@ export default function Auth({ onLoginSuccess, initialMode = 'login' }) { // Rev
                   gap: '10px',
                 }}
               >
-                {/* Removed Chrome icon as it caused build error */}
                 Entrar com o Google
               </button>
             </div>
@@ -404,7 +403,7 @@ export default function Auth({ onLoginSuccess, initialMode = 'login' }) { // Rev
         </form>
 
         {/* Rodapé Alternador */}
-        {mode !== 'updatePassword' && ( // Condition based on 'mode'
+        {mode !== 'updatePassword' && (
           <div style={styles.cardFooter}>
             <p style={styles.footerText}>
               {mode === 'login' ? 'Não tem uma conta?' : 'Já possui uma conta?'}

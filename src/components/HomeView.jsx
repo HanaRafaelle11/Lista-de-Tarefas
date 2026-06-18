@@ -4,6 +4,7 @@ import { calcStreak, ACHIEVEMENTS } from '../hooks/useAchievements';
 import { useAuraAssistant } from '../hooks/useAuraAssistant';
 import AuraAssistantWidget from './AuraAssistantWidget';
 import { useAppContext } from '../contexts/AppContext';
+import MFIcon from './MFIcon';
 // Formata data amigável
 function formatFriendlyDate(dateStr) {
   if (!dateStr) return '';
@@ -319,7 +320,7 @@ function GoalProgressRow({ goal, linkedTasks }) {
               <div className="home-hero-graphic-side">
                 <div className="home-graphic-circle">
                   <div className="home-graphic-inner-circle">
-                    <span className="material-symbols-outlined graphic-icon">eco</span>
+                    <MFIcon name="flow-mode" size={32} />
                   </div>
                 </div>
               </div>
@@ -353,10 +354,13 @@ function GoalProgressRow({ goal, linkedTasks }) {
               fontWeight: '700',
               borderBottom: activeHomeTab === 'progresso' ? '2.5px solid var(--primary)' : 'none',
               color: activeHomeTab === 'progresso' ? 'var(--primary)' : 'var(--text-muted)',
-              cursor: 'pointer'
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px'
             }}
           >
-            📈 Foco & Progresso
+            <MFIcon name="performance" size={16} /> Foco & Progresso
           </button>
           <button 
             type="button"
@@ -367,21 +371,26 @@ function GoalProgressRow({ goal, linkedTasks }) {
               fontWeight: '700',
               borderBottom: activeHomeTab === 'aura' ? '2.5px solid var(--primary)' : 'none',
               color: activeHomeTab === 'aura' ? 'var(--primary)' : 'var(--text-muted)',
-              cursor: 'pointer'
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px'
             }}
           >
-            🧠 Central de Insights
+            <MFIcon name="insights" size={16} /> Central de Insights
           </button>
         </div>
 
         {activeHomeTab === 'progresso' && (
           <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
             
-            {/* Bloco compacto de Evolução */}
+             {/* Bloco compacto de Evolução */}
             {(currentStreak > 0 || unlockedCount > 0 || completedGoalsCount > 0) && (
               <section className="home-evo-block">
                 <div className="home-section-header">
-                  <h3 className="home-section-eyebrow">📈 Sua Evolução</h3>
+                  <h3 className="home-section-eyebrow" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <MFIcon name="evolution" size={16} /> Sua Evolução
+                  </h3>
                   <button onClick={() => setActiveTab('analytics')} className="home-section-link">
                     Ver evolução
                     <ChevronRight size={14} />
@@ -390,7 +399,7 @@ function GoalProgressRow({ goal, linkedTasks }) {
                 <div className="home-evo-stats-row">
                   {currentStreak > 0 && (
                     <div className="home-evo-stat">
-                      <span className="home-evo-stat-emoji">🔥</span>
+                      <MFIcon name="streak" size={24} style={{ color: 'var(--accent-orange, #f97316)' }} />
                       <div className="home-evo-stat-text">
                         <span className="home-evo-stat-value">{currentStreak} {currentStreak === 1 ? 'dia' : 'dias'}</span>
                         <span className="home-evo-stat-label">seguidos</span>
@@ -399,7 +408,7 @@ function GoalProgressRow({ goal, linkedTasks }) {
                   )}
                   {unlockedCount > 0 && (
                     <div className="home-evo-stat">
-                      <span className="home-evo-stat-emoji">🏅</span>
+                      <MFIcon name="achievements" size={24} style={{ color: 'var(--accent-yellow, #eab308)' }} />
                       <div className="home-evo-stat-text">
                         <span className="home-evo-stat-value">{unlockedCount} {unlockedCount === 1 ? 'conquista' : 'conquistas'}</span>
                         <span className="home-evo-stat-label">desbloqueadas</span>
@@ -408,7 +417,7 @@ function GoalProgressRow({ goal, linkedTasks }) {
                   )}
                   {completedGoalsCount > 0 && (
                     <div className="home-evo-stat">
-                      <span className="home-evo-stat-emoji">🎯</span>
+                      <MFIcon name="objectives" size={24} style={{ color: 'var(--primary)' }} />
                       <div className="home-evo-stat-text">
                         <span className="home-evo-stat-value">{completedGoalsCount} {completedGoalsCount === 1 ? 'objetivo' : 'objetivos'}</span>
                         <span className="home-evo-stat-label">{completedGoalsCount === 1 ? 'concluído' : 'concluídos'}</span>
@@ -422,7 +431,9 @@ function GoalProgressRow({ goal, linkedTasks }) {
             {/* Widget de Objetivos */}
             <section className="home-goals-section">
               <div className="home-section-header">
-                <h3 className="home-section-eyebrow">🎯 Objetivos em Andamento</h3>
+                <h3 className="home-section-eyebrow" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <MFIcon name="objectives" size={16} /> Objetivos em Andamento
+                </h3>
                 <button onClick={() => setActiveTab('goals')} className="home-section-link">
                   Ver todos
                   <ChevronRight size={14} />

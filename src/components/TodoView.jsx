@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import EmojiPicker from 'emoji-picker-react';
 import TodoItem from './TodoItem';
+import AchievementModal from './AchievementModal'; // Importar AchievementModal
 const WeeklyPlannerModal = lazy(() => import('./WeeklyPlannerModal'));
 import { 
   useAppContext, 
@@ -12,6 +13,13 @@ import {
   formatDescriptionWithoutMetadata, 
   buildDescriptionWithMetadata 
 } from '../contexts/AppContext';
+
+// Importar SVGs personalizados
+import MfTasksIcon from '../assets/Icons/mf-tasks.svg';
+import MfCalendarIcon from '../assets/Icons/mf-calendar.svg';
+
+// Importar serviço do Google Calendar
+import { addToGoogleCalendar } from '../services/googleCalendarService';
 
 // Helpers de data local
 const todayStr = () => {
@@ -187,7 +195,7 @@ export default function TodoView() {
     handleAddTask: onAddTask,
     handleUpdateTask: onUpdateTask,
     handleDeleteTask: onDeleteTask,
-    handleToggleComplete: onToggleComplete,
+    handleToggleComplete: onToggleComplete, // Original onToggleComplete from context
     categories,
     handleAddCategory,
     handleDeleteCategory,
@@ -203,6 +211,10 @@ export default function TodoView() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState(null);
   const [isPlannerOpen, setIsPlannerOpen] = useState(false);
+
+  // Estados para AchievementModal
+  const [showAchievementModal, setShowAchievementModal] = useState(false);
+  const [achievementData, setAchievementData] = useState({ title: '', message: '', icon: '' });
 
   // Bloco 4 - Visualização
   const [viewMode, setViewMode] = useState(() => localStorage.getItem('flowday_tasks_view_mode') || 'list');
@@ -320,7 +332,8 @@ export default function TodoView() {
 
   // Caixa de Entrada Rápida
   const handleQuickAddSubmit = (e) => {
-    if (e.key === 'Enter' && quickTitle.trim()) {
+    e.preventDefault();
+    if (quickTitle.trim()) {
       const metaDescription = buildDescriptionWithMetadata('', '', 'nenhuma');
       onAddTask({
         title: quickTitle.trim(),
@@ -331,6 +344,32 @@ export default function TodoView() {
       });
       setQuickTitle('');
     }
+  };
+
+  // Lógica para Achievement Modal: Verificar "Primeira do Dia"
+  const handleToggleCompleteWithAchievement = async (taskId) => {
+    const taskToToggle = tasks.find(t => t.id === taskId);
+    
+    // Só verifica conquista se a tarefa estiver sendo marcada como concluída
+    if (taskToToggle && !taskToToggle.completed) {
+      const today = todayStr();
+      // Filtrar tarefas *já* completadas hoje (excluindo a tarefa atual)
+      const completedTasksTodayBefore = tasks.filter(t => 
+        t.id !== taskId && t.completed && t.completedAt && t.completedAt.startsWith(today)
+      );
+
+      if (completedTasksTodayBefore.length === 0) {
+        setAchievementData({
+          title: 'Primeira do Dia!',
+          message: 'Você completou sua primeira tarefa de hoje. Parabéns pelo foco!',
+          icon: '🏆'
+        });
+        setShowAchievementModal(true);
+      }
+    }
+
+    // Chamar a função original de toggle complete do AppContext
+    await onToggleComplete(taskId);
   };
 
   // CRUD de categorias locais
@@ -495,9 +534,9 @@ export default function TodoView() {
         {/* Seletor de visualização (Abas Bloco 4) */}
         <div className="navbar-navigation" style={{ display: 'inline-flex', padding: '4px', borderRadius: 'var(--radius-md)', background: 'var(--primary-glow)', alignSelf: 'center' }}>
           {[
-            { key: 'list', label: 'Lista', icon: <List size={16} /> },
+            { key: 'list', label: 'Lista', icon: <img src={MfTasksIcon} alt="Tarefas" width={16} height={16} style={{ filter: 'var(--icon-filter)' }} /> },
             { key: 'kanban', label: 'Kanban', icon: <Columns size={16} /> },
-            { key: 'calendar', label: 'Agenda', icon: <Grid size={16} /> }
+            { key: 'calendar', label: 'Agenda', icon: <img src={MfCalendarIcon} alt="Agenda" width={16} height={16} style={{ filter: 'var(--icon-filter)' }} /> }
           ].map(item => (
             <button
               key={item.key}
@@ -513,16 +552,21 @@ export default function TodoView() {
       </div>
 
       {/* Caixa de Entrada Rápida (Inbox Bloco 4) */}
-      <div className="quick-inbox-container">
+      <form onSubmit={handleQuickAddSubmit} className="quick-inbox-container">
         <input 
           type="text" 
           placeholder="⚡ Captura rápida: digite uma tarefa e pressione Enter..."
           value={quickTitle}
           onChange={e => setQuickTitle(e.target.value)}
-          onKeyDown={handleQuickAddSubmit}
+          onKeyDown={e => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              handleQuickAddSubmit(e);
+            }
+          }}
           className="quick-inbox-input"
         />
-      </div>
+      </form>
 
       {/* Controles de Busca e Criação */}
       <div className="tasks-controls">
@@ -692,7 +736,7 @@ export default function TodoView() {
                 tasks={sections.overdue}
                 onEdit={openEditTaskModal}
                 onDelete={onDeleteTask}
-                onToggle={onToggleComplete}
+                onToggle={handleToggleCompleteWithAchievement} // Usar a função com lógica de conquista
                 defaultOpen={true}
                 isOverdue={true}
               />
@@ -702,7 +746,7 @@ export default function TodoView() {
                 tasks={sections.today}
                 onEdit={openEditTaskModal}
                 onDelete={onDeleteTask}
-                onToggle={onToggleComplete}
+                onToggle={handleToggleCompleteWithAchievement} // Usar a função com lógica de conquista
                 defaultOpen={true}
               />
               <TaskSection
@@ -711,7 +755,7 @@ export default function TodoView() {
                 tasks={sections.tomorrow}
                 onEdit={openEditTaskModal}
                 onDelete={onDeleteTask}
-                onToggle={onToggleComplete}
+                onToggle={handleToggleCompleteWithAchievement} // Usar a função com lógica de conquista
                 defaultOpen={true}
               />
               <TaskSection
@@ -720,7 +764,7 @@ export default function TodoView() {
                 tasks={sections.thisWeek}
                 onEdit={openEditTaskModal}
                 onDelete={onDeleteTask}
-                onToggle={onToggleComplete}
+                onToggle={handleToggleCompleteWithAchievement} // Usar a função com lógica de conquista
                 defaultOpen={true}
               />
               <TaskSection
@@ -729,7 +773,7 @@ export default function TodoView() {
                 tasks={sections.future}
                 onEdit={openEditTaskModal}
                 onDelete={onDeleteTask}
-                onToggle={onToggleComplete}
+                onToggle={handleToggleCompleteWithAchievement} // Usar a função com lógica de conquista
                 defaultOpen={false}
               />
               <TaskSection
@@ -738,7 +782,7 @@ export default function TodoView() {
                 tasks={sections.noDueDate}
                 onEdit={openEditTaskModal}
                 onDelete={onDeleteTask}
-                onToggle={onToggleComplete}
+                onToggle={handleToggleCompleteWithAchievement} // Usar a função com lógica de conquista
                 defaultOpen={false}
               />
               <TaskSection
@@ -747,7 +791,7 @@ export default function TodoView() {
                 tasks={sections.completed}
                 onEdit={openEditTaskModal}
                 onDelete={onDeleteTask}
-                onToggle={onToggleComplete}
+                onToggle={handleToggleCompleteWithAchievement} // Usar a função com lógica de conquista
                 defaultOpen={false}
               />
             </div>
@@ -957,10 +1001,24 @@ export default function TodoView() {
                     <input 
                       type="checkbox" 
                       checked={task.completed} 
-                      onChange={() => onToggleComplete(task.id)}
+                      onChange={() => handleToggleCompleteWithAchievement(task.id)} // Usar a função com lógica de conquista
                       style={{ cursor: 'pointer' }}
                     />
                     <span style={{ fontSize: '13px', textDecoration: task.completed ? 'line-through' : 'none', color: task.completed ? 'var(--text-muted)' : 'var(--text-main)', flex: 1 }}>{task.title}</span>
+                    
+                    {/* Botão Adicionar ao Google Calendar */}
+                    {task.dueDate && (
+                      <button
+                        onClick={() => addToGoogleCalendar({ ...task, dueTime: parseTaskMetadata(task.description).due_time })}
+                        className="todo-item-action-btn" // Reusing a similar style, adjust as needed
+                        title="Adicionar ao Google Calendar"
+                        aria-label="Adicionar tarefa ao Google Calendar"
+                        style={{ padding: '4px', color: 'var(--primary)', background: 'transparent', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                      >
+                        <Calendar size={14} />
+                      </button>
+                    )}
+
                     <button 
                       onClick={() => onDeleteTask(task.id)} 
                       style={{ padding: '4px', color: 'var(--text-light)', background: 'transparent', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center' }} 
@@ -1181,6 +1239,16 @@ export default function TodoView() {
           onUpdateTask={onUpdateTask}
         />
       </Suspense>
+
+      {/* Achievement Modal */}
+      <AchievementModal
+        isOpen={showAchievementModal}
+        onClose={() => setShowAchievementModal(false)}
+        title={achievementData.title}
+        message={achievementData.message}
+        icon={achievementData.icon}
+      />
     </div>
   );
 }
+

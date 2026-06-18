@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Settings, User, Moon, Sun, Bell, Shield, Heart, BellOff, BellRing, CheckCircle, Award } from 'lucide-react';
+import { Settings, User, Moon, Sun, Bell, Shield, Heart, BellOff, BellRing, CheckCircle, Award, MessageSquare } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import { useNotifications } from '../hooks/useNotifications';
 import { useAppContext } from '../contexts/AppContext';
@@ -7,6 +7,8 @@ import { useAppContext } from '../contexts/AppContext';
 export default function SettingsView() {
   const { theme, setTheme, currentUser, handleLogout, isPro, handleSimulateUpgrade } = useAppContext();
   const [loading, setLoading] = useState(false);
+  const [feedbackText, setFeedbackText] = useState('');
+  const [feedbackStatus, setFeedbackStatus] = useState('idle'); // idle, sending, sent, error
   const notifications = useNotifications();
 
   const handlePasswordReset = async () => {
@@ -40,6 +42,26 @@ export default function SettingsView() {
       alert('Erro ao excluir conta: ' + e.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSendFeedback = async () => {
+    if (!feedbackText.trim()) {
+      alert('Por favor, escreva seu feedback antes de enviar.');
+      return;
+    }
+    setFeedbackStatus('sending');
+    try {
+      // Simula chamada de API
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      console.log("Feedback enviado:", feedbackText, "Usuário:", currentUser.email);
+      // Em uma aplicação real, enviaria o feedback para um serviço/backend
+      setFeedbackText('');
+      setFeedbackStatus('sent');
+      setTimeout(() => setFeedbackStatus('idle'), 3000); // Reset status
+    } catch (error) {
+      console.error("Erro ao enviar feedback:", error);
+      setFeedbackStatus('error');
     }
   };
 
@@ -252,6 +274,46 @@ export default function SettingsView() {
           )}
         </div>
 
+        {/* Seção de Feedback */}
+        <div style={{ backgroundColor: 'var(--bg-card)', padding: '24px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-light)' }}>
+          <h2 style={{ fontSize: '16px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+            <MessageSquare size={18} /> Sugestões, Críticas e Dúvidas
+          </h2>
+          <textarea
+            value={feedbackText}
+            onChange={(e) => setFeedbackText(e.target.value)}
+            placeholder="Compartilhe suas ideias, problemas ou sugestões para o Flowday..."
+            rows="5"
+            style={{ width: '100%', padding: '12px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-medium)', backgroundColor: 'var(--bg-app)', color: 'var(--text-main)', resize: 'vertical', fontSize: '14px' }}
+          />
+          <button
+            onClick={handleSendFeedback}
+            disabled={feedbackStatus === 'sending'}
+            style={{
+              marginTop: '12px',
+              padding: '10px 20px',
+              borderRadius: 'var(--radius-sm)',
+              backgroundColor: feedbackStatus === 'sent' ? '#22c55e' : (feedbackStatus === 'error' ? '#ef4444' : 'var(--primary)'),
+              color: 'white',
+              fontWeight: '600',
+              fontSize: '14px',
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+              border: 'none',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              justifyContent: 'center'
+            }}
+          >
+            {feedbackStatus === 'sending' && <><span>Enviando...</span></>}
+            {feedbackStatus === 'sent' && <><span>✅ Enviado!</span></>}
+            {feedbackStatus === 'error' && <><span>❌ Erro!</span></>}
+            {feedbackStatus === 'idle' && <><span>Enviar Feedback</span></>}
+          </button>
+          {feedbackStatus === 'sent' && <p style={{ fontSize: '12px', color: '#22c55e', marginTop: '8px' }}>Obrigado pelo seu feedback!</p>}
+          {feedbackStatus === 'error' && <p style={{ fontSize: '12px', color: '#ef4444', marginTop: '8px' }}>Não foi possível enviar o feedback. Tente novamente.</p>}
+        </div>
 
         {/* PWA & Sistema */}
         <div style={{ backgroundColor: 'var(--bg-card)', padding: '24px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-light)' }}>
@@ -262,7 +324,7 @@ export default function SettingsView() {
             <p>Plataforma de Progresso Pessoal</p>
             <p>Construído para clareza, evolução e consistência.</p>
             <p style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '8px' }}>
-              Feito com <Heart size={12} color="#E47070" /> pela comunidade.
+              Desenvolvido por Hana Oliveira.
             </p>
           </div>
 
@@ -287,4 +349,3 @@ export default function SettingsView() {
     </div>
   );
 }
-
