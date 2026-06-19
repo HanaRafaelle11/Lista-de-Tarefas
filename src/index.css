@@ -1,5 +1,5 @@
-/* Design System & Global Styles â€” Flowday */
-/* Fontes carregadas via <link> no index.html (Inter + Plus Jakarta Sans) */
+/* Design System & Global Styles — MyFlowDay */
+/* Fonte: Inter (400–800) carregada via <link> no index.html */
 
 
 :root {
@@ -46,7 +46,7 @@
   --prio-baixa-bg: #F8FAFC;
   --prio-baixa-border: #F1F5F9;
 
-  /* Efeitos e Sombras OrgÃ¢nicas */
+  /* Efeitos e Sombras Orgânicas */
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
   --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
   --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
@@ -55,7 +55,7 @@
   --radius-md: 12px; 
   --radius-lg: 20px; 
   
-  /* Fontes elegantes e limpas (ObrigatÃ³rio Inter) */
+  /* Fontes elegantes e limpas (Obrigatório Inter) */
   --font-display: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-body: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   
@@ -89,7 +89,7 @@ body {
 
 h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-display);
-  font-weight: 600;
+  font-weight: 700;
   color: var(--text-main);
 }
 
@@ -111,7 +111,7 @@ a {
   text-decoration: none;
 }
 
-/* UtilitÃ¡rios Globais */
+/* Utilitários Globais */
 .container {
   width: 100%;
   max-width: 1200px;
@@ -119,7 +119,7 @@ a {
   padding: 0 var(--space-6);
 }
 
-/* AnimaÃ§Ãµes */
+/* Animações */
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: translateY(0); }
@@ -266,7 +266,7 @@ a {
   border-color: var(--prio-alta-border);
 }
 
-.badge-priority.mÃ©dia {
+.badge-priority.média {
   color: var(--prio-media-text);
   background-color: var(--prio-media-bg);
   border-color: var(--prio-media-border);
@@ -306,7 +306,7 @@ a {
   animation: scaleUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
 }
 
-/* Elementos de Input padrÃ£o premium */
+/* Elementos de Input padrão premium */
 .form-input {
   width: 100%;
   padding: 10px var(--space-4);
@@ -323,7 +323,7 @@ a {
   box-shadow: 0 0 0 3px var(--primary-glow);
 }
 
-/* Efeito Glow para botÃµes principais */
+/* Efeito Glow para botões principais */
 .btn-primary-glow {
   background-color: var(--primary);
   color: white;
@@ -349,13 +349,13 @@ a {
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* BotÃ£o de excluir - hover vermelho */
+/* Botão de excluir - hover vermelho */
 .delete-btn:hover {
   color: #ef4444 !important;
   background-color: #fef2f2 !important;
 }
 
-/* BotÃ£o de editar - hover primary */
+/* Botão de editar - hover primary */
 .edit-btn:hover {
   background-color: var(--primary-light) !important;
 }
@@ -363,13 +363,13 @@ a {
   color: var(--primary) !important;
 }
 
-/* Modal header reutilizÃ¡vel */
+/* Modal header reutilizável */
 .modal-content .modalHeader,
 .modal-content > div:first-child {
   border-bottom: 1px solid var(--border-light);
 }
 
-/* AnimaÃ§Ã£o de Spinner de Loading */
+/* Animação de Spinner de Loading */
 @keyframes spin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
@@ -387,7 +387,7 @@ a {
     gap: 8px;
   }
 
-  /* CalendÃ¡rio - cÃ©lulas menores */
+  /* Calendário - células menores */
   .dayCell {
     min-height: 56px !important;
   }
@@ -417,12 +417,12 @@ a {
   }
 
   .quick-inbox-input {
-    font-size: 16px; /* Evita zoom automÃ¡tico no iOS */
+    font-size: 16px; /* Evita zoom automático no iOS */
   }
 }
 
 @media (max-width: 480px) {
-  /* Navbar - esconder texto e mostrar sÃ³ Ã­cones */
+  /* Navbar - esconder texto e mostrar só ícones */
   header nav button span {
     display: none;
   }
@@ -447,21 +447,21 @@ textarea:focus-visible {
   box-shadow: 0 0 0 4px var(--primary-glow);
 }
 
-/* SeleÃ§Ã£o de texto premium */
+/* Seleção de texto premium */
 ::selection {
   background-color: var(--primary-light);
   color: var(--primary);
 }
 
-/* TransiÃ§Ã£o suave para inputs do modal */
+/* Transição suave para inputs do modal */
 input:focus, select:focus, textarea:focus {
   border-color: var(--primary);
   box-shadow: 0 0 0 3px var(--primary-glow);
 }
 
-/* BotÃ£o de logout hover */
+/* Botão de logout hover */
 .logoutBtn:hover,
-button[title="Sair do Flowday"]:hover {
+button[title="Sair do MyFlowDay"]:hover {
   color: #ef4444;
   border-color: #fca5a5;
   background-color: #fef2f2;
@@ -1333,7 +1333,7 @@ button[title="Sair do Flowday"]:hover {
   display: flex;
   flex-direction: column;
   gap: 40px;
-  padding-bottom: 80px; /* para nÃ£o sumir atrÃ¡s do menu inferior */
+  padding-bottom: 80px; /* para não sumir atrás do menu inferior */
 }
 
 /* Greeting Section */
@@ -1416,7 +1416,7 @@ button[title="Sair do Flowday"]:hover {
   opacity: 0.8;
 }
 
-/* Hero Section / Prioridade MÃ¡xima */
+/* Hero Section / Prioridade Máxima */
 .home-hero-card {
   position: relative;
   background-color: var(--bg-card);
@@ -1524,7 +1524,7 @@ button[title="Sair do Flowday"]:hover {
   flex-shrink: 0;
 }
 
-/* GrÃ¡fico Decorativo GeomÃ©trico e Neutro */
+/* Gráfico Decorativo Geométrico e Neutro */
 .home-graphic-circle {
   width: 120px;
   height: 120px;
@@ -1822,7 +1822,7 @@ button[title="Sair do Flowday"]:hover {
   overflow: hidden;
 }
 
-/* Efeito Ripple GeomÃ©trico Decorativo */
+/* Efeito Ripple Geométrico Decorativo */
 .home-ritmo-wave-container {
   width: 140px;
   height: 140px;
@@ -1868,9 +1868,9 @@ button[title="Sair do Flowday"]:hover {
   }
 }
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-   SPRINT 2 â€” Tela de Tarefas (Aura v2 Design System)
-   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+/* -------------------------------------------------------------------------
+   SPRINT 2 — MyFlowDay Tela de Tarefas (Aura v2 Design System)
+   ------------------------------------------------------------------------- */
 
 /* Container principal */
 .tasks-view {
@@ -1880,7 +1880,7 @@ button[title="Sair do Flowday"]:hover {
   padding-bottom: 100px;
 }
 
-/* â”€â”€ Page Header â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* — Page Header —————————————————————————————— */
 .tasks-page-header {
   display: flex;
   align-items: flex-end;
@@ -1940,7 +1940,7 @@ button[title="Sair do Flowday"]:hover {
   min-width: 34px;
 }
 
-/* â”€â”€ Controles (Busca + BotÃ£o) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* — Controles (Busca + Botão) ——————————————————— */
 .tasks-controls {
   display: flex;
   align-items: center;
@@ -2018,7 +2018,7 @@ button[title="Sair do Flowday"]:hover {
   border-radius: var(--radius-md);
 }
 
-/* â”€â”€ Filtros de Status e Categoria â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* — Filtros de Status e Categoria ————————————————— */
 .tasks-filter-row {
   display: flex;
   flex-direction: column;
@@ -2108,7 +2108,7 @@ button[title="Sair do Flowday"]:hover {
   font-weight: 650;
 }
 
-/* â”€â”€ SeÃ§Ãµes Temporais â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* — Seções Temporais ——————————————————————————————————— */
 .tasks-sections-wrapper {
   display: flex;
   flex-direction: column;
@@ -2242,7 +2242,7 @@ button[title="Sair do Flowday"]:hover {
   background-color: #FFF5F5;
 }
 
-/* â”€â”€ Estados Vazios â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* — Estados Vazios —————————————————————————————————————— */
 .tasks-empty-state {
   display: flex;
   flex-direction: column;
@@ -2315,7 +2315,7 @@ button[title="Sair do Flowday"]:hover {
   box-shadow: 0 6px 18px rgba(74, 101, 78, 0.3);
 }
 
-/* â”€â”€ Modal refinado â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* — Modal refinado —————————————————————————————————————— */
 .tasks-modal {
   max-width: 520px;
 }
@@ -2330,7 +2330,7 @@ button[title="Sair do Flowday"]:hover {
   font-size: 20px;
 }
 
-/* â”€â”€ Responsividade Mobile â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* — Responsividade Mobile —————————————————————————————— */
 @media (max-width: 768px) {
   .tasks-page-header {
     flex-direction: column;
@@ -2383,11 +2383,11 @@ button[title="Sair do Flowday"]:hover {
 }
 
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-   SPRINT 3 â€” Sistema de Objetivos (Aura v2)
-   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+/* -------------------------------------------------------------------------
+   SPRINT 3 — MyFlowDay Sistema de Objetivos (Aura v2)
+   ------------------------------------------------------------------------- */
 
-/* â”€â”€ GoalsView â€” Tela Principal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* — GoalsView — Tela Principal ————————————————————————————— */
 .goals-view {
   display: flex;
   flex-direction: column;
@@ -2436,7 +2436,7 @@ button[title="Sair do Flowday"]:hover {
   border-radius: var(--radius-md);
 }
 
-/* â”€â”€ Filtros de Objetivos â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* — Filtros de Objetivos ——————————————————————————————————— */
 .goals-filter-row {
   display: flex;
   align-items: center;
@@ -2487,14 +2487,14 @@ button[title="Sair do Flowday"]:hover {
   color: var(--text-light);
 }
 
-/* â”€â”€ Grid de GoalCards â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* — Grid de GoalCards ——————————————————————————————————————— */
 .goals-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(min(340px, 100%), 1fr));
   gap: 16px;
 }
 
-/* â”€â”€ GoalCard â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* — GoalCard ————————————————————————————————————————————————— */
 .goal-card {
   position: relative;
   background-color: var(--bg-card);
@@ -2529,7 +2529,7 @@ button[title="Sair do Flowday"]:hover {
   box-shadow: 0 0 0 2px rgba(74, 101, 78, 0.08), var(--shadow-sm);
 }
 
-/* Borda colorida Ã  esquerda */
+/* Borda colorida à esquerda */
 .goal-card-accent {
   position: absolute;
   left: 0;
@@ -2710,7 +2710,7 @@ button[title="Sair do Flowday"]:hover {
   background-color: color-mix(in srgb, var(--goal-color, var(--primary)) 10%, transparent);
 }
 
-/* â”€â”€ Menu de opÃ§Ãµes do GoalCard â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* — Menu de opções do GoalCard ——————————————————————————— */
 .goal-menu-wrap {
   position: relative;
 }
@@ -2784,7 +2784,7 @@ button[title="Sair do Flowday"]:hover {
   margin: 4px 0;
 }
 
-/* â”€â”€ GoalModal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* — GoalModal —————————————————————————————————————————————— */
 .goal-modal {
   max-width: 520px;
 }
@@ -2811,7 +2811,7 @@ button[title="Sair do Flowday"]:hover {
   color: var(--text-main);
 }
 
-/* Grid de Ã­cones */
+/* Grid de ícones */
 .goal-icon-grid {
   display: grid;
   grid-template-columns: repeat(8, 1fr);
@@ -2874,7 +2874,7 @@ button[title="Sair do Flowday"]:hover {
   transform: scale(1.1);
 }
 
-/* â”€â”€ GoalTasksModal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* — GoalTasksModal ————————————————————————————————————————— */
 .goal-tasks-modal {
   max-width: 560px;
   max-height: 80vh;
@@ -3041,7 +3041,7 @@ button[title="Sair do Flowday"]:hover {
   font-family: var(--font-display);
 }
 
-/* â”€â”€ GoalsEmptyState â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* — GoalsEmptyState —————————————————————————————————————— */
 .goals-empty-state {
   display: flex;
   flex-direction: column;
@@ -3109,7 +3109,7 @@ button[title="Sair do Flowday"]:hover {
   box-shadow: 0 6px 18px rgba(74, 101, 78, 0.3);
 }
 
-/* â”€â”€ Widget de Objetivos na Home â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* — Widget de Objetivos na Home ——————————————————————————— */
 .home-goals-section {
   display: flex;
   flex-direction: column;
@@ -3286,7 +3286,7 @@ button[title="Sair do Flowday"]:hover {
   color: white;
 }
 
-/* â”€â”€ Responsividade Sprint 3 â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* — Responsividade Sprint 3 —————————————————————————————————— */
 @media (max-width: 768px) {
   .goals-page-header {
     flex-direction: column;
@@ -3349,11 +3349,11 @@ button[title="Sair do Flowday"]:hover {
 }
 
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-   SPRINT 4 â€” EvoluÃ§Ã£o e Conquistas (Aura v2)
-   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+/* -------------------------------------------------------------------------
+   SPRINT 4 — MyFlowDay Evolução e Conquistas (Aura v2)
+   ------------------------------------------------------------------------- */
 
-/* â”€â”€ EvolutionView â€” Container â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* — EvolutionView — Container ————————————————————————————————————— */
 .evo-view {
   display: flex;
   flex-direction: column;
@@ -3361,7 +3361,7 @@ button[title="Sair do Flowday"]:hover {
   padding-bottom: 100px;
 }
 
-/* â”€â”€ Banner motivacional â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* — Banner motivacional —————————————————————————————————————————— */
 .evo-motivation-banner {
   display: flex;
   align-items: center;
@@ -3398,7 +3398,7 @@ button[title="Sair do Flowday"]:hover {
   margin-top: 2px;
 }
 
-/* â”€â”€ Grid de mÃ©tricas â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* — Grid de métricas ————————————————————————————————————————————— */
 .evo-metrics-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(200px, 100%), 1fr));
@@ -3455,7 +3455,7 @@ button[title="Sair do Flowday"]:hover {
   font-family: var(--font-display);
 }
 
-/* â”€â”€ Cards da tela EvoluÃ§Ã£o â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* — Cards da tela Evolução ———————————————————————————————————————— */
 .evo-card {
   background-color: var(--bg-card);
   border: 1px solid var(--border-light);
@@ -3492,7 +3492,7 @@ button[title="Sair do Flowday"]:hover {
   letter-spacing: 0.05em;
 }
 
-/* â”€â”€ SequÃªncia (streak) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* — Sequência (streak) ———————————————————————————————————————————— */
 .evo-streak-badge {
   font-size: 13px;
   font-weight: 700;
@@ -3548,7 +3548,7 @@ button[title="Sair do Flowday"]:hover {
   transition: width 0.8s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-/* â”€â”€ Mapa de Ritmo na EvoluÃ§Ã£o â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* — Mapa de Ritmo na Evolução ————————————————————————————————————— */
 .evo-rhythm-row {
   display: flex;
   align-items: flex-end;
@@ -3570,7 +3570,7 @@ button[title="Sair do Flowday"]:hover {
   letter-spacing: 0.04em;
 }
 
-/* â”€â”€ Conquistas â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* — Conquistas ————————————————————————————————————————————————————— */
 .evo-achievements-count {
   font-size: 12.5px;
   font-weight: 600;
@@ -3657,7 +3657,7 @@ button[title="Sair do Flowday"]:hover {
   overflow: hidden;
 }
 
-/* â”€â”€ Objetivos concluÃ­dos â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* — Objetivos concluídos ————————————————————————————————————————— */
 .evo-completed-goals-list {
   display: flex;
   flex-direction: column;
@@ -3697,7 +3697,7 @@ button[title="Sair do Flowday"]:hover {
   white-space: nowrap;
 }
 
-/* â”€â”€ GrÃ¡ficos â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* — Gráficos —————————————————————————————————————————————————————— */
 .evo-charts-row {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr));
@@ -3798,7 +3798,7 @@ button[title="Sair do Flowday"]:hover {
   transition: width 0.7s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-/* â”€â”€ AchievementToast â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* — AchievementToast ——————————————————————————————————————————— */
 .achievement-toast-container {
   position: fixed;
   bottom: 100px;
@@ -3936,7 +3936,7 @@ button[title="Sair do Flowday"]:hover {
   line-height: 1.45;
 }
 
-/* â”€â”€ Bloco EvoluÃ§Ã£o na Home â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* — Bloco Evolução na Home ———————————————————————————————————————— */
 .home-evo-block {
   display: flex;
   flex-direction: column;
@@ -4001,7 +4001,7 @@ button[title="Sair do Flowday"]:hover {
   white-space: nowrap;
 }
 
-/* â”€â”€ Responsividade Sprint 4 â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* — Responsividade Sprint 4 ————————————————————————————————————— */
 @media (max-width: 768px) {
   .evo-metrics-grid {
     grid-template-columns: repeat(2, 1fr);
@@ -4049,7 +4049,7 @@ button[title="Sair do Flowday"]:hover {
 }
 
 
-/* â”€â”€ Onboarding (Guia de Boas-Vindas) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* — Onboarding (Guia de Boas-Vindas) —————————————————————————— */
 .onboarding-card {
   background: linear-gradient(135deg, var(--primary-light) 0%, var(--bg-card) 100%);
   border: 1px dashed rgba(74, 101, 78, 0.4);
@@ -4316,7 +4316,7 @@ button[title="Sair do Flowday"]:hover {
 }
 
 /* ================================================================
-   DARK MODE â€” VariÃ¡veis sobrescritas quando <html class="dark">
+   DARK MODE — Variáveis sobrescritas quando <html class="dark">
    ================================================================ */
 .dark {
   /* Fundos */
@@ -4335,7 +4335,7 @@ button[title="Sair do Flowday"]:hover {
   --border-light:     #334155;
   --border-medium:    #475569;
 
-  /* PrimÃ¡rio adaptado ao dark (Cor SecundÃ¡ria Cyan) */
+  /* Primário adaptado ao dark (Cor Secundária Cyan) */
   --primary:          #22D3EE;
   --primary-light:    rgba(34, 211, 238, 0.12);
   --primary-hover:    #06B6D4;
@@ -4413,7 +4413,7 @@ button[title="Sair do Flowday"]:hover {
   background-color: #200F0F;
 }
 
-/* â”€â”€â”€ ESTILOS ADICIONAIS FLOWDAY (KANBAN, CALENDÃRIO, INBOX, PAYWALL) â”€â”€â”€ */
+/* ── ESTILOS ADICIONAIS MyFlowDay (KANBAN, CALENDÁRIO, INBOX, PAYWALL) ── */
 
 .quick-inbox-container {
   display: flex;
@@ -4829,13 +4829,13 @@ button[title="Sair do Flowday"]:hover {
 }
 
 /* ================================================================
-   SAFE AREA ï¿½ Mobile Bottom Nav
+   SAFE AREA — Mobile Bottom Nav
    ================================================================ */
 .app-bottom-nav {
   padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 6px);
 }
 
-/* â”€â”€ Flowday V2: Additional Safe Areas & Responsiveness â”€â”€ */
+/* ── MyFlowDay V2: Additional Safe Areas & Responsiveness ── */
 .safe-area-inset {
   padding-top: env(safe-area-inset-top, 0px);
   padding-bottom: env(safe-area-inset-bottom, 0px);
@@ -4873,7 +4873,7 @@ button[title="Sair do Flowday"]:hover {
 }
 
 /* ================================================================
-   UNIVERSAL RESPONSIVENESS OVERRIDES (Flowday V3)
+   UNIVERSAL RESPONSIVENESS OVERRIDES (MyFlowDay V3)
    ================================================================ */
 
 /* Support for very small devices (320px to 360px) */

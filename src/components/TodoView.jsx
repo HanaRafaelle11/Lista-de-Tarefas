@@ -50,6 +50,13 @@ function formatFriendlyDate(dateStr) {
   return `${parts[2]} de ${months[parseInt(parts[1]) - 1]} de ${parts[0]}`;
 }
 
+const formatarDataBR = (str) => {
+  if (!str) return '';
+  const p = str.split('-');
+  return p.length === 3 ? `${p[2]}/${p[1]}/${p[0]}` : new Date(str).toLocaleDateString('pt-BR');
+};
+
+
 // Categorizar tarefas
 function categorizeTasks(tasks) {
   const today = todayStr();
@@ -836,7 +843,7 @@ export default function TodoView() {
                         {task.dueDate && (
                           <span style={{ fontSize: '10px', color: 'var(--text-muted)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
                             <Calendar size={11} />
-                            <span>{task.dueDate} {meta.due_time ? `às ${meta.due_time}` : ''}</span>
+                            <span>{formatarDataBR(task.dueDate)} {meta.due_time ? `às ${meta.due_time}` : ''}</span>
                           </span>
                         )}
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '6px', alignItems: 'center' }}>
@@ -885,7 +892,7 @@ export default function TodoView() {
                         {task.dueDate && (
                           <span style={{ fontSize: '10px', color: 'var(--text-muted)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
                             <Calendar size={11} />
-                            <span>{task.dueDate} {meta.due_time ? `às ${meta.due_time}` : ''}</span>
+                            <span>{formatarDataBR(task.dueDate)} {meta.due_time ? `às ${meta.due_time}` : ''}</span>
                           </span>
                         )}
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '6px', alignItems: 'center' }}>

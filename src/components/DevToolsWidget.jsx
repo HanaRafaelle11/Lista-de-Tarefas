@@ -108,7 +108,7 @@ export default function DevToolsWidget() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `flowday_diagnostico_${currentUser.id}_${Date.now()}.json`;
+      a.download = `myflowday_diagnostico_${currentUser.id}_${Date.now()}.json`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -242,7 +242,7 @@ export default function DevToolsWidget() {
           <div style={{ padding: '16px', borderBottom: '1px solid #1E293B', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#1E293B' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <Cpu size={18} style={{ color: '#818CF8' }} />
-              <strong style={{ color: '#F8FAFC', fontSize: '14px' }}>Flowday 3.0 Safe Observability</strong>
+              <strong style={{ color: '#F8FAFC', fontSize: '14px' }}>MyFlowDay 3.0 Safe Observability</strong>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <button 

@@ -14,7 +14,8 @@ export default function PerformanceView() {
     goals, 
     goalTasks,
     habitsManager, 
-    consistencyScore 
+    consistencyScore,
+    setActiveTab 
   } = useAppContext();
 
   const completedTasks = useMemo(() => tasks.filter(t => t.completed), [tasks]);
@@ -375,7 +376,7 @@ export default function PerformanceView() {
       </div>
 
       {/* Zero State Global — nenhuma tarefa ou objetivo ainda */}
-      {hasNoData && (
+      {completedTasks.length === 0 && (
         <div style={{
           padding: '40px 24px', textAlign: 'center',
           backgroundColor: 'var(--bg-card)', borderRadius: 'var(--radius-lg)',
@@ -390,17 +391,37 @@ export default function PerformanceView() {
             Complete suas primeiras tarefas para que a nossa IA entenda sua rotina e monte seu gráfico de produtividade real.
           </p>
           <div style={{ display: 'flex', gap: '8px', marginTop: '4px', flexWrap: 'wrap', justifyContent: 'center' }}>
-            {['Criar uma tarefa', 'Definir um objetivo', 'Concluir a primeira atividade'].map(step => (
-              <span key={step} style={{
-                padding: '4px 12px', borderRadius: '99px', fontSize: '12px', fontWeight: '600',
-                backgroundColor: 'var(--primary-light)', color: 'var(--primary)'
-              }}>{step}</span>
+            {[
+              { text: 'Criar uma tarefa', action: () => setActiveTab('tasks') },
+              { text: 'Definir um objetivo', action: () => setActiveTab('goals') },
+              { text: 'Concluir a primeira atividade', action: () => setActiveTab('home') }
+            ].map(step => (
+              <button 
+                key={step.text} 
+                onClick={step.action}
+                style={{
+                  padding: '6px 14px', borderRadius: '99px', fontSize: '12.5px', fontWeight: '600',
+                  backgroundColor: 'var(--primary-light)', color: 'var(--primary)',
+                  border: 'none', cursor: 'pointer', transition: 'all 0.2s'
+                }}
+                onMouseEnter={e => {
+                  e.target.style.backgroundColor = 'var(--primary)';
+                  e.target.style.color = '#fff';
+                }}
+                onMouseLeave={e => {
+                  e.target.style.backgroundColor = 'var(--primary-light)';
+                  e.target.style.color = 'var(--primary)';
+                }}
+              >
+                {step.text}
+              </button>
             ))}
           </div>
         </div>
       )}
 
-      <div className="perf-grid-container">
+      {completedTasks.length > 0 && (
+        <div className="perf-grid-container">
         
         {/* Bloco 1: Score & Classificação */}
         <div style={{ backgroundColor: 'var(--bg-card)', padding: '24px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-light)', display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -610,7 +631,8 @@ export default function PerformanceView() {
           )}
         </div>
 
-      </div>
+        </div>
+      )}
     </div>
   );
 }

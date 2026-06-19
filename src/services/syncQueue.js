@@ -1,5 +1,5 @@
 /**
- * syncQueue.js — Fila de sincronização resiliente do Flowday
+ * syncQueue.js — Fila de sincronização resiliente do MyFlowDay
  *
  * Garantias:
  * ✔ Zero perda de dados (localStorage persistente)

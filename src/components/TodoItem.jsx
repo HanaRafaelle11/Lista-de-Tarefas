@@ -2,61 +2,16 @@ import React, { useState } from 'react';
 import { Calendar, Trash2, Edit2, AlertCircle, CalendarPlus, Check, Repeat } from 'lucide-react';
 import { parseTaskMetadata, formatDescriptionWithoutMetadata } from '../contexts/AppContext';
 
-// ─── Gera e faz download de um arquivo .ics (iCalendar) para a tarefa ─────────
+// ─── Redireciona para o Google Calendar web pré-preenchido ───────────────────
 function exportTaskToCalendar(task) {
-  const now = new Date();
-  const uid = `flowday-${task.id}-${Date.now()}@myflowday.app`;
-
-  // Formata data no padrão iCal: YYYYMMDD
-  const formatICalDate = (dateStr) => {
-    if (!dateStr) return null;
-    return dateStr.replace(/-/g, '');
+  const cleanDescription = formatDescriptionWithoutMetadata(task.description);
+  const tarefa = {
+    titulo: task.title,
+    data_limite: task.dueDate || new Date().toISOString().split('T')[0],
+    descricao: cleanDescription || '',
   };
-
-  // Formata timestamp no padrão iCal: YYYYMMDDTHHmmssZ
-  const formatICalDateTime = (date) => {
-    return date.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
-  };
-
-  const dtStamp = formatICalDateTime(now);
-  const startDate = task.dueDate ? formatICalDate(task.dueDate) : formatICalDate(now.toISOString().split('T')[0]);
-
-  // Constrói o conteúdo do arquivo .ics
-  const lines = [
-    'BEGIN:VCALENDAR',
-    'VERSION:2.0',
-    'PRODID:-//MyFlowDay//MyFlowDay App//PT',
-    'CALSCALE:GREGORIAN',
-    'METHOD:PUBLISH',
-    'BEGIN:VEVENT',
-    `UID:${uid}`,
-    `DTSTAMP:${dtStamp}`,
-    `DTSTART;VALUE=DATE:${startDate}`,
-    `DTEND;VALUE=DATE:${startDate}`,
-    `SUMMARY:${task.title}`,
-    task.description ? `DESCRIPTION:${task.description.replace(/\n/g, '\\n').substring(0, 255)}` : '',
-    `CATEGORIES:${task.category || 'Geral'},${task.priority || 'Normal'}`,
-    `STATUS:${task.completed ? 'COMPLETED' : 'CONFIRMED'}`,
-    `PRIORITY:${task.priority === 'Alta' ? 1 : task.priority === 'Média' ? 5 : 9}`,
-    'BEGIN:VALARM',
-    'TRIGGER:-PT30M',
-    'ACTION:DISPLAY',
-    'DESCRIPTION:Lembrete — MyFlowDay',
-    'END:VALARM',
-    'END:VEVENT',
-    'END:VCALENDAR',
-  ].filter(Boolean).join('\r\n');
-
-  // Cria e dispara o download do arquivo .ics
-  const blob = new Blob([lines], { type: 'text/calendar;charset=utf-8' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = `${task.title.replace(/[^a-zA-Z0-9\u00C0-\u017F ]/g, '').trim().substring(0, 40)}.ics`;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
+  const url = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=[MyFlowDay]%20${encodeURIComponent(tarefa.titulo)}&dates=${tarefa.data_limite.replace(/-/g, '')}/${tarefa.data_limite.replace(/-/g, '')}&details=${encodeURIComponent(tarefa.descricao)}&sf=true&output=xml`;
+  window.open(url, '_blank');
 }
 
 
@@ -86,11 +41,10 @@ export default function TodoItem({ item, onToggleComplete, onDelete, onEdit }) {
   };
 
   // Formatar data em formato brasileiro dd/mm/aaaa
-  const formatDueDate = (dateStr) => {
-    if (!dateStr) return '';
-    const parts = dateStr.split('-');
-    if (parts.length !== 3) return dateStr;
-    return `${parts[2]}/${parts[1]}/${parts[0]}`;
+  const formatarDataBR = (str) => {
+    if (!str) return '';
+    const p = str.split('-');
+    return p.length === 3 ? `${p[2]}/${p[1]}/${p[0]}` : new Date(str).toLocaleDateString('pt-BR');
   };
 
   const overdue = isOverdue();
@@ -147,7 +101,7 @@ export default function TodoItem({ item, onToggleComplete, onDelete, onEdit }) {
             <div className={`todo-item-date-wrapper ${overdue ? 'date-overdue' : ''}`}>
               <Calendar size={13} />
               <span className="todo-item-date-text">
-                {formatDueDate(item.dueDate)}
+                {formatarDataBR(item.dueDate)}
                 {meta.due_time && ` às ${meta.due_time}`}
               </span>
             </div>
@@ -169,8 +123,8 @@ export default function TodoItem({ item, onToggleComplete, onDelete, onEdit }) {
         <button
           onClick={handleExportCalendar}
           className="todo-item-action-btn"
-          title={calExported ? 'Adicionado!' : 'Adicionar à Agenda (.ics)'}
-          aria-label={calExported ? 'Tarefa exportada para agenda' : 'Exportar para agenda'}
+          title={calExported ? 'Abrindo Google Calendar...' : 'Adicionar ao Google Calendar'}
+          aria-label="Adicionar tarefa ao Google Calendar"
           style={{
             color: calExported ? '#22c55e' : 'var(--text-light)',
             transition: 'color 0.3s',

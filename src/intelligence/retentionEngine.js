@@ -30,7 +30,7 @@ export function getEngagementSuggestions(userState = {}, tasks = [], onboardingC
     suggestions.push({
       id: 'onboarding_guided_loop',
       type: 'onboarding',
-      title: `Jornada Flowday (Passo ${step})`,
+      title: `Jornada MyFlowDay (Passo ${step})`,
       message: step === 1 
         ? 'Defina seu primeiro grande Objetivo para conectar suas tarefas a metas maiores.'
         : 'Crie suas primeiras tarefas de foco diário para iniciar sua rotina.',

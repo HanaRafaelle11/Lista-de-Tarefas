@@ -613,6 +613,7 @@ export function AppProvider({ children }) {
         await eventsService.logEvent(currentUser.id, 'logout');
       }
       await supabase.auth.signOut();
+      window.location.href = window.location.origin + '/login';
       // Reset do guard de conquistas para o próximo login
       dataLoadedOnce.current = false;
       firstSuccessLogged.current = false;

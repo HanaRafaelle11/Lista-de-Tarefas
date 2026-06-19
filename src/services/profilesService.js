@@ -16,7 +16,7 @@ const requireUser = (userId) => {
 function localFallbackProfile(userId, name = '') {
   return {
     id: userId,
-    name: name || 'Usuário Flowday',
+    name: name || 'Usuário MyFlowDay',
     nickname: 'user',
     profession: '',
     bio: '',
@@ -45,7 +45,7 @@ export const profilesService = {
           // Perfil não existe ainda — tenta criar
           const defaultData = {
             id: userId,
-            name: 'Usuário Flowday',
+            name: 'Usuário MyFlowDay',
             nickname: 'user',
             profession: '',
             bio: '',
