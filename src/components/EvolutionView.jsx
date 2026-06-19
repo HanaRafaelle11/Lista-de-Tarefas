@@ -1,5 +1,5 @@
 import React, { useMemo, useState, lazy, Suspense } from 'react';
-import { CheckCircle, Clock, AlertTriangle, BarChart3, PieChart, Target, Star, Award, ShieldAlert, Zap } from 'lucide-react';
+import { CheckCircle, Clock, AlertTriangle, BarChart3, PieChart, Target, Star, Award, ShieldAlert, Zap, Calendar } from 'lucide-react';
 import { ACHIEVEMENTS, calcStats, calcStreak } from '../hooks/useAchievements';
 import { useAppContext } from '../contexts/AppContext';
 import MFIcon from './MFIcon';
@@ -329,13 +329,22 @@ export default function EvolutionView() {
 
           {/* Feature pills */}
           <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', flexWrap: 'wrap', marginBottom: '32px' }}>
-            {['🔥 Sequências de dias', '🏆 Conquistas', '📊 Gráficos de análise', '📅 Relatório semanal'].map((pill, i) => (
+            {[
+              { text: 'Sequências de dias', icon: <Zap size={14} style={{ color: 'var(--primary)' }} /> },
+              { text: 'Conquistas', icon: <Award size={14} style={{ color: '#eab308' }} /> },
+              { text: 'Gráficos de análise', icon: <BarChart3 size={14} style={{ color: 'var(--primary)' }} /> },
+              { text: 'Relatório semanal', icon: <Calendar size={14} style={{ color: 'var(--primary)' }} /> }
+            ].map((pill, i) => (
               <span key={i} style={{
                 padding: '6px 14px', borderRadius: '99px', fontSize: '13px', fontWeight: 500,
                 background: 'var(--bg-app)', border: '1px solid var(--border-light)',
                 color: 'var(--text-muted)',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px'
               }}>
-                {pill}
+                {pill.icon}
+                {pill.text}
               </span>
             ))}
           </div>
@@ -345,7 +354,7 @@ export default function EvolutionView() {
             className="btn-primary-glow"
             style={{ padding: '14px 32px', fontSize: '15px', fontWeight: 700 }}
           >
-            Criar minha primeira tarefa ⚡
+            Criar minha primeira tarefa
           </button>
         </section>
 
@@ -372,7 +381,9 @@ export default function EvolutionView() {
 
       {/* ── Banner motivacional ─────────────────────────── */}
       <section className="evo-motivation-banner">
-        <div className="evo-motivation-icon">📈</div>
+        <div className="evo-motivation-icon" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <BarChart3 size={32} style={{ color: 'var(--primary)' }} />
+        </div>
         <div>
           <h2 className="evo-motivation-title">{motivation.title}</h2>
           <p className="evo-motivation-desc">{motivation.desc}</p>

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Calendar, Trash2, Edit2, AlertCircle, CalendarPlus, Check } from 'lucide-react';
+import { Calendar, Trash2, Edit2, AlertCircle, CalendarPlus, Check, Repeat } from 'lucide-react';
 import { parseTaskMetadata, formatDescriptionWithoutMetadata } from '../contexts/AppContext';
 
 // ─── Gera e faz download de um arquivo .ics (iCalendar) para a tarefa ─────────
@@ -156,7 +156,7 @@ export default function TodoItem({ item, onToggleComplete, onDelete, onEdit }) {
           {/* Recorrência */}
           {meta.recurrence && meta.recurrence !== 'nenhuma' && (
             <span className="badge-priority baixa" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-              <span>🔄</span>
+              <Repeat size={12} />
               <span style={{ textTransform: 'capitalize' }}>{meta.recurrence}</span>
             </span>
           )}

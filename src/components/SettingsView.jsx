@@ -1,15 +1,148 @@
-import React, { useState } from 'react';
-import { Settings, User, Moon, Sun, Bell, Shield, Heart, BellOff, BellRing, CheckCircle, Award, MessageSquare } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Settings, User, Moon, Sun, Bell, Shield, Heart, BellOff, BellRing, CheckCircle, Award, MessageSquare, Calendar } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import { useNotifications } from '../hooks/useNotifications';
 import { useAppContext } from '../contexts/AppContext';
+import { exportAllTasksToCalendar } from '../services/googleCalendarService';
 
 export default function SettingsView() {
-  const { theme, setTheme, currentUser, handleLogout, isPro, handleSimulateUpgrade } = useAppContext();
+  const { theme, setTheme, currentUser, handleLogout, isPro, handleSimulateUpgrade, tasks } = useAppContext();
   const [loading, setLoading] = useState(false);
   const [feedbackText, setFeedbackText] = useState('');
   const [feedbackStatus, setFeedbackStatus] = useState('idle'); // idle, sending, sent, error
   const notifications = useNotifications();
+
+  // MFA States
+  const [mfaStatus, setMfaStatus] = useState('loading'); // 'loading', 'unconfigured', 'enrolling', 'verified'
+  const [mfaFactorId, setMfaFactorId] = useState(null);
+  const [mfaSecret, setMfaSecret] = useState(null);
+  const [mfaQrCode, setMfaQrCode] = useState(null);
+  const [mfaCode, setMfaCode] = useState('');
+  const [mfaError, setMfaError] = useState(null);
+  const [mfaSuccess, setMfaSuccess] = useState(null);
+
+  const loadMfaStatus = async () => {
+    try {
+      const { data, error } = await supabase.auth.mfa.listFactors();
+      if (error) throw error;
+      
+      const verifiedTotp = data.totp || [];
+      if (verifiedTotp.length > 0) {
+        const verifiedFactor = verifiedTotp.find(f => f.status === 'verified');
+        if (verifiedFactor) {
+          setMfaFactorId(verifiedFactor.id);
+          setMfaStatus('verified');
+          return;
+        }
+      }
+      setMfaStatus('unconfigured');
+    } catch (err) {
+      console.error('[MFA] Erro ao listar fatores:', err.message);
+      setMfaStatus('unconfigured');
+    }
+  };
+
+  useEffect(() => {
+    if (currentUser) {
+      loadMfaStatus();
+    }
+  }, [currentUser]);
+
+  const handleMfaEnroll = async () => {
+    setLoading(true);
+    setMfaError(null);
+    setMfaSuccess(null);
+    try {
+      const { data, error } = await supabase.auth.mfa.enroll({
+        factorType: 'totp',
+        friendlyName: `MyFlowDay (${currentUser?.email})`
+      });
+      if (error) throw error;
+
+      setMfaFactorId(data.id);
+      setMfaSecret(data.totp.secret);
+      setMfaQrCode(data.totp.qr_code);
+      setMfaStatus('enrolling');
+    } catch (err) {
+      setMfaError('Erro ao iniciar ativação de MFA: ' + err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleMfaVerify = async () => {
+    if (!mfaCode || mfaCode.length !== 6) {
+      setMfaError('Por favor, digite o código de 6 dígitos.');
+      return;
+    }
+    setLoading(true);
+    setMfaError(null);
+    setMfaSuccess(null);
+    try {
+      const { data: challengeData, error: challengeError } = await supabase.auth.mfa.challenge({
+        factorId: mfaFactorId,
+      });
+      if (challengeError) throw challengeError;
+
+      const { error: verifyError } = await supabase.auth.mfa.verify({
+        factorId: mfaFactorId,
+        challengeId: challengeData.id,
+        code: mfaCode,
+      });
+      if (verifyError) throw verifyError;
+
+      setMfaSuccess('Autenticação em Duas Etapas (MFA) ativada com sucesso!');
+      setMfaCode('');
+      setMfaSecret(null);
+      setMfaQrCode(null);
+      setMfaStatus('verified');
+      loadMfaStatus();
+    } catch (err) {
+      setMfaError('Código inválido ou expirado. Tente novamente: ' + err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleMfaCancel = async () => {
+    setLoading(true);
+    setMfaError(null);
+    setMfaSuccess(null);
+    try {
+      if (mfaFactorId) {
+        await supabase.auth.mfa.unenroll({ factorId: mfaFactorId });
+      }
+      setMfaFactorId(null);
+      setMfaSecret(null);
+      setMfaQrCode(null);
+      setMfaCode('');
+      setMfaStatus('unconfigured');
+    } catch (err) {
+      console.error('[MFA] Erro ao cancelar enrollment:', err.message);
+      setMfaStatus('unconfigured');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleMfaDisable = async () => {
+    if (!window.confirm('Tem certeza que deseja desativar a Autenticação em Duas Etapas (MFA)? Sua conta ficará menos protegida.')) return;
+    setLoading(true);
+    setMfaError(null);
+    setMfaSuccess(null);
+    try {
+      const { error } = await supabase.auth.mfa.unenroll({ factorId: mfaFactorId });
+      if (error) throw error;
+      
+      setMfaSuccess('MFA desativado com sucesso.');
+      setMfaFactorId(null);
+      setMfaStatus('unconfigured');
+    } catch (err) {
+      setMfaError('Erro ao desativar MFA: ' + err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handlePasswordReset = async () => {
     setLoading(true);
@@ -52,8 +185,8 @@ export default function SettingsView() {
     }
     setFeedbackStatus('sending');
     try {
-      // Tenta inserir no Supabase na tabela 'feedback'
-      const { error } = await supabase
+      // 1. Tenta inserir no Supabase na tabela 'feedback'
+      const { error: dbError } = await supabase
         .from('feedback')
         .insert({
           message: feedbackText.trim(),
@@ -62,10 +195,25 @@ export default function SettingsView() {
           created_at: new Date().toISOString(),
         });
 
-      if (error) {
+      if (dbError) {
         // Tabela pode ainda não existir — fallback para log local
-        console.warn('[Feedback] Tabela não encontrada, usando fallback:', error.message);
-        console.log('[Feedback] Mensagem recebida:', feedbackText.trim(), '| Usuário:', currentUser?.email);
+        console.warn('[Feedback] Tabela não encontrada, usando fallback:', dbError.message);
+      }
+
+      // 2. Dispara a requisição para a Supabase Edge Function 'send-feedback-email'
+      if (supabase.functions && typeof supabase.functions.invoke === 'function') {
+        const { error: funcError } = await supabase.functions.invoke('send-feedback-email', {
+          body: {
+            message: feedbackText.trim(),
+            userId: currentUser?.id || null,
+            userEmail: currentUser?.email || null,
+          }
+        });
+
+        if (funcError) {
+          console.error('[Feedback] Falha ao despachar email pela Edge Function:', funcError.message);
+          throw funcError;
+        }
       }
 
       setFeedbackText('');
@@ -113,6 +261,126 @@ export default function SettingsView() {
           </div>
         </div>
 
+        {/* Segurança e Autenticação MFA */}
+        <div style={{ backgroundColor: 'var(--bg-card)', padding: '24px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-light)' }}>
+          <h2 style={{ fontSize: '16px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+            <Shield size={18} /> Segurança da Conta
+          </h2>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            {mfaError && (
+              <div style={{ backgroundColor: '#fef2f2', color: '#991b1b', border: '1px solid #fca5a5', borderRadius: 'var(--radius-sm)', padding: '10px 14px', fontSize: '13px', textAlign: 'center' }}>
+                {mfaError}
+              </div>
+            )}
+            {mfaSuccess && (
+              <div style={{ backgroundColor: '#ecfdf5', color: '#065f46', border: '1px solid #a7f3d0', borderRadius: 'var(--radius-sm)', padding: '10px 14px', fontSize: '13px', textAlign: 'center' }}>
+                {mfaSuccess}
+              </div>
+            )}
+
+            {mfaStatus === 'loading' && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-light)', fontSize: '14px' }}>
+                <div className="app-loading-spinner" style={{ width: '16px', height: '16px' }} />
+                Carregando status de segurança...
+              </div>
+            )}
+
+            {mfaStatus === 'unconfigured' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ fontSize: '12px', color: 'var(--text-light)', textTransform: 'uppercase' }}>Status de Duas Etapas (MFA)</span>
+                  <span style={{ fontSize: '11px', fontWeight: '750', padding: '2px 8px', borderRadius: '4px', backgroundColor: 'var(--prio-alta-bg)', color: 'var(--prio-alta-text)' }}>Desativado</span>
+                </div>
+                <p style={{ fontSize: '13px', color: 'var(--text-light)', lineHeight: '1.5', margin: 0 }}>
+                  A autenticação em duas etapas adiciona uma camada extra de segurança para a sua conta do MyFlowDay. Para entrar, além da senha, você precisará fornecer um código temporário de 6 dígitos gerado no celular.
+                </p>
+                <button
+                  onClick={handleMfaEnroll}
+                  disabled={loading}
+                  style={{ alignSelf: 'flex-start', color: 'white', fontWeight: '600', fontSize: '13px', padding: '8px 16px', backgroundColor: 'var(--primary)', border: 'none', borderRadius: '6px', cursor: 'pointer' }}
+                >
+                  Configurar Autenticação em Duas Etapas
+                </button>
+              </div>
+            )}
+
+            {mfaStatus === 'enrolling' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <h3 style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-main)', margin: 0 }}>Scan do Código de Segurança</h3>
+                <p style={{ fontSize: '13px', color: 'var(--text-light)', lineHeight: '1.5', margin: 0 }}>
+                  Abra seu aplicativo de autenticação (como Google Authenticator ou Authy), escaneie o código QR abaixo e insira o código de 6 dígitos gerado para concluir a ativação.
+                </p>
+                
+                {/* QR Code Container */}
+                {mfaQrCode && (
+                  <div style={{ display: 'flex', justifyContent: 'center', padding: '16px', backgroundColor: 'white', borderRadius: '8px', alignSelf: 'center' }}>
+                    {mfaQrCode.trim().startsWith('<svg') ? (
+                      <div dangerouslySetInnerHTML={{ __html: mfaQrCode }} style={{ width: '180px', height: '180px' }} />
+                    ) : (
+                      <img src={mfaQrCode} alt="TOTP QR Code" style={{ width: '180px', height: '180px' }} />
+                    )}
+                  </div>
+                )}
+
+                {mfaSecret && (
+                  <div style={{ padding: '12px', backgroundColor: 'var(--bg-app)', borderRadius: '6px', border: '1px solid var(--border-light)' }}>
+                    <span style={{ fontSize: '11px', color: 'var(--text-light)', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Chave Secreta (Configuração Manual)</span>
+                    <code style={{ fontSize: '14px', color: 'var(--text-main)', fontWeight: '700', letterSpacing: '1px', wordBreak: 'break-all', fontFamily: 'monospace' }}>{mfaSecret}</code>
+                  </div>
+                )}
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <label style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-main)' }}>Código de 6 dígitos</label>
+                  <input
+                    type="text"
+                    maxLength={6}
+                    placeholder="000000"
+                    value={mfaCode}
+                    onChange={(e) => setMfaCode(e.target.value.replace(/\D/g, ''))}
+                    style={{ padding: '8px 12px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-medium)', backgroundColor: 'var(--bg-app)', color: 'var(--text-main)', width: '140px', fontSize: '16px', letterSpacing: '2px', textAlign: 'center' }}
+                  />
+                </div>
+
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  <button
+                    onClick={handleMfaVerify}
+                    disabled={loading || mfaCode.length !== 6}
+                    style={{ color: 'white', fontWeight: '600', fontSize: '13px', padding: '8px 16px', backgroundColor: 'var(--primary)', border: 'none', borderRadius: '6px', cursor: 'pointer', opacity: mfaCode.length === 6 ? 1 : 0.6 }}
+                  >
+                    Confirmar e Ativar
+                  </button>
+                  <button
+                    onClick={handleMfaCancel}
+                    disabled={loading}
+                    style={{ color: 'var(--text-muted)', fontWeight: '600', fontSize: '13px', padding: '8px 16px', backgroundColor: 'transparent', border: '1px solid var(--border-medium)', borderRadius: '6px', cursor: 'pointer' }}
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {mfaStatus === 'verified' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ fontSize: '12px', color: 'var(--text-light)', textTransform: 'uppercase' }}>Status de Duas Etapas (MFA)</span>
+                  <span style={{ fontSize: '11px', fontWeight: '750', padding: '2px 8px', borderRadius: '4px', backgroundColor: '#ecfdf5', color: '#047857', border: '1px solid #a7f3d0' }}>MFA Ativado</span>
+                </div>
+                <p style={{ fontSize: '13px', color: 'var(--text-light)', lineHeight: '1.5', margin: 0 }}>
+                  Sua conta está altamente protegida com autenticação em duas etapas TOTP baseada em app autenticador.
+                </p>
+                <button
+                  onClick={handleMfaDisable}
+                  disabled={loading}
+                  style={{ alignSelf: 'flex-start', color: '#c06c6c', fontWeight: '600', fontSize: '13px', padding: '8px 16px', backgroundColor: '#faf0f0', border: '1px solid #fca5a5', borderRadius: '6px', cursor: 'pointer' }}
+                >
+                  Desativar Autenticação em Duas Etapas
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+
         {/* Assinatura SaaS (Simulador Pro) - Bloco 6 */}
         <div style={{ backgroundColor: 'var(--bg-card)', padding: '24px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-light)' }}>
           <h2 style={{ fontSize: '16px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
@@ -152,6 +420,44 @@ export default function SettingsView() {
               }}
             >
               {isPro ? 'Voltar para o Plano Grátis (Simulado)' : 'Ativar Flowday Pro ⚡ (Simulado)'}
+            </button>
+          </div>
+        </div>
+
+        {/* Configurações de Produtividade */}
+        <div style={{ backgroundColor: 'var(--bg-card)', padding: '24px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-light)' }}>
+          <h2 style={{ fontSize: '16px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+            <Calendar size={18} /> Configurações de Produtividade
+          </h2>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <p style={{ fontSize: '14px', color: 'var(--text-main)', fontWeight: '500', margin: 0 }}>
+              Sincronização do Calendário de Tarefas
+            </p>
+            <p style={{ fontSize: '12px', color: 'var(--text-light)', lineHeight: '1.5', margin: 0 }}>
+              Exporte e integre todas as suas tarefas ativas e com data definida em qualquer calendário externo (Google Calendar, Apple Calendar, Outlook) via arquivo iCalendar.
+            </p>
+            <button
+              onClick={() => {
+                exportAllTasksToCalendar(tasks);
+              }}
+              style={{
+                alignSelf: 'flex-start',
+                marginTop: '8px',
+                padding: '10px 20px',
+                borderRadius: 'var(--radius-sm)',
+                backgroundColor: 'var(--primary)',
+                color: 'white',
+                fontWeight: '600',
+                fontSize: '13px',
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+                border: 'none',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}
+            >
+              <Calendar size={14} /> Sincronizar Calendário (.ics)
             </button>
           </div>
         </div>

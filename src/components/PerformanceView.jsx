@@ -1,8 +1,12 @@
 import React, { useMemo } from 'react';
 import { 
-  Award, TrendingUp, Clock, Calendar, ShieldAlert, Zap, BarChart2, CheckCircle2, AlertTriangle, ArrowUpRight 
+  Award, TrendingUp, Clock, Calendar, ShieldAlert, Zap, BarChart2,
+  CheckCircle2, AlertTriangle, ArrowUpRight, Flame, Trophy, Shield,
+  Sunrise, Sun, Sunset, Moon, Radar, Target, Lightbulb, CalendarDays,
+  AlarmClock, Leaf, Activity
 } from 'lucide-react';
 import { useAppContext } from '../contexts/AppContext';
+
 
 export default function PerformanceView() {
   const { 
@@ -19,11 +23,12 @@ export default function PerformanceView() {
 
   // 1. Classificação do Score Geral
   const scoreLabel = useMemo(() => {
-    if (consistencyScore >= 90) return { label: 'Excelente 🌟', color: 'var(--primary)', desc: 'Sua consistência está incrível! Continue liderando sua jornada.' };
-    if (consistencyScore >= 75) return { label: 'Muito Bom ⚡', color: '#6B7F8A', desc: 'Ótimo ritmo de crescimento. Mantendo a disciplina.' };
-    if (consistencyScore >= 60) return { label: 'Regular 🟢', color: '#C89658', desc: 'Bom desempenho, mas há margem para focar em mais hábitos.' };
-    return { label: 'Atenção ⚠️', color: '#C06C6C', desc: 'Foque em planejar tarefas menores para reativar seu ritmo.' };
+    if (consistencyScore >= 90) return { label: 'Excelente', color: 'var(--primary)', desc: 'Sua consistência está incrível! Continue liderando sua jornada.' };
+    if (consistencyScore >= 75) return { label: 'Muito Bom', color: '#6B7F8A', desc: 'Ótimo ritmo de crescimento. Mantendo a disciplina.' };
+    if (consistencyScore >= 60) return { label: 'Regular', color: '#C89658', desc: 'Bom desempenho, mas há margem para focar em mais hábitos.' };
+    return { label: 'Atenção', color: '#C06C6C', desc: 'Foque em planejar tarefas menores para reativar seu ritmo.' };
   }, [consistencyScore]);
+
 
   // 2. Mapa de Produtividade por Horário (completed_at)
   const productivityHours = useMemo(() => {
@@ -49,11 +54,12 @@ export default function PerformanceView() {
     const leastProductiveKey = sorted[sorted.length - 1][0];
 
     const periodNames = {
-      matutino: 'Matutino (06h - 12h) ☀️',
-      vespertino: 'Vespertino (12h - 18h) ⛅',
-      noturno: 'Noturno (18h - 00h) 🌙',
-      madrugada: 'Madrugada (00h - 06h) 🦉'
+      matutino: 'Matutino (06h – 12h)',
+      vespertino: 'Vespertino (12h – 18h)',
+      noturno: 'Noturno (18h – 00h)',
+      madrugada: 'Madrugada (00h – 06h)'
     };
+
 
     // Recomendação Automática
     let recommendation = 'Você tem um ritmo de execução equilibrado ao longo do dia.';
@@ -101,12 +107,13 @@ export default function PerformanceView() {
     const maxVal = Math.max(...days, 1);
     const dayNames = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
     
+    // Map each day to a performance level (no emojis — use CSS/icon instead)
     const radarData = days.map((val, idx) => {
-      let indicator = '🔴';
       const pct = (val / maxVal) * 100;
-      if (pct > 70) indicator = '🟢';
-      else if (pct > 30) indicator = '🟡';
-      return { dayName: dayNames[idx], count: val, indicator };
+      let level = 'low';    // red
+      if (pct > 70) level = 'high';   // green
+      else if (pct > 30) level = 'mid'; // yellow
+      return { dayName: dayNames[idx], count: val, level };
     });
 
     const sortedDays = days.map((val, idx) => ({ idx, val })).sort((a, b) => b.val - a.val);
@@ -223,9 +230,10 @@ export default function PerformanceView() {
 
     // Nível de Gamificação
     let userLevel = 'Recruta Focado';
-    if (maxStreak >= 15) userLevel = 'Mestre Consistente 🔥';
-    else if (maxStreak >= 7) userLevel = 'Executor Focado ⚡';
-    else if (maxStreak >= 3) userLevel = 'Explorador Conectado 🌱';
+    if (maxStreak >= 15) userLevel = 'Mestre Consistente';
+    else if (maxStreak >= 7) userLevel = 'Executor Focado';
+    else if (maxStreak >= 3) userLevel = 'Explorador Conectado';
+
 
     return {
       currentStreak,
@@ -245,7 +253,7 @@ export default function PerformanceView() {
     if (radarSemanal.bestDay) {
       list.push({
         id: 'best_day',
-        emoji: '📅',
+        icon: 'calendar',
         text: `Você conclui mais tarefas às ${radarSemanal.bestDay}s.`
       });
     }
@@ -254,34 +262,36 @@ export default function PerformanceView() {
     if (productivityHours.mostProductive) {
       list.push({
         id: 'best_period',
-        emoji: '⏰',
+        icon: 'clock',
         text: `Seu pico de produtividade é no período ${productivityHours.mostProductive}.`
       });
     }
 
+
     // Insight de Hábitos
     if (habits.length > 0 && habitLogs.length > 0) {
       habits.forEach(h => {
-        const logsCount = habitLogs.filter(l => l.habit_id === h.id).length;
-        const rate = Math.round((logsCount / 7) * 100);
-        if (rate >= 80) {
-          list.push({
-            id: `habit_${h.id}`,
-            emoji: h.emoji || '🌱',
-            text: `Seu hábito "${h.title}" possui consistência excepcional de ${rate}% nesta semana.`
-          });
-        }
-      });
+          const logsCount = habitLogs.filter(l => l.habit_id === h.id).length;
+          const rate = Math.round((logsCount / 7) * 100);
+          if (rate >= 80) {
+            list.push({
+              id: `habit_${h.id}`,
+              icon: 'leaf',
+              text: `Seu hábito "${h.title}" possui consistência excepcional de ${rate}% nesta semana.`
+            });
+          }
+        });
     }
 
     // Insight de Objetivos Estagnados
     stagnantGoals.forEach(g => {
       list.push({
         id: `goal_${g.id}`,
-        emoji: g.icon || '🎯',
+        icon: 'target',
         text: `O objetivo "${g.title}" está há ${g.daysStagnant} dias sem novas conclusões de tarefas.`
       });
     });
+
 
     // Insight de Horário de Objetivos
     const completedGoals = goals.filter(g => g.status === 'completed');
@@ -296,9 +306,10 @@ export default function PerformanceView() {
       const endHour = parseInt(bestHour) + 3;
       list.push({
         id: 'goal_time_insight',
-        emoji: '🎯',
+        icon: 'target',
         text: `Maior concentração de agendamento de objetivos concluídos entre ${bestHour}h e ${endHour}h.`
       });
+
     }
 
     return list.slice(0, 4); // Limita a 4 insights principais
@@ -308,8 +319,8 @@ export default function PerformanceView() {
   const productivityProfile = useMemo(() => {
     if (completedTasks.length === 0) {
       return {
-        title: 'Produtor em Início de Jornada 🌱',
-        desc: 'Você ainda não concluiu tarefas suficientes para determinarmos seu perfil de produtividade ideal. Comece a concluir tarefas para ver sua análise aqui!'
+        title: 'Produtor em Início de Jornada',
+        desc: 'Você ainda não concluiu tarefas suficientes para determinarmos seu perfil. Comece a concluir tarefas para ver sua análise aqui!'
       };
     }
     const counts = productivityHours.counts;
@@ -318,25 +329,39 @@ export default function PerformanceView() {
 
     const profiles = {
       matutino: {
-        title: 'Executor Matinal 🌅',
+        title: 'Executor Matinal',
         desc: 'Você rende melhor nas primeiras horas do dia. Sua mente está focada e você gosta de liquidar pendências críticas logo cedo.'
       },
       vespertino: {
-        title: 'Focado Vespertino ☀️',
+        title: 'Focado Vespertino',
         desc: 'Seu pico de energia criativa e foco ocorre no período da tarde. Ideal para agendar projetos e entregas complexas.'
       },
       noturno: {
-        title: 'Planejador Noturno 🌙',
+        title: 'Planejador Noturno',
         desc: 'Sua concentração flui melhor à noite, quando as distrações diminuem. Ótimo perfil para desenvolvimento profundo e reflexão.'
       },
       madrugada: {
-        title: 'Coruja da Madrugada 🦉',
+        title: 'Coruja da Madrugada',
         desc: 'Você funciona em horários alternativos. A calmaria da madrugada é seu santuário de produtividade.'
       }
     };
 
-    return profiles[primaryMode] || { title: 'Produtor Equilibrado ⚖️', desc: 'Seus horários de conclusão são distribuídos de maneira regular ao longo de todo o dia.' };
+    return profiles[primaryMode] || { title: 'Produtor Equilibrado', desc: 'Seus horários de conclusão são distribuídos de maneira regular ao longo de todo o dia.' };
   }, [productivityHours, completedTasks]);
+
+  // Helper: mapeia icon key para componente lucide
+  const InsightIcon = ({ icon, size = 18 }) => {
+    const map = {
+      calendar: <CalendarDays size={size} color="var(--primary)" />,
+      clock:    <AlarmClock   size={size} color="var(--primary)" />,
+      leaf:     <Leaf         size={size} color="#22c55e" />,
+      target:   <Target       size={size} color="var(--primary)" />,
+    };
+    return map[icon] || <Activity size={size} color="var(--primary)" />;
+  };
+
+  // Zero state top-level: não há nenhuma tarefa concluída nem objetivo
+  const hasNoData = completedTasks.length === 0 && goals.length === 0;
 
   return (
     <div className="performance-view-container animate-fade-in" style={{ padding: '24px 0' }}>
@@ -348,6 +373,32 @@ export default function PerformanceView() {
         </h1>
         <p className="tasks-page-subtitle">Descobertas comportamentais e análise de consistência pessoal</p>
       </div>
+
+      {/* Zero State Global — nenhuma tarefa ou objetivo ainda */}
+      {hasNoData && (
+        <div style={{
+          padding: '40px 24px', textAlign: 'center',
+          backgroundColor: 'var(--bg-card)', borderRadius: 'var(--radius-lg)',
+          border: '1px dashed var(--border-medium)', marginBottom: '24px',
+          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px'
+        }}>
+          <Activity size={40} color="var(--primary)" style={{ opacity: 0.7 }} />
+          <h2 style={{ fontSize: '18px', fontWeight: '700', color: 'var(--text-main)', margin: 0 }}>
+            Seus insights estão sendo preparados!
+          </h2>
+          <p style={{ fontSize: '14px', color: 'var(--text-muted)', lineHeight: '1.6', maxWidth: '480px', margin: 0 }}>
+            Complete suas primeiras tarefas para que a nossa IA entenda sua rotina e monte seu gráfico de produtividade real.
+          </p>
+          <div style={{ display: 'flex', gap: '8px', marginTop: '4px', flexWrap: 'wrap', justifyContent: 'center' }}>
+            {['Criar uma tarefa', 'Definir um objetivo', 'Concluir a primeira atividade'].map(step => (
+              <span key={step} style={{
+                padding: '4px 12px', borderRadius: '99px', fontSize: '12px', fontWeight: '600',
+                backgroundColor: 'var(--primary-light)', color: 'var(--primary)'
+              }}>{step}</span>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="perf-grid-container">
         
@@ -375,25 +426,33 @@ export default function PerformanceView() {
           <h3 style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Zap size={18} /> Central de Streaks
           </h3>
+          {completedTasks.length === 0 ? (
+            <div style={{ padding: '20px', textAlign: 'center', backgroundColor: 'var(--bg-app)', borderRadius: 'var(--radius-md)', border: '1px dashed var(--border-medium)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+              <Flame size={28} color="var(--text-light)" style={{ opacity: 0.5 }} />
+              <p style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-main)', margin: 0 }}>Sem sequência ainda</p>
+              <p style={{ fontSize: '11px', color: 'var(--text-light)', margin: 0 }}>Seus insights estão sendo preparados! Complete suas primeiras tarefas para que a nossa IA entenda sua rotina.</p>
+            </div>
+          ) : (
           <div style={{ display: 'flex', justifyContent: 'space-around', alignItems: 'center', height: '100%' }}>
             <div style={{ textAlign: 'center' }}>
-              <span style={{ fontSize: '28px' }}>🔥</span>
+              <Flame size={28} color="#f97316" style={{ margin: '0 auto 4px' }} />
               <span style={{ fontSize: '20px', fontWeight: '800', display: 'block', color: 'var(--text-main)' }}>{streaksData.currentStreak} dias</span>
               <span style={{ fontSize: '11px', color: 'var(--text-light)' }}>Sequência Atual</span>
             </div>
             <div style={{ height: '40px', width: '1px', backgroundColor: 'var(--border-medium)' }} />
             <div style={{ textAlign: 'center' }}>
-              <span style={{ fontSize: '28px' }}>🏆</span>
+              <Trophy size={28} color="#eab308" style={{ margin: '0 auto 4px' }} />
               <span style={{ fontSize: '20px', fontWeight: '800', display: 'block', color: 'var(--text-main)' }}>{streaksData.maxStreak} dias</span>
               <span style={{ fontSize: '11px', color: 'var(--text-light)' }}>Recorde Histórico</span>
             </div>
             <div style={{ height: '40px', width: '1px', backgroundColor: 'var(--border-medium)' }} />
             <div style={{ textAlign: 'center' }}>
-              <span style={{ fontSize: '28px' }}>🛡️</span>
+              <Shield size={28} color="var(--primary)" style={{ margin: '0 auto 4px' }} />
               <span style={{ fontSize: '13px', fontWeight: '700', display: 'block', color: 'var(--primary)', marginTop: '6px' }}>{streaksData.userLevel}</span>
               <span style={{ fontSize: '11px', color: 'var(--text-light)' }}>Seu Nível</span>
             </div>
           </div>
+          )}
         </div>
 
         {/* Bloco 3: Perfil de Produtividade */}
@@ -447,28 +506,35 @@ export default function PerformanceView() {
             <Calendar size={18} /> Radar Semanal
           </h3>
           {completedTasks.length === 0 && goals.length === 0 ? (
-            <div style={{ padding: '24px', textAlign: 'center', backgroundColor: 'var(--bg-app)', borderRadius: 'var(--radius-md)', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', border: '1px dashed var(--border-medium)' }}>
-              <span style={{ fontSize: '24px' }}>📡</span>
-              <p style={{ fontSize: '13px', color: 'var(--text-main)', fontWeight: '600', marginTop: '8px' }}>Radar inativo</p>
-              <p style={{ fontSize: '11px', color: 'var(--text-light)', textAlign: 'center' }}>Conclua tarefas ou objetivos para ativar o radar.</p>
+            <div style={{ padding: '24px', textAlign: 'center', backgroundColor: 'var(--bg-app)', borderRadius: 'var(--radius-md)', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', border: '1px dashed var(--border-medium)', gap: '8px' }}>
+              <Radar size={28} color="var(--text-light)" style={{ opacity: 0.5 }} />
+              <p style={{ fontSize: '13px', color: 'var(--text-main)', fontWeight: '600', margin: 0 }}>Radar inativo</p>
+              <p style={{ fontSize: '11px', color: 'var(--text-light)', margin: 0 }}>Seus insights estão sendo preparados! Complete suas primeiras tarefas para ativar o radar de produtividade.</p>
             </div>
           ) : (
             <>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                {radarSemanal.radarData.map(day => (
-                  <div key={day.dayName} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 12px', backgroundColor: 'var(--bg-app)', borderRadius: '6px' }}>
-                    <span style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-main)' }}>{day.dayName}</span>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span style={{ fontSize: '11px', color: 'var(--text-light)' }}>{day.count} concluídas</span>
-                      <span style={{ fontSize: '14px' }}>{day.indicator}</span>
+                {radarSemanal.radarData.map(day => {
+                  const dotColor = day.level === 'high' ? '#22c55e' : day.level === 'mid' ? '#eab308' : '#ef4444';
+                  return (
+                    <div key={day.dayName} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 12px', backgroundColor: 'var(--bg-app)', borderRadius: '6px' }}>
+                      <span style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-main)' }}>{day.dayName}</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ fontSize: '11px', color: 'var(--text-light)' }}>{day.count} concluídas</span>
+                        <span style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: dotColor, display: 'inline-block', flexShrink: 0 }} />
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
-              <div style={{ display: 'flex', gap: '8px', fontSize: '11px', color: 'var(--text-light)', marginTop: '8px' }}>
-                <span>🚀 Melhor dia: <strong>{radarSemanal.bestDay}</strong></span>
+              <div style={{ display: 'flex', gap: '12px', fontSize: '11px', color: 'var(--text-light)', marginTop: '8px', flexWrap: 'wrap' }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <TrendingUp size={12} color="#22c55e" /> Melhor dia: <strong>{radarSemanal.bestDay}</strong>
+                </span>
                 <span>•</span>
-                <span>⚠️ Pior dia: <strong>{radarSemanal.worstDay}</strong></span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <AlertTriangle size={12} color="#ef4444" /> Pior dia: <strong>{radarSemanal.worstDay}</strong>
+                </span>
               </div>
             </>
           )}
@@ -480,8 +546,8 @@ export default function PerformanceView() {
             <Zap size={18} /> Saúde dos Objetivos
           </h3>
           {goals.length === 0 ? (
-            <div style={{ padding: '24px', textAlign: 'center', backgroundColor: 'var(--bg-app)', borderRadius: 'var(--radius-md)', border: '1px dashed var(--border-medium)' }}>
-              <span style={{ fontSize: '24px' }}>🎯</span>
+            <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', backgroundColor: 'var(--bg-app)', borderRadius: 'var(--radius-md)', border: '1px dashed var(--border-medium)' }}>
+              <Target size={24} style={{ color: 'var(--text-muted)' }} />
               <p style={{ fontSize: '14px', color: 'var(--text-main)', fontWeight: '600', marginTop: '8px' }}>Sem objetivos ativos</p>
               <p style={{ fontSize: '12px', color: 'var(--text-light)' }}>Crie seus primeiros objetivos para visualizar sua saúde de progresso.</p>
             </div>
@@ -521,16 +587,22 @@ export default function PerformanceView() {
             <ArrowUpRight size={18} /> Insights Comportamentais Recentes
           </h3>
           {autoInsights.length === 0 ? (
-            <div style={{ padding: '24px', textAlign: 'center', backgroundColor: 'var(--bg-app)', borderRadius: 'var(--radius-md)', border: '1px dashed var(--border-medium)' }}>
-              <span style={{ fontSize: '24px' }}>💡</span>
-              <p style={{ fontSize: '14px', color: 'var(--text-main)', fontWeight: '600', marginTop: '8px' }}>Sem insights comportamentais</p>
-              <p style={{ fontSize: '12px', color: 'var(--text-light)' }}>Continue utilizando o Flowday para gerar análises sobre seu ritmo de execução.</p>
+            <div style={{ padding: '28px 24px', textAlign: 'center', backgroundColor: 'var(--bg-app)', borderRadius: 'var(--radius-md)', border: '1px dashed var(--border-medium)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
+              <Lightbulb size={32} color="var(--text-light)" style={{ opacity: 0.5 }} />
+              <p style={{ fontSize: '14px', color: 'var(--text-main)', fontWeight: '700', margin: 0 }}>
+                Seus insights estão sendo preparados!
+              </p>
+              <p style={{ fontSize: '13px', color: 'var(--text-muted)', lineHeight: '1.6', maxWidth: '460px', margin: 0 }}>
+                Complete suas primeiras tarefas para que a nossa IA entenda sua rotina e monte seu gráfico de produtividade real.
+              </p>
             </div>
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '16px' }}>
               {autoInsights.map(insight => (
                 <div key={insight.id} style={{ padding: '14px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-light)', backgroundColor: 'var(--bg-app)', display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
-                  <span style={{ fontSize: '20px' }}>{insight.emoji}</span>
+                  <div style={{ width: '32px', height: '32px', borderRadius: '8px', backgroundColor: 'var(--primary-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <InsightIcon icon={insight.icon} size={16} />
+                  </div>
                   <p style={{ fontSize: '12.5px', color: 'var(--text-main)', lineHeight: '1.5', margin: 0 }}>{insight.text}</p>
                 </div>
               ))}

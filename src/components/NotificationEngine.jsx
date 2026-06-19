@@ -27,7 +27,7 @@ export default function NotificationEngine() {
         if (timeDiffMinutes > 0 && timeDiffMinutes <= 15) {
           const notifId = `task_due_${task.id}`;
           if (!notifiedSet.current.has(notifId)) {
-            sendNotification('Tarefa Próxima do Vencimento ⏰', {
+            sendNotification('Tarefa Próxima do Vencimento', {
               body: `"${task.title}" vence em breve.`,
               icon: '/icon-192x192.png',
               tag: notifId
@@ -47,7 +47,7 @@ export default function NotificationEngine() {
         if (daysSinceUpdate >= 3) {
           const notifId = `goal_stagnant_${goal.id}_${now.toDateString()}`;
           if (!notifiedSet.current.has(notifId)) {
-             sendNotification('Objetivo sem progresso recente 🎯', {
+             sendNotification('Objetivo sem progresso recente', {
                body: `Seu objetivo "${goal.title}" precisa de atenção.`,
                icon: '/icon-192x192.png',
                tag: notifId
@@ -61,7 +61,7 @@ export default function NotificationEngine() {
       if (now.getDay() === 0 && now.getHours() === 18 && now.getMinutes() < 15) {
         const notifId = `weekly_review_${now.toDateString()}`;
         if (!notifiedSet.current.has(notifId)) {
-           sendNotification('Revisão Semanal 🔄', {
+           sendNotification('Revisão Semanal', {
              body: 'É hora de planejar sua próxima semana e revisar seu progresso!',
              icon: '/icon-192x192.png',
              tag: notifId

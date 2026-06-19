@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Plus, Trash2, Smile } from 'lucide-react';
+import { X, Plus, Trash2, Smile, Calendar, Clock, Target, Edit2 } from 'lucide-react';
 import EmojiPicker from 'emoji-picker-react';
 
 const COLORS = [
@@ -108,8 +108,10 @@ export default function GoalModal({ isOpen, onClose, onSave, onDelete, editingGo
       <div className="modal-content goal-modal animate-scale-up" onClick={e => e.stopPropagation()}>
         {/* Header */}
         <div className="todo-modal-header">
-          <div className="tasks-modal-title-wrap">
-            <span className="tasks-modal-icon">{editingGoal ? '✏️' : '🎯'}</span>
+          <div className="tasks-modal-title-wrap" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span className="tasks-modal-icon" style={{ display: 'inline-flex', alignItems: 'center', color: 'var(--primary)' }}>
+              {editingGoal ? <Edit2 size={18} /> : <Target size={18} />}
+            </span>
             <h2 className="todo-modal-title">
               {editingGoal ? 'Editar Objetivo' : 'Novo Objetivo'}
             </h2>
@@ -225,8 +227,10 @@ export default function GoalModal({ isOpen, onClose, onSave, onDelete, editingGo
           {/* Data-alvo */}
           <div className="todo-form-group">
             <label className="todo-form-label" htmlFor="goal-date">Data-alvo (opcional)</label>
-            <div className="todo-date-input-wrapper">
-              <span className="todo-date-icon" style={{ fontSize: '14px', left: '12px', position: 'absolute', color: 'var(--text-light)' }}>📅</span>
+            <div className="todo-date-input-wrapper" style={{ display: 'flex', alignItems: 'center' }}>
+              <span className="todo-date-icon" style={{ left: '12px', position: 'absolute', color: 'var(--text-light)', display: 'inline-flex', alignItems: 'center' }}>
+                <Calendar size={14} />
+              </span>
               <input
                 id="goal-date"
                 type="date"
@@ -242,8 +246,10 @@ export default function GoalModal({ isOpen, onClose, onSave, onDelete, editingGo
           <div className="todo-form-group" style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
             <div style={{ flex: '1 1 calc(50% - 8px)', minWidth: '140px' }}>
               <label className="todo-form-label" htmlFor="goal-start-time">Horário Inicial (opcional)</label>
-              <div className="todo-date-input-wrapper">
-                <span className="todo-date-icon" style={{ fontSize: '14px', left: '12px', position: 'absolute', color: 'var(--text-light)' }}>🕒</span>
+              <div className="todo-date-input-wrapper" style={{ display: 'flex', alignItems: 'center' }}>
+                <span className="todo-date-icon" style={{ left: '12px', position: 'absolute', color: 'var(--text-light)', display: 'inline-flex', alignItems: 'center' }}>
+                  <Clock size={14} />
+                </span>
                 <input
                   id="goal-start-time"
                   type="time"
@@ -255,8 +261,10 @@ export default function GoalModal({ isOpen, onClose, onSave, onDelete, editingGo
             </div>
             <div style={{ flex: '1 1 calc(50% - 8px)', minWidth: '140px' }}>
               <label className="todo-form-label" htmlFor="goal-end-time">Horário Final (opcional)</label>
-              <div className="todo-date-input-wrapper">
-                <span className="todo-date-icon" style={{ fontSize: '14px', left: '12px', position: 'absolute', color: 'var(--text-light)' }}>🕒</span>
+              <div className="todo-date-input-wrapper" style={{ display: 'flex', alignItems: 'center' }}>
+                <span className="todo-date-icon" style={{ left: '12px', position: 'absolute', color: 'var(--text-light)', display: 'inline-flex', alignItems: 'center' }}>
+                  <Clock size={14} />
+                </span>
                 <input
                   id="goal-end-time"
                   type="time"

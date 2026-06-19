@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Plus } from 'lucide-react';
+import { Plus, Target, Sprout, Award, Archive } from 'lucide-react';
 import GoalCard from './GoalCard';
 import GoalModal from './GoalModal';
 import GoalTasksModal from './GoalTasksModal';
@@ -10,25 +10,25 @@ import { useAppContext } from '../contexts/AppContext';
 function GoalsEmptyState({ filter, onAdd }) {
   const messages = {
     active: {
-      emoji: '🌱',
+      icon: <Sprout size={32} style={{ color: 'var(--primary)' }} />,
       title: 'Nenhum objetivo ativo',
       desc: 'Grandes conquistas começam com um objetivo. Defina para onde você quer ir.',
       cta: 'Criar meu primeiro objetivo',
     },
     completed: {
-      emoji: '🏆',
+      icon: <Award size={32} style={{ color: 'var(--primary)' }} />,
       title: 'Nenhum objetivo concluído ainda',
       desc: 'Quando você concluir um objetivo, ele aparecerá aqui como uma conquista.',
       cta: null,
     },
     archived: {
-      emoji: '🗃️',
+      icon: <Archive size={32} style={{ color: 'var(--primary)' }} />,
       title: 'Nenhum objetivo arquivado',
       desc: 'Objetivos pausados ou descontinuados ficam guardados aqui.',
       cta: null,
     },
     all: {
-      emoji: '✦',
+      icon: <Target size={32} style={{ color: 'var(--primary)' }} />,
       title: 'Nenhum objetivo ainda',
       desc: 'Grandes conquistas começam com um objetivo. Defina para onde você quer ir.',
       cta: 'Criar meu primeiro objetivo',
@@ -39,8 +39,8 @@ function GoalsEmptyState({ filter, onAdd }) {
 
   return (
     <div className="goals-empty-state">
-      <div className="goals-empty-icon-wrap">
-        <span className="goals-empty-emoji">{msg.emoji}</span>
+      <div className="goals-empty-icon-wrap" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        {msg.icon}
       </div>
       <h3 className="goals-empty-title">{msg.title}</h3>
       <p className="goals-empty-desc">{msg.desc}</p>
@@ -167,7 +167,7 @@ export default function GoalsView() {
       {/* ── Page Header ─────────────────────────────────── */}
       <div className="goals-page-header">
         <div className="goals-page-title-block">
-          <h1 className="goals-page-title">🎯 Meus Objetivos</h1>
+          <h1 className="goals-page-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Target size={24} style={{ color: 'var(--primary)' }} /> Meus Objetivos</h1>
           <p className="goals-page-subtitle">
             {counts.active > 0
               ? `${counts.active} objetivo${counts.active > 1 ? 's' : ''} ativo${counts.active > 1 ? 's' : ''}`

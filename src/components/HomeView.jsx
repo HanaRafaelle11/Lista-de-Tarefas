@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { Target, CheckCircle, Clock, ChevronRight, Award, Plus } from 'lucide-react';
+import { Target, CheckCircle, Clock, ChevronRight, Award, Plus, Flame, Calendar, Lightbulb, Sparkles, AlertTriangle, BarChart3, Zap } from 'lucide-react';
 import { calcStreak, ACHIEVEMENTS } from '../hooks/useAchievements';
 import { useAuraAssistant } from '../hooks/useAuraAssistant';
 import AuraAssistantWidget from './AuraAssistantWidget';
@@ -235,7 +235,9 @@ function GoalProgressRow({ goal, linkedTasks }) {
 
         {/* Badge do Score de Consistência */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 16px', borderRadius: 'var(--radius-md)', backgroundColor: 'var(--primary-glow)', border: '1px solid var(--primary-light)', minWidth: '180px' }}>
-          <span style={{ fontSize: '28px' }}>🔥</span>
+          <span style={{ display: 'inline-flex', alignItems: 'center', color: 'var(--primary)' }}>
+            <Flame size={28} style={{ color: 'var(--primary)' }} />
+          </span>
           <div>
             <span style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--primary)', fontWeight: '700', display: 'block' }}>Score de Consistência</span>
             <span style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-main)' }}>{consistencyScore} <span style={{ fontSize: '13px', color: 'var(--text-light)', fontWeight: '500' }}>/ 100</span></span>
@@ -246,7 +248,7 @@ function GoalProgressRow({ goal, linkedTasks }) {
       {/* ── Widget "Hoje" (Bloco 3 - Seção 8) ─────────────── */}
       <section className="onboarding-card animate-fade-in" style={{ background: 'linear-gradient(135deg, var(--bg-card) 0%, var(--bg-app) 100%)', border: '1px solid var(--border-medium)', padding: '24px' }}>
         <h3 style={{ fontSize: '16px', fontWeight: '700', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-          📅 Resumo de Hoje
+          <Calendar size={18} style={{ color: 'var(--primary)' }} /> Resumo de Hoje
         </h3>
         <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '16px' }}>
           Aqui está o que você precisa focar hoje para manter sua consistência:
@@ -656,43 +658,56 @@ function GoalProgressRow({ goal, linkedTasks }) {
             )}
 
             {/* Insights Comportamentais Inteligentes */}
-            {insights && insights.length > 0 && (
-              <section className="behavioral-insights-section animate-fade-in">
-                <div 
-                  style={{ 
-                    background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(16, 185, 129, 0.05) 100%)', 
-                    border: '1px solid var(--primary-light)', 
-                    borderRadius: 'var(--radius-md)', 
-                    padding: '20px' 
-                  }}
-                >
-                  <h3 style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-main)', margin: '0 0 14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    🧠 Insights do MyFlowDay
-                  </h3>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    {insights.map((ins, idx) => (
-                      <div 
-                        key={idx} 
-                        style={{ 
-                          display: 'flex', 
-                          alignItems: 'flex-start', 
-                          gap: '12px', 
-                          padding: '10px 12px', 
-                          backgroundColor: 'var(--bg-card)', 
-                          border: '1px solid var(--border-light)', 
-                          borderRadius: 'var(--radius-sm)' 
-                        }}
-                      >
-                        <span style={{ fontSize: '20px', lineHeight: '1' }}>{ins.emoji}</span>
-                        <p style={{ fontSize: '13px', color: 'var(--text-main)', margin: 0, lineHeight: '1.5' }}>
-                          {ins.message}
-                        </p>
-                      </div>
-                    ))}
+            {insights && insights.length > 0 && (() => {
+              const insightIconMap = {
+                '📊': <BarChart3 size={18} style={{ color: 'var(--primary)' }} />,
+                '⚠️': <AlertTriangle size={18} style={{ color: '#ef4444' }} />,
+                '🔥': <Flame size={18} style={{ color: '#f59e0b' }} />,
+                '⚡': <Zap size={18} style={{ color: 'var(--primary)' }} />,
+                '📅': <Calendar size={18} style={{ color: 'var(--primary)' }} />,
+                '🏆': <Award size={18} style={{ color: '#eab308' }} />,
+                '💡': <Lightbulb size={18} style={{ color: '#eab308' }} />,
+              };
+              return (
+                <section className="behavioral-insights-section animate-fade-in">
+                  <div 
+                    style={{ 
+                      background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(16, 185, 129, 0.05) 100%)', 
+                      border: '1px solid var(--primary-light)', 
+                      borderRadius: 'var(--radius-md)', 
+                      padding: '20px' 
+                    }}
+                  >
+                    <h3 style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-main)', margin: '0 0 14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <Sparkles size={16} style={{ color: 'var(--primary)' }} /> Insights do MyFlowDay
+                    </h3>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      {insights.map((ins, idx) => (
+                        <div 
+                          key={idx} 
+                          style={{ 
+                            display: 'flex', 
+                            alignItems: 'flex-start', 
+                            gap: '12px', 
+                            padding: '10px 12px', 
+                            backgroundColor: 'var(--bg-card)', 
+                            border: '1px solid var(--border-light)', 
+                            borderRadius: 'var(--radius-sm)' 
+                          }}
+                        >
+                          <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginTop: '2px' }}>
+                            {insightIconMap[ins.emoji] || <Lightbulb size={18} style={{ color: 'var(--text-muted)' }} />}
+                          </span>
+                          <p style={{ fontSize: '13px', color: 'var(--text-main)', margin: 0, lineHeight: '1.5' }}>
+                            {ins.message}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              </section>
-            )}
+                </section>
+              );
+            })()}
 
           </div>
         )}

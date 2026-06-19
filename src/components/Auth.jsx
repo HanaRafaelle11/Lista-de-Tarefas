@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Shield, Lock, Mail, User, CheckCircle2, ArrowLeft } from 'lucide-react';
-import { supabase } from '../supabaseClient';
+import { supabase, REDIRECT_URL } from '../supabaseClient';
 import { eventsService } from '../services/eventsService';
 
 import { useAppContext } from '../contexts/AppContext';
@@ -16,6 +16,9 @@ export default function Auth({ onLoginSuccess, initialMode = 'login' }) {
   const [isWaitingConfirmation, setIsWaitingConfirmation] = useState(false);
   const [showResendButton, setShowResendButton] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [mfaFactorId, setMfaFactorId] = useState(null);
+  const [mfaCode, setMfaCode] = useState('');
+  const [mfaUserObj, setMfaUserObj] = useState(null);
 
   const handleGoogleSignIn = async () => {
     setError('');
@@ -25,7 +28,7 @@ export default function Auth({ onLoginSuccess, initialMode = 'login' }) {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: window.location.origin, // Redireciona de volta para a raiz do app
+          redirectTo: REDIRECT_URL,
           queryParams: {
             access_type: 'offline',
             prompt: 'consent',
@@ -57,7 +60,7 @@ export default function Auth({ onLoginSuccess, initialMode = 'login' }) {
       setLoading(true);
       try {
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
-          redirectTo: window.location.origin + '/#type=recovery',
+          redirectTo: REDIRECT_URL + '/#type=recovery',
         });
         if (error) {
           setError(error.message);
@@ -117,6 +120,26 @@ export default function Auth({ onLoginSuccess, initialMode = 'login' }) {
             setError(error.message || 'E-mail ou senha incorretos.');
           }
         } else if (data?.user) {
+          // Check if MFA is required
+          const { data: aalData, error: aalError } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+          if (!aalError && aalData && aalData.currentLevel === 'aal1' && aalData.nextLevel === 'aal2') {
+            const { data: factorsData, error: factorsError } = await supabase.auth.mfa.listFactors();
+            if (!factorsError && factorsData && factorsData.totp && factorsData.totp.length > 0) {
+              const activeFactor = factorsData.totp[0];
+              setMfaFactorId(activeFactor.id);
+              setMfaUserObj({
+                id: data.user.id,
+                email: data.user.email,
+                name: data.user.user_metadata?.name || data.user.email.split('@')[0],
+                user_metadata: data.user.user_metadata || {},
+              });
+              setMode('mfaChallenge');
+              setMfaCode('');
+              setLoading(false);
+              return;
+            }
+          }
+
           if (!data.user.email_confirmed_at && !data.user.user_metadata?.email_verified) {
             await supabase.auth.signOut();
             setError('Seu e-mail ainda não foi confirmado. Por favor, ative sua conta pelo link enviado para sua caixa de entrada.');
@@ -145,7 +168,7 @@ export default function Auth({ onLoginSuccess, initialMode = 'login' }) {
           email,
           password,
           options: {
-            emailRedirectTo: 'https://myflowday.vercel.app',
+            emailRedirectTo: REDIRECT_URL,
             data: {
               name: name
             }
@@ -205,7 +228,7 @@ export default function Auth({ onLoginSuccess, initialMode = 'login' }) {
         type: 'signup',
         email: email,
         options: {
-          emailRedirectTo: 'https://myflowday.vercel.app'
+          emailRedirectTo: REDIRECT_URL
         }
       });
       if (error) {
@@ -217,6 +240,116 @@ export default function Auth({ onLoginSuccess, initialMode = 'login' }) {
       setError('Erro ao reenviar: ' + e.message);
     }
   };
+
+  const handleMfaVerify = async (e) => {
+    e.preventDefault();
+    setError('');
+    setSuccess('');
+    if (!mfaCode || mfaCode.length !== 6) {
+      setError('Por favor, informe o código de 6 dígitos.');
+      return;
+    }
+    setLoading(true);
+    try {
+      const { data: challengeData, error: challengeError } = await supabase.auth.mfa.challenge({
+        factorId: mfaFactorId,
+      });
+      if (challengeError) throw challengeError;
+
+      const { error: verifyError } = await supabase.auth.mfa.verify({
+        factorId: mfaFactorId,
+        challengeId: challengeData.id,
+        code: mfaCode,
+      });
+      if (verifyError) throw verifyError;
+
+      setSuccess('MFA verificado! Entrando...');
+      eventsService.logEvent(mfaUserObj.id, 'session_started', {
+        method: 'login_mfa',
+        ts: new Date().toISOString(),
+      });
+      setTimeout(() => {
+        onLoginSuccess(mfaUserObj);
+      }, 1000);
+    } catch (err) {
+      setError('Erro ao verificar MFA: ' + err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCancelMfa = async () => {
+    setError('');
+    setSuccess('');
+    setLoading(true);
+    try {
+      await supabase.auth.signOut();
+      setMode('login');
+      setMfaFactorId(null);
+      setMfaUserObj(null);
+    } catch (err) {
+      console.error('Erro ao cancelar MFA:', err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (mode === 'mfaChallenge') {
+    return (
+      <div style={styles.authContainer} className="animate-fade-in">
+        <div style={styles.authCard}>
+          <div style={{ textAlign: 'center', padding: '20px 0' }}>
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px', color: 'var(--primary)' }}>
+              <Shield size={48} />
+            </div>
+            <h2 style={{ fontSize: '22px', fontWeight: '700', color: 'var(--text-main)', marginBottom: '8px' }}>Duas Etapas (MFA)</h2>
+            <p style={{ fontSize: '14px', color: 'var(--text-muted)', lineHeight: '1.6', marginBottom: '24px' }}>
+              Digite o código de 6 dígitos gerado pelo seu aplicativo autenticador.
+            </p>
+            
+            <form onSubmit={handleMfaVerify} style={styles.form}>
+              {error && <div style={styles.errorMessage}>{error}</div>}
+              {success && <div style={styles.successMessage}>{success}</div>}
+
+              <div style={styles.inputGroup}>
+                <label style={styles.label}>Código de Verificação</label>
+                <div style={styles.inputWrapper}>
+                  <span style={styles.inputIcon}><Lock size={18} /></span>
+                  <input
+                    type="text"
+                    pattern="[0-9]*"
+                    inputMode="numeric"
+                    maxLength={6}
+                    placeholder="000000"
+                    value={mfaCode}
+                    onChange={(e) => setMfaCode(e.target.value.replace(/\D/g, ''))}
+                    style={{ ...styles.input, textAlign: 'center', fontSize: '20px', letterSpacing: '8px' }}
+                    className="form-input"
+                    disabled={loading}
+                    autoFocus
+                  />
+                </div>
+              </div>
+
+              <button type="submit" className="btn-primary-glow" style={styles.submitBtn} disabled={loading}>
+                {loading ? 'Verificando...' : 'Confirmar'}
+              </button>
+
+              <button 
+                type="button" 
+                onClick={handleCancelMfa} 
+                className="toggle-btn"
+                style={{ ...styles.toggleBtn, padding: '12px', fontSize: '14px', alignSelf: 'center', display: 'block', margin: '12px auto 0' }}
+                disabled={loading}
+              >
+                Cancelar
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // Tela de espera de confirmação de e-mail (Bloco 3 - Seção 6)
   if (isWaitingConfirmation) {
@@ -268,10 +401,9 @@ export default function Auth({ onLoginSuccess, initialMode = 'login' }) {
             <img 
               src={theme === 'dark' ? '/branding/logo-dark.svg' : '/branding/logo.svg'} 
               alt="MyFlowDay Logo" 
-              style={{ height: '64px', width: 'auto', objectFit: 'contain' }} 
+              style={{ height: '64px', width: 'auto', objectFit: 'contain', marginBottom: '8px' }} 
             />
-            <h1 className="auth-brand-text" style={{ fontSize: '42px', fontWeight: 700, margin: '8px 0 0 0', letterSpacing: '-1px', color: 'var(--text-main)' }}>MyFlowDay</h1>
-            <p style={{ fontSize: '18px', color: 'var(--text-light)', margin: '8px 0 32px 0' }}>
+            <p style={{ fontSize: '15px', color: 'var(--text-muted)', margin: '0 0 24px 0', letterSpacing: '0.5px', fontWeight: '500', textAlign: 'center' }}>
               {mode === 'updatePassword' ? 'Crie sua nova senha de acesso.' : 'Planeje. Execute. Evolua.'}
             </p>
           </div>

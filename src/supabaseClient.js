@@ -5,6 +5,10 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 export const hasSupabaseConfig = !!(supabaseUrl && supabaseAnonKey);
 
+export const REDIRECT_URL = (typeof window !== 'undefined' && window.location.origin.includes('localhost'))
+  ? window.location.origin
+  : (import.meta.env.VITE_REDIRECT_URL || 'https://myflowday.com.br');
+
 if (!hasSupabaseConfig) {
   console.warn(
     '[Flowday] Variáveis de ambiente do Supabase não encontradas.\n' +
@@ -25,6 +29,9 @@ export const supabase = hasSupabaseConfig
         signUp: async () => ({ data: { user: null }, error: new Error('Supabase não configurado') }),
         signOut: async () => {},
         updateUser: async () => ({ data: null, error: new Error('Supabase não configurado') }),
+      },
+      functions: {
+        invoke: async () => ({ data: null, error: new Error('Supabase não configurado') }),
       },
       from: () => ({
         select: () => ({

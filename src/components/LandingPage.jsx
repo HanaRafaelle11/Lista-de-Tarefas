@@ -1,8 +1,18 @@
 import React, { useState, useEffect } from 'react';
+import { Target, Award, Clock, TrendingUp, Sparkles, Smartphone } from 'lucide-react';
 
 // ─── Landing Page Pública ─────────────────────────────────────────────────────
 export default function LandingPage({ onEnterApp }) {
   const [scrolled, setScrolled] = useState(false);
+
+  const handleLinkClick = (e, path) => {
+    if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) {
+      return;
+    }
+    e.preventDefault();
+    window.history.pushState(null, '', path);
+    window.dispatchEvent(new Event('popstate'));
+  };
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
@@ -12,32 +22,32 @@ export default function LandingPage({ onEnterApp }) {
 
   const features = [
     {
-      icon: '🎯',
+      icon: <Target size={22} style={{ color: 'var(--primary)' }} />,
       title: 'Tarefas com Propósito',
       desc: 'Organize e priorize suas tarefas diárias com clareza. Foque no que realmente importa para o seu progresso.',
     },
     {
-      icon: '🏆',
+      icon: <Award size={22} style={{ color: 'var(--primary)' }} />,
       title: 'Objetivos que Movem',
       desc: 'Defina metas de médio e longo prazo, acompanhe o progresso e mantenha o foco na sua evolução.',
     },
     {
-      icon: '⏱️',
+      icon: <Clock size={22} style={{ color: 'var(--primary)' }} />,
       title: 'Modo Foco Pomodoro',
       desc: 'Sessões cronometradas com sons ambientes para eliminar distrações e maximizar sua concentração.',
     },
     {
-      icon: '📈',
+      icon: <TrendingUp size={22} style={{ color: 'var(--primary)' }} />,
       title: 'Evolução Visível',
       desc: 'Relatórios semanais, gráficos de produtividade e conquistas que celebram cada passo da sua jornada.',
     },
     {
-      icon: '🧠',
+      icon: <Sparkles size={22} style={{ color: 'var(--primary)' }} />,
       title: 'Insights Inteligentes',
       desc: 'A Aura, sua assistente de IA, analisa seus padrões e oferece sugestões personalizadas de produtividade.',
     },
     {
-      icon: '📱',
+      icon: <Smartphone size={22} style={{ color: 'var(--primary)' }} />,
       title: 'PWA Responsivo',
       desc: 'Instale como app no seu celular ou use no navegador. Seus dados sincronizam em todos os dispositivos.',
     },
@@ -426,26 +436,24 @@ export default function LandingPage({ onEnterApp }) {
           </p>
           <div style={{ display: 'flex', gap: '24px', justifyContent: 'center', flexWrap: 'wrap' }}>
             <a
-              href="/privacy.html"
-              target="_blank"
-              rel="noopener noreferrer"
+              href="/privacidade"
+              onClick={(e) => handleLinkClick(e, '/privacidade')}
               style={{ fontSize: '13px', color: 'var(--primary)', textDecoration: 'none', fontWeight: 500 }}
             >
               Política de Privacidade
             </a>
             <a
-              href="/terms.html"
-              target="_blank"
-              rel="noopener noreferrer"
+              href="/termos"
+              onClick={(e) => handleLinkClick(e, '/termos')}
               style={{ fontSize: '13px', color: 'var(--primary)', textDecoration: 'none', fontWeight: 500 }}
             >
               Termos de Serviço
             </a>
             <a
-              href="mailto:suporte@myflowday.app"
-              style={{ fontSize: '13px', color: 'var(--text-muted)', textDecoration: 'none' }}
+              href="mailto:suporte@myflowday.com.br"
+              style={{ fontSize: '13px', color: 'var(--text-light)', textDecoration: 'none' }}
             >
-              suporte@myflowday.app
+              suporte@myflowday.com.br
             </a>
           </div>
           <p style={{ fontSize: '12px', color: 'var(--text-light)', marginTop: '20px' }}>

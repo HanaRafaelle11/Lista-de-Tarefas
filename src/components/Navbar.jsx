@@ -33,13 +33,16 @@ export default function Navbar() {
       <header className="app-top-header">
         <div className="app-top-header-container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', maxWidth: '1200px', margin: '0 auto', padding: '0 24px', height: '64px' }}>
           
-          {/* Logo — apenas o SVG, sem texto duplicado */}
-          <div className="navbar-brand" style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }} onClick={() => setActiveTab('home')}>
+          {/* Logo — símbolo SVG oficial e texto da marca */}
+          <div className="navbar-brand" style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }} onClick={() => setActiveTab('home')}>
             <img 
               src={theme === 'dark' ? '/branding/logo-dark.svg' : '/branding/logo.svg'}
               alt="MyFlowDay Logo" 
-              style={{ height: '28px', width: 'auto', objectFit: 'contain' }}
+              style={{ height: '38px', width: 'auto', objectFit: 'contain' }}
             />
+            <span style={{ fontSize: '18px', fontWeight: 800, color: 'var(--text-main)', letterSpacing: '-0.5px', fontFamily: 'var(--font-display)' }}>
+              MyFlowDay
+            </span>
           </div>
 
           {/* Navegação */}
@@ -102,7 +105,7 @@ export default function Navbar() {
                 {userProfile?.avatar_url ? (
                   <img src={userProfile.avatar_url} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 ) : (
-                  <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'var(--primary-light)', color: 'var(--primary)', fontWeight: 'bold', fontSize: '12px' }}>
+                  <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%)', color: 'white', fontWeight: '700', fontSize: '12.5px', fontFamily: 'var(--font-display)' }}>
                     {getInitials(userProfile?.name || currentUser?.name)}
                   </div>
                 )}

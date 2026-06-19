@@ -4,6 +4,8 @@ import { supabase } from './supabaseClient';
 import Auth from './components/Auth';
 import Navbar from './components/Navbar';
 import LandingPage from './components/LandingPage';
+import PrivacyView from './components/PrivacyView';
+import TermsView from './components/TermsView';
 
 import AchievementToastManager from './components/AchievementToast';
 import SyncStatusBanner from './components/SyncStatusBanner';
@@ -21,6 +23,30 @@ const GuidedTour = lazy(() => import('./components/GuidedTour'));
 const NotificationEngine = lazy(() => import('./components/NotificationEngine'));
 const PwaInstallPrompt = lazy(() => import('./components/PwaInstallPrompt'));
 
+// Helper function to resolve public legal routes
+const getLegalRoute = (path, hash) => {
+  const cleanPath = path.toLowerCase().replace(/\/$/, '');
+  const cleanHash = hash.toLowerCase().replace(/^#\/?/, '');
+
+  if (
+    cleanPath === '/privacidade' || 
+    cleanPath === '/privacy' || 
+    cleanHash === 'privacidade' || 
+    cleanHash === 'privacy'
+  ) {
+    return 'privacy';
+  }
+  if (
+    cleanPath === '/termos' || 
+    cleanPath === '/terms' || 
+    cleanHash === 'termos' || 
+    cleanHash === 'terms'
+  ) {
+    return 'terms';
+  }
+  return null;
+};
+
 // ─── Layout interno (usa o contexto) ─────────────────────────────────────────
 function AppLayout() {
   console.error("DEBUG_APP_LAYOUT_MOUNT");
@@ -36,6 +62,25 @@ function AppLayout() {
     isPro,
     isAdmin,
   } = useAppContext();
+
+  // Custom routing states
+  const [currentPath, setCurrentPath] = React.useState(() => window.location.pathname);
+  const [currentHash, setCurrentHash] = React.useState(() => window.location.hash);
+
+  useEffect(() => {
+    const handleLocationChange = () => {
+      setCurrentPath(window.location.pathname);
+      setCurrentHash(window.location.hash);
+    };
+
+    window.addEventListener('popstate', handleLocationChange);
+    window.addEventListener('hashchange', handleLocationChange);
+
+    return () => {
+      window.removeEventListener('popstate', handleLocationChange);
+      window.removeEventListener('hashchange', handleLocationChange);
+    };
+  }, []);
 
   const [authMode, setAuthMode] = React.useState('login');
   // Controla se o usuário está na landing page pública (apenas para não-autenticados)
@@ -79,6 +124,39 @@ function AppLayout() {
       }
     }
   }, [activeTab, currentUser?.id, logEvent, isPro]);
+
+  // Interceptar rotas de Termos e Privacidade públicas
+  const legalRoute = getLegalRoute(currentPath, currentHash);
+
+  if (legalRoute === 'privacy') {
+    return (
+      <PrivacyView
+        onGoBack={() => {
+          window.history.pushState(null, '', '/');
+          window.dispatchEvent(new Event('popstate'));
+        }}
+        onNavigateToTerms={() => {
+          window.history.pushState(null, '', '/termos');
+          window.dispatchEvent(new Event('popstate'));
+        }}
+      />
+    );
+  }
+
+  if (legalRoute === 'terms') {
+    return (
+      <TermsView
+        onGoBack={() => {
+          window.history.pushState(null, '', '/');
+          window.dispatchEvent(new Event('popstate'));
+        }}
+        onNavigateToPrivacy={() => {
+          window.history.pushState(null, '', '/privacidade');
+          window.dispatchEvent(new Event('popstate'));
+        }}
+      />
+    );
+  }
 
   // Tela de erro caso falte configuração do Supabase (Bloco 2)
   if (supabaseConfigError) {

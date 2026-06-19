@@ -1,7 +1,8 @@
 import React, { useState, useMemo, useEffect, useRef, lazy, Suspense } from 'react';
 import { 
   Plus, Search, X, Calendar, ChevronDown, ChevronRight, 
-  List, Columns, Grid, Trash2, Edit2, AlertCircle, ArrowLeft, ArrowRight
+  List, Columns, Grid, Trash2, Edit2, AlertCircle, ArrowLeft, ArrowRight,
+  Sparkles, Award, Sprout, Pin, Zap, CheckCircle, Moon, Sun, Tag, AlertTriangle, RotateCcw
 } from 'lucide-react';
 import EmojiPicker from 'emoji-picker-react';
 import TodoItem from './TodoItem';
@@ -19,7 +20,7 @@ import MfTasksIcon from '../assets/Icons/mf-tasks.svg';
 import MfCalendarIcon from '../assets/Icons/mf-calendar.svg';
 
 // Importar serviço do Google Calendar
-import { addToGoogleCalendar } from '../services/googleCalendarService';
+import { addToGoogleCalendar, exportAllTasksToCalendar } from '../services/googleCalendarService';
 
 // Helpers de data local
 const todayStr = () => {
@@ -137,8 +138,8 @@ function EmptyState({ filter, searchQuery, onAdd }) {
   if (searchQuery) {
     return (
       <div className="tasks-empty-state">
-        <div className="tasks-empty-icon-wrap">
-          <span className="tasks-empty-emoji">🔍</span>
+        <div className="tasks-empty-icon-wrap" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <Search size={24} style={{ color: 'var(--text-light)' }} />
         </div>
         <h3 className="tasks-empty-title">Nenhum resultado</h3>
         <p className="tasks-empty-desc">Nenhuma tarefa corresponde a "<strong>{searchQuery}</strong>". Tente outras palavras.</p>
@@ -149,8 +150,8 @@ function EmptyState({ filter, searchQuery, onAdd }) {
   if (filter === 'completed') {
     return (
       <div className="tasks-empty-state">
-        <div className="tasks-empty-icon-wrap">
-          <span className="tasks-empty-emoji">✨</span>
+        <div className="tasks-empty-icon-wrap" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <Sparkles size={24} style={{ color: 'var(--text-light)' }} />
         </div>
         <h3 className="tasks-empty-title">Nenhuma tarefa concluída ainda</h3>
         <p className="tasks-empty-desc">Complete suas primeiras tarefas e elas aparecerão aqui como conquistas.</p>
@@ -161,8 +162,8 @@ function EmptyState({ filter, searchQuery, onAdd }) {
   if (filter === 'active') {
     return (
       <div className="tasks-empty-state tasks-empty-state--celebrate">
-        <div className="tasks-empty-icon-wrap">
-          <span className="tasks-empty-emoji">🎉</span>
+        <div className="tasks-empty-icon-wrap" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <Award size={24} style={{ color: 'var(--text-light)' }} />
         </div>
         <h3 className="tasks-empty-title">Tudo em dia!</h3>
         <p className="tasks-empty-desc">Você não tem nenhuma tarefa pendente. Momento perfeito para planejar seus próximos passos.</p>
@@ -176,8 +177,8 @@ function EmptyState({ filter, searchQuery, onAdd }) {
 
   return (
     <div className="tasks-empty-state">
-      <div className="tasks-empty-icon-wrap">
-        <span className="tasks-empty-emoji">🌱</span>
+      <div className="tasks-empty-icon-wrap" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <Sprout size={24} style={{ color: 'var(--text-light)' }} />
       </div>
       <h3 className="tasks-empty-title">Sua lista está em branco</h3>
       <p className="tasks-empty-desc">Comece criando sua primeira tarefa. Pequenos passos constroem grandes conquistas.</p>
@@ -555,7 +556,7 @@ export default function TodoView() {
       <form onSubmit={handleQuickAddSubmit} className="quick-inbox-container">
         <input 
           type="text" 
-          placeholder="⚡ Captura rápida: digite uma tarefa e pressione Enter..."
+          placeholder="Captura rápida: digite uma tarefa e pressione Enter..."
           value={quickTitle}
           onChange={e => setQuickTitle(e.target.value)}
           onKeyDown={e => {
@@ -591,9 +592,10 @@ export default function TodoView() {
           <button 
             onClick={() => setShowCategoryManager(!showCategoryManager)} 
             className="tasks-add-btn" 
-            style={{ backgroundColor: 'var(--bg-card)', color: 'var(--text-main)', border: '1px solid var(--border-medium)' }}
+            style={{ backgroundColor: 'var(--bg-card)', color: 'var(--text-main)', border: '1px solid var(--border-medium)', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
           >
-            <span>🏷️ Categorias</span>
+            <Tag size={14} />
+            <span>Categorias</span>
           </button>
           <button onClick={() => setIsPlannerOpen(true)} className="tasks-add-btn" style={{ backgroundColor: 'var(--bg-card)', color: 'var(--text-main)', border: '1px solid var(--border-medium)' }}>
             <Calendar size={16} />
@@ -708,8 +710,9 @@ export default function TodoView() {
             <button
               onClick={() => setCategoryFilter('all')}
               className={`tasks-cat-pill ${categoryFilter === 'all' ? 'active' : ''}`}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}
             >
-              🏷️ Todas
+              <Tag size={12} /> Todas
             </button>
             {categories.map(cat => (
               <button
@@ -731,7 +734,7 @@ export default function TodoView() {
             <div className="tasks-sections-wrapper">
               <TaskSection
                 title="Atrasadas"
-                icon="⚠️"
+                icon={<AlertTriangle size={15} style={{ color: 'var(--danger)' }} />}
                 accent="overdue"
                 tasks={sections.overdue}
                 onEdit={openEditTaskModal}
@@ -742,7 +745,7 @@ export default function TodoView() {
               />
               <TaskSection
                 title="Hoje"
-                icon="☀️"
+                icon={<Sun size={15} style={{ color: 'var(--primary)' }} />}
                 tasks={sections.today}
                 onEdit={openEditTaskModal}
                 onDelete={onDeleteTask}
@@ -751,7 +754,7 @@ export default function TodoView() {
               />
               <TaskSection
                 title="Amanhã"
-                icon="🌙"
+                icon={<Moon size={15} style={{ color: '#818cf8' }} />}
                 tasks={sections.tomorrow}
                 onEdit={openEditTaskModal}
                 onDelete={onDeleteTask}
@@ -760,7 +763,7 @@ export default function TodoView() {
               />
               <TaskSection
                 title="Esta semana"
-                icon="📅"
+                icon={<Calendar size={15} />}
                 tasks={sections.thisWeek}
                 onEdit={openEditTaskModal}
                 onDelete={onDeleteTask}
@@ -769,7 +772,7 @@ export default function TodoView() {
               />
               <TaskSection
                 title="Futuras"
-                icon="🚀"
+                icon={<Zap size={15} style={{ color: '#eab308' }} />}
                 tasks={sections.future}
                 onEdit={openEditTaskModal}
                 onDelete={onDeleteTask}
@@ -778,7 +781,7 @@ export default function TodoView() {
               />
               <TaskSection
                 title="Sem prazo definido"
-                icon="📌"
+                icon={<Pin size={15} />}
                 tasks={sections.noDueDate}
                 onEdit={openEditTaskModal}
                 onDelete={onDeleteTask}
@@ -787,7 +790,7 @@ export default function TodoView() {
               />
               <TaskSection
                 title="Concluídas"
-                icon="✅"
+                icon={<CheckCircle size={15} style={{ color: '#22c55e' }} />}
                 tasks={sections.completed}
                 onEdit={openEditTaskModal}
                 onDelete={onDeleteTask}
@@ -809,7 +812,9 @@ export default function TodoView() {
               {/* Coluna 1: A Fazer */}
               <div className="kanban-column" onDragOver={handleDragOver} onDrop={(e) => handleDrop(e, 'todo')}>
                 <div className="kanban-column-header">
-                  <span className="kanban-column-title">📌 A Fazer</span>
+                  <span className="kanban-column-title" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Pin size={14} /> A Fazer
+                  </span>
                   <span className="kanban-column-count">{kanbanTasks.todo.length}</span>
                 </div>
                 <div className="kanban-cards-list">
@@ -829,8 +834,9 @@ export default function TodoView() {
                           </span>
                         </div>
                         {task.dueDate && (
-                          <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
-                            📅 {task.dueDate} {meta.due_time ? `às ${meta.due_time}` : ''}
+                          <span style={{ fontSize: '10px', color: 'var(--text-muted)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                            <Calendar size={11} />
+                            <span>{task.dueDate} {meta.due_time ? `às ${meta.due_time}` : ''}</span>
                           </span>
                         )}
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '6px', alignItems: 'center' }}>
@@ -855,7 +861,9 @@ export default function TodoView() {
               {/* Coluna 2: Em Progresso */}
               <div className="kanban-column" onDragOver={handleDragOver} onDrop={(e) => handleDrop(e, 'in_progress')}>
                 <div className="kanban-column-header">
-                  <span className="kanban-column-title">⚡ Em Progresso</span>
+                  <span className="kanban-column-title" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Zap size={14} style={{ color: '#eab308' }} /> Em Progresso
+                  </span>
                   <span className="kanban-column-count">{kanbanTasks.inProgress.length}</span>
                 </div>
                 <div className="kanban-cards-list">
@@ -875,14 +883,15 @@ export default function TodoView() {
                           </span>
                         </div>
                         {task.dueDate && (
-                          <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
-                            📅 {task.dueDate} {meta.due_time ? `às ${meta.due_time}` : ''}
+                          <span style={{ fontSize: '10px', color: 'var(--text-muted)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                            <Calendar size={11} />
+                            <span>{task.dueDate} {meta.due_time ? `às ${meta.due_time}` : ''}</span>
                           </span>
                         )}
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '6px', alignItems: 'center' }}>
                           <div style={{ display: 'flex', gap: '4px' }}>
-                            <button onClick={() => handleMoveKanban(task, 'todo')} className="todo-item-action-btn edit-btn" style={{ fontSize: '11px', padding: '4px 8px' }}>
-                              ⬅️
+                            <button onClick={() => handleMoveKanban(task, 'todo')} className="todo-item-action-btn edit-btn" style={{ display: 'inline-flex', alignItems: 'center', padding: '4px 8px' }} title="Mover para A Fazer">
+                              <ArrowLeft size={12} />
                             </button>
                             <button onClick={() => handleMoveKanban(task, 'completed')} className="todo-item-action-btn edit-btn" style={{ fontSize: '11px', padding: '4px 8px' }}>
                               Concluir ➔
@@ -902,7 +911,9 @@ export default function TodoView() {
               {/* Coluna 3: Concluídas */}
               <div className="kanban-column" onDragOver={handleDragOver} onDrop={(e) => handleDrop(e, 'completed')}>
                 <div className="kanban-column-header">
-                  <span className="kanban-column-title">✅ Concluído</span>
+                  <span className="kanban-column-title" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <CheckCircle size={14} style={{ color: '#22c55e' }} /> Concluído
+                  </span>
                   <span className="kanban-column-count">{kanbanTasks.completed.length}</span>
                 </div>
                 <div className="kanban-cards-list">
@@ -919,8 +930,8 @@ export default function TodoView() {
                           </span>
                         </div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '6px', alignItems: 'center' }}>
-                          <button onClick={() => handleMoveKanban(task, 'in_progress')} className="todo-item-action-btn edit-btn" style={{ fontSize: '11px', padding: '4px 8px' }}>
-                            ⬅️ Reabrir
+                          <button onClick={() => handleMoveKanban(task, 'in_progress')} className="todo-item-action-btn edit-btn" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', padding: '4px 8px' }}>
+                            <RotateCcw size={12} /> Reabrir
                           </button>
                           <button onClick={() => onDeleteTask(task.id)} className="todo-item-action-btn delete-btn"><Trash2 size={13} /></button>
                         </div>
@@ -936,11 +947,36 @@ export default function TodoView() {
 
       {viewMode === 'calendar' && (
         <div className="calendar-view-container animate-fade-in">
-          <div className="calendar-header">
+          <div className="calendar-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <h3 className="calendar-title">{getMonthName()}</h3>
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <button onClick={() => { changeMonth(-1); logEvent('calendar_month_selected', { direction: 'prev' }); }} className="calendar-nav-btn"><ArrowLeft size={16} /></button>
-              <button onClick={() => { changeMonth(1); logEvent('calendar_month_selected', { direction: 'next' }); }} className="calendar-nav-btn"><ArrowRight size={16} /></button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <button
+                onClick={() => {
+                  exportAllTasksToCalendar(tasks);
+                  logEvent('calendar_full_sync_clicked');
+                }}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '6px 12px',
+                  borderRadius: '6px',
+                  backgroundColor: 'var(--primary-light)',
+                  color: 'var(--primary)',
+                  border: '1px solid var(--primary)',
+                  fontSize: '12px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                }}
+                title="Sincronizar todo o calendário de tarefas (.ics)"
+              >
+                <Calendar size={13} /> Sincronizar Calendário
+              </button>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button onClick={() => { changeMonth(-1); logEvent('calendar_month_selected', { direction: 'prev' }); }} className="calendar-nav-btn"><ArrowLeft size={16} /></button>
+                <button onClick={() => { changeMonth(1); logEvent('calendar_month_selected', { direction: 'next' }); }} className="calendar-nav-btn"><ArrowRight size={16} /></button>
+              </div>
             </div>
           </div>
 
@@ -983,8 +1019,8 @@ export default function TodoView() {
         <div className="modal-overlay" onClick={() => setSelectedCalendarDay(null)}>
           <div className="modal-content animate-scale-up" onClick={e => e.stopPropagation()} style={{ padding: '24px', maxWidth: '440px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <h3 style={{ fontSize: '18px', fontWeight: '700', color: 'var(--text-main)' }}>
-                📅 {formatFriendlyDate(selectedCalendarDay)}
+              <h3 style={{ fontSize: '18px', fontWeight: '700', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <Calendar size={18} style={{ color: 'var(--primary)' }} /> {formatFriendlyDate(selectedCalendarDay)}
               </h3>
               <button onClick={() => setSelectedCalendarDay(null)} className="todo-modal-close-btn">
                 <X size={18} />

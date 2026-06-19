@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, ChevronRight, Check, X, Target, Star, ListCollapse, Trash2 } from 'lucide-react';
+import { Calendar, ChevronRight, Check, X, Target, Star, ListCollapse, Trash2, Flame } from 'lucide-react';
 import { useAppContext } from '../contexts/AppContext';
 import { supabase } from '../supabaseClient';
+import { exportAllTasksToCalendar } from '../services/googleCalendarService';
 
 export default function WeeklyPlannerModal({ isOpen, onClose, tasks, onUpdateTask }) {
   if (!isOpen) return null;
@@ -203,9 +204,34 @@ export default function WeeklyPlannerModal({ isOpen, onClose, tasks, onUpdateTas
             <Calendar size={20} className="text-primary" />
             Planejamento Semanal Flowday
           </h3>
-          <button onClick={onClose} className="todo-modal-close-btn">
-            <X size={18} />
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <button
+              onClick={() => {
+                exportAllTasksToCalendar(tasks);
+                logEvent('weekly_planner_calendar_sync');
+              }}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '6px 12px',
+                borderRadius: '6px',
+                backgroundColor: 'var(--primary-light)',
+                color: 'var(--primary)',
+                border: '1px solid var(--primary)',
+                fontSize: '12px',
+                fontWeight: '600',
+                cursor: 'pointer',
+                transition: 'all 0.2s'
+              }}
+              title="Exportar tarefas agendadas para o calendário (.ics)"
+            >
+              <Calendar size={14} /> Sincronizar Calendário
+            </button>
+            <button onClick={onClose} className="todo-modal-close-btn">
+              <X size={18} />
+            </button>
+          </div>
         </div>
 
         {/* Abas de Navegação */}
@@ -220,10 +246,14 @@ export default function WeeklyPlannerModal({ isOpen, onClose, tasks, onUpdateTas
               color: plannerTab === 'focus' ? 'var(--primary)' : 'var(--text-muted)',
               borderBottom: plannerTab === 'focus' ? '3px solid var(--primary)' : 'none',
               backgroundColor: plannerTab === 'focus' ? 'var(--bg-card)' : 'transparent',
-              borderRadius: 0
+              borderRadius: 0,
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px'
             }}
           >
-            🎯 1. Foco & Objetivos
+            <Target size={14} /> 1. Foco & Objetivos
           </button>
           <button 
             onClick={() => setPlannerTab('schedule')}
@@ -235,10 +265,14 @@ export default function WeeklyPlannerModal({ isOpen, onClose, tasks, onUpdateTas
               color: plannerTab === 'schedule' ? 'var(--primary)' : 'var(--text-muted)',
               borderBottom: plannerTab === 'schedule' ? '3px solid var(--primary)' : 'none',
               backgroundColor: plannerTab === 'schedule' ? 'var(--bg-card)' : 'transparent',
-              borderRadius: 0
+              borderRadius: 0,
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px'
             }}
           >
-            📅 2. Distribuir Tarefas ({unscheduledTasks.length})
+            <Calendar size={14} /> 2. Distribuir Tarefas ({unscheduledTasks.length})
           </button>
         </div>
 
@@ -248,7 +282,9 @@ export default function WeeklyPlannerModal({ isOpen, onClose, tasks, onUpdateTas
             
             {/* Passo 1: Foco Principal */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <label style={{ fontWeight: '600', fontSize: '14px', color: 'var(--text-main)' }}>🎯 Passo 1: Foco Principal da Semana</label>
+              <label style={{ fontWeight: '600', fontSize: '14px', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <Target size={14} style={{ color: 'var(--primary)' }} /> Passo 1: Foco Principal da Semana
+              </label>
               <input 
                 type="text" 
                 placeholder="Ex: Entregar versão beta do aplicativo SaaS" 
@@ -262,7 +298,9 @@ export default function WeeklyPlannerModal({ isOpen, onClose, tasks, onUpdateTas
 
             {/* Passo 2: Prioridades Críticas */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '12px' }}>
-              <label style={{ fontWeight: '600', fontSize: '14px', color: 'var(--text-main)' }}>🔥 Passo 2: Prioridades Críticas ({criticalPriorities.filter(p => p.trim()).length})</label>
+              <label style={{ fontWeight: '600', fontSize: '14px', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <Flame size={14} style={{ color: 'var(--danger)' }} /> Passo 2: Prioridades Críticas ({criticalPriorities.filter(p => p.trim()).length})
+              </label>
               {criticalPriorities.map((priority, index) => (
                 <div key={index} style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                   <input 
@@ -298,7 +336,9 @@ export default function WeeklyPlannerModal({ isOpen, onClose, tasks, onUpdateTas
 
             {/* Passo 3: Objetivos Vinculados */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '12px' }}>
-              <label style={{ fontWeight: '600', fontSize: '14px', color: 'var(--text-main)' }}>⭐ Passo 3: Objetivos Vinculados ({selectedGoals.length})</label>
+              <label style={{ fontWeight: '600', fontSize: '14px', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <Star size={14} style={{ color: '#eab308' }} /> Passo 3: Objetivos Vinculados ({selectedGoals.length})
+              </label>
               <div style={{ padding: '8px 0' }}>
                   {activeGoals.length === 0 ? (
                     <p style={{ fontSize: '12px', color: 'var(--text-muted)', fontStyle: 'italic' }}>Nenhum objetivo ativo cadastrado. Crie objetivos para vinculá-los aqui.</p>

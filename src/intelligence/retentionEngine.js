@@ -16,9 +16,9 @@ export function getEngagementSuggestions(userState = {}, tasks = [], onboardingC
     suggestions.push({
       id: 'churn_reengage_loop',
       type: 'reengage',
-      title: '🎯 Simplifique seu dia',
+      title: 'Simplifique seu dia',
       message: 'Notamos que você está afastado. Que tal criar ou concluir uma única tarefa rápida hoje para reativar seu ritmo?',
-      ctaText: 'Retomar Foco ⚡',
+      ctaText: 'Retomar Foco',
       actionTab: 'tasks',
       autoTrigger: 'focus_simplification'
     });
@@ -30,11 +30,11 @@ export function getEngagementSuggestions(userState = {}, tasks = [], onboardingC
     suggestions.push({
       id: 'onboarding_guided_loop',
       type: 'onboarding',
-      title: `🌱 Jornada Flowday (Passo ${step})`,
+      title: `Jornada Flowday (Passo ${step})`,
       message: step === 1 
         ? 'Defina seu primeiro grande Objetivo para conectar suas tarefas a metas maiores.'
         : 'Crie suas primeiras tarefas de foco diário para iniciar sua rotina.',
-      ctaText: step === 1 ? 'Criar Primeiro Objetivo 🎯' : 'Começar Agora 🚀',
+      ctaText: step === 1 ? 'Criar Primeiro Objetivo' : 'Começar Agora',
       actionTab: step === 1 ? 'goals' : 'tasks',
       autoTrigger: 'open_onboarding_helper'
     });
@@ -45,21 +45,21 @@ export function getEngagementSuggestions(userState = {}, tasks = [], onboardingC
      suggestions.push({
        id: 'habit_reinforcement_loop',
        type: 'habit',
-       title: '🔥 Automatize sua Rotina',
+       title: 'Automatize sua Rotina',
        message: 'Você já concluiu tarefas importantes! Oficialize suas rotinas como Hábitos para rastreamento contínuo.',
        ctaText: 'Configurar Hábito',
        actionTab: 'goals'
      });
    }
 
-  // 4. Loop de Engajamento Alto (Reforço positivo para streaks ativos)
+  // 4. Loop de Engajamento Alto (Reforço positivo para streaks antigos)
   if (userState.stage === 'engaged') {
     suggestions.push({
       id: 'engagement_streak_loop',
       type: 'celebrate',
-      title: '👑 Produtividade em Alta!',
+      title: 'Produtividade em Alta!',
       message: 'Seu foco está incrível nesta semana. Proteja seu tempo livre hoje para recarregar as energias.',
-      ctaText: 'Ver Conquistas 🏆',
+      ctaText: 'Ver Conquistas',
       actionTab: 'analytics'
     });
   }
@@ -69,7 +69,7 @@ export function getEngagementSuggestions(userState = {}, tasks = [], onboardingC
     suggestions.push({
       id: 'stagnation_loop',
       type: 'action',
-      title: '⚖️ Alivie sua carga',
+      title: 'Alivie sua carga',
       message: 'Você tem muitas tarefas acumuladas. Que tal adiar as menos importantes e focar em apenas uma?',
       ctaText: 'Organizar Tarefas',
       actionTab: 'tasks'

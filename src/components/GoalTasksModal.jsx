@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { X, Search, Check, Link2, Unlink } from 'lucide-react';
+import { X, Search, Check, Link2, Unlink, Tag, AlertCircle, Calendar, Inbox } from 'lucide-react';
 
 function formatDate(dateStr) {
   if (!dateStr) return null;
@@ -8,8 +8,7 @@ function formatDate(dateStr) {
   return `${parts[2]}/${parts[1]}/${parts[0]}`;
 }
 
-const priorityDot = { Alta: '🔴', Média: '🟡', Baixa: '🟢' };
-const categoryEmoji = { Trabalho: '💼', Pessoal: '🏠', Estudos: '📚', Lazer: '🎸' };
+const priorityColors = { Alta: '#ef4444', Média: '#f59e0b', Baixa: '#10b981' };
 
 export default function GoalTasksModal({ isOpen, onClose, goal, tasks, linkedTaskIds, onLink, onUnlink }) {
   const [search, setSearch] = useState('');
@@ -75,12 +74,13 @@ export default function GoalTasksModal({ isOpen, onClose, goal, tasks, linkedTas
           <div className="goal-tasks-list">
             {filteredTasks.length === 0 ? (
               <div className="goal-tasks-empty">
-                <span style={{ fontSize: '28px' }}>📭</span>
+                <Inbox size={28} style={{ color: 'var(--text-muted)', marginBottom: '8px' }} />
                 <p>{search ? 'Nenhuma tarefa encontrada para essa busca.' : 'Nenhuma tarefa pendente disponível.'}</p>
               </div>
             ) : (
               filteredTasks.map(task => {
                 const isLinked = linkedTaskIds.includes(task.id);
+                const priorityColor = priorityColors[task.priority] || 'var(--text-muted)';
                 return (
                   <div
                     key={task.id}
@@ -96,10 +96,16 @@ export default function GoalTasksModal({ isOpen, onClose, goal, tasks, linkedTas
                     <div className="goal-task-content">
                       <span className="goal-task-title">{task.title}</span>
                       <div className="goal-task-meta">
-                        <span>{categoryEmoji[task.category] || '📋'} {task.category}</span>
-                        <span>{priorityDot[task.priority]} {task.priority}</span>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                          <Tag size={11} /> {task.category}
+                        </span>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', color: priorityColor }}>
+                          <AlertCircle size={11} color={priorityColor} /> {task.priority}
+                        </span>
                         {task.dueDate && (
-                          <span>📅 {formatDate(task.dueDate)}</span>
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                            <Calendar size={11} /> {formatDate(task.dueDate)}
+                          </span>
                         )}
                       </div>
                     </div>

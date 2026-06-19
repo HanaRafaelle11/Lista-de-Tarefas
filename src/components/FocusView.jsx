@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Play, Pause, RotateCcw, CheckCircle2, Moon, Sun, Volume2, Settings, VolumeX, Music } from 'lucide-react';
+import { Play, Pause, RotateCcw, CheckCircle2, Moon, Sun, Volume2, Settings, VolumeX, Music, Clock, Target, Coffee } from 'lucide-react';
 import { useAppContext, parseTaskMetadata } from '../contexts/AppContext';
 
 export default function FocusView() {
@@ -184,7 +184,7 @@ export default function FocusView() {
       logEvent('focus_session_completed', { duration_minutes: focusTime, task_id: selectedTaskId });
       // Envia notificação nativa se disponível
       if ('Notification' in window && Notification.permission === 'granted') {
-        new Notification('Flowday ⏱️', {
+        new Notification('Flowday - Timer', {
           body: 'Ciclo de foco concluído! Hora de uma pausa de ' + breakTime + ' minutos.',
           icon: '/favicon.ico'
         });
@@ -194,7 +194,7 @@ export default function FocusView() {
     } else {
       logEvent('break_timer_completed', { duration_minutes: breakTime });
       if ('Notification' in window && Notification.permission === 'granted') {
-        new Notification('Flowday ⏱️', {
+        new Notification('Flowday - Timer', {
           body: 'A pausa acabou! Hora de voltar ao foco.',
           icon: '/favicon.ico'
         });
@@ -330,7 +330,7 @@ export default function FocusView() {
 
       <div className="tasks-page-header" style={{ marginBottom: '24px' }}>
         <h1 className="tasks-page-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          ⏱️ Modo Foco
+          <Clock size={22} style={{ color: 'var(--primary)' }} /> Modo Foco
         </h1>
         <p className="tasks-page-subtitle">Pomodoro para concentração máxima</p>
       </div>
@@ -387,8 +387,16 @@ export default function FocusView() {
           )}
 
           {/* Modo Label */}
-          <div style={{ textTransform: 'uppercase', fontSize: '12px', fontWeight: '700', letterSpacing: '0.1em', color: mode === 'focus' ? 'var(--primary)' : 'var(--prio-alta-text)', marginBottom: '16px' }}>
-            {mode === 'focus' ? '🎯 Foco' : '☕ Pausa'}
+          <div style={{ textTransform: 'uppercase', fontSize: '12px', fontWeight: '700', letterSpacing: '0.1em', color: mode === 'focus' ? 'var(--primary)' : 'var(--prio-alta-text)', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            {mode === 'focus' ? (
+              <>
+                <Target size={14} /> Foco
+              </>
+            ) : (
+              <>
+                <Coffee size={14} /> Pausa
+              </>
+            )}
           </div>
 
           {/* Gráfico circular de progresso */}

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Calendar, MoreVertical, Trash2, Archive, CheckCircle, RotateCcw, Link2 } from 'lucide-react';
+import { Calendar, MoreVertical, Trash2, Archive, CheckCircle, RotateCcw, Link2, Edit2, Award, Clock } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 
 // Formata data para pt-BR legível
@@ -39,8 +39,8 @@ function GoalMenu({ goal, onEdit, onComplete, onArchive, onRestore, onDelete }) 
         <div className="goal-menu-dropdown animate-scale-up">
           {goal.status === 'active' && (
             <>
-              <button className="goal-menu-item" onClick={() => { onEdit(goal); setOpen(false); }}>
-                ✏️ Editar
+              <button className="goal-menu-item" onClick={() => { onEdit(goal); setOpen(false); }} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <Edit2 size={13} /> Editar
               </button>
               <button className="goal-menu-item" onClick={() => { onComplete(goal.id); setOpen(false); }}>
                 <CheckCircle size={14} /> Concluir objetivo
@@ -111,10 +111,10 @@ export default function GoalCard({
 
         <div className="goal-card-header-right">
           {/* Badges de status */}
-          {isCompleted && <span className="goal-status-badge goal-status-badge--completed">✅ Concluído</span>}
-          {isArchived && <span className="goal-status-badge goal-status-badge--archived">🗃️ Arquivado</span>}
+          {isCompleted && <span className="goal-status-badge goal-status-badge--completed" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><CheckCircle size={12} /> Concluído</span>}
+          {isArchived && <span className="goal-status-badge goal-status-badge--archived" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><Archive size={12} /> Arquivado</span>}
           {progress === 100 && !isCompleted && !isArchived && (
-            <span className="goal-status-badge goal-status-badge--ready">🎉 Pronto!</span>
+            <span className="goal-status-badge goal-status-badge--ready" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><Award size={12} /> Pronto!</span>
           )}
 
           <GoalMenu
@@ -157,7 +157,8 @@ export default function GoalCard({
             </div>
             {(goal.start_time || goal.end_time) && (
               <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: 'var(--text-light)', marginLeft: '17px' }}>
-                <span>🕒 {goal.start_time || ''} {goal.end_time ? `até ${goal.end_time}` : ''}</span>
+                <Clock size={11} style={{ display: 'inline-block', verticalAlign: 'middle' }} />
+                <span>{goal.start_time || ''} {goal.end_time ? `até ${goal.end_time}` : ''}</span>
               </div>
             )}
           </div>
@@ -166,7 +167,8 @@ export default function GoalCard({
             <span className="goal-card-no-date">Sem data-alvo</span>
             {(goal.start_time || goal.end_time) && (
               <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: 'var(--text-light)' }}>
-                <span>🕒 {goal.start_time || ''} {goal.end_time ? `até ${goal.end_time}` : ''}</span>
+                <Clock size={11} style={{ display: 'inline-block', verticalAlign: 'middle' }} />
+                <span>{goal.start_time || ''} {goal.end_time ? `até ${goal.end_time}` : ''}</span>
               </div>
             )}
           </div>
