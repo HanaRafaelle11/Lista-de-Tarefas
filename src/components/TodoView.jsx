@@ -5,8 +5,12 @@ import {
   Sparkles, Award, Sprout, Pin, Zap, CheckCircle, Moon, Sun, Tag, AlertTriangle, RotateCcw
 } from 'lucide-react';
 import EmojiPicker from 'emoji-picker-react';
+import CategoryIcon from './CategoryIcon';
 import TodoItem from './TodoItem';
 import AchievementModal from './AchievementModal'; // Importar AchievementModal
+import Skeleton from './Skeleton';
+import EisenhowerMatrix from './EisenhowerMatrix';
+import { TASK_TEMPLATES } from '../data/taskTemplates';
 const WeeklyPlannerModal = lazy(() => import('./WeeklyPlannerModal'));
 import { 
   useAppContext, 
@@ -50,6 +54,33 @@ function formatFriendlyDate(dateStr) {
   return `${parts[2]} de ${months[parseInt(parts[1]) - 1]} de ${parts[0]}`;
 }
 
+function getGoalIconEmoji(iconName) {
+  if (!iconName) return '🎯';
+  const isEmoji = /\p{Emoji}/u.test(iconName) && !/^[a-zA-Z0-9-]+$/.test(iconName);
+  if (isEmoji) return iconName;
+
+  const emojiMap = {
+    target: '🎯',
+    rocket: '🚀',
+    book: '📖',
+    dollar: '💰',
+    home: '🏠',
+    globe: '🌐',
+    dumbbell: '💪',
+    brain: '🧠',
+    heart: '❤️',
+    palette: '🎨',
+    music: '🎵',
+    plane: '✈️',
+    sprout: '🌱',
+    trending: '📈',
+    star: '⭐',
+    users: '👥',
+  };
+
+  return emojiMap[iconName.toLowerCase()] || '🎯';
+}
+
 const formatarDataBR = (str) => {
   if (!str) return '';
   const p = str.split('-');
@@ -70,6 +101,7 @@ function categorizeTasks(tasks) {
     thisWeek: [],
     future: [],
     noDueDate: [],
+    templateGroups: {},
     completed: [],
   };
 
@@ -78,6 +110,18 @@ function categorizeTasks(tasks) {
       sections.completed.push(task);
       return;
     }
+
+    // Identificar se pertence a um modelo
+    const meta = parseTaskMetadata(task.description);
+    if (meta.template_name) {
+      const groupName = meta.template_name;
+      if (!sections.templateGroups[groupName]) {
+        sections.templateGroups[groupName] = [];
+      }
+      sections.templateGroups[groupName].push(task);
+      return;
+    }
+
     if (!task.dueDate) {
       sections.noDueDate.push(task);
       return;
@@ -219,6 +263,10 @@ export default function TodoView() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState(null);
   const [isPlannerOpen, setIsPlannerOpen] = useState(false);
+  const [isTemplatesOpen, setIsTemplatesOpen] = useState(false);
+  const [customizingTemplate, setCustomizingTemplate] = useState(null);
+  const [isSyncModalOpen, setIsSyncModalOpen] = useState(false);
+  const [showCompletedKanban, setShowCompletedKanban] = useState(false);
 
   // Estados para AchievementModal
   const [showAchievementModal, setShowAchievementModal] = useState(false);
@@ -256,6 +304,8 @@ export default function TodoView() {
       logEvent('calendar_viewed');
     } else if (viewMode === 'kanban') {
       logEvent('kanban_viewed');
+    } else if (viewMode === 'eisenhower') {
+      logEvent('eisenhower_matrix_viewed');
     }
   }, [viewMode, logEvent]);
 
@@ -392,6 +442,133 @@ export default function TodoView() {
       color: newCatColor
     });
     setNewCatName('');
+  };
+
+  const activeTemplates = useMemo(() => {
+    const active = new Set();
+    tasks.forEach(task => {
+      if (!task.completed && !task.deletedAt) {
+        const meta = parseTaskMetadata(task.description);
+        if (meta.template_name) {
+          active.add(meta.template_name);
+        }
+      }
+    });
+    return active;
+  }, [tasks]);
+
+  const handleLoadTemplate = (template) => {
+    if (activeTemplates.has(template.title)) {
+      alert(`O modelo "${template.title}" já está ativo em sua lista.`);
+      return;
+    }
+    setCustomizingTemplate({
+      ...template,
+      tasks: template.tasks.map((t, idx) => ({
+        id: `t_${idx}_${Date.now()}`,
+        title: t.title,
+        description: t.description || '',
+        category: template.category || 'Pessoal',
+        priority: t.priority || 'Média',
+        enabled: true
+      }))
+    });
+  };
+
+  const handleCancelCustomization = () => {
+    setCustomizingTemplate(null);
+  };
+
+  const handleToggleCustomTask = (taskId) => {
+    setCustomizingTemplate(prev => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        tasks: prev.tasks.map(t => t.id === taskId ? { ...t, enabled: !t.enabled } : t)
+      };
+    });
+  };
+
+  const handleUpdateCustomTask = (taskId, field, value) => {
+    setCustomizingTemplate(prev => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        tasks: prev.tasks.map(t => t.id === taskId ? { ...t, [field]: value } : t)
+      };
+    });
+  };
+
+  const handleAddCustomTask = () => {
+    setCustomizingTemplate(prev => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        tasks: [
+          ...prev.tasks,
+          {
+            id: `t_custom_${Date.now()}`,
+            title: '',
+            description: '',
+            category: prev.category || 'Pessoal',
+            priority: 'Média',
+            enabled: true
+          }
+        ]
+      };
+    });
+  };
+
+  const handleRemoveCustomTask = (taskId) => {
+    setCustomizingTemplate(prev => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        tasks: prev.tasks.filter(t => t.id !== taskId)
+      };
+    });
+  };
+
+  const handleImportCustomizedTemplate = async () => {
+    if (!customizingTemplate) return;
+    const enabledTasks = customizingTemplate.tasks.filter(t => t.enabled && t.title.trim());
+    if (enabledTasks.length === 0) {
+      alert("Selecione ou preencha pelo menos uma tarefa com título.");
+      return;
+    }
+
+    for (const t of enabledTasks) {
+      const metaDescription = `\n\n--flowday-meta--\n${JSON.stringify({ due_time: '', recurrence: 'nenhuma', template_name: customizingTemplate.title })}`;
+      const finalDesc = t.description ? `${t.description}${metaDescription}` : metaDescription;
+      
+      const catExists = categories.some(cat => cat.id === t.category || cat.name === t.category);
+      const categoryId = catExists ? t.category : (categories[0]?.id || 'Trabalho');
+
+      await onAddTask({
+        title: t.title.trim(),
+        description: finalDesc,
+        category: categoryId,
+        priority: t.priority || 'Média',
+        dueDate: null
+      });
+    }
+
+    setCustomizingTemplate(null);
+    setIsTemplatesOpen(false);
+    logEvent('template_loaded', { template_id: customizingTemplate.id });
+  };
+
+  const handleExportGoogleCalendar = () => {
+    exportAllTasksToCalendar(tasks);
+    window.open('https://calendar.google.com/calendar/r/settings/export', '_blank');
+    setIsSyncModalOpen(false);
+    logEvent('calendar_google_sync_clicked');
+  };
+
+  const handleExportIcsOnly = () => {
+    exportAllTasksToCalendar(tasks);
+    setIsSyncModalOpen(false);
+    logEvent('calendar_ics_sync_clicked');
   };
 
   // Filtragem de tarefas
@@ -544,6 +721,7 @@ export default function TodoView() {
           {[
             { key: 'list', label: 'Lista', icon: <img src={MfTasksIcon} alt="Tarefas" width={16} height={16} style={{ filter: 'var(--icon-filter)' }} /> },
             { key: 'kanban', label: 'Kanban', icon: <Columns size={16} /> },
+            { key: 'eisenhower', label: 'Matriz', icon: <Grid size={16} /> },
             { key: 'calendar', label: 'Agenda', icon: <img src={MfCalendarIcon} alt="Agenda" width={16} height={16} style={{ filter: 'var(--icon-filter)' }} /> }
           ].map(item => (
             <button
@@ -603,6 +781,14 @@ export default function TodoView() {
           >
             <Tag size={14} />
             <span>Categorias</span>
+          </button>
+          <button 
+            onClick={() => setIsTemplatesOpen(true)} 
+            className="tasks-add-btn" 
+            style={{ backgroundColor: 'var(--bg-card)', color: 'var(--text-main)', border: '1px solid var(--border-medium)', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+          >
+            <Sparkles size={14} style={{ color: 'var(--primary)' }} />
+            <span>Modelos</span>
           </button>
           <button onClick={() => setIsPlannerOpen(true)} className="tasks-add-btn" style={{ backgroundColor: 'var(--bg-card)', color: 'var(--text-main)', border: '1px solid var(--border-medium)' }}>
             <Calendar size={16} />
@@ -795,6 +981,18 @@ export default function TodoView() {
                 onToggle={handleToggleCompleteWithAchievement} // Usar a função com lógica de conquista
                 defaultOpen={false}
               />
+              {Object.entries(sections.templateGroups || {}).map(([templateName, templateTasks]) => (
+                <TaskSection
+                  key={templateName}
+                  title={templateName}
+                  icon={<Sparkles size={15} style={{ color: 'var(--primary)' }} />}
+                  tasks={templateTasks}
+                  onEdit={openEditTaskModal}
+                  onDelete={onDeleteTask}
+                  onToggle={handleToggleCompleteWithAchievement}
+                  defaultOpen={true}
+                />
+              ))}
               <TaskSection
                 title="Concluídas"
                 icon={<CheckCircle size={15} style={{ color: '#22c55e' }} />}
@@ -917,39 +1115,95 @@ export default function TodoView() {
 
               {/* Coluna 3: Concluídas */}
               <div className="kanban-column" onDragOver={handleDragOver} onDrop={(e) => handleDrop(e, 'completed')}>
-                <div className="kanban-column-header">
+                <div className="kanban-column-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <span className="kanban-column-title" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                     <CheckCircle size={14} style={{ color: '#22c55e' }} /> Concluído
                   </span>
-                  <span className="kanban-column-count">{kanbanTasks.completed.length}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <button
+                      onClick={() => setShowCompletedKanban(!showCompletedKanban)}
+                      style={{
+                        background: 'transparent',
+                        border: 'none',
+                        cursor: 'pointer',
+                        color: 'var(--text-light)',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: '4px',
+                        borderRadius: '4px',
+                        transition: 'background-color 0.2s'
+                      }}
+                      title={showCompletedKanban ? 'Ocultar concluídas' : 'Mostrar concluídas'}
+                    >
+                      {showCompletedKanban ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                    </button>
+                    <span className="kanban-column-count">{kanbanTasks.completed.length}</span>
+                  </div>
                 </div>
                 <div className="kanban-cards-list">
-                  {kanbanTasks.completed.map(task => {
-                    const meta = parseTaskMetadata(task.description);
-                    const cleanDesc = formatDescriptionWithoutMetadata(task.description);
-                    return (
-                      <div key={task.id} className="kanban-card" style={{ opacity: 0.75 }} draggable="true" onDragStart={(e) => handleDragStart(e, task.id)}>
-                        <span className="kanban-card-title" style={{ textDecoration: 'line-through' }}>{task.title}</span>
-                        {cleanDesc && <span style={{ fontSize: '11px', color: 'var(--text-light)' }}>{cleanDesc}</span>}
-                        <div className="kanban-card-meta">
-                          <span className={`badge-category ${task.category.toLowerCase()}`} style={{ fontSize: '9px', padding: '2px 6px' }}>
-                            {task.category}
-                          </span>
+                  {showCompletedKanban ? (
+                    kanbanTasks.completed.map(task => {
+                      const meta = parseTaskMetadata(task.description);
+                      const cleanDesc = formatDescriptionWithoutMetadata(task.description);
+                      return (
+                        <div key={task.id} className="kanban-card" style={{ opacity: 0.75 }} draggable="true" onDragStart={(e) => handleDragStart(e, task.id)}>
+                          <span className="kanban-card-title" style={{ textDecoration: 'line-through' }}>{task.title}</span>
+                          {cleanDesc && <span style={{ fontSize: '11px', color: 'var(--text-light)' }}>{cleanDesc}</span>}
+                          <div className="kanban-card-meta">
+                            <span className={`badge-category ${task.category.toLowerCase()}`} style={{ fontSize: '9px', padding: '2px 6px' }}>
+                              {task.category}
+                            </span>
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '6px', alignItems: 'center' }}>
+                            <button onClick={() => handleMoveKanban(task, 'in_progress')} className="todo-item-action-btn edit-btn" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', padding: '4px 8px' }}>
+                              <RotateCcw size={12} /> Reabrir
+                            </button>
+                            <button onClick={() => onDeleteTask(task.id)} className="todo-item-action-btn delete-btn"><Trash2 size={13} /></button>
+                          </div>
                         </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '6px', alignItems: 'center' }}>
-                          <button onClick={() => handleMoveKanban(task, 'in_progress')} className="todo-item-action-btn edit-btn" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', padding: '4px 8px' }}>
-                            <RotateCcw size={12} /> Reabrir
-                          </button>
-                          <button onClick={() => onDeleteTask(task.id)} className="todo-item-action-btn delete-btn"><Trash2 size={13} /></button>
-                        </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    })
+                  ) : kanbanTasks.completed.length > 0 ? (
+                    <div 
+                      onClick={() => setShowCompletedKanban(true)}
+                      style={{
+                        padding: '16px',
+                        textAlign: 'center',
+                        backgroundColor: 'var(--bg-app)',
+                        borderRadius: 'var(--radius-md)',
+                        border: '1px dashed var(--border-medium)',
+                        cursor: 'pointer',
+                        color: 'var(--text-light)',
+                        fontSize: '13px',
+                        fontWeight: '550',
+                        transition: 'all 0.2s',
+                        width: '100%'
+                      }}
+                    >
+                      👁️ {kanbanTasks.completed.length} tarefas concluídas ocultas
+                      <span style={{ display: 'block', fontSize: '11px', fontWeight: '400', marginTop: '4px', color: 'var(--text-muted)' }}>Clique para visualizar</span>
+                    </div>
+                  ) : (
+                    <div style={{ padding: '16px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '12px', fontStyle: 'italic' }}>
+                      Nenhuma tarefa concluída
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
           );
         })()
+      )}
+
+      {viewMode === 'eisenhower' && (
+        <EisenhowerMatrix
+          tasks={baseFiltered}
+          onEditTask={openEditTaskModal}
+          onDeleteTask={onDeleteTask}
+          onUpdateTask={onUpdateTask}
+          onToggleComplete={handleToggleCompleteWithAchievement}
+        />
       )}
 
       {viewMode === 'calendar' && (
@@ -959,8 +1213,7 @@ export default function TodoView() {
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <button
                 onClick={() => {
-                  exportAllTasksToCalendar(tasks);
-                  logEvent('calendar_full_sync_clicked');
+                  setIsSyncModalOpen(true);
                 }}
                 style={{
                   display: 'inline-flex',
@@ -1206,7 +1459,7 @@ export default function TodoView() {
                   >
                     <option value="">Nenhum objetivo</option>
                     {goals.filter(g => g.status === 'active').map(g => (
-                      <option key={g.id} value={g.id}>{g.icon} {g.title}</option>
+                      <option key={g.id} value={g.id}>{getGoalIconEmoji(g.icon)} {g.title}</option>
                     ))}
                   </select>
                 </div>
@@ -1291,6 +1544,256 @@ export default function TodoView() {
         message={achievementData.message}
         icon={achievementData.icon}
       />
+
+      {/* Modal de Escolha de Sincronização do Calendário */}
+      {isSyncModalOpen && (
+        <div className="modal-overlay" onClick={() => setIsSyncModalOpen(false)} style={{ zIndex: 11000 }}>
+          <div 
+            className="modal-content" 
+            role="dialog" 
+            aria-modal="true" 
+            onClick={e => e.stopPropagation()}
+            style={{ maxWidth: '420px', width: '90%', padding: '24px', textAlign: 'center' }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h3 style={{ fontSize: '16px', fontWeight: '700', color: 'var(--text-main)', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Calendar size={18} style={{ color: 'var(--primary)' }} /> Sincronizar Calendário
+              </h3>
+              <button 
+                onClick={() => setIsSyncModalOpen(false)} 
+                className="todo-modal-close-btn"
+                style={{ background: 'none', border: 'none', color: 'var(--text-light)', cursor: 'pointer', padding: '4px' }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '20px', lineHeight: '1.5', textAlign: 'left' }}>
+              Escolha o formato que preferir para integrar suas tarefas agendadas ao seu calendário pessoal:
+            </p>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <button
+                onClick={handleExportGoogleCalendar}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  padding: '14px',
+                  borderRadius: '8px',
+                  border: '1px solid var(--border-light)',
+                  backgroundColor: 'var(--bg-app)',
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  transition: 'border-color 0.2s',
+                  width: '100%',
+                }}
+                className="calendar-sync-option"
+              >
+                <span style={{ fontSize: '24px' }}>📅</span>
+                <div>
+                  <strong style={{ display: 'block', fontSize: '13px', color: 'var(--text-main)' }}>Google Calendar (Recomendado)</strong>
+                  <span style={{ fontSize: '11px', color: 'var(--text-light)' }}>Exporta o arquivo .ics e abre a página de importação do Google.</span>
+                </div>
+              </button>
+
+              <button
+                onClick={handleExportIcsOnly}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  padding: '14px',
+                  borderRadius: '8px',
+                  border: '1px solid var(--border-light)',
+                  backgroundColor: 'var(--bg-app)',
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  transition: 'border-color 0.2s',
+                  width: '100%',
+                }}
+                className="calendar-sync-option"
+              >
+                <span style={{ fontSize: '24px' }}>📥</span>
+                <div>
+                  <strong style={{ display: 'block', fontSize: '13px', color: 'var(--text-main)' }}>Baixar arquivo .ics</strong>
+                  <span style={{ fontSize: '11px', color: 'var(--text-light)' }}>Apenas exporta e baixa o arquivo de calendário para programas locais.</span>
+                </div>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Drawer de Templates de Tarefas */}
+      <div 
+        className={`templates-drawer-overlay ${isTemplatesOpen ? 'open' : ''}`}
+        onClick={() => setIsTemplatesOpen(false)}
+      >
+        <div 
+          className="templates-drawer"
+          onClick={e => e.stopPropagation()}
+        >
+          <div className="templates-drawer-header">
+            <h3 className="templates-drawer-title">
+              <Sparkles size={18} style={{ color: 'var(--primary)' }} />
+              Modelos de Tarefa
+            </h3>
+            <button 
+              className="templates-drawer-close"
+              onClick={() => setIsTemplatesOpen(false)}
+              aria-label="Fechar modelos"
+            >
+              <X size={18} />
+            </button>
+          </div>
+          
+          <div className="templates-drawer-body">
+            {customizingTemplate ? (
+              <div className="template-customizer-container">
+                <div className="template-customizer-header">
+                  <h4 style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-main)', margin: '0 0 4px' }}>
+                    Personalizar: {customizingTemplate.title}
+                  </h4>
+                  <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: 0 }}>
+                    Ajuste os títulos e descrições das tarefas antes de importá-las.
+                  </p>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '55vh', overflowY: 'auto', paddingRight: '4px', marginBottom: '12px' }}>
+                  {customizingTemplate.tasks.map((t) => (
+                    <div key={t.id} className="template-customizer-task-card" style={{ opacity: t.enabled ? 1 : 0.6 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'space-between' }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontWeight: '600', fontSize: '12px', color: 'var(--text-main)', flex: 1 }}>
+                          <input
+                            type="checkbox"
+                            checked={t.enabled}
+                            onChange={() => handleToggleCustomTask(t.id)}
+                            style={{ cursor: 'pointer', accentColor: 'var(--primary)' }}
+                          />
+                          <span>Incluir tarefa</span>
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveCustomTask(t.id)}
+                          style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '11px', display: 'flex', alignItems: 'center', gap: '2px' }}
+                        >
+                          <Trash2 size={12} /> Remover
+                        </button>
+                      </div>
+
+                      {t.enabled && (
+                        <>
+                          <div className="template-customizer-input-group">
+                            <span className="template-customizer-label">Título da Tarefa</span>
+                            <input
+                              type="text"
+                              value={t.title}
+                              onChange={(e) => handleUpdateCustomTask(t.id, 'title', e.target.value)}
+                              placeholder="Título da tarefa..."
+                              className="template-customizer-input"
+                            />
+                          </div>
+
+                          <div className="template-customizer-input-group">
+                            <span className="template-customizer-label">Descrição (Opcional)</span>
+                            <input
+                              type="text"
+                              value={t.description}
+                              onChange={(e) => handleUpdateCustomTask(t.id, 'description', e.target.value)}
+                              placeholder="Descrição adicional..."
+                              className="template-customizer-input"
+                            />
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleAddCustomTask}
+                  className="template-customizer-btn-add"
+                >
+                  <Plus size={14} /> Adicionar Nova Tarefa
+                </button>
+
+                <div className="template-customizer-actions">
+                  <button
+                    type="button"
+                    onClick={handleCancelCustomization}
+                    className="template-customizer-btn-back"
+                  >
+                    Voltar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleImportCustomizedTemplate}
+                    className="template-customizer-btn-confirm"
+                  >
+                    Confirmar e Importar
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '20px', lineHeight: '1.5' }}>
+                  Selecione um modelo baseado na sua persona para injetar tarefas sugeridas automaticamente na sua lista.
+                </p>
+                
+                {TASK_TEMPLATES.map(template => {
+                  const isAlreadyActive = activeTemplates.has(template.title);
+                  const templateIconMap = {
+                    'Pets': '🐾',
+                    'Trabalho': '💼',
+                    'Estudos': '📚',
+                    'Lazer': '🎸',
+                  };
+                  const icon = templateIconMap[template.category] || '🏠';
+
+                  return (
+                    <div 
+                      key={template.id} 
+                      className={`template-persona-card ${isAlreadyActive ? 'template-disabled-card' : ''}`}
+                    >
+                      <h4 className="template-persona-title">
+                        <span style={{ fontSize: '16px', marginRight: '6px' }}>{icon}</span>
+                        {template.title}
+                      </h4>
+                      <p className="template-persona-desc">{template.description}</p>
+                      
+                      {isAlreadyActive && (
+                        <div style={{ color: '#ef4444', fontSize: '11px', fontWeight: '700', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <AlertTriangle size={12} /> Modelo já ativo (Tarefas importadas)
+                        </div>
+                      )}
+
+                      <div className="template-tasks-preview" style={{ borderTop: '1px solid var(--border-light)', paddingTop: '10px', marginTop: '10px' }}>
+                        {template.tasks.map((t, i) => (
+                          <div key={i} className="template-task-item">
+                            <span className="template-task-item-bullet" />
+                            <span style={{ fontWeight: '500' }}>{t.title}</span>
+                          </div>
+                        ))}
+                      </div>
+                      
+                      <button
+                        className="template-load-btn"
+                        onClick={() => handleLoadTemplate(template)}
+                        disabled={isAlreadyActive}
+                      >
+                        <Plus size={14} />
+                        {isAlreadyActive ? 'Modelo Ativo' : 'Carregar Tarefas'}
+                      </button>
+                    </div>
+                  );
+                })}
+              </>
+            )}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

@@ -6,7 +6,7 @@ import { eventsService } from '../services/eventsService';
 import { useAppContext } from '../contexts/AppContext';
 
 export default function Auth({ onLoginSuccess, initialMode = 'login' }) {
-  const { theme } = useAppContext();
+  const { theme, handleStartDemoMode } = useAppContext();
   const [mode, setMode] = useState(initialMode); // 'login', 'signup', 'recovery', 'updatePassword'
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -489,7 +489,7 @@ export default function Auth({ onLoginSuccess, initialMode = 'login' }) {
           </button>
 
           {(mode === 'login' || mode === 'signup') && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', marginTop: '20px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '20px' }}>
               <button
                 type="button"
                 onClick={handleGoogleSignIn}
@@ -502,9 +502,28 @@ export default function Auth({ onLoginSuccess, initialMode = 'login' }) {
                   alignItems: 'center',
                   justifyContent: 'center',
                   gap: '10px',
+                  marginTop: 0
                 }}
               >
                 Entrar com o Google
+              </button>
+              <button
+                type="button"
+                onClick={handleStartDemoMode}
+                disabled={loading}
+                style={{
+                  ...styles.submitBtn,
+                  backgroundColor: 'transparent',
+                  border: '1.5px solid var(--border-medium)',
+                  color: 'var(--text-main)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '10px',
+                  marginTop: 0
+                }}
+              >
+                🎮 Experimentar sem criar conta
               </button>
             </div>
           )}

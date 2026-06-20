@@ -2,6 +2,7 @@ import React, { useMemo, useState, lazy, Suspense } from 'react';
 import { CheckCircle, Clock, AlertTriangle, BarChart3, PieChart, Target, Star, Award, ShieldAlert, Zap, Calendar } from 'lucide-react';
 import { ACHIEVEMENTS, calcStats, calcStreak } from '../hooks/useAchievements';
 import { useAppContext } from '../contexts/AppContext';
+import CategoryIcon from './CategoryIcon';
 import MFIcon from './MFIcon';
 const WeeklyPlannerModal = lazy(() => import('./WeeklyPlannerModal'));
 
@@ -27,25 +28,103 @@ function MetricCard({ iconName, iconColor, value, label, highlight }) {
   );
 }
 
+// ─── Badge de Conquista Rarity Map ──────────────────────────────────────────
+const RARITY_MAP = {
+  first_task: { rarity: 'Bronze', color: '#cd7f32', bg: 'linear-gradient(135deg, rgba(205, 127, 50, 0.15) 0%, rgba(205, 127, 50, 0.03) 100%)', border: '1px solid rgba(205, 127, 50, 0.35)' },
+  tasks_10: { rarity: 'Bronze', color: '#cd7f32', bg: 'linear-gradient(135deg, rgba(205, 127, 50, 0.15) 0%, rgba(205, 127, 50, 0.03) 100%)', border: '1px solid rgba(205, 127, 50, 0.35)' },
+  first_goal: { rarity: 'Bronze', color: '#cd7f32', bg: 'linear-gradient(135deg, rgba(205, 127, 50, 0.15) 0%, rgba(205, 127, 50, 0.03) 100%)', border: '1px solid rgba(205, 127, 50, 0.35)' },
+  streak_3: { rarity: 'Bronze', color: '#cd7f32', bg: 'linear-gradient(135deg, rgba(205, 127, 50, 0.15) 0%, rgba(205, 127, 50, 0.03) 100%)', border: '1px solid rgba(205, 127, 50, 0.35)' },
+  pet_lover: { rarity: 'Bronze', color: '#cd7f32', bg: 'linear-gradient(135deg, rgba(205, 127, 50, 0.15) 0%, rgba(205, 127, 50, 0.03) 100%)', border: '1px solid rgba(205, 127, 50, 0.35)' },
+  financista: { rarity: 'Bronze', color: '#cd7f32', bg: 'linear-gradient(135deg, rgba(205, 127, 50, 0.15) 0%, rgba(205, 127, 50, 0.03) 100%)', border: '1px solid rgba(205, 127, 50, 0.35)' },
+  carreira: { rarity: 'Bronze', color: '#cd7f32', bg: 'linear-gradient(135deg, rgba(205, 127, 50, 0.15) 0%, rgba(205, 127, 50, 0.03) 100%)', border: '1px solid rgba(205, 127, 50, 0.35)' },
+  perfect_habits: { rarity: 'Bronze', color: '#cd7f32', bg: 'linear-gradient(135deg, rgba(205, 127, 50, 0.15) 0%, rgba(205, 127, 50, 0.03) 100%)', border: '1px solid rgba(205, 127, 50, 0.35)' },
+  
+  tasks_50: { rarity: 'Prata', color: '#9ca3af', bg: 'linear-gradient(135deg, rgba(156, 163, 175, 0.15) 0%, rgba(156, 163, 175, 0.03) 100%)', border: '1px solid rgba(156, 163, 175, 0.35)' },
+  streak_7: { rarity: 'Prata', color: '#9ca3af', bg: 'linear-gradient(135deg, rgba(156, 163, 175, 0.15) 0%, rgba(156, 163, 175, 0.03) 100%)', border: '1px solid rgba(156, 163, 175, 0.35)' },
+  first_goal_completed: { rarity: 'Prata', color: '#9ca3af', bg: 'linear-gradient(135deg, rgba(156, 163, 175, 0.15) 0%, rgba(156, 163, 175, 0.03) 100%)', border: '1px solid rgba(156, 163, 175, 0.35)' },
+  
+  tasks_100: { rarity: 'Ouro', color: '#fbbf24', bg: 'linear-gradient(135deg, rgba(251, 191, 36, 0.15) 0%, rgba(251, 191, 36, 0.03) 100%)', border: '1px solid rgba(251, 191, 36, 0.35)' },
+  streak_30: { rarity: 'Ouro', color: '#fbbf24', bg: 'linear-gradient(135deg, rgba(251, 191, 36, 0.15) 0%, rgba(251, 191, 36, 0.03) 100%)', border: '1px solid rgba(251, 191, 36, 0.35)' },
+  goals_10: { rarity: 'Ouro', color: '#fbbf24', bg: 'linear-gradient(135deg, rgba(251, 191, 36, 0.15) 0%, rgba(251, 191, 36, 0.03) 100%)', border: '1px solid rgba(251, 191, 36, 0.35)' }
+};
+
 // ─── Badge de Conquista ──────────────────────────────────────────────────────
 function AchievementBadge({ achievement, unlocked, unlockedAt }) {
+  const info = RARITY_MAP[achievement.key] || { rarity: 'Bronze', color: '#cd7f32', bg: 'var(--bg-card)', border: '1px solid var(--border-light)' };
+  
+  const cardStyle = unlocked 
+    ? {
+        background: info.bg,
+        border: info.border,
+        padding: '16px',
+        borderRadius: 'var(--radius-md)',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '16px',
+        position: 'relative',
+        boxShadow: 'var(--shadow-sm)',
+        transition: 'all 0.3s ease',
+      }
+    : {
+        backgroundColor: 'var(--bg-card)',
+        border: '1px solid var(--border-light)',
+        padding: '16px',
+        borderRadius: 'var(--radius-md)',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '16px',
+        position: 'relative',
+        opacity: 0.65,
+        filter: 'grayscale(90%)',
+        transition: 'all 0.3s ease',
+      };
+
   return (
-    <div
-      className={`evo-achievement-badge ${unlocked ? 'evo-achievement-badge--unlocked' : 'evo-achievement-badge--locked'}`}
-      title={unlocked ? `${achievement.title} — ${achievement.desc}` : `Bloqueada: ${achievement.desc}`}
-    >
-      <div className="evo-achievement-emoji-wrap">
-        <span className="evo-achievement-emoji" role="img" aria-label={achievement.title}>
-          {unlocked ? achievement.emoji : '🔒'}
-        </span>
+    <div style={cardStyle} className="achievement-card-premium">
+      <div style={{
+        width: '44px',
+        height: '44px',
+        borderRadius: '50%',
+        backgroundColor: unlocked ? 'rgba(255, 255, 255, 0.08)' : 'var(--bg-app)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        fontSize: '20px',
+        border: unlocked ? `2px solid ${info.color}` : '2px dashed var(--border-medium)',
+        flexShrink: 0
+      }}>
+        {unlocked ? achievement.emoji : '🔒'}
       </div>
-      <div className="evo-achievement-info">
-        <span className="evo-achievement-title">{achievement.title}</span>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '4px' }}>
+          <strong style={{ fontSize: '13.5px', color: 'var(--text-main)', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {achievement.title}
+          </strong>
+          <span style={{ 
+            fontSize: '9px', 
+            fontWeight: '800', 
+            textTransform: 'uppercase', 
+            letterSpacing: '0.05em', 
+            color: info.color,
+            padding: '2px 6px',
+            borderRadius: '4px',
+            backgroundColor: unlocked ? 'rgba(255, 255, 255, 0.06)' : 'var(--bg-app)'
+          }}>
+            {info.rarity}
+          </span>
+        </div>
+        <p style={{ fontSize: '11.5px', color: 'var(--text-muted)', margin: '4px 0 0', lineHeight: '1.4' }}>
+          {achievement.desc}
+        </p>
         {unlocked && unlockedAt && (
-          <span className="evo-achievement-date">{formatDate(unlockedAt)}</span>
+          <span style={{ fontSize: '9.5px', color: 'var(--text-light)', display: 'block', marginTop: '6px' }}>
+            🏆 Desbloqueado em {formatDate(unlockedAt)}
+          </span>
         )}
         {!unlocked && (
-          <span className="evo-achievement-hint">{achievement.desc}</span>
+          <span style={{ fontSize: '9.5px', color: 'var(--text-light)', display: 'block', marginTop: '6px', fontStyle: 'italic' }}>
+            Requisito pendente
+          </span>
         )}
       </div>
     </div>
@@ -89,14 +168,14 @@ function WeeklyRhythm({ tasks }) {
 
 // ─── Gráfico Donut de Categorias ─────────────────────────────────────────────
 function CategoryDonut({ tasks }) {
-  const categories = ['Trabalho', 'Pessoal', 'Estudos', 'Lazer'];
+  const categories = ['Trabalho', 'Pessoal', 'Estudos', 'Lazer', 'Pets'];
   const colors = {
-    Trabalho: 'var(--cat-trabalho)',
-    Pessoal: 'var(--cat-pessoal)',
-    Estudos: 'var(--cat-estudos)',
-    Lazer: 'var(--cat-lazer)',
+    Trabalho: '#60A5FA',
+    Pessoal: '#4ADE80',
+    Estudos: '#FBBF24',
+    Lazer: '#F472B6',
+    Pets: '#FCA5A5',
   };
-  const emojis = { Trabalho: '💼', Pessoal: '🏠', Estudos: '📚', Lazer: '🎸' };
 
   const total = tasks.length;
   const counts = categories.reduce((acc, c) => { acc[c] = tasks.filter(t => t.category === c).length; return acc; }, {});
@@ -142,9 +221,12 @@ function CategoryDonut({ tasks }) {
       </svg>
       <div className="evo-donut-legend">
         {categories.map(c => (
-          <div key={c} className="evo-legend-row">
+          <div key={c} className="evo-legend-row" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <span className="evo-legend-dot" style={{ backgroundColor: colors[c] }} />
-            <span className="evo-legend-cat">{emojis[c]} {c}</span>
+            <span className="evo-legend-cat" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+              <CategoryIcon categoryId={c} size={14} />
+              <span>{c}</span>
+            </span>
             <span className="evo-legend-val">{counts[c]}</span>
           </div>
         ))}
@@ -156,7 +238,7 @@ function CategoryDonut({ tasks }) {
 // ─── Gráfico de Prioridades ───────────────────────────────────────────────────
 function PriorityBars({ tasks }) {
   const priorities = ['Alta', 'Média', 'Baixa'];
-  const colors = { Alta: 'var(--prio-alta-border)', Média: 'var(--prio-media-border)', Baixa: 'var(--prio-baixa-border)' };
+  const colors = { Alta: '#EF4444', Média: '#F59E0B', Baixa: '#10B981' };
   const total = tasks.length;
   const counts = priorities.reduce((acc, p) => { acc[p] = tasks.filter(t => t.priority === p).length; return acc; }, {});
   const maxCount = Math.max(...Object.values(counts), 1);
@@ -360,18 +442,89 @@ export default function EvolutionView() {
 
         {/* Conquistas — exibe mesmo sem tarefas */}
         <section className="evo-card">
-          <div className="evo-card-header">
+          <div className="evo-card-header" style={{ borderBottom: 'none', paddingBottom: '10px' }}>
             <h3 className="evo-card-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <MFIcon name="achievements" size={20} style={{ color: 'var(--accent-yellow, #eab308)' }} /> Suas Conquistas
             </h3>
             <span className="evo-achievements-count">0 de {ACHIEVEMENTS.length} desbloqueadas</span>
           </div>
-          <div className="evo-achievements-grid">
+
+          {/* Progress Bar das conquistas estilo PS5 */}
+          <div style={{ padding: '0 24px 20px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12.5px', marginBottom: '6px' }}>
+              <span style={{ color: 'var(--text-muted)' }}>Progresso da Coleção</span>
+              <strong style={{ color: 'var(--primary)' }}>0% concluído</strong>
+            </div>
+            <div style={{ height: '8px', backgroundColor: 'var(--bg-app)', borderRadius: '4px', overflow: 'hidden', border: '1px solid var(--border-light)' }}>
+              <div style={{ 
+                height: '100%', 
+                width: '0%', 
+                background: 'linear-gradient(90deg, var(--primary) 0%, var(--accent-yellow, #eab308) 100%)', 
+                borderRadius: '4px',
+                transition: 'width 0.4s ease-out'
+              }} />
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px', padding: '0 24px 24px' }}>
+            {/* Platina / Master Trophy (Locked) */}
+            <div style={{
+              gridColumn: '1 / -1',
+              backgroundColor: 'var(--bg-card)',
+              border: '1px dashed var(--border-medium)',
+              padding: '20px',
+              borderRadius: 'var(--radius-lg)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '20px',
+              opacity: 0.65,
+              filter: 'grayscale(80%)',
+              transition: 'all 0.3s ease',
+            }}>
+              <div style={{
+                width: '60px',
+                height: '60px',
+                borderRadius: '50%',
+                backgroundColor: 'var(--bg-app)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '32px',
+                border: '3px solid var(--border-medium)',
+                flexShrink: 0
+              }}>
+                👑
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <strong style={{ fontSize: '16px', color: 'var(--text-main)' }}>Platina: Mestre do Flowday</strong>
+                  <span style={{ 
+                    fontSize: '10px', 
+                    fontWeight: '800', 
+                    textTransform: 'uppercase', 
+                    color: '#9ca3af',
+                    backgroundColor: 'var(--bg-app)',
+                    padding: '2px 8px',
+                    borderRadius: '4px'
+                  }}>
+                    PLATINA
+                  </span>
+                </div>
+                <p style={{ fontSize: '13px', color: 'var(--text-muted)', margin: '4px 0 0', lineHeight: '1.4' }}>
+                  Desbloqueie todas as outras 10 conquistas para alcançar a maestria absoluta.
+                </p>
+                <span style={{ fontSize: '11px', color: 'var(--text-light)', display: 'block', marginTop: '8px', fontStyle: 'italic' }}>
+                  Faltam 10 conquistas para liberar.
+                </span>
+              </div>
+            </div>
+
             {ACHIEVEMENTS.map(a => (
               <AchievementBadge key={a.key} achievement={a} unlocked={false} />
             ))}
           </div>
         </section>
+
       </div>
     );
   }
@@ -610,7 +763,7 @@ export default function EvolutionView() {
 
       {/* ── Conquistas ──────────────────────────────────── */}
       <section className="evo-card">
-        <div className="evo-card-header">
+        <div className="evo-card-header" style={{ borderBottom: 'none', paddingBottom: '10px' }}>
           <h3 className="evo-card-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <MFIcon name="achievements" size={20} style={{ color: 'var(--accent-yellow, #eab308)' }} /> Suas Conquistas
           </h3>
@@ -619,7 +772,88 @@ export default function EvolutionView() {
           </span>
         </div>
 
-        <div className="evo-achievements-grid">
+        {/* Progress Bar das conquistas estilo PS5 */}
+        <div style={{ padding: '0 24px 20px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12.5px', marginBottom: '6px' }}>
+            <span style={{ color: 'var(--text-muted)' }}>Progresso da Coleção</span>
+            <strong style={{ color: 'var(--primary)' }}>{Math.round((unlockedCount / ACHIEVEMENTS.length) * 100)}% concluído</strong>
+          </div>
+          <div style={{ height: '8px', backgroundColor: 'var(--bg-app)', borderRadius: '4px', overflow: 'hidden', border: '1px solid var(--border-light)' }}>
+            <div style={{ 
+              height: '100%', 
+              width: `${(unlockedCount / ACHIEVEMENTS.length) * 100}%`, 
+              background: 'linear-gradient(90deg, var(--primary) 0%, var(--accent-yellow, #eab308) 100%)', 
+              borderRadius: '4px',
+              transition: 'width 0.4s ease-out'
+            }} />
+          </div>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px', padding: '0 24px 24px' }}>
+          {/* Platina / Master Trophy */}
+          <div style={{
+            gridColumn: '1 / -1',
+            background: unlockedCount === ACHIEVEMENTS.length
+              ? 'linear-gradient(135deg, rgba(0, 210, 255, 0.25) 0%, rgba(56, 189, 248, 0.05) 100%)' 
+              : 'var(--bg-card)',
+            border: unlockedCount === ACHIEVEMENTS.length
+              ? '1px solid rgba(0, 210, 255, 0.5)' 
+              : '1px dashed var(--border-medium)',
+            padding: '20px',
+            borderRadius: 'var(--radius-lg)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '20px',
+            opacity: unlockedCount === ACHIEVEMENTS.length ? 1 : 0.65,
+            filter: unlockedCount === ACHIEVEMENTS.length ? 'none' : 'grayscale(80%)',
+            boxShadow: unlockedCount === ACHIEVEMENTS.length ? '0 8px 30px rgba(0, 210, 255, 0.15)' : 'none',
+            transition: 'all 0.3s ease',
+          }}>
+            <div style={{
+              width: '54px',
+              height: '54px',
+              borderRadius: '50%',
+              backgroundColor: unlockedCount === ACHIEVEMENTS.length ? 'rgba(255, 255, 255, 0.12)' : 'var(--bg-app)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '28px',
+              border: `3px solid ${unlockedCount === ACHIEVEMENTS.length ? '#00d2ff' : 'var(--border-medium)'}`,
+              boxShadow: unlockedCount === ACHIEVEMENTS.length ? '0 0 12px rgba(0, 210, 255, 0.2)' : 'none',
+              flexShrink: 0
+            }}>
+              👑
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <strong style={{ fontSize: '15px', color: 'var(--text-main)' }}>Platina: Mestre do Flowday</strong>
+                <span style={{ 
+                  fontSize: '9.5px', 
+                  fontWeight: '800', 
+                  textTransform: 'uppercase', 
+                  color: '#00d2ff',
+                  backgroundColor: 'rgba(0, 210, 255, 0.1)',
+                  padding: '2px 8px',
+                  borderRadius: '4px'
+                }}>
+                  PLATINA
+                </span>
+              </div>
+              <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: '4px 0 0', lineHeight: '1.4' }}>
+                Desbloqueie todas as outras 10 conquistas para alcançar a maestria absoluta.
+              </p>
+              {unlockedCount === ACHIEVEMENTS.length ? (
+                <span style={{ fontSize: '11px', color: '#22c55e', display: 'block', marginTop: '8px', fontWeight: '700' }}>
+                  ✨ Coleção 100% Concluída! Você é uma lenda da produtividade.
+                </span>
+              ) : (
+                <span style={{ fontSize: '11px', color: 'var(--text-light)', display: 'block', marginTop: '8px', fontStyle: 'italic' }}>
+                  Faltam {ACHIEVEMENTS.length - unlockedCount} conquistas para liberar.
+                </span>
+              )}
+            </div>
+          </div>
+
           {ACHIEVEMENTS.map(a => (
             <AchievementBadge
               key={a.key}

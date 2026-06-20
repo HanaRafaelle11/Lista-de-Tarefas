@@ -6,7 +6,7 @@ function Toast({ achievement, onDismiss }) {
   const [visible, setVisible] = useState(false);
   const [closing, setClosing] = useState(false);
   const timerRef = useRef(null);
-  const DURATION = 5000;
+  const DURATION = 4000; // Ajustado para 4 segundos no Sprint 2
 
   useEffect(() => {
     // Slide-in após montagem
@@ -22,7 +22,9 @@ function Toast({ achievement, onDismiss }) {
   }, []);
 
   const handleDismiss = () => {
+    if (closing) return;
     setClosing(true);
+    // Tempo para rodar a animação de saída/closing
     setTimeout(() => onDismiss(), 350);
   };
 
@@ -41,7 +43,7 @@ function Toast({ achievement, onDismiss }) {
       {/* Conteúdo */}
       <div className="achievement-toast-inner">
         <div className="achievement-toast-header">
-          <span className="achievement-toast-label">✨ Nova conquista desbloqueada</span>
+          <span className="achievement-toast-label">✨ Conquista Desbloqueada!</span>
           <button
             onClick={handleDismiss}
             className="achievement-toast-close"
@@ -62,24 +64,35 @@ function Toast({ achievement, onDismiss }) {
             <p className="achievement-toast-desc">{achievement.desc}</p>
           </div>
         </div>
+
+        <div className="achievement-toast-footer">
+          <button
+            onClick={handleDismiss}
+            className="achievement-toast-btn"
+          >
+            ✓ Entendi
+          </button>
+        </div>
       </div>
     </div>
   );
 }
 
-// Gerenciador de fila de toasts
+// Gerenciador de fila de toasts (FIFO sequencial)
 export default function AchievementToastManager({ queue, onDismiss }) {
   if (queue.length === 0) return null;
 
+  // Renderiza apenas o primeiro item da fila. 
+  // O próximo item só será renderizado quando o atual for descartado e removido do estado do AppContext.
+  const current = queue[0];
+
   return (
     <div className="achievement-toast-container" aria-label="Notificações de conquistas">
-      {queue.map((item) => (
-        <Toast
-          key={item.id}
-          achievement={item.achievement}
-          onDismiss={() => onDismiss(item.id)}
-        />
-      ))}
+      <Toast
+        key={current.id}
+        achievement={current.achievement}
+        onDismiss={() => onDismiss(current.id, current.achievement.key)}
+      />
     </div>
   );
 }

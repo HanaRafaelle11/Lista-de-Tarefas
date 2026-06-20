@@ -2,6 +2,8 @@ import React from 'react';
 import { Sun, Moon } from 'lucide-react';
 import { useAppContext } from '../contexts/AppContext';
 import MFIcon from './MFIcon';
+import DefaultAvatar from './DefaultAvatar';
+import NotificationCenter from './NotificationCenter';
 
 export default function Navbar() {
   const { activeTab, setActiveTab, currentUser, handleLogout, userProfile, isAdmin, theme, setTheme } = useAppContext();
@@ -76,24 +78,24 @@ export default function Navbar() {
 
           {/* Ações */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <NotificationCenter />
             <button
               onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-              className="app-top-logout-btn"
+              className="header-btn"
               title={theme === 'dark' ? 'Modo Claro' : 'Modo Escuro'}
               aria-label={theme === 'dark' ? 'Ativar modo claro' : 'Ativar modo escuro'}
-              style={{ padding: '8px', minWidth: 'auto', display: 'inline-flex', alignItems: 'center' }}
             >
               {theme === 'dark'
-                ? <Sun size={18} aria-hidden="true" />
-                : <Moon size={18} aria-hidden="true" />}
+                ? <Sun size={20} aria-hidden="true" />
+                : <Moon size={20} aria-hidden="true" />}
             </button>
             <button
               onClick={() => setActiveTab('settings')}
-              className="app-top-logout-btn"
+              className="header-btn"
               title="Configurações"
-              style={{ padding: '8px', minWidth: 'auto', color: activeTab === 'settings' ? 'var(--primary)' : 'var(--text-light)', display: 'inline-flex', alignItems: 'center' }}
+              style={{ color: activeTab === 'settings' ? 'var(--primary)' : 'var(--text-muted)' }}
             >
-              <MFIcon name="profile" size={18} />
+              <MFIcon name="profile" size={20} />
             </button>
             
             <div 
@@ -101,13 +103,11 @@ export default function Navbar() {
               onClick={() => setActiveTab('profile')}
               style={{ cursor: 'pointer', marginLeft: '8px' }}
             >
-              <div className="app-top-avatar" title={userProfile?.name || currentUser?.name} style={{ width: '32px', height: '32px', borderRadius: '50%', overflow: 'hidden', border: '1px solid var(--border)' }}>
+              <div className="app-top-avatar" title={userProfile?.name || currentUser?.name} style={{ width: '38px', height: '38px', borderRadius: '50%', overflow: 'hidden', border: '1px solid var(--border)' }}>
                 {userProfile?.avatar_url ? (
                   <img src={userProfile.avatar_url} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 ) : (
-                  <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%)', color: 'white', fontWeight: '700', fontSize: '12.5px', fontFamily: 'var(--font-display)' }}>
-                    {getInitials(userProfile?.name || currentUser?.name)}
-                  </div>
+                  <DefaultAvatar size={38} />
                 )}
               </div>
             </div>

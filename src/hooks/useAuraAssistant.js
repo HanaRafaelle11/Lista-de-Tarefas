@@ -48,14 +48,15 @@ export function useAuraAssistant(tasks = [], goals = [], goalTasks = [], streak 
     today.setHours(0, 0, 0, 0);
     const overdueTasks = pendingTasks.filter(t => {
       if (!t.dueDate) return false;
-      const dueDate = new Date(t.dueDate);
+      const dueDate = new Date(t.dueDate + 'T12:00:00');
       return dueDate < today;
     });
 
     if (overdueTasks.length > 0) {
       risk = {
         type: 'overdue',
-        message: `Você possui ${overdueTasks.length} tarefa${overdueTasks.length > 1 ? 's' : ''} em atraso. Que tal reagendá-las?`
+        message: `Você possui ${overdueTasks.length} tarefa${overdueTasks.length > 1 ? 's' : ''} em atraso. Que tal reagendá-las?`,
+        tasks: overdueTasks
       };
     } else {
       // Verifica objetivos sem progresso recente
@@ -77,7 +78,7 @@ export function useAuraAssistant(tasks = [], goals = [], goalTasks = [], streak 
     // 3. Resumo Semanal (Simplificado para consistência)
     if (streak > 0 || completedTasks.length > 0) {
       summary = {
-        message: `Você já concluiu ${completedTasks.length} tarefas e está num ritmo de ${streak} dias seguidos. Continue assim!`
+        message: `Você já concluiu ${completedTasks.length} tarefas e está num ritmo de ${streak} ${streak === 1 ? 'dia seguido' : 'dias seguidos'}. Continue assim!`
       };
     }
 

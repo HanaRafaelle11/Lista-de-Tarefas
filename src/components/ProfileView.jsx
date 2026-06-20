@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { User, Shield, Briefcase, FileText, Camera, Trash2, CheckCircle2 } from 'lucide-react';
 import { useAppContext } from '../contexts/AppContext';
+import DefaultAvatar from './DefaultAvatar';
 
 export default function ProfileView() {
   const { 
@@ -114,17 +115,15 @@ export default function ProfileView() {
         {/* Bloco de Foto / Avatar */}
         <div style={{ backgroundColor: 'var(--bg-card)', padding: '24px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-light)', display: 'flex', alignItems: 'center', gap: '24px', flexWrap: 'wrap' }}>
           
-          <div style={{ position: 'relative', width: '100px', height: '100px' }}>
+          <div style={{ position: 'relative', width: '140px', height: '140px' }}>
             {userProfile?.avatar_url ? (
               <img 
                 src={userProfile.avatar_url} 
                 alt="Avatar" 
-                style={{ width: '100px', height: '100px', borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--primary)' }}
+                style={{ width: '140px', height: '140px', borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--primary)' }}
               />
             ) : (
-              <div style={{ width: '100px', height: '100px', borderRadius: '50%', background: 'linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '32px', fontWeight: '800', fontFamily: 'var(--font-display)' }}>
-                {getInitials()}
-              </div>
+              <DefaultAvatar size={140} />
             )}
 
             {/* Label click triggers input file */}

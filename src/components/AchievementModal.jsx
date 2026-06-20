@@ -28,7 +28,7 @@ export default function AchievementModal({ isOpen, onClose, title, message, icon
   if (!isOpen) return null;
 
   return (
-    <div className="modal-overlay achievement-modal-overlay" onClick={onClose}>
+    <div className={`modal-overlay achievement-modal-overlay ${isOpen ? 'open' : ''}`} onClick={onClose}>
       <div 
         ref={modalRef}
         className="modal-content achievement-modal-content" 

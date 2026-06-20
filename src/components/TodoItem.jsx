@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Calendar, Trash2, Edit2, AlertCircle, CalendarPlus, Check, Repeat } from 'lucide-react';
 import { parseTaskMetadata, formatDescriptionWithoutMetadata } from '../contexts/AppContext';
+import CategoryIcon from './CategoryIcon';
 
 // ─── Redireciona para o Google Calendar web pré-preenchido ───────────────────
 function exportTaskToCalendar(task) {
@@ -87,8 +88,9 @@ export default function TodoItem({ item, onToggleComplete, onDelete, onEdit }) {
         {/* Metadados: Tags e Data */}
         <div className="todo-item-meta-row">
           {/* Categoria */}
-          <span className={`badge-category ${item.category.toLowerCase()}`}>
-            {item.category}
+          <span className={`badge-category ${item.category.toLowerCase()}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+            <CategoryIcon categoryId={item.category} size={12} />
+            <span>{item.category}</span>
           </span>
 
           {/* Prioridade */}

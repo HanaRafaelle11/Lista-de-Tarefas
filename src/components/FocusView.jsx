@@ -467,11 +467,7 @@ export default function FocusView() {
                   value={ambientSoundFile} 
                   onChange={(e) => {
                     setAmbientSoundFile(e.target.value);
-                    if (e.target.value !== 'none') {
-                      setIsAmbientPlaying(true);
-                    } else {
-                      setIsAmbientPlaying(false);
-                    }
+                    setIsAmbientPlaying(false); // Evita bloqueio de autoplay em dispositivos móveis
                   }}
                   style={{ width: '100%', padding: '8px', border: '1px solid var(--border-medium)', borderRadius: '6px', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)', fontSize: '13px' }}
                 >

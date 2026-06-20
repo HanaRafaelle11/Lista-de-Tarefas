@@ -1,19 +1,21 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Plus, Target, Sprout, Award, Archive } from 'lucide-react';
+import { Plus, Target, Sprout, Award, Archive, Sparkles, X, AlertTriangle } from 'lucide-react';
 import GoalCard from './GoalCard';
 import GoalModal from './GoalModal';
 import GoalTasksModal from './GoalTasksModal';
 import HabitsWidget from './HabitsWidget';
+import Skeleton from './Skeleton';
 import { useAppContext } from '../contexts/AppContext';
+import { GOAL_TEMPLATES } from '../data/taskTemplates';
 
 // Estado vazio para cada filtro
-function GoalsEmptyState({ filter, onAdd }) {
+function GoalsEmptyState({ filter, onAdd, hasAnyGoals }) {
   const messages = {
     active: {
       icon: <Sprout size={32} style={{ color: 'var(--primary)' }} />,
       title: 'Nenhum objetivo ativo',
       desc: 'Grandes conquistas começam com um objetivo. Defina para onde você quer ir.',
-      cta: 'Criar meu primeiro objetivo',
+      cta: hasAnyGoals ? 'Criar novo objetivo' : 'Criar meu primeiro objetivo',
     },
     completed: {
       icon: <Award size={32} style={{ color: 'var(--primary)' }} />,
@@ -31,7 +33,7 @@ function GoalsEmptyState({ filter, onAdd }) {
       icon: <Target size={32} style={{ color: 'var(--primary)' }} />,
       title: 'Nenhum objetivo ainda',
       desc: 'Grandes conquistas começam com um objetivo. Defina para onde você quer ir.',
-      cta: 'Criar meu primeiro objetivo',
+      cta: hasAnyGoals ? 'Criar novo objetivo' : 'Criar meu primeiro objetivo',
     },
   };
 
@@ -62,15 +64,20 @@ export default function GoalsView() {
     handleDeleteGoal: onDeleteGoal,
     handleLinkTask: onLinkTask,
     handleUnlinkTask: onUnlinkTask,
+    handleUpdateTask: onUpdateTask,
     habitsManager,
     shouldOpenGoalModal,
     setShouldOpenGoalModal,
+    isInitializing
   } = useAppContext();
   const [filter, setFilter] = useState('active');
   const [isGoalModalOpen, setIsGoalModalOpen] = useState(false);
   const [isTasksModalOpen, setIsTasksModalOpen] = useState(false);
+  const [isTemplatesDrawerOpen, setIsTemplatesDrawerOpen] = useState(false);
   const [editingGoal, setEditingGoal] = useState(null);
   const [managingGoal, setManagingGoal] = useState(null);
+  // Confirmation dialog for completing a goal with incomplete linked tasks
+  const [pendingCompleteGoalId, setPendingCompleteGoalId] = useState(null);
 
   useEffect(() => {
     if (shouldOpenGoalModal) {
@@ -117,9 +124,30 @@ export default function GoalsView() {
     setEditingGoal(null);
   };
 
-  // Concluir objetivo
+  // Concluir objetivo — verifica tarefas vinculadas incompletas
   const handleCompleteGoal = (id) => {
-    onUpdateGoal(id, { status: 'completed' });
+    const linkedIds = goalTasks.filter(gt => gt.goal_id === id).map(gt => gt.task_id);
+    const incompleteLinked = tasks.filter(t => linkedIds.includes(t.id) && !t.completed);
+    if (incompleteLinked.length > 0) {
+      setPendingCompleteGoalId(id);
+    } else {
+      onUpdateGoal(id, { status: 'completed' });
+    }
+  };
+
+  const confirmCompleteGoalWithTasks = () => {
+    if (!pendingCompleteGoalId) return;
+    const linkedIds = goalTasks.filter(gt => gt.goal_id === pendingCompleteGoalId).map(gt => gt.task_id);
+    const incompleteLinked = tasks.filter(t => linkedIds.includes(t.id) && !t.completed);
+    incompleteLinked.forEach(t => onUpdateTask(t.id, { completed: true }));
+    onUpdateGoal(pendingCompleteGoalId, { status: 'completed' });
+    setPendingCompleteGoalId(null);
+  };
+
+  const confirmCompleteGoalWithoutTasks = () => {
+    if (!pendingCompleteGoalId) return;
+    onUpdateGoal(pendingCompleteGoalId, { status: 'completed' });
+    setPendingCompleteGoalId(null);
   };
 
   // Arquivar objetivo
@@ -176,14 +204,29 @@ export default function GoalsView() {
           </p>
         </div>
 
-        <button
-          onClick={openNewGoalModal}
-          className="goals-add-btn btn-primary-glow"
-          id="btn-novo-objetivo"
-        >
-          <Plus size={16} />
-          <span>Novo Objetivo</span>
-        </button>
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <button
+            onClick={() => setIsTemplatesDrawerOpen(true)}
+            className="goals-add-btn"
+            style={{
+              backgroundColor: 'var(--primary-light)',
+              color: 'var(--primary)',
+              border: '1px solid var(--primary)',
+            }}
+          >
+            <Sparkles size={16} />
+            <span>Modelos Prontos</span>
+          </button>
+
+          <button
+            onClick={openNewGoalModal}
+            className="goals-add-btn btn-primary-glow"
+            id="btn-novo-objetivo"
+          >
+            <Plus size={16} />
+            <span>Novo Objetivo</span>
+          </button>
+        </div>
       </div>
 
       {/* ── Seção de Hábitos ────────────────────────────── */}
@@ -204,10 +247,17 @@ export default function GoalsView() {
       </div>
 
       {/* ── Lista de Objetivos ──────────────────────────── */}
-      {filteredGoals.length === 0 ? (
+      {isInitializing ? (
+        <div className="goals-grid" style={{ marginTop: '24px' }}>
+          <Skeleton height="180px" width="100%" borderRadius="var(--radius-md)" />
+          <Skeleton height="180px" width="100%" borderRadius="var(--radius-md)" />
+          <Skeleton height="180px" width="100%" borderRadius="var(--radius-md)" />
+        </div>
+      ) : filteredGoals.length === 0 ? (
         <GoalsEmptyState
           filter={filter}
           onAdd={filter === 'active' || filter === 'all' ? openNewGoalModal : null}
+          hasAnyGoals={goals.length > 0}
         />
       ) : (
         <div className="goals-grid">
@@ -247,6 +297,156 @@ export default function GoalsView() {
         onLink={(taskId) => onLinkTask(managingGoal.id, taskId)}
         onUnlink={(taskId) => onUnlinkTask(managingGoal.id, taskId)}
       />
+
+      {/* Drawer de Templates de Objetivos */}
+      <div 
+        className={`templates-drawer-overlay ${isTemplatesDrawerOpen ? 'open' : ''}`}
+        onClick={() => setIsTemplatesDrawerOpen(false)}
+        style={{ zIndex: 10000 }}
+      >
+        <div 
+          className="templates-drawer"
+          onClick={e => e.stopPropagation()}
+        >
+          <div className="templates-drawer-header">
+            <h3 className="templates-drawer-title">
+              <Sparkles size={18} style={{ color: 'var(--primary)' }} />
+              Modelos de Objetivos
+            </h3>
+            <button 
+              className="templates-drawer-close"
+              onClick={() => setIsTemplatesDrawerOpen(false)}
+              aria-label="Fechar modelos"
+            >
+              <X size={18} />
+            </button>
+          </div>
+          
+          <div className="templates-drawer-body">
+            <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '20px', lineHeight: '1.5' }}>
+              Importe um modelo de objetivo macro estruturado com sugestões de tarefas integradas para acelerar o seu progresso.
+            </p>
+            
+            {GOAL_TEMPLATES.map(template => {
+              const isAlreadyActive = goals.some(g => g.title === template.title && g.status === 'active');
+              
+              const handleImportGoal = () => {
+                if (isAlreadyActive) return;
+                onAddGoal({
+                  title: template.title,
+                  description: template.description,
+                  color: template.color,
+                  icon: template.icon,
+                  actions: template.actions
+                });
+                setIsTemplatesDrawerOpen(false);
+              };
+
+              return (
+                <div 
+                  key={template.id} 
+                  className={`template-persona-card ${isAlreadyActive ? 'template-disabled-card' : ''}`}
+                >
+                  <h4 className="template-persona-title">
+                    <span style={{ fontSize: '16px', marginRight: '6px' }}>{template.icon}</span>
+                    {template.title}
+                  </h4>
+                  <p className="template-persona-desc">{template.description}</p>
+                  
+                  {isAlreadyActive && (
+                    <div style={{ color: '#ef4444', fontSize: '11px', fontWeight: '700', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <AlertTriangle size={12} /> Objetivo já ativo
+                    </div>
+                  )}
+
+                  <div className="template-tasks-preview" style={{ borderTop: '1px solid var(--border-light)', paddingTop: '10px', marginTop: '10px' }}>
+                    <span style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: 'var(--text-muted)', marginBottom: '6px' }}>Sub-tarefas inclusas:</span>
+                    {template.actions.map((act, i) => (
+                      <div key={i} className="template-task-item">
+                        <span className="template-task-item-bullet" style={{ backgroundColor: template.color }} />
+                        <span style={{ fontWeight: '500' }}>{act}</span>
+                      </div>
+                    ))}
+                  </div>
+                  
+                  <button
+                    className="template-load-btn"
+                    onClick={handleImportGoal}
+                    disabled={isAlreadyActive}
+                    style={{
+                      border: `1px solid ${template.color}`,
+                      color: template.color,
+                      backgroundColor: `${template.color}15`
+                    }}
+                  >
+                    <Plus size={14} />
+                    {isAlreadyActive ? 'Objetivo Ativo' : 'Importar Objetivo'}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* ── Diálogo de confirmação: concluir tarefas vinculadas ── */}
+      {pendingCompleteGoalId && (() => {
+        const linkedIds = goalTasks.filter(gt => gt.goal_id === pendingCompleteGoalId).map(gt => gt.task_id);
+        const incompleteLinked = tasks.filter(t => linkedIds.includes(t.id) && !t.completed);
+        return (
+          <div
+            className="modal-overlay"
+            style={{ zIndex: 10001 }}
+            onClick={() => setPendingCompleteGoalId(null)}
+          >
+            <div
+              className="modal-content animate-scale-up"
+              style={{ maxWidth: '420px', padding: '28px', textAlign: 'center' }}
+              onClick={e => e.stopPropagation()}
+            >
+              <div style={{ fontSize: '36px', marginBottom: '12px' }}>🏆</div>
+              <h3 style={{ fontSize: '17px', fontWeight: '700', color: 'var(--text-main)', marginBottom: '8px' }}>
+                Concluir objetivo
+              </h3>
+              <p style={{ fontSize: '13.5px', color: 'var(--text-muted)', marginBottom: '20px', lineHeight: '1.6' }}>
+                Você tem <strong>{incompleteLinked.length} {incompleteLinked.length === 1 ? 'tarefa vinculada ainda aberta' : 'tarefas vinculadas ainda abertas'}</strong>.
+                Deseja marcá-{incompleteLinked.length === 1 ? 'la' : 'las'} como concluída{incompleteLinked.length === 1 ? '' : 's'} também?
+              </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <button
+                  onClick={confirmCompleteGoalWithTasks}
+                  className="btn-primary-glow"
+                  style={{ padding: '12px 24px', width: '100%', fontSize: '14px', fontWeight: '700' }}
+                >
+                  ✅ Concluir objetivo e tarefas
+                </button>
+                <button
+                  onClick={confirmCompleteGoalWithoutTasks}
+                  style={{
+                    padding: '11px 24px',
+                    width: '100%',
+                    fontSize: '13px',
+                    fontWeight: '600',
+                    border: '1px solid var(--border-medium)',
+                    borderRadius: 'var(--radius-sm)',
+                    backgroundColor: 'var(--bg-card)',
+                    color: 'var(--text-main)',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Apenas concluir o objetivo
+                </button>
+                <button
+                  onClick={() => setPendingCompleteGoalId(null)}
+                  style={{ fontSize: '13px', color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', marginTop: '4px' }}
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }

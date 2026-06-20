@@ -6,6 +6,7 @@ import Navbar from './components/Navbar';
 import LandingPage from './components/LandingPage';
 import PrivacyView from './components/PrivacyView';
 import TermsView from './components/TermsView';
+import FaqView from './components/FaqView';
 
 import AchievementToastManager from './components/AchievementToast';
 import SyncStatusBanner from './components/SyncStatusBanner';
@@ -44,12 +45,17 @@ const getLegalRoute = (path, hash) => {
   ) {
     return 'terms';
   }
+  if (
+    cleanPath === '/faq' ||
+    cleanHash === 'faq'
+  ) {
+    return 'faq';
+  }
   return null;
 };
 
-// ─── Layout interno (usa o contexto) ─────────────────────────────────────────
+// ─── Layout interno (usa o contexto) ───────────────────────────────────
 function AppLayout() {
-  console.error("DEBUG_APP_LAYOUT_MOUNT");
   const {
     currentUser,
     isInitializing,
@@ -61,6 +67,9 @@ function AppLayout() {
     logEvent,
     isPro,
     isAdmin,
+    undoAction,
+    triggerUndo,
+    handleLogout
   } = useAppContext();
 
   // Custom routing states
@@ -158,6 +167,10 @@ function AppLayout() {
     );
   }
 
+  if (legalRoute === 'faq') {
+    return <FaqView />;
+  }
+
   // Tela de erro caso falte configuração do Supabase (Bloco 2)
   if (supabaseConfigError) {
     return (
@@ -193,6 +206,12 @@ function AppLayout() {
 
   return (
     <div className="app-wrapper">
+      {currentUser?.isDemo && (
+        <div className="demo-banner">
+          <span>Você está no Modo de Demonstração. Crie uma conta gratuita para salvar e sincronizar seus dados.</span>
+          <button className="demo-banner-btn" onClick={handleLogout}>Criar Conta</button>
+        </div>
+      )}
       <SyncStatusBanner />
       <Navbar />
 
@@ -216,6 +235,17 @@ function AppLayout() {
           </Suspense>
         </div>
       </main>
+
+      {undoAction && (
+        <div className="undo-toast animate-scale-up">
+          <span className="undo-toast-text">
+            {undoAction.type === 'task' ? 'Tarefa removida' : 'Objetivo removido'}
+          </span>
+          <button className="undo-toast-btn" onClick={triggerUndo}>
+            DESFAZER
+          </button>
+        </div>
+      )}
 
       {isAdmin && (
         <Suspense fallback={null}>

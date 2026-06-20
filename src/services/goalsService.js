@@ -25,7 +25,8 @@ const mapGoal = (g) => {
     ...g,
     description: cleanDescription,
     start_time,
-    end_time
+    end_time,
+    deletedAt: g.deleted_at || null
   };
 };
 
@@ -213,9 +214,30 @@ export const goalsService = {
   },
 
   /**
-   * Exclui um objetivo.
+   * Exclui um objetivo logicamente (Soft Delete).
    */
   delete: async (userId, id) => {
+    requireUser(userId);
+    const nowIso = new Date().toISOString();
+    try {
+      const { error } = await supabase
+        .from('goals')
+        .update({ deleted_at: nowIso })
+        .eq('id', id)
+        .eq('user_id', userId);
+
+      if (error) throw error;
+      return { error: null };
+    } catch (error) {
+      console.error('[goalsService.delete]', error);
+      return { error };
+    }
+  },
+
+  /**
+   * Exclui um objetivo permanentemente (Hard Delete).
+   */
+  deletePermanent: async (userId, id) => {
     requireUser(userId);
     try {
       const { error } = await supabase
@@ -227,7 +249,27 @@ export const goalsService = {
       if (error) throw error;
       return { error: null };
     } catch (error) {
-      console.error('[goalsService.delete]', error);
+      console.error('[goalsService.deletePermanent]', error);
+      return { error };
+    }
+  },
+
+  /**
+   * Restaura um objetivo (limpa deleted_at).
+   */
+  restore: async (userId, id) => {
+    requireUser(userId);
+    try {
+      const { error } = await supabase
+        .from('goals')
+        .update({ deleted_at: null })
+        .eq('id', id)
+        .eq('user_id', userId);
+
+      if (error) throw error;
+      return { error: null };
+    } catch (error) {
+      console.error('[goalsService.restore]', error);
       return { error };
     }
   },

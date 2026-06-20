@@ -14,12 +14,16 @@ export function generateInsights(tasks = [], events = []) {
   const pending = tasks.filter(t => !t.completed);
   const now = Date.now();
 
-  if (completed.length < 3) {
+  if (completed.length < 7) {
     return [{
       type: 'info',
       emoji: '📊',
       confidence: 1.0,
-      message: 'Dados insuficientes para gerar insights. Conclua pelo menos 3 tarefas para liberar análises sobre seu ritmo.',
+      confidenceLevel: 'alta',
+      sampleSize: tasks.length || 1,
+      timeRangeWeeks: 1,
+      estimatedAccuracy: 100,
+      message: 'Ainda estamos aprendendo sobre sua rotina.',
       action: 'tasks'
     }];
   }
@@ -136,34 +140,86 @@ export function generateInsights(tasks = [], events = []) {
     }
   }
 
-  // ─── 4. Análise de Dia de Semana Mais Produtivo ───────────────────────────────
+  // ─── 4. Análise de Dia de Semana Mais e Menos Produtivo ───────────────────────
   const dayNames = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];
-  const dayCounts = Array(7).fill(0);
-  completed.forEach(t => {
-    if (!t.completedAt) return;
-    const day = new Date(t.completedAt).getDay();
-    dayCounts[day]++;
+  const tasksScheduledPerDay = Array(7).fill(0);
+  const tasksCompletedPerDay = Array(7).fill(0);
+
+  tasks.forEach(t => {
+    if (!t.dueDate) return;
+    const dateStr = t.dueDate + 'T12:00:00';
+    const day = new Date(dateStr).getDay();
+    tasksScheduledPerDay[day]++;
+    if (t.completed) {
+      tasksCompletedPerDay[day]++;
+    }
   });
 
-  const totalDayStats = dayCounts.reduce((a, b) => a + b, 0);
-  if (totalDayStats >= 4) {
-    let bestDayIdx = 0;
-    let maxDayCount = 0;
-    for (let i = 0; i < 7; i++) {
-      if (dayCounts[i] > maxDayCount) {
-        maxDayCount = dayCounts[i];
+  // Procurar melhor e pior dia com base em uma amostragem mínima de 5 tarefas
+  let bestDayIdx = -1;
+  let bestRate = -1;
+  let worstDayIdx = -1;
+  let worstCount = 0;
+
+  for (let i = 0; i < 7; i++) {
+    const totalScheduled = tasksScheduledPerDay[i];
+    if (totalScheduled >= 5) {
+      const rate = tasksCompletedPerDay[i] / totalScheduled;
+      if (rate > bestRate) {
+        bestRate = rate;
         bestDayIdx = i;
       }
     }
-    const dayConfidence = Math.round((maxDayCount / totalDayStats) * 100) / 100;
-    if (dayConfidence >= 0.3) {
-      insights.push({
-        type: "achievement",
-        emoji: "📅",
-        confidence: dayConfidence,
-        message: `Dia de Foco: ${dayNames[bestDayIdx]} é seu dia mais produtivo, concentrando ${Math.round(dayConfidence * 100)}% de suas conclusões.`
-      });
+  }
+
+  if (completed.length > 0) {
+    const lateOrOverduePerDay = Array(7).fill(0);
+    tasks.forEach(t => {
+      const isOverdue = !t.completed && t.dueDate && new Date(t.dueDate + 'T23:59:59') < new Date();
+      let isLate = false;
+      if (t.completed && t.dueDate && t.completedAt) {
+        const complDate = new Date(t.completedAt.split('T')[0] + 'T12:00:00');
+        const dueDate = new Date(t.dueDate + 'T12:00:00');
+        if (complDate > dueDate) {
+          isLate = true;
+        }
+      }
+      if ((isOverdue || isLate) && t.dueDate) {
+        const day = new Date(t.dueDate + 'T12:00:00').getDay();
+        lateOrOverduePerDay[day]++;
+      }
+    });
+
+    for (let i = 0; i < 7; i++) {
+      if (lateOrOverduePerDay[i] > worstCount && tasksScheduledPerDay[i] >= 3) {
+        worstCount = lateOrOverduePerDay[i];
+        worstDayIdx = i;
+      }
     }
+  }
+
+  // Se houver um melhor dia válido
+  if (bestDayIdx !== -1 && bestRate >= 0.6) {
+    insights.push({
+      type: "achievement",
+      emoji: "📅",
+      confidence: bestRate,
+      message: `Dia de Foco: ${dayNames[bestDayIdx]} é seu dia mais produtivo, com uma taxa de conclusão de ${Math.round(bestRate * 100)}% (de ${tasksScheduledPerDay[bestDayIdx]} tarefas).`,
+      sampleSize: tasksScheduledPerDay[bestDayIdx]
+    });
+  }
+
+  // Se houver um pior dia válido
+  if (worstDayIdx !== -1 && worstDayIdx !== bestDayIdx) {
+    const totalScheduled = tasksScheduledPerDay[worstDayIdx];
+    const failRate = totalScheduled > 0 ? worstCount / totalScheduled : 0;
+    insights.push({
+      type: "risk",
+      emoji: "📉",
+      confidence: failRate > 1 ? 1 : failRate,
+      message: `Ritmo de Atenção: ${dayNames[worstDayIdx]} é o dia com mais tarefas atrasadas ou pendentes (${worstCount} de ${totalScheduled} tarefas). Tente programar menos atividades para este dia.`,
+      sampleSize: totalScheduled
+    });
   }
 
   // ─── 5. Padrões de consistência por Categoria ───────────────────────────────
@@ -193,19 +249,55 @@ export function generateInsights(tasks = [], events = []) {
       type: 'achievement',
       emoji: '🏆',
       confidence: bestPct,
-      message: `Alta Performance na categoria "${bestCat}": você conclui ${Math.round(bestPct * 100)}% das tarefas propostas. Excelente trabalho!`
+      message: `Alta Performance na categoria "${bestCat}": você conclui ${Math.round(bestPct * 100)}% das tarefas propostas. Excelente trabalho!`,
+      sampleSize: catTotal[bestCat]
     });
   }
 
-  // Fallback se nenhum insight avançado foi gerado
+  // Fallback se nenhum insight avançado foi gerado (Coletando Dados / Estado Inicial)
   if (insights.length === 0) {
     insights.push({
       type: 'suggestion',
       emoji: '💡',
       confidence: 0.60,
-      message: 'Organizar suas tarefas por prioridade (Alta, Média, Baixa) ajuda a reduzir a fadiga de decisão no início do dia.'
+      message: 'Estamos analisando seus padrões. Organizar suas tarefas por prioridade (Alta, Média, Baixa) ajuda a reduzir a fadiga de decisão no início do dia.',
+      sampleSize: tasks.length || 1
     });
   }
 
-  return insights;
+  const allTaskDates = tasks.map(t => new Date(t.completedAt || t.dueDate || t.createdAt).getTime()).filter(Boolean);
+  const timeRangeWeeks = allTaskDates.length > 1
+    ? Math.max(1, Math.ceil((Math.max(...allTaskDates) - Math.min(...allTaskDates)) / (7 * 24 * 60 * 60 * 1000)))
+    : 1;
+
+  return insights.map(ins => {
+    let sampleSize = ins.sampleSize;
+    if (!sampleSize) {
+      if (ins.type === 'risk') {
+        sampleSize = completed.length;
+      } else if (ins.type === 'habit') {
+        sampleSize = emergenteCount || completed.length;
+      } else if (ins.message?.includes('Foco Máximo')) {
+        sampleSize = totalHourStats;
+      } else if (ins.message?.includes('Dia de Foco')) {
+        sampleSize = totalDayStats;
+      } else if (ins.message?.includes('Performance')) {
+        sampleSize = bestCat ? catTotal[bestCat] : completed.length;
+      } else {
+        sampleSize = completed.length || tasks.length || 1;
+      }
+    }
+
+    const confidence = ins.confidence ?? 0.6;
+    const confidenceLevel = confidence >= 0.8 ? 'alta' : confidence >= 0.5 ? 'média' : 'baixa';
+    const estimatedAccuracy = Math.round(confidence * 100);
+
+    return {
+      ...ins,
+      confidenceLevel,
+      sampleSize,
+      timeRangeWeeks,
+      estimatedAccuracy
+    };
+  });
 }

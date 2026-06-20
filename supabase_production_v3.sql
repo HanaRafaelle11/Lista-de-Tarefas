@@ -583,6 +583,7 @@ CREATE TABLE IF NOT EXISTS public.user_achievements (
   unlocked_at TIMESTAMPTZ DEFAULT now(),
   seen BOOLEAN DEFAULT FALSE,
   viewed_at TIMESTAMPTZ DEFAULT NULL,
+  dismissed_at TIMESTAMPTZ DEFAULT NULL,
   PRIMARY KEY (user_id, achievement_key)
 );
 

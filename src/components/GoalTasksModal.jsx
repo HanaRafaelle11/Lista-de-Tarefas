@@ -1,5 +1,36 @@
 import React, { useState, useMemo } from 'react';
+import * as LucideIcons from 'lucide-react';
 import { X, Search, Check, Link2, Unlink, Tag, AlertCircle, Calendar, Inbox } from 'lucide-react';
+
+function GoalIcon({ name, size = 18, className = '' }) {
+  if (!name) return null;
+  const isEmoji = /\p{Emoji}/u.test(name) && !/^[a-zA-Z0-9-]+$/.test(name);
+  if (isEmoji) {
+    return <span className={className} role="img" aria-label="ícone">{name}</span>;
+  }
+  
+  const iconMap = {
+    target: LucideIcons.Target,
+    rocket: LucideIcons.Rocket,
+    book: LucideIcons.BookOpen,
+    dollar: LucideIcons.DollarSign,
+    home: LucideIcons.Home,
+    globe: LucideIcons.Globe,
+    dumbbell: LucideIcons.Dumbbell,
+    brain: LucideIcons.Brain,
+    heart: LucideIcons.Heart,
+    palette: LucideIcons.Palette,
+    music: LucideIcons.Music,
+    plane: LucideIcons.Plane,
+    sprout: LucideIcons.Sprout,
+    trending: LucideIcons.TrendingUp,
+    star: LucideIcons.Star,
+    users: LucideIcons.Users,
+  };
+
+  const IconComponent = iconMap[name.toLowerCase()] || LucideIcons.Target;
+  return <IconComponent size={size} className={className} />;
+}
 
 function formatDate(dateStr) {
   if (!dateStr) return null;
@@ -37,7 +68,9 @@ export default function GoalTasksModal({ isOpen, onClose, goal, tasks, linkedTas
         {/* Header */}
         <div className="todo-modal-header">
           <div className="tasks-modal-title-wrap">
-            <span className="tasks-modal-icon">{goal.icon}</span>
+            <span className="tasks-modal-icon" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+              <GoalIcon name={goal.icon} size={20} />
+            </span>
             <div>
               <h2 className="todo-modal-title">Tarefas vinculadas</h2>
               <p className="goal-tasks-modal-subtitle">

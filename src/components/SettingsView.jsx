@@ -1,15 +1,33 @@
 import React, { useState, useEffect } from 'react';
-import { Settings, User, Moon, Sun, Bell, Shield, Heart, BellOff, BellRing, CheckCircle, Award, MessageSquare, Calendar } from 'lucide-react';
+import { Settings, User, Moon, Sun, Bell, Shield, Heart, BellOff, BellRing, CheckCircle, Award, MessageSquare, Calendar, X } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import { useNotifications } from '../hooks/useNotifications';
 import { useAppContext } from '../contexts/AppContext';
 import { exportAllTasksToCalendar } from '../services/googleCalendarService';
 
 export default function SettingsView() {
-  const { theme, setTheme, currentUser, handleLogout, isPro, handleSimulateUpgrade, tasks } = useAppContext();
+  const {
+    theme,
+    setTheme,
+    appBgColor,
+    setAppBgColor,
+    currentUser,
+    handleLogout,
+    isPro,
+    handleSimulateUpgrade,
+    tasks,
+    deletedTasks,
+    deletedGoals,
+    handleRestoreTask,
+    handleDeleteTaskPermanent,
+    handleRestoreGoal,
+    handleDeleteGoalPermanent
+  } = useAppContext();
   const [loading, setLoading] = useState(false);
   const [feedbackText, setFeedbackText] = useState('');
   const [feedbackStatus, setFeedbackStatus] = useState('idle'); // idle, sending, sent, error
+  const [settingsTab, setSettingsTab] = useState('general'); // 'general' | 'trash'
+  const [isSyncModalOpen, setIsSyncModalOpen] = useState(false);
   const notifications = useNotifications();
 
   // MFA States
@@ -178,6 +196,17 @@ export default function SettingsView() {
     }
   };
 
+  const handleExportGoogleCalendar = () => {
+    exportAllTasksToCalendar(tasks);
+    window.open('https://calendar.google.com/calendar/r/settings/export', '_blank');
+    setIsSyncModalOpen(false);
+  };
+
+  const handleExportIcsOnly = () => {
+    exportAllTasksToCalendar(tasks);
+    setIsSyncModalOpen(false);
+  };
+
   const handleSendFeedback = async () => {
     if (!feedbackText.trim()) {
       alert('Por favor, escreva seu feedback antes de enviar.');
@@ -220,10 +249,111 @@ export default function SettingsView() {
       setFeedbackStatus('sent');
       setTimeout(() => setFeedbackStatus('idle'), 4000);
     } catch (err) {
-      console.error('[Feedback] Erro ao enviar feedback:', err);
-      setFeedbackStatus('error');
-      setTimeout(() => setFeedbackStatus('idle'), 4000);
+      console.warn('[Feedback] Salvando localmente devido a falha no serviço:', err);
+      try {
+        const localFeedbackKey = 'flowday_local_feedback';
+        const existing = JSON.parse(localStorage.getItem(localFeedbackKey) || '[]');
+        existing.push({
+          message: feedbackText.trim(),
+          user_id: currentUser?.id || 'demo-user',
+          user_email: currentUser?.email || 'demo@flowday.app',
+          created_at: new Date().toISOString(),
+          synced: false
+        });
+        localStorage.setItem(localFeedbackKey, JSON.stringify(existing));
+        
+        setFeedbackText('');
+        setFeedbackStatus('sent');
+        setTimeout(() => setFeedbackStatus('idle'), 4000);
+      } catch (localErr) {
+        console.error('[Feedback] Erro fatal ao salvar feedback localmente:', localErr);
+        setFeedbackStatus('error');
+        setTimeout(() => setFeedbackStatus('idle'), 4000);
+      }
     }
+  };
+
+  const renderTrashTab = () => {
+    const hasItems = deletedTasks.length > 0 || deletedGoals.length > 0;
+    
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        <div style={{ padding: '16px', backgroundColor: 'rgba(239, 68, 68, 0.05)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(239, 68, 68, 0.1)', fontSize: '13px', color: 'var(--text-muted)' }}>
+          ⚠️ Os itens excluídos permanecem na lixeira por 30 dias antes de serem eliminados permanentemente de forma automática.
+        </div>
+
+        {!hasItems ? (
+          <div style={{ textAlign: 'center', padding: '48px 24px', backgroundColor: 'var(--bg-card)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-light)' }}>
+            <span style={{ fontSize: '32px' }}>🗑️</span>
+            <h3 style={{ fontSize: '16px', fontWeight: '700', marginTop: '12px', color: 'var(--text-main)' }}>Lixeira Vazia</h3>
+            <p style={{ fontSize: '13px', color: 'var(--text-light)', marginTop: '4px' }}>
+              Nenhuma tarefa ou objetivo foi removido recentemente.
+            </p>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            {deletedGoals.length > 0 && (
+              <div style={{ backgroundColor: 'var(--bg-card)', padding: '20px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-light)' }}>
+                <h3 style={{ fontSize: '14px', fontWeight: '700', marginBottom: '12px', color: 'var(--text-main)', borderBottom: '1px solid var(--border-light)', paddingBottom: '6px' }}>Objetivos Excluídos</h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  {deletedGoals.map(goal => (
+                    <div key={goal.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', border: '1px solid var(--border-light)', borderRadius: 'var(--radius-sm)', backgroundColor: 'var(--bg-app)' }}>
+                      <span style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span>{goal.title}</span>
+                      </span>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <button 
+                          onClick={() => handleRestoreGoal(goal.id)}
+                          style={{ fontSize: '12px', fontWeight: '600', padding: '6px 12px', color: 'var(--primary)', backgroundColor: 'var(--primary-light)', borderRadius: '4px', cursor: 'pointer' }}
+                        >
+                          Restaurar
+                        </button>
+                        <button 
+                          onClick={() => handleDeleteGoalPermanent(goal.id)}
+                          style={{ fontSize: '12px', fontWeight: '600', padding: '6px 12px', color: '#ef4444', backgroundColor: 'rgba(239, 68, 68, 0.08)', borderRadius: '4px', cursor: 'pointer' }}
+                        >
+                          Excluir permanente
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {deletedTasks.length > 0 && (
+              <div style={{ backgroundColor: 'var(--bg-card)', padding: '20px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-light)' }}>
+                <h3 style={{ fontSize: '14px', fontWeight: '700', marginBottom: '12px', color: 'var(--text-main)', borderBottom: '1px solid var(--border-light)', paddingBottom: '6px' }}>Tarefas Excluídas</h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  {deletedTasks.map(task => (
+                    <div key={task.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', border: '1px solid var(--border-light)', borderRadius: 'var(--radius-sm)', backgroundColor: 'var(--bg-app)' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', alignItems: 'flex-start' }}>
+                        <span style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-main)' }}>{task.title}</span>
+                        <span style={{ fontSize: '10px', color: 'var(--text-light)' }}>Categoria: {task.category}</span>
+                      </div>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <button 
+                          onClick={() => handleRestoreTask(task.id)}
+                          style={{ fontSize: '12px', fontWeight: '600', padding: '6px 12px', color: 'var(--primary)', backgroundColor: 'var(--primary-light)', borderRadius: '4px', cursor: 'pointer' }}
+                        >
+                          Restaurar
+                        </button>
+                        <button 
+                          onClick={() => handleDeleteTaskPermanent(task.id)}
+                          style={{ fontSize: '12px', fontWeight: '600', padding: '6px 12px', color: '#ef4444', backgroundColor: 'rgba(239, 68, 68, 0.08)', borderRadius: '4px', cursor: 'pointer' }}
+                        >
+                          Excluir permanente
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    );
   };
 
   return (
@@ -235,7 +365,39 @@ export default function SettingsView() {
         <p className="tasks-page-subtitle">Ajuste suas preferências</p>
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+      <div style={{ display: 'flex', gap: '12px', marginBottom: '24px', borderBottom: '1px solid var(--border-light)', paddingBottom: '12px' }}>
+        <button
+          onClick={() => setSettingsTab('general')}
+          style={{
+            padding: '8px 16px',
+            borderRadius: '6px',
+            fontSize: '13px',
+            fontWeight: '600',
+            backgroundColor: settingsTab === 'general' ? 'var(--primary-light)' : 'transparent',
+            color: settingsTab === 'general' ? 'var(--primary)' : 'var(--text-muted)',
+            cursor: 'pointer'
+          }}
+        >
+          Configurações Gerais
+        </button>
+        <button
+          onClick={() => setSettingsTab('trash')}
+          style={{
+            padding: '8px 16px',
+            borderRadius: '6px',
+            fontSize: '13px',
+            fontWeight: '600',
+            backgroundColor: settingsTab === 'trash' ? 'var(--primary-light)' : 'transparent',
+            color: settingsTab === 'trash' ? 'var(--primary)' : 'var(--text-muted)',
+            cursor: 'pointer'
+          }}
+        >
+          Lixeira
+        </button>
+      </div>
+
+      {settingsTab === 'general' ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
         
         {/* Perfil */}
         <div style={{ backgroundColor: 'var(--bg-card)', padding: '24px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-light)' }}>
@@ -438,7 +600,7 @@ export default function SettingsView() {
             </p>
             <button
               onClick={() => {
-                exportAllTasksToCalendar(tasks);
+                setIsSyncModalOpen(true);
               }}
               style={{
                 alignSelf: 'flex-start',
@@ -457,7 +619,7 @@ export default function SettingsView() {
                 gap: '8px'
               }}
             >
-              <Calendar size={14} /> Sincronizar Calendário (.ics)
+              <Calendar size={14} /> Sincronizar Calendário
             </button>
           </div>
         </div>
@@ -489,6 +651,46 @@ export default function SettingsView() {
               </button>
             ))}
           </div>
+
+          {theme !== 'dark' && (
+            <div style={{ marginTop: '20px', paddingTop: '16px', borderTop: '1px solid var(--border-light)' }}>
+              <span style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-main)', display: 'block', marginBottom: '10px' }}>
+                Cor de Fundo Personalizada (Modo Claro)
+              </span>
+              <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                {[
+                  { color: '#F8FAFC', label: 'Padrão' },
+                  { color: '#FAF5FF', label: 'Lilás' },
+                  { color: '#F0F9FF', label: 'Azul' },
+                  { color: '#F0FDF4', label: 'Menta' },
+                  { color: '#FFF7ED', label: 'Pêssego' }
+                ].map(bg => (
+                  <button
+                    key={bg.color}
+                    onClick={() => setAppBgColor(bg.color)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      padding: '8px 12px',
+                      borderRadius: '6px',
+                      border: `1.5px solid ${appBgColor === bg.color ? 'var(--primary)' : 'var(--border-medium)'}`,
+                      backgroundColor: bg.color,
+                      color: 'var(--text-main)',
+                      fontSize: '12.5px',
+                      fontWeight: '600',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s'
+                    }}
+                  >
+                    <span style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: bg.color, border: '1px solid var(--border-medium)', display: 'inline-block' }} />
+                    {bg.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           <p style={{ fontSize: '12px', color: 'var(--text-light)', marginTop: '12px' }}>
             O Flowday se adapta à sua preferência. O modo escuro reduz o cansaço visual.
           </p>
@@ -596,12 +798,12 @@ export default function SettingsView() {
         {/* Seção de Feedback */}
         <div style={{ backgroundColor: 'var(--bg-card)', padding: '24px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-light)' }}>
           <h2 style={{ fontSize: '16px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-            <MessageSquare size={18} /> Fale com a Gente
+            <MessageSquare size={18} /> Compartilhe com o MyFlowDay
           </h2>
           <textarea
             value={feedbackText}
             onChange={(e) => setFeedbackText(e.target.value)}
-            placeholder="Compartilhe suas ideias, problemas ou sugestões para o Flowday..."
+            placeholder="Compartilhe suas ideias, problemas ou sugestões com o MyFlowDay..."
             rows="5"
             style={{ width: '100%', padding: '12px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-medium)', backgroundColor: 'var(--bg-app)', color: 'var(--text-main)', resize: 'vertical', fontSize: '14px' }}
           />
@@ -664,7 +866,88 @@ export default function SettingsView() {
           </div>
         </div>
 
-      </div>
+        </div>
+      ) : (
+        renderTrashTab()
+      )}
+
+      {/* Modal de Escolha de Sincronização do Calendário */}
+      {isSyncModalOpen && (
+        <div className="modal-overlay" onClick={() => setIsSyncModalOpen(false)} style={{ zIndex: 12000 }}>
+          <div 
+            className="modal-content" 
+            role="dialog" 
+            aria-modal="true" 
+            onClick={e => e.stopPropagation()}
+            style={{ maxWidth: '420px', width: '90%', padding: '24px', textAlign: 'center', backgroundColor: 'var(--bg-card)', borderRadius: 'var(--radius-lg)' }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h3 style={{ fontSize: '16px', fontWeight: '700', color: 'var(--text-main)', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Calendar size={18} style={{ color: 'var(--primary)' }} /> Sincronizar Calendário
+              </h3>
+              <button 
+                onClick={() => setIsSyncModalOpen(false)} 
+                className="todo-modal-close-btn"
+                style={{ background: 'none', border: 'none', color: 'var(--text-light)', cursor: 'pointer', padding: '4px' }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '20px', lineHeight: '1.5', textAlign: 'left' }}>
+              Escolha o formato que preferir para integrar suas tarefas agendadas ao seu calendário pessoal:
+            </p>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <button
+                onClick={handleExportGoogleCalendar}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  padding: '14px',
+                  borderRadius: '8px',
+                  border: '1px solid var(--border-light)',
+                  backgroundColor: 'var(--bg-app)',
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  transition: 'border-color 0.2s',
+                  width: '100%',
+                }}
+              >
+                <span style={{ fontSize: '24px' }}>📅</span>
+                <div>
+                  <strong style={{ display: 'block', fontSize: '13px', color: 'var(--text-main)' }}>Google Calendar (Recomendado)</strong>
+                  <span style={{ fontSize: '11px', color: 'var(--text-light)' }}>Exporta o arquivo .ics e abre a página de importação do Google.</span>
+                </div>
+              </button>
+
+              <button
+                onClick={handleExportIcsOnly}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  padding: '14px',
+                  borderRadius: '8px',
+                  border: '1px solid var(--border-light)',
+                  backgroundColor: 'var(--bg-app)',
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  transition: 'border-color 0.2s',
+                  width: '100%',
+                }}
+              >
+                <span style={{ fontSize: '24px' }}>📥</span>
+                <div>
+                  <strong style={{ display: 'block', fontSize: '13px', color: 'var(--text-main)' }}>Baixar arquivo .ics</strong>
+                  <span style={{ fontSize: '11px', color: 'var(--text-light)' }}>Apenas exporta e baixa o arquivo de calendário para programas locais.</span>
+                </div>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

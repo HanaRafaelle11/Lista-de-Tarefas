@@ -14,7 +14,8 @@ const mapTask = (t) => ({
   completed: t.completed,
   createdAt: t.created_at || new Date().toISOString(),
   completedAt: t.completed_at || null,
-  updatedAt: t.updated_at || new Date().toISOString()
+  updatedAt: t.updated_at || new Date().toISOString(),
+  deletedAt: t.deleted_at || null
 });
 
 // Guard: bloqueia queries sem usuário autenticado
@@ -179,17 +180,52 @@ export const tasksService = {
   },
 
   /**
-   * Exclui uma tarefa permanentemente.
-   * Remove do cache local e sincroniza.
+   * Exclui uma tarefa logicamente (Soft Delete).
+   * Define deletedAt no cache local e no Supabase.
    */
   delete: async (userId, id) => {
+    requireUser(userId);
+    const nowIso = new Date().toISOString();
+    
+    // 1. Marca como excluído logicamente no cache local
+    try {
+      const existing = await localDB.get('tasks', id);
+      if (existing) {
+        existing.deletedAt = nowIso;
+        await localDB.put('tasks', existing);
+      }
+    } catch (err) {
+      console.warn('[tasksService.delete] Erro ao marcar soft delete local:', err.message);
+    }
+
+    // 2. Tenta fazer o update de deleted_at no Supabase
+    try {
+      const { error } = await supabase
+        .from('tasks')
+        .update({ deleted_at: nowIso })
+        .eq('id', id)
+        .eq('user_id', userId);
+
+      if (error) throw error;
+      return { error: null };
+    } catch (error) {
+      console.warn('[tasksService.delete] Falha ao marcar soft delete no Supabase — enfileirado:', error.message);
+      enqueue('task_update', { userId, id, updates: { deleted_at: nowIso } });
+      return { error, degraded: true };
+    }
+  },
+
+  /**
+   * Exclui uma tarefa permanentemente (Hard Delete).
+   */
+  deletePermanent: async (userId, id) => {
     requireUser(userId);
     
     // 1. Remove do cache local
     try {
       await localDB.delete('tasks', id);
     } catch (err) {
-      console.warn('[tasksService.delete] Erro ao excluir do cache local:', err.message);
+      console.warn('[tasksService.deletePermanent] Erro ao excluir do cache local:', err.message);
     }
 
     // 2. Tenta deletar no Supabase
@@ -203,8 +239,42 @@ export const tasksService = {
       if (error) throw error;
       return { error: null };
     } catch (error) {
-      console.warn('[tasksService.delete] Falha ao excluir tarefa — enfileirado:', error.message);
+      console.warn('[tasksService.deletePermanent] Falha ao excluir fisicamente do Supabase — enfileirado:', error.message);
       enqueue('task_delete', { userId, id });
+      return { error, degraded: true };
+    }
+  },
+
+  /**
+   * Restaura uma tarefa soft-deletada (limpa deletedAt).
+   */
+  restore: async (userId, id) => {
+    requireUser(userId);
+    
+    // 1. Limpa deletedAt no cache local
+    try {
+      const existing = await localDB.get('tasks', id);
+      if (existing) {
+        existing.deletedAt = null;
+        await localDB.put('tasks', existing);
+      }
+    } catch (err) {
+      console.warn('[tasksService.restore] Erro ao restaurar no cache local:', err.message);
+    }
+
+    // 2. Tenta limpar no Supabase
+    try {
+      const { error } = await supabase
+        .from('tasks')
+        .update({ deleted_at: null })
+        .eq('id', id)
+        .eq('user_id', userId);
+
+      if (error) throw error;
+      return { error: null };
+    } catch (error) {
+      console.warn('[tasksService.restore] Falha ao restaurar no Supabase — enfileirado:', error.message);
+      enqueue('task_update', { userId, id, updates: { deleted_at: null } });
       return { error, degraded: true };
     }
   },

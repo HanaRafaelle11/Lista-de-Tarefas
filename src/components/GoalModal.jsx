@@ -1,28 +1,73 @@
 import React, { useState, useEffect, useRef } from 'react';
+import * as LucideIcons from 'lucide-react';
 import { X, Plus, Trash2, Smile, Calendar, Clock, Target, Edit2 } from 'lucide-react';
 import EmojiPicker from 'emoji-picker-react';
 
 const COLORS = [
-  { value: '#4A654E', label: 'Verde Sálvia' },
-  { value: '#9B6B5A', label: 'Terracota' },
-  { value: '#5A6B7A', label: 'Azul Ardósia' },
-  { value: '#B09060', label: 'Âmbar' },
-  { value: '#8A6B8A', label: 'Malva' },
-  { value: '#7A8A5A', label: 'Verde Oliva' },
-  { value: '#6A6A9A', label: 'Índigo' },
-  { value: '#6A6A6A', label: 'Chumbo' },
+  { value: 'hsl(243, 75%, 59%)', label: 'Foco & Trabalho (Índigo)' },
+  { value: 'hsl(162, 76%, 45%)', label: 'Saúde & Hábitos (Esmeralda)' },
+  { value: 'hsl(217, 91%, 60%)', label: 'Crescimento & Estudos (Azul)' },
+  { value: 'hsl(38, 92%, 50%)', label: 'Pessoal & Projetos (Âmbar)' },
+  { value: 'hsl(322, 85%, 60%)', label: 'Bem-estar (Rosa)' },
+  { value: 'hsl(280, 75%, 60%)', label: 'Mente (Roxo)' },
+  { value: 'hsl(180, 75%, 40%)', label: 'Finanças (Ciano)' },
+  { value: 'hsl(0, 75%, 60%)', label: 'Urgente (Vermelho)' },
 ];
 
 const ICONS = [
-  '🎯', '🚀', '📚', '💰', '🏠', '🌍', '💪', '🧠',
-  '❤️', '🎨', '🎵', '🏋️', '✈️', '🌱', '📈', '⭐',
+  { value: 'target', label: 'Alvo' },
+  { value: 'rocket', label: 'Foguete' },
+  { value: 'book', label: 'Livro' },
+  { value: 'dollar', label: 'Dinheiro' },
+  { value: 'home', label: 'Casa' },
+  { value: 'globe', label: 'Mundo' },
+  { value: 'dumbbell', label: 'Exercício' },
+  { value: 'brain', label: 'Mente' },
+  { value: 'heart', label: 'Saúde' },
+  { value: 'palette', label: 'Arte' },
+  { value: 'music', label: 'Música' },
+  { value: 'plane', label: 'Viagem' },
+  { value: 'sprout', label: 'Crescimento' },
+  { value: 'trending', label: 'Tendência' },
+  { value: 'star', label: 'Destaque' },
+  { value: 'users', label: 'Social' },
 ];
+
+function GoalIcon({ name, size = 18, className = '' }) {
+  if (!name) return null;
+  const isEmoji = /\p{Emoji}/u.test(name) && !/^[a-zA-Z0-9-]+$/.test(name);
+  if (isEmoji) {
+    return <span className={className} role="img" aria-label="ícone">{name}</span>;
+  }
+  
+  const iconMap = {
+    target: LucideIcons.Target,
+    rocket: LucideIcons.Rocket,
+    book: LucideIcons.BookOpen,
+    dollar: LucideIcons.DollarSign,
+    home: LucideIcons.Home,
+    globe: LucideIcons.Globe,
+    dumbbell: LucideIcons.Dumbbell,
+    brain: LucideIcons.Brain,
+    heart: LucideIcons.Heart,
+    palette: LucideIcons.Palette,
+    music: LucideIcons.Music,
+    plane: LucideIcons.Plane,
+    sprout: LucideIcons.Sprout,
+    trending: LucideIcons.TrendingUp,
+    star: LucideIcons.Star,
+    users: LucideIcons.Users,
+  };
+
+  const IconComponent = iconMap[name.toLowerCase()] || LucideIcons.Target;
+  return <IconComponent size={size} className={className} />;
+}
 
 export default function GoalModal({ isOpen, onClose, onSave, onDelete, editingGoal }) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [color, setColor] = useState('#4A654E');
-  const [icon, setIcon] = useState('🎯');
+  const [color, setColor] = useState('hsl(243, 75%, 59%)');
+  const [icon, setIcon] = useState('target');
   const [targetDate, setTargetDate] = useState('');
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
@@ -35,22 +80,31 @@ export default function GoalModal({ isOpen, onClose, onSave, onDelete, editingGo
     if (editingGoal) {
       setTitle(editingGoal.title || '');
       setDescription(editingGoal.description || '');
-      setColor(editingGoal.color || '#4A654E');
-      setIcon(editingGoal.icon || '🎯');
+      setColor(editingGoal.color || 'hsl(243, 75%, 59%)');
+      setIcon(editingGoal.icon || 'target');
       setTargetDate(editingGoal.target_date || '');
       setStartTime(editingGoal.start_time || '');
       setEndTime(editingGoal.end_time || '');
     } else {
       setTitle('');
       setDescription('');
-      setColor('#4A654E');
-      setIcon('🎯');
+      setColor('hsl(243, 75%, 59%)');
+      setIcon('target');
       setTargetDate('');
       setStartTime('');
       setEndTime('');
       setActions([]);
     }
   }, [editingGoal, isOpen]);
+
+  // ESC key listener
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && isOpen) onClose();
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -124,7 +178,9 @@ export default function GoalModal({ isOpen, onClose, onSave, onDelete, editingGo
         <form onSubmit={handleSubmit} className="todo-modal-form">
           {/* Preview do objetivo */}
           <div className="goal-modal-preview" style={{ borderLeftColor: color }}>
-            <span className="goal-modal-preview-icon">{icon}</span>
+            <span className="goal-modal-preview-icon" style={{ display: 'inline-flex', alignItems: 'center', color }}>
+              <GoalIcon name={icon} size={24} />
+            </span>
             <span className="goal-modal-preview-title">
               {title || 'Meu objetivo...'}
             </span>
@@ -157,47 +213,77 @@ export default function GoalModal({ isOpen, onClose, onSave, onDelete, editingGo
             />
           </div>
 
-          {/* Seleção de Ícone — Emoji Picker */}
+          {/* Seleção de Ícone — Lucide Grid + Emoji Picker Fallback */}
           <div className="todo-form-group">
-            <label className="todo-form-label">Ícone (Emoji)</label>
-            <div style={{ position: 'relative' }} ref={emojiPickerRef}>
-              <button
-                type="button"
-                onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  padding: '10px 16px',
-                  border: '1px solid var(--border-medium)',
-                  borderRadius: 'var(--radius-sm)',
-                  backgroundColor: 'var(--bg-app)',
-                  cursor: 'pointer',
-                  fontSize: '22px',
-                  color: 'var(--text-main)',
-                  transition: 'all 0.15s',
-                }}
-                title="Selecionar emoji"
-              >
-                <span>{icon}</span>
-                <Smile size={14} style={{ color: 'var(--text-light)', marginLeft: '4px' }} />
-              </button>
-              {showEmojiPicker && (
-                <div style={{ position: 'absolute', top: '100%', left: 0, zIndex: 9999, marginTop: '4px' }}>
-                  <EmojiPicker
-                    onEmojiClick={(emojiData) => {
-                      setIcon(emojiData.emoji);
-                      setShowEmojiPicker(false);
+            <label className="todo-form-label">Ícone do Objetivo</label>
+            <div className="goal-icon-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(8, 1fr)', gap: '8px', marginBottom: '8px' }}>
+              {ICONS.map(i => {
+                const isSelected = icon === i.value;
+                return (
+                  <button
+                    key={i.value}
+                    type="button"
+                    onClick={() => setIcon(i.value)}
+                    className={`goal-icon-btn ${isSelected ? 'selected' : ''}`}
+                    title={i.label}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      padding: '8px',
+                      border: isSelected ? '2px solid var(--primary)' : '1px solid var(--border-medium)',
+                      borderRadius: 'var(--radius-sm)',
+                      backgroundColor: isSelected ? 'var(--primary-light)' : 'var(--bg-app)',
+                      cursor: 'pointer',
+                      color: isSelected ? 'var(--primary)' : 'var(--text-main)',
+                      transition: 'all 0.15s'
                     }}
-                    autoFocusSearch={false}
-                    lazyLoadEmojis={true}
-                    height={380}
-                    width={320}
-                    searchPlaceholder="Buscar emoji..."
-                    previewConfig={{ showPreview: false }}
-                  />
-                </div>
-              )}
+                  >
+                    <GoalIcon name={i.value} size={18} />
+                  </button>
+                );
+              })}
+            </div>
+            
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '8px' }}>
+              <span style={{ fontSize: '12px', color: 'var(--text-light)' }}>Ou escolha um emoji personalizado:</span>
+              <div style={{ position: 'relative' }} ref={emojiPickerRef}>
+                <button
+                  type="button"
+                  onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    padding: '6px 12px',
+                    border: '1px solid var(--border-medium)',
+                    borderRadius: 'var(--radius-sm)',
+                    backgroundColor: 'var(--bg-app)',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    color: 'var(--text-main)',
+                  }}
+                >
+                  <Smile size={14} style={{ color: 'var(--text-light)' }} />
+                  <span>Outro emoji...</span>
+                </button>
+                {showEmojiPicker && (
+                  <div style={{ position: 'absolute', top: '100%', left: 0, zIndex: 9999, marginTop: '4px' }}>
+                    <EmojiPicker
+                      onEmojiClick={(emojiData) => {
+                        setIcon(emojiData.emoji);
+                        setShowEmojiPicker(false);
+                      }}
+                      autoFocusSearch={false}
+                      lazyLoadEmojis={true}
+                      height={380}
+                      width={320}
+                      searchPlaceholder="Buscar emoji..."
+                      previewConfig={{ showPreview: false }}
+                    />
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 

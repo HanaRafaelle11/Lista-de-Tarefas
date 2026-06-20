@@ -1,6 +1,38 @@
 import React from 'react';
+import * as LucideIcons from 'lucide-react';
 import { Calendar, MoreVertical, Trash2, Archive, CheckCircle, RotateCcw, Link2, Edit2, Award, Clock } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
+
+// Componente para renderizar ícone do objetivo (Lucide ou Emoji)
+function GoalIcon({ name, size = 18, className = '' }) {
+  if (!name) return null;
+  const isEmoji = /\p{Emoji}/u.test(name) && !/^[a-zA-Z0-9-]+$/.test(name);
+  if (isEmoji) {
+    return <span className={className} role="img" aria-label="ícone">{name}</span>;
+  }
+  
+  const iconMap = {
+    target: LucideIcons.Target,
+    rocket: LucideIcons.Rocket,
+    book: LucideIcons.BookOpen,
+    dollar: LucideIcons.DollarSign,
+    home: LucideIcons.Home,
+    globe: LucideIcons.Globe,
+    dumbbell: LucideIcons.Dumbbell,
+    brain: LucideIcons.Brain,
+    heart: LucideIcons.Heart,
+    palette: LucideIcons.Palette,
+    music: LucideIcons.Music,
+    plane: LucideIcons.Plane,
+    sprout: LucideIcons.Sprout,
+    trending: LucideIcons.TrendingUp,
+    star: LucideIcons.Star,
+    users: LucideIcons.Users,
+  };
+
+  const IconComponent = iconMap[name.toLowerCase()] || LucideIcons.Target;
+  return <IconComponent size={size} className={className} style={{ color: 'var(--goal-color, var(--primary))' }} />;
+}
 
 // Formata data para pt-BR legível
 function formatDate(dateStr) {
@@ -98,8 +130,8 @@ export default function GoalCard({
       {/* Header */}
       <div className="goal-card-header">
         <div className="goal-card-identity">
-          <span className="goal-card-icon" role="img" aria-label="ícone do objetivo">
-            {goal.icon}
+          <span className="goal-card-icon-container" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '38px', height: '38px', borderRadius: 'var(--radius-sm)', backgroundColor: 'color-mix(in srgb, var(--goal-color, var(--primary)) 8%, var(--bg-card))', border: '1px solid color-mix(in srgb, var(--goal-color, var(--primary)) 20%, var(--border-light))', flexShrink: 0 }}>
+            <GoalIcon name={goal.icon} size={20} />
           </span>
           <div className="goal-card-title-block">
             <h3 className="goal-card-title">{goal.title}</h3>

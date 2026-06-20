@@ -73,6 +73,34 @@ export const ACHIEVEMENTS = [
     desc: '10 objetivos concluídos. Você constrói grandes coisas.',
     check: (s) => s.completedGoals >= 10,
   },
+  {
+    key: 'pet_lover',
+    emoji: '🐾',
+    title: 'Amigo dos Animais',
+    desc: 'Você concluiu 3 ou mais tarefas de cuidados com pets.',
+    check: (s) => s.petTasksCompleted >= 3,
+  },
+  {
+    key: 'financista',
+    emoji: '💰',
+    title: 'Mestre Financeiro',
+    desc: 'Você concluiu 3 ou mais tarefas de finanças pessoais.',
+    check: (s) => s.financeTasksCompleted >= 3,
+  },
+  {
+    key: 'carreira',
+    emoji: '🚀',
+    title: 'Foco Profissional',
+    desc: 'Você concluiu 3 ou mais tarefas de transição de carreira.',
+    check: (s) => s.careerTasksCompleted >= 3,
+  },
+  {
+    key: 'perfect_habits',
+    emoji: '🏆',
+    title: 'Foco Total',
+    desc: 'Você concluiu 100% dos seus hábitos de hoje.',
+    check: (s) => s.habits100PercentToday === true,
+  },
 ];
 
 // ─── Cálculo de Streak ───────────────────────────────────────────────────────
@@ -119,7 +147,33 @@ export function calcActiveDays(tasks) {
 }
 
 // ─── Calcular todas as stats ─────────────────────────────────────────────────
-export function calcStats(tasks, goals) {
+export function calcStats(tasks, goals, habits = [], habitLogs = []) {
+  let petTasksCompleted = 0;
+  let financeTasksCompleted = 0;
+  let careerTasksCompleted = 0;
+
+  tasks.forEach(t => {
+    if (t.completed) {
+      const marker = '--flowday-meta--';
+      if (t.description && t.description.includes(marker)) {
+        try {
+          const parts = t.description.split(marker);
+          const meta = JSON.parse(parts[1].trim());
+          if (meta.template_name === 'Cuidados com Cachorro') petTasksCompleted++;
+          if (meta.template_name === 'Organizar Finanças Pessoais') financeTasksCompleted++;
+          if (meta.template_name === 'Transição de Carreira') careerTasksCompleted++;
+        } catch (e) {
+          // ignore
+        }
+      }
+    }
+  });
+
+  // Cálculo de hábitos completos hoje
+  const todayStr = new Date().toISOString().split('T')[0];
+  const completedHabitsToday = habitLogs.filter(l => l.completed_date === todayStr).length;
+  const habits100PercentToday = habits.length > 0 && completedHabitsToday === habits.length;
+
   return {
     completedTasks: tasks.filter(t => t.completed).length,
     totalTasks: tasks.length,
@@ -131,6 +185,10 @@ export function calcStats(tasks, goals) {
     completionRate: tasks.length > 0
       ? Math.round((tasks.filter(t => t.completed).length / tasks.length) * 100)
       : 0,
+    petTasksCompleted,
+    financeTasksCompleted,
+    careerTasksCompleted,
+    habits100PercentToday
   };
 }
 

@@ -18,6 +18,7 @@ export default function WeeklyPlannerModal({ isOpen, onClose, tasks, onUpdateTas
   const [selectedGoals, setSelectedGoals] = useState([]);
   const [saving, setSaving] = useState(false);
   const [activeAccordion, setActiveAccordion] = useState('focus'); // 'focus' | 'priorities' | 'goals'
+  const [isSyncModalOpen, setIsSyncModalOpen] = useState(false);
 
   // Carrega planejamento semanal existente se houver e reseta tabs
   useEffect(() => {
@@ -181,6 +182,19 @@ export default function WeeklyPlannerModal({ isOpen, onClose, tasks, onUpdateTas
     }
   };
 
+  const handleExportGoogleCalendar = () => {
+    exportAllTasksToCalendar(tasks);
+    window.open('https://calendar.google.com/calendar/r/settings/export', '_blank');
+    setIsSyncModalOpen(false);
+    logEvent('weekly_planner_calendar_google_sync_clicked');
+  };
+
+  const handleExportIcsOnly = () => {
+    exportAllTasksToCalendar(tasks);
+    setIsSyncModalOpen(false);
+    logEvent('weekly_planner_calendar_ics_sync_clicked');
+  };
+
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape' && isOpen) {
@@ -207,7 +221,7 @@ export default function WeeklyPlannerModal({ isOpen, onClose, tasks, onUpdateTas
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <button
               onClick={() => {
-                exportAllTasksToCalendar(tasks);
+                setIsSyncModalOpen(true);
                 logEvent('weekly_planner_calendar_sync');
               }}
               style={{
@@ -367,7 +381,6 @@ export default function WeeklyPlannerModal({ isOpen, onClose, tasks, onUpdateTas
                             onChange={() => {}} // Tratado pelo click do container
                             style={{ cursor: 'pointer' }}
                           />
-                          <span style={{ fontSize: '13px' }}>{goal.icon}</span>
                           <span style={{ fontSize: '13px', color: 'var(--text-main)', fontWeight: '600', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{goal.title}</span>
                         </div>
                       ))}
@@ -551,6 +564,84 @@ export default function WeeklyPlannerModal({ isOpen, onClose, tasks, onUpdateTas
         )}
 
       </div>
+
+      {/* Modal de Escolha de Sincronização do Calendário */}
+      {isSyncModalOpen && (
+        <div className="modal-overlay" onClick={() => setIsSyncModalOpen(false)} style={{ zIndex: 12000 }}>
+          <div 
+            className="modal-content" 
+            role="dialog" 
+            aria-modal="true" 
+            onClick={e => e.stopPropagation()}
+            style={{ maxWidth: '420px', width: '90%', padding: '24px', textAlign: 'center', backgroundColor: 'var(--bg-card)', borderRadius: 'var(--radius-lg)' }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h3 style={{ fontSize: '16px', fontWeight: '700', color: 'var(--text-main)', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Calendar size={18} style={{ color: 'var(--primary)' }} /> Sincronizar Calendário
+              </h3>
+              <button 
+                onClick={() => setIsSyncModalOpen(false)} 
+                className="todo-modal-close-btn"
+                style={{ background: 'none', border: 'none', color: 'var(--text-light)', cursor: 'pointer', padding: '4px' }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '20px', lineHeight: '1.5', textAlign: 'left' }}>
+              Escolha o formato que preferir para integrar suas tarefas agendadas ao seu calendário pessoal:
+            </p>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <button
+                onClick={handleExportGoogleCalendar}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  padding: '14px',
+                  borderRadius: '8px',
+                  border: '1px solid var(--border-light)',
+                  backgroundColor: 'var(--bg-app)',
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  transition: 'border-color 0.2s',
+                  width: '100%',
+                }}
+              >
+                <span style={{ fontSize: '24px' }}>📅</span>
+                <div>
+                  <strong style={{ display: 'block', fontSize: '13px', color: 'var(--text-main)' }}>Google Calendar (Recomendado)</strong>
+                  <span style={{ fontSize: '11px', color: 'var(--text-light)' }}>Exporta o arquivo .ics e abre a página de importação do Google.</span>
+                </div>
+              </button>
+
+              <button
+                onClick={handleExportIcsOnly}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  padding: '14px',
+                  borderRadius: '8px',
+                  border: '1px solid var(--border-light)',
+                  backgroundColor: 'var(--bg-app)',
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  transition: 'border-color 0.2s',
+                  width: '100%',
+                }}
+              >
+                <span style={{ fontSize: '24px' }}>📥</span>
+                <div>
+                  <strong style={{ display: 'block', fontSize: '13px', color: 'var(--text-main)' }}>Baixar arquivo .ics</strong>
+                  <span style={{ fontSize: '11px', color: 'var(--text-light)' }}>Apenas exporta e baixa o arquivo de calendário para programas locais.</span>
+                </div>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

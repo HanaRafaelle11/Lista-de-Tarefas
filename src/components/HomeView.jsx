@@ -3,6 +3,7 @@ import { Target, CheckCircle, Clock, ChevronRight, Award, Plus, Flame, Calendar,
 import { calcStreak, ACHIEVEMENTS } from '../hooks/useAchievements';
 import { useAuraAssistant } from '../hooks/useAuraAssistant';
 import AuraAssistantWidget from './AuraAssistantWidget';
+import Skeleton from './Skeleton';
 import { useAppContext } from '../contexts/AppContext';
 import MFIcon from './MFIcon';
 // Formata data amigável
@@ -15,15 +16,14 @@ function formatFriendlyDate(dateStr) {
 }
 
 // Widget de objetivo individual (linha compacta para a Home)
-function GoalProgressRow({ goal, linkedTasks }) {
+function GoalProgressRow({ goal, linkedTasks, onClick }) {
   const total = linkedTasks.length;
   const done = linkedTasks.filter(t => t.completed).length;
   const pct = total > 0 ? Math.round((done / total) * 100) : 0;
 
   return (
-    <div className="home-goal-row">
+    <div className="home-goal-row" onClick={onClick} style={{ cursor: 'pointer' }}>
       <div className="home-goal-row-identity">
-        <span className="home-goal-row-icon">{goal.icon}</span>
         <span className="home-goal-row-title">{goal.title}</span>
       </div>
       <div className="home-goal-row-progress">
@@ -41,7 +41,8 @@ function GoalProgressRow({ goal, linkedTasks }) {
     </div>
   );
 }
-export default function HomeView() {
+
+export default function HomeView() {
   const { 
     tasks, 
     goals, 
@@ -51,16 +52,36 @@ function GoalProgressRow({ goal, linkedTasks }) {
     unlockedAchievements, 
     habitsManager, 
     consistencyScore, 
+    consistencyScoreExplanation,
     handleCompleteOnboarding,
     logEvent,
     insights,
     suggestions,
-    setShouldOpenGoalModal
+    setShouldOpenGoalModal,
+    isInitializing,
+    handleUpdateTask
   } = useAppContext();
+  
+  const [showHealthExplanation, setShowHealthExplanation] = useState(false);
+  
+  // Persistent dismiss for "Resumo de Hoje" card (resets daily)
+  const todaySummaryKey = `flowday_today_summary_dismissed_${currentUser?.id || 'guest'}_${new Date().toISOString().split('T')[0]}`;
+  const [showTodaySummary, setShowTodaySummary] = useState(() => localStorage.getItem(todaySummaryKey) !== 'true');
+  const dismissTodaySummary = () => {
+    localStorage.setItem(todaySummaryKey, 'true');
+    setShowTodaySummary(false);
+  };
   
   const { habits, habitLogs } = habitsManager;
 
-  const onStartTask = () => setActiveTab('tasks');
+  const onStartTask = (task) => {
+    if (task && task.id) {
+      localStorage.setItem('flowday_pomodoro_selected_task_id', task.id);
+      setActiveTab('focus');
+    } else {
+      setActiveTab('tasks');
+    }
+  };
   const pendingTasks = tasks.filter(t => !t.completed);
 
   // Lógica de priorização do Hero Card
@@ -219,6 +240,28 @@ function GoalProgressRow({ goal, linkedTasks }) {
   const completedHabitsToday = habitLogs.filter(l => l.completed_date === todayDate).length;
   const pendingHabitsCount = Math.max(0, habits.length - completedHabitsToday);
 
+  if (isInitializing) {
+    return (
+      <div className="home-view-container animate-fade-in" style={{ paddingBottom: '90px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
+        <section style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '20px' }}>
+          <div style={{ flex: 1 }}>
+            <Skeleton height="32px" width="200px" />
+            <Skeleton height="20px" width="350px" style={{ marginTop: '8px' }} />
+          </div>
+          <Skeleton height="54px" width="180px" borderRadius="var(--radius-md)" />
+        </section>
+        
+        <Skeleton height="150px" width="100%" borderRadius="var(--radius-lg)" />
+        <Skeleton height="180px" width="100%" borderRadius="var(--radius-lg)" />
+        
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '24px' }}>
+          <Skeleton height="250px" width="100%" borderRadius="var(--radius-lg)" />
+          <Skeleton height="250px" width="100%" borderRadius="var(--radius-lg)" />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="home-view-container animate-fade-in" style={{ paddingBottom: '90px' }}>
 
@@ -245,36 +288,90 @@ function GoalProgressRow({ goal, linkedTasks }) {
         </div>
       </section>
 
-      {/* ── Widget "Hoje" (Bloco 3 - Seção 8) ─────────────── */}
-      <section className="onboarding-card animate-fade-in" style={{ background: 'linear-gradient(135deg, var(--bg-card) 0%, var(--bg-app) 100%)', border: '1px solid var(--border-medium)', padding: '24px' }}>
-        <h3 style={{ fontSize: '16px', fontWeight: '700', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-          <Calendar size={18} style={{ color: 'var(--primary)' }} /> Resumo de Hoje
-        </h3>
-        <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '16px' }}>
-          Aqui está o que você precisa focar hoje para manter sua consistência:
-        </p>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '16px', marginBottom: '20px' }}>
-          <div style={{ padding: '12px', borderRadius: 'var(--radius-sm)', backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-light)' }}>
-            <span style={{ fontSize: '11px', color: 'var(--text-light)', display: 'block' }}>Tarefas Pendentes</span>
-            <span style={{ fontSize: '20px', fontWeight: '800', color: pendingTasks.length > 0 ? 'var(--primary)' : 'var(--text-light)' }}>{pendingTasks.length}</span>
-          </div>
-          <div style={{ padding: '12px', borderRadius: 'var(--radius-sm)', backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-light)' }}>
-            <span style={{ fontSize: '11px', color: 'var(--text-light)', display: 'block' }}>Hábitos Pendentes</span>
-            <span style={{ fontSize: '20px', fontWeight: '800', color: pendingHabitsCount > 0 ? '#C89658' : 'var(--text-light)' }}>{pendingHabitsCount}</span>
-          </div>
-          <div style={{ padding: '12px', borderRadius: 'var(--radius-sm)', backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-light)' }}>
-            <span style={{ fontSize: '11px', color: 'var(--text-light)', display: 'block' }}>Objetivos Ativos</span>
-            <span style={{ fontSize: '20px', fontWeight: '800', color: 'var(--text-main)' }}>{activeGoalsCount}</span>
-          </div>
-        </div>
+      {/* Accordion do Health Score */}
+      <div className="health-accordion animate-fade-in" style={{ marginBottom: '24px' }}>
         <button 
-          onClick={() => setActiveTab('focus')} 
-          className="btn-primary-glow"
-          style={{ padding: '12px 24px', fontSize: '14px', fontWeight: '600', width: 'auto', display: 'inline-flex', alignItems: 'center', gap: '8px' }}
+          className="health-accordion-header" 
+          onClick={() => setShowHealthExplanation(!showHealthExplanation)}
+          type="button"
         >
-          Começar meu dia ⚡
+          <span>🎯 Como seu score foi calculado?</span>
+          <span>{showHealthExplanation ? '▲' : '▼'}</span>
         </button>
-      </section>
+        {showHealthExplanation && (
+          <div className="health-accordion-content animate-fade-in">
+            {consistencyScoreExplanation.positives.length > 0 && (
+              <div>
+                <h4 style={{ fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', color: '#22c55e', marginBottom: '6px' }}>Fatores Positivos</h4>
+                {consistencyScoreExplanation.positives.map((f, i) => (
+                  <div key={i} className="health-factor-row health-factor-row--positive" style={{ display: 'flex', justifyContent: 'space-between', margin: '4px 0' }}>
+                    <span>{f.text}</span>
+                    <span>{f.value}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            {consistencyScoreExplanation.negatives.length > 0 && (
+              <div style={{ marginTop: '10px' }}>
+                <h4 style={{ fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', color: '#ef4444', marginBottom: '6px' }}>Fatores Negativos</h4>
+                {consistencyScoreExplanation.negatives.map((f, i) => (
+                  <div key={i} className="health-factor-row health-factor-row--negative" style={{ display: 'flex', justifyContent: 'space-between', margin: '4px 0' }}>
+                    <span>{f.text}</span>
+                    <span>{f.value}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            {consistencyScoreExplanation.positives.length === 0 && consistencyScoreExplanation.negatives.length === 0 && (
+              <p style={{ fontSize: '12px', color: 'var(--text-light)', fontStyle: 'italic', margin: 0 }}>
+                Nenhuma atividade recente registrada para calcular os fatores.
+              </p>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* ── Widget "Hoje" (Bloco 3 - Seção 8) ─────────────── */}
+      {showTodaySummary && (
+        <section className="onboarding-card animate-fade-in" style={{ background: 'linear-gradient(135deg, var(--bg-card) 0%, var(--bg-app) 100%)', border: '1px solid var(--border-medium)', padding: '24px', position: 'relative' }}>
+          <button
+            onClick={dismissTodaySummary}
+            aria-label="Fechar resumo de hoje"
+            style={{ position: 'absolute', top: '14px', right: '14px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '50%', width: '28px', height: '28px', transition: 'background 0.2s' }}
+            onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-card-hover)'}
+            onMouseLeave={e => e.currentTarget.style.background = 'none'}
+          >
+            <span style={{ fontSize: '16px', lineHeight: 1 }}>×</span>
+          </button>
+          <h3 style={{ fontSize: '16px', fontWeight: '700', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+            <Calendar size={18} style={{ color: 'var(--primary)' }} /> Resumo de Hoje
+          </h3>
+          <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '16px' }}>
+            Aqui está o que você precisa focar hoje para manter sua consistência:
+          </p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '16px', marginBottom: '20px' }}>
+            <div style={{ padding: '12px', borderRadius: 'var(--radius-sm)', backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-light)' }}>
+              <span style={{ fontSize: '11px', color: 'var(--text-light)', display: 'block' }}>Tarefas Pendentes</span>
+              <span style={{ fontSize: '20px', fontWeight: '800', color: pendingTasks.length > 0 ? 'var(--primary)' : 'var(--text-light)' }}>{pendingTasks.length}</span>
+            </div>
+            <div style={{ padding: '12px', borderRadius: 'var(--radius-sm)', backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-light)' }}>
+              <span style={{ fontSize: '11px', color: 'var(--text-light)', display: 'block' }}>Hábitos Pendentes</span>
+              <span style={{ fontSize: '20px', fontWeight: '800', color: pendingHabitsCount > 0 ? '#C89658' : 'var(--text-light)' }}>{pendingHabitsCount}</span>
+            </div>
+            <div style={{ padding: '12px', borderRadius: 'var(--radius-sm)', backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-light)' }}>
+              <span style={{ fontSize: '11px', color: 'var(--text-light)', display: 'block' }}>Objetivos Ativos</span>
+              <span style={{ fontSize: '20px', fontWeight: '800', color: 'var(--text-main)' }}>{activeGoalsCount}</span>
+            </div>
+          </div>
+          <button 
+            onClick={() => setActiveTab('focus')} 
+            className="btn-primary-glow"
+            style={{ padding: '12px 24px', fontSize: '14px', fontWeight: '600', width: 'auto', display: 'inline-flex', alignItems: 'center', gap: '8px' }}
+          >
+            Começar meu dia ⚡
+          </button>
+        </section>
+      )}
 
       {/* O Guia Estático foi removido em favor do Tour Interativo (react-joyride) */}
 
@@ -446,9 +543,13 @@ function GoalProgressRow({ goal, linkedTasks }) {
                 <div className="home-goals-empty">
                   <div className="home-goals-empty-glow" />
                   <p className="home-goals-empty-symbol">✦</p>
-                  <h4 className="home-goals-empty-title">Grandes conquistas começam com um objetivo.</h4>
+                  <h4 className="home-goals-empty-title">
+                    {goals.length > 0 ? 'Foque em um novo objetivo.' : 'Grandes conquistas começam com um objetivo.'}
+                  </h4>
                   <p className="home-goals-empty-desc">
-                    Defina para onde você quer ir e acompanhe seu progresso aqui.
+                    {goals.length > 0 
+                      ? 'Defina novas metas para continuar evoluindo no MyFlowDay.' 
+                      : 'Defina para onde você quer ir e acompanhe seu progresso aqui.'}
                   </p>
                   <button
                     onClick={() => {
@@ -458,7 +559,7 @@ function GoalProgressRow({ goal, linkedTasks }) {
                     className="home-goals-empty-cta"
                   >
                     <Plus size={15} />
-                    Criar meu primeiro objetivo
+                    {goals.length > 0 ? 'Criar novo objetivo' : 'Criar meu primeiro objetivo'}
                   </button>
                 </div>
               ) : (
@@ -468,6 +569,7 @@ function GoalProgressRow({ goal, linkedTasks }) {
                       key={goal.id}
                       goal={goal}
                       linkedTasks={linkedTasks}
+                      onClick={() => setActiveTab('goals')}
                     />
                   ))}
 
@@ -593,7 +695,19 @@ function GoalProgressRow({ goal, linkedTasks }) {
             {/* Assistente Aura */}
             <AuraAssistantWidget 
               analysis={auraAnalysis} 
-              onActionClick={(task) => onStartTask(task)} 
+              onActionClick={(task, actionType) => {
+                if (actionType === 'today') {
+                  const todayStr = new Date().toISOString().split('T')[0];
+                  handleUpdateTask(task.id, { dueDate: todayStr });
+                } else if (actionType === 'tomorrow') {
+                  const tomorrow = new Date();
+                  tomorrow.setDate(tomorrow.getDate() + 1);
+                  const tomorrowStr = tomorrow.toISOString().split('T')[0];
+                  handleUpdateTask(task.id, { dueDate: tomorrowStr });
+                } else {
+                  onStartTask(task);
+                }
+              }} 
             />
 
             {/* Sugestões de Engajamento */}
@@ -689,7 +803,7 @@ function GoalProgressRow({ goal, linkedTasks }) {
                             display: 'flex', 
                             alignItems: 'flex-start', 
                             gap: '12px', 
-                            padding: '10px 12px', 
+                            padding: '10.5px 12px', 
                             backgroundColor: 'var(--bg-card)', 
                             border: '1px solid var(--border-light)', 
                             borderRadius: 'var(--radius-sm)' 
@@ -698,9 +812,22 @@ function GoalProgressRow({ goal, linkedTasks }) {
                           <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginTop: '2px' }}>
                             {insightIconMap[ins.emoji] || <Lightbulb size={18} style={{ color: 'var(--text-muted)' }} />}
                           </span>
-                          <p style={{ fontSize: '13px', color: 'var(--text-main)', margin: 0, lineHeight: '1.5' }}>
-                            {ins.message}
-                          </p>
+                          <div style={{ flex: 1 }}>
+                            <p style={{ fontSize: '13px', color: 'var(--text-main)', margin: 0, lineHeight: '1.5' }}>
+                              {ins.message}
+                            </p>
+                            {ins.confidenceLevel && (
+                              <div style={{ display: 'flex', gap: '10px', fontSize: '10.5px', color: 'var(--text-light)', marginTop: '6px', flexWrap: 'wrap' }}>
+                                <span>Confiança: <strong style={{ color: ins.confidenceLevel === 'alta' ? '#22c55e' : ins.confidenceLevel === 'média' ? '#eab308' : '#ef4444' }}>{ins.confidenceLevel.toUpperCase()}</strong></span>
+                                <span>•</span>
+                                <span>Precisão: <strong>{ins.estimatedAccuracy}%</strong></span>
+                                <span>•</span>
+                                <span>Amostra: <strong>{ins.sampleSize} {ins.sampleSize === 1 ? 'atividade' : 'atividades'}</strong></span>
+                                <span>•</span>
+                                <span>Período: <strong>{ins.timeRangeWeeks} {ins.timeRangeWeeks === 1 ? 'semana' : 'semanas'}</strong></span>
+                              </div>
+                            )}
+                          </div>
                         </div>
                       ))}
                     </div>

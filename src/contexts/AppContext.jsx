@@ -15,7 +15,7 @@ import { achievementsService }  from '../services/achievementsService';
 import { eventsService }        from '../services/eventsService';
 import { profilesService }      from '../services/profilesService';
 import { ACHIEVEMENTS, calcStats } from '../hooks/useAchievements';
-import { subscribe as subscribeSync, initSyncQueue } from '../services/syncQueue';
+import { subscribe as subscribeSync, initSyncQueue, generateId } from '../services/syncQueue';
 import { initEventBatcher } from '../services/eventBatcher';
 import { generateInsights } from '../intelligence/productIntelligence';
 import { getEngagementSuggestions } from '../intelligence/retentionEngine';
@@ -77,7 +77,8 @@ const defaultCategories = [
   { id: 'Trabalho', name: 'Trabalho', emoji: '💼', color: '#6B7F8A' },
   { id: 'Pessoal', name: 'Pessoal', emoji: '🏠', color: '#7A8B7B' },
   { id: 'Estudos', name: 'Estudos', emoji: '📚', color: '#B09E86' },
-  { id: 'Lazer', name: 'Lazer', emoji: '🎸', color: '#A88891' }
+  { id: 'Lazer', name: 'Lazer', emoji: '🎸', color: '#A88891' },
+  { id: 'Pets', name: 'Pets', emoji: '🐾', color: '#B5A296' }
 ];
 
 // ─── Context ──────────────────────────────────────────────────────────────────
@@ -109,6 +110,7 @@ export function AppProvider({ children }) {
 
   // ── Tema ─────────────────────────────────────────────────────────────────────
   const [theme, setTheme] = useState(localStorage.getItem('theme') || 'system');
+  const [appBgColor, setAppBgColor] = useState(localStorage.getItem('app_bg_color') || '#F8FAFC');
 
   // ── Dados ────────────────────────────────────────────────────────────────────
   const [tasks, setTasks]           = useState([]);
@@ -125,8 +127,13 @@ export function AppProvider({ children }) {
   const [habitLogs, setHabitLogs]   = useState([]);
   const [habitsLoading, setHabitsLoading] = useState(false);
 
+  // ── Notificações & Undo (Soft Delete) ──────────────────────────────────────────
+  const [notifications, setNotifications] = useState([]);
+  const [undoAction, setUndoAction]       = useState(null);
+
   // ── Ref para lock de conquistas ───────────────────────────────────────────────
   const achievementChecking = useRef(false);
+  const unlockedKeysRef = useRef(new Set());
   // Garante que first_success_action é emitido apenas uma vez por sessão
   const firstSuccessLogged = useRef(false);
   // Garante que conquistas só são verificadas APÓS o primeiro carregamento completo dos dados
@@ -233,7 +240,16 @@ export function AppProvider({ children }) {
     };
     applyTheme(theme);
     localStorage.setItem('theme', theme);
-  }, [theme]);
+
+    // Aplicar a cor de fundo customizada
+    const isDark = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    if (isDark) {
+      document.documentElement.style.setProperty('--bg-app', '#0F172A');
+    } else {
+      document.documentElement.style.setProperty('--bg-app', appBgColor);
+    }
+    localStorage.setItem('app_bg_color', appBgColor);
+  }, [theme, appBgColor]);
 
   // Sincronização de tema entre abas
   useEffect(() => {
@@ -245,6 +261,15 @@ export function AppProvider({ children }) {
     window.addEventListener('storage', handleStorage);
     return () => window.removeEventListener('storage', handleStorage);
   }, [theme]);
+
+  // Sincronização de unlockedKeysRef com o estado unlockedKeys
+  useEffect(() => {
+    if (unlockedKeys) {
+      unlockedKeysRef.current = new Set(unlockedKeys);
+    } else {
+      unlockedKeysRef.current = new Set();
+    }
+  }, [unlockedKeys]);
 
   // ── Re-hidratação de Estado por Event Sourcing (Fase 3.0) ──
   const rehydrateUserState = useCallback(async (userId) => {
@@ -259,6 +284,205 @@ export function AppProvider({ children }) {
       return null;
     }
   }, []);
+
+  // ── Notificações Helpers ──
+  const loadNotifications = useCallback(async (userId) => {
+    if (!userId) return;
+    try {
+      const localNotifs = await localDB.getAll('notifications');
+      const userNotifs = localNotifs.filter(n => n.user_id === userId);
+      setNotifications(userNotifs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)));
+    } catch (err) {
+      console.warn('[AppContext] Erro ao carregar notificações:', err.message);
+    }
+  }, []);
+
+  const addNotification = useCallback(async (type, title, description, metadata = {}) => {
+    if (!currentUser?.id) return;
+    const newNotif = {
+      id: generateId(),
+      user_id: currentUser.id,
+      type,
+      title,
+      description,
+      timestamp: new Date().toISOString(),
+      read: false,
+      metadata
+    };
+    setNotifications(prev => [newNotif, ...prev]);
+    try {
+      await localDB.put('notifications', newNotif);
+    } catch (err) {
+      console.warn('[AppContext] Erro ao salvar notificação local:', err.message);
+    }
+  }, [currentUser?.id]);
+
+  const markNotificationsAsRead = useCallback(async () => {
+    if (!currentUser?.id) return;
+    const updated = notifications.map(n => ({ ...n, read: true }));
+    setNotifications(updated);
+    try {
+      for (const n of updated) {
+        await localDB.put('notifications', n);
+      }
+    } catch (err) {
+      console.warn('[AppContext] Erro ao marcar notificações como lidas:', err.message);
+    }
+  }, [currentUser?.id, notifications]);
+
+  const clearNotifications = useCallback(async () => {
+    if (!currentUser?.id) return;
+    setNotifications([]);
+    try {
+      const all = await localDB.getAll('notifications');
+      const userNotifs = all.filter(n => n.user_id === currentUser.id);
+      for (const n of userNotifs) {
+        await localDB.delete('notifications', n.id);
+      }
+    } catch (err) {
+      console.warn('[AppContext] Erro ao limpar notificações:', err.message);
+    }
+  }, [currentUser?.id]);
+
+  // ── Modo Demo Helpers ──
+  const initDemoData = () => {
+    const demoTasksKey = `flowday_demo_tasks_${currentUser.id}`;
+    const demoGoalsKey = `flowday_demo_goals_${currentUser.id}`;
+    const demoHabitsKey = `flowday_demo_habits_${currentUser.id}`;
+    const demoAchievementsKey = `flowday_demo_achievements_${currentUser.id}`;
+
+    let localTasks = localStorage.getItem(demoTasksKey);
+    let localGoals = localStorage.getItem(demoGoalsKey);
+    let localHabits = localStorage.getItem(demoHabitsKey);
+    let localAchievements = localStorage.getItem(demoAchievementsKey);
+
+    const now = new Date();
+    if (localTasks) {
+      setTasks(JSON.parse(localTasks));
+    } else {
+      const mockTasks = [
+        { id: 'dt1', user_id: currentUser.id, title: 'Revisar hooks avançados do React', description: 'Focar em useMemo e useCallback', category: 'Estudos', priority: 'Alta', dueDate: now.toISOString().split('T')[0], completed: true, createdAt: now.toISOString(), completedAt: now.toISOString(), deletedAt: null },
+        { id: 'dt2', user_id: currentUser.id, title: 'Correr 5km no parque', description: 'Treinar endurance e ritmo constante', category: 'Lazer', priority: 'Alta', dueDate: now.toISOString().split('T')[0], completed: false, createdAt: now.toISOString(), deletedAt: null },
+        { id: 'dt3', user_id: currentUser.id, title: 'Refatorar design system do Flowday', description: 'Ajustar variáveis de cores e glassmorphism', category: 'Trabalho', priority: 'Alta', dueDate: now.toISOString().split('T')[0], completed: false, createdAt: now.toISOString(), deletedAt: null },
+        { id: 'dt4', user_id: currentUser.id, title: 'Comprar tênis de corrida com amortecimento', description: 'Focar em proteção de articulações', category: 'Pessoal', priority: 'Média', dueDate: '', completed: true, createdAt: now.toISOString(), completedAt: now.toISOString(), deletedAt: null },
+        { id: 'dt5', user_id: currentUser.id, title: 'Ler 20 páginas do livro atual', description: 'Hábito de leitura offline diária', category: 'Pessoal', priority: 'Baixa', dueDate: now.toISOString().split('T')[0], completed: true, createdAt: now.toISOString(), completedAt: now.toISOString(), deletedAt: null },
+        { id: 'dt6', user_id: currentUser.id, title: 'Aprender sobre App Router do Next.js', description: 'Estudar layouts e subrotas dinâmicas', category: 'Estudos', priority: 'Média', dueDate: '', completed: false, createdAt: now.toISOString(), deletedAt: null },
+        { id: 'dt7', user_id: currentUser.id, title: 'Preparar marmitas saudáveis', description: 'Alimentação equilibrada para a semana', category: 'Pessoal', priority: 'Média', dueDate: '', completed: false, createdAt: now.toISOString(), deletedAt: null }
+      ];
+      setTasks(mockTasks);
+      localStorage.setItem(demoTasksKey, JSON.stringify(mockTasks));
+    }
+
+    if (localGoals) {
+      const parsed = JSON.parse(localGoals);
+      setGoals(parsed.goals);
+      setGoalTasks(parsed.goalTasks);
+    } else {
+      const mockGoals = [
+        { id: 'dg1', user_id: currentUser.id, title: '🚀 Dominar o React', description: 'Ficar proficiente em React, hooks e Next.js', color: '#6366f1', icon: '💻', target_date: '', status: 'active', deletedAt: null },
+        { id: 'dg2', user_id: currentUser.id, title: '🏃‍♂️ Corrida 10K', description: 'Treinar para correr 10km direto sem paradas', color: '#10b981', icon: '👟', target_date: '', status: 'active', deletedAt: null },
+        { id: 'dg3', user_id: currentUser.id, title: '📚 Hábito de Leitura', description: 'Ler pelo menos 1 livro por mês este ano', color: '#f59e0b', icon: '📖', target_date: '', status: 'active', deletedAt: null }
+      ];
+      const mockGoalTasks = [
+        { goal_id: 'dg1', task_id: 'dt1' },
+        { goal_id: 'dg1', task_id: 'dt6' },
+        { goal_id: 'dg2', task_id: 'dt2' },
+        { goal_id: 'dg2', task_id: 'dt4' },
+        { goal_id: 'dg3', task_id: 'dt5' }
+      ];
+      setGoals(mockGoals);
+      setGoalTasks(mockGoalTasks);
+      localStorage.setItem(demoGoalsKey, JSON.stringify({ goals: mockGoals, goalTasks: mockGoalTasks }));
+    }
+
+    if (localHabits) {
+      const parsed = JSON.parse(localHabits);
+      setHabits(parsed.habits);
+      setHabitLogs(parsed.habitLogs);
+    } else {
+      const mockHabits = [
+        { id: 'dh1', user_id: currentUser.id, title: 'Meditar 10 min', description: 'Foco na respiração mindfulness', frequency: 'diaria', created_at: new Date().toISOString() },
+        { id: 'dh2', user_id: currentUser.id, title: 'Beber 2L de água', description: 'Garrafa na mesa sempre cheia', frequency: 'diaria', created_at: new Date().toISOString() }
+      ];
+      const mockLogs = [];
+      const today = now.toISOString().split('T')[0];
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      const yesterdayStr = yesterday.toISOString().split('T')[0];
+      
+      mockLogs.push({ id: 'dl1', habit_id: 'dh2', completed_date: today, user_id: currentUser.id });
+      mockLogs.push({ id: 'dl2', habit_id: 'dh1', completed_date: yesterdayStr, user_id: currentUser.id });
+      mockLogs.push({ id: 'dl3', habit_id: 'dh2', completed_date: yesterdayStr, user_id: currentUser.id });
+      
+      setHabits(mockHabits);
+      setHabitLogs(mockLogs);
+      localStorage.setItem(demoHabitsKey, JSON.stringify({ habits: mockHabits, habitLogs: mockLogs }));
+    }
+
+    if (localAchievements) {
+      const parsed = JSON.parse(localAchievements);
+      setUnlockedAchievements(parsed);
+      setUnlockedKeys(new Set(parsed.map(a => a.achievement_key)));
+    } else {
+      const mockAchievements = [
+        { achievement_key: 'first_task', unlocked_at: now.toISOString(), seen: true, dismissed_at: null }
+      ];
+      setUnlockedAchievements(mockAchievements);
+      setUnlockedKeys(new Set(['first_task']));
+      localStorage.setItem(demoAchievementsKey, JSON.stringify(mockAchievements));
+    }
+
+    setIsPro(true);
+    setIsInitializing(false);
+    
+    // Notificação de boas vindas
+    setTimeout(() => {
+      addNotification('system', 'Modo Demo Ativo', 'Você está experimentando o Flowday com uma conta temporária. Fique à vontade para explorar!');
+    }, 1000);
+  };
+
+  const handleStartDemoMode = () => {
+    const demoUser = {
+      id: 'demo-user',
+      email: 'demo@flowday.app',
+      name: 'Explorador Demo',
+      isDemo: true,
+      user_metadata: { name: 'Explorador Demo', onboarding_completed: true }
+    };
+    setCurrentUser(demoUser);
+    logEvent('demo_started');
+    setActiveTab('home');
+  };
+
+  // ── Purga automática de lixeira 30 dias ──
+  const purgeTrash = useCallback(async (userId) => {
+    if (!userId || currentUser?.isDemo) return;
+    try {
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      
+      const allTasks = await localDB.getAll('tasks');
+      const oldTasks = allTasks.filter(t => t.user_id === userId && t.deletedAt && new Date(t.deletedAt) < thirtyDaysAgo);
+      for (const t of oldTasks) {
+        await tasksService.deletePermanent(userId, t.id);
+      }
+      
+      const { data: oldGoals } = await supabase
+        .from('goals')
+        .select('id')
+        .eq('user_id', userId)
+        .not('deleted_at', 'is', null)
+        .lt('deleted_at', thirtyDaysAgo.toISOString());
+      
+      if (oldGoals && oldGoals.length > 0) {
+        for (const g of oldGoals) {
+          await goalsService.deletePermanent(userId, g.id);
+        }
+      }
+    } catch (err) {
+      console.warn('[AppContext] Erro ao purgar lixeira:', err.message);
+    }
+  }, [currentUser?.isDemo]);
 
   // LOGGER DE EVENTOS com session tracking
   // ═══════════════════════════════════════════════════════════════════════════
@@ -365,27 +589,40 @@ export function AppProvider({ children }) {
     setUnlockedAchievements(list);
     setUnlockedKeys(new Set(list.map((a) => a.achievement_key)));
 
-    const unseen = list.filter(a => !a.seen);
-    if (unseen.length > 0) {
-      unseen.forEach((a, i) => {
+    // Filtra conquistas que ainda não foram dispensadas no banco E nem localmente
+    const dismissedLocalKey = `myflowday_dismissed_achievements_${userId}`;
+    let localDismissed = {};
+    try {
+      const localVal = localStorage.getItem(dismissedLocalKey);
+      if (localVal) localDismissed = JSON.parse(localVal);
+    } catch (e) {
+      console.warn('[AppContext] Falha ao ler localStorage de dismissals:', e);
+    }
+
+    const toQueue = list.filter(a => !a.dismissed_at && !localDismissed[a.achievement_key]);
+    if (toQueue.length > 0) {
+      const newItems = toQueue.map((a) => {
         const achievementInfo = ACHIEVEMENTS.find(ac => ac.key === a.achievement_key);
         if (achievementInfo) {
-          setTimeout(async () => {
-            const id = `${a.achievement_key}-${Date.now()}`;
-            setToastQueue((prev) => [...prev, { id, achievement: achievementInfo }]);
-            await achievementsService.markAsSeen(userId, [a.achievement_key]);
-
-            // Atualizar estado local
-            setUnlockedAchievements((prev) =>
-              (prev || []).map((item) =>
-                item.achievement_key === a.achievement_key
-                  ? { ...item, seen: true }
-                  : item
-              )
-            );
-          }, i * 1200);
+          const id = `${a.achievement_key}-${Date.now()}`;
+          // Se ainda não foi visto, registra seen no banco de dados imediatamente
+          if (!a.seen) {
+            achievementsService.markAsSeen(userId, [a.achievement_key]).catch(() => {});
+          }
+          return { id, achievement: achievementInfo };
         }
-      });
+        return null;
+      }).filter(Boolean);
+
+      setToastQueue((prev) => [...prev, ...newItems]);
+
+      // Atualiza localmente no estado para seen: true
+      setUnlockedAchievements((prev) =>
+        (prev || []).map((item) => {
+          const matched = toQueue.find(q => q.achievement_key === item.achievement_key);
+          return matched ? { ...item, seen: true, viewed_at: item.viewed_at || new Date().toISOString() } : item;
+        })
+      );
     }
   }, []);
 
@@ -497,11 +734,20 @@ export function AppProvider({ children }) {
       setUnlockedKeys(null);
       setHabits([]);
       setHabitLogs([]);
+      setNotifications([]);
       setIsPro(false);
       return;
     }
 
     const userId = currentUser.id;
+    
+    // Tratamento para Modo Demo
+    if (currentUser.isDemo) {
+      initDemoData();
+      loadNotifications(userId);
+      return;
+    }
+
     let active = true;
 
     const loadAll = async () => {
@@ -513,7 +759,9 @@ export function AppProvider({ children }) {
           loadHabits(userId),
           loadProfile(userId),
           loadSubscription(userId),
+          loadNotifications(userId),
           rehydrateUserState(userId),
+          purgeTrash(userId),
         ]);
       } catch (err) {
         console.error('[AppContext] Erro ao carregar dados do usuário:', err);
@@ -525,7 +773,7 @@ export function AppProvider({ children }) {
     return () => {
       active = false;
     };
-  }, [currentUser?.id, loadTasks, loadGoals, loadAchievements, loadHabits, loadProfile, loadSubscription, rehydrateUserState]);
+  }, [currentUser?.id, loadTasks, loadGoals, loadAchievements, loadHabits, loadProfile, loadSubscription, loadNotifications, rehydrateUserState, purgeTrash]);
 
   // ═══════════════════════════════════════════════════════════════════════════
   // CONQUISTAS — detecção automática (PROTEGIDA contra false positives)
@@ -548,12 +796,12 @@ export function AppProvider({ children }) {
 
       achievementChecking.current = true;
       try {
-        const stats = calcStats(tasks, goals);
+        const stats = calcStats(tasks, goals, habits, habitLogs);
 
         // GUARD SECUNDÁRIO: conquistas que exigem ação real do usuário
         // só disparam se há evidência real de interação (não apenas dados carregados).
         const newlyUnlocked = ACHIEVEMENTS.filter((a) => {
-          if (unlockedKeys.has(a.key)) return false;
+          if (unlockedKeys.has(a.key) || unlockedKeysRef.current.has(a.key)) return false;
           // Conquistas baseadas em tarefas concluídas: só disparam se há completedTasks > 0
           if (['first_task', 'tasks_10', 'tasks_50', 'tasks_100'].includes(a.key)) {
             if (stats.completedTasks === 0) return false;
@@ -566,10 +814,45 @@ export function AppProvider({ children }) {
           if (['first_goal_completed', 'goals_10'].includes(a.key)) {
             if (stats.completedGoals === 0) return false;
           }
+          // Conquistas baseadas em hábitos
+          if (a.key === 'perfect_habits') {
+            if (!stats.habits100PercentToday) return false;
+          }
           return a.check(stats);
         });
 
-        if (newlyUnlocked.length === 0) return;
+        if (currentUser.isDemo) {
+          newlyUnlocked.forEach((a) => {
+            unlockedKeysRef.current.add(a.key);
+            setUnlockedKeys((prev) => { const n = new Set(prev); n.add(a.key); return n; });
+            setUnlockedAchievements((prev) => [
+              ...(prev || []),
+              { 
+                achievement_key: a.key, 
+                unlocked_at: new Date().toISOString(), 
+                seen: true, 
+                viewed_at: new Date().toISOString(),
+                dismissed_at: null
+              },
+            ]);
+            const id = `${a.key}-${Date.now()}`;
+            setToastQueue((prev) => [...prev, { id, achievement: a }]);
+            addNotification('achievement', `Nova conquista: ${a.title}`, a.desc, { tab: 'evolution' });
+
+            // Salva no localStorage para o demo
+            const demoAchievementsKey = `flowday_demo_achievements_${currentUser.id}`;
+            const localAchievements = JSON.parse(localStorage.getItem(demoAchievementsKey) || '[]');
+            localAchievements.push({
+              achievement_key: a.key,
+              unlocked_at: new Date().toISOString(),
+              seen: true,
+              viewed_at: new Date().toISOString(),
+              dismissed_at: null
+            });
+            localStorage.setItem(demoAchievementsKey, JSON.stringify(localAchievements));
+          });
+          return;
+        }
 
         const { error } = await achievementsService.unlock(
           currentUser.id,
@@ -577,26 +860,32 @@ export function AppProvider({ children }) {
         );
         if (error) return;
 
-        newlyUnlocked.forEach((a, i) => {
-          setTimeout(() => {
-            setUnlockedKeys((prev) => { const n = new Set(prev); n.add(a.key); return n; });
-            setUnlockedAchievements((prev) => [
-              ...(prev || []),
-              { achievement_key: a.key, unlocked_at: new Date().toISOString(), seen: true, viewed_at: new Date().toISOString() },
-            ]);
-            const id = `${a.key}-${Date.now()}`;
-            setToastQueue((prev) => [...prev, { id, achievement: a }]);
+        newlyUnlocked.forEach((a) => {
+          unlockedKeysRef.current.add(a.key);
+          setUnlockedKeys((prev) => { const n = new Set(prev); n.add(a.key); return n; });
+          setUnlockedAchievements((prev) => [
+            ...(prev || []),
+            { 
+              achievement_key: a.key, 
+              unlocked_at: new Date().toISOString(), 
+              seen: true, 
+              viewed_at: new Date().toISOString(),
+              dismissed_at: null
+            },
+          ]);
+          const id = `${a.key}-${Date.now()}`;
+          setToastQueue((prev) => [...prev, { id, achievement: a }]);
+          addNotification('achievement', `Nova conquista: ${a.title}`, a.desc, { tab: 'evolution' });
 
-            // Marca como visto no banco
-            achievementsService.markAsSeen(currentUser.id, [a.key]);
-          }, i * 1200);
+          // Marca como visto no banco
+          achievementsService.markAsSeen(currentUser.id, [a.key]);
         });
       } finally {
         achievementChecking.current = false;
       }
     };
     checkAchievements();
-  }, [tasks, goals, currentUser?.id, unlockedKeys, unlockedAchievements]);
+  }, [tasks, goals, habits, habitLogs, currentUser?.id, unlockedKeys, unlockedAchievements]);
 
   // ═══════════════════════════════════════════════════════════════════════════
   // AUTH ACTIONS
@@ -610,9 +899,22 @@ export function AppProvider({ children }) {
   const handleLogout = useCallback(async () => {
     try {
       if (currentUser?.id) {
-        await eventsService.logEvent(currentUser.id, 'logout');
+        if (!currentUser.isDemo) {
+          await eventsService.logEvent(currentUser.id, 'logout');
+        }
       }
-      await supabase.auth.signOut();
+      if (!currentUser?.isDemo) {
+        await supabase.auth.signOut();
+      }
+      
+      // Limpa dados demo se for o caso
+      if (currentUser?.isDemo) {
+        localStorage.removeItem(`flowday_demo_tasks_${currentUser.id}`);
+        localStorage.removeItem(`flowday_demo_goals_${currentUser.id}`);
+        localStorage.removeItem(`flowday_demo_habits_${currentUser.id}`);
+        localStorage.removeItem(`flowday_demo_achievements_${currentUser.id}`);
+      }
+
       window.location.href = window.location.origin + '/login';
       // Reset do guard de conquistas para o próximo login
       dataLoadedOnce.current = false;
@@ -621,7 +923,9 @@ export function AppProvider({ children }) {
       setUserProfile(null);
       setTasks([]); setGoals([]); setGoalTasks([]);
       setUnlockedAchievements(null); setUnlockedKeys(null);
+      setToastQueue([]); // Limpa a fila de exibição no logout
       setHabits([]); setHabitLogs([]);
+      setNotifications([]);
 
       // Limpa caches locais no IndexedDB para isolamento multiusuário
       await localDB.clear('tasks').catch(() => {});
@@ -629,12 +933,41 @@ export function AppProvider({ children }) {
       await localDB.clear('habits').catch(() => {});
       await localDB.clear('profile').catch(() => {});
       await localDB.clear('events').catch(() => {});
+      await localDB.clear('notifications').catch(() => {});
     } catch (e) { console.error(e); }
-  }, [currentUser?.id]);
+  }, [currentUser]);
 
-  const dismissToast = useCallback((id) => {
+  const dismissToast = useCallback(async (id, key) => {
+    // Remove localmente do toastQueue para resposta visual instantiva
     setToastQueue((prev) => prev.filter((t) => t.id !== id));
-  }, []);
+
+    if (currentUser?.id && key) {
+      const userId = currentUser.id;
+      const dismissedLocalKey = `myflowday_dismissed_achievements_${userId}`;
+      try {
+        let localDismissed = {};
+        const localVal = localStorage.getItem(dismissedLocalKey);
+        if (localVal) localDismissed = JSON.parse(localVal);
+        localDismissed[key] = new Date().toISOString();
+        localStorage.setItem(dismissedLocalKey, JSON.stringify(localDismissed));
+      } catch (e) {
+        console.warn('[AppContext] Falha ao salvar no localStorage:', e);
+      }
+
+      setUnlockedAchievements((prev) =>
+        (prev || []).map((item) =>
+          item.achievement_key === key
+            ? { ...item, seen: true, dismissed_at: new Date().toISOString() }
+            : item
+        )
+      );
+
+      const { error } = await achievementsService.markAsDismissed(userId, key);
+      if (error) {
+        console.warn('[AppContext] Erro ao salvar dismissed_at no banco de dados (usando fallback local):', error.message);
+      }
+    }
+  }, [currentUser?.id]);
 
   const handleCompleteOnboarding = useCallback(async () => {
     if (!currentUser?.id) return;
@@ -675,36 +1008,99 @@ export function AppProvider({ children }) {
   const handleAddTask = useCallback(async (taskData) => {
     if (!currentUser?.id) return;
     const { goal_id, ...payload } = taskData;
-    const { data } = await tasksService.create(currentUser.id, payload);
-    if (data) {
-      setTasks((prev) => [data, ...prev]);
-      logEvent('task_created', { taskId: data.id, title: payload.title });
+    
+    if (currentUser.isDemo) {
+      const demoId = 'dt_' + Date.now();
+      const newTask = {
+        id: demoId,
+        user_id: currentUser.id,
+        title: payload.title,
+        description: payload.description || '',
+        category: payload.category,
+        priority: payload.priority,
+        dueDate: payload.dueDate || '',
+        completed: false,
+        createdAt: new Date().toISOString(),
+        completedAt: null,
+        updatedAt: new Date().toISOString(),
+        deletedAt: null
+      };
+      const updated = [newTask, ...tasks];
+      setTasks(updated);
+      localStorage.setItem(`flowday_demo_tasks_${currentUser.id}`, JSON.stringify(updated));
+      logEvent('task_created', { taskId: demoId, title: payload.title });
+      
       if (goal_id) {
-        await goalsService.linkTask(goal_id, data.id);
-        setGoalTasks((prev) => [...prev, { goal_id: goal_id, task_id: data.id }]);
+        const updatedGT = [...goalTasks, { goal_id, task_id: demoId }];
+        setGoalTasks(updatedGT);
+        localStorage.setItem(`flowday_demo_goals_${currentUser.id}`, JSON.stringify({ goals, goalTasks: updatedGT }));
+      }
+      addNotification('task', 'Tarefa criada', payload.title);
+      return;
+    }
+
+    // Optimistic UI Update
+    const tempId = 'temp_task_' + Date.now();
+    const optimisticTask = {
+      id: tempId,
+      user_id: currentUser.id,
+      title: payload.title,
+      description: payload.description || '',
+      category: payload.category || 'Pessoal',
+      priority: payload.priority || 'Média',
+      dueDate: payload.dueDate || '',
+      completed: false,
+      createdAt: new Date().toISOString(),
+      completedAt: null,
+      updatedAt: new Date().toISOString(),
+      deletedAt: null
+    };
+
+    setTasks((prev) => [optimisticTask, ...prev]);
+    if (goal_id) {
+      setGoalTasks((prev) => [...prev, { goal_id, task_id: tempId }]);
+    }
+
+    try {
+      const { data } = await tasksService.create(currentUser.id, payload);
+      if (data) {
+        setTasks((prev) => prev.map(t => t.id === tempId ? data : t));
+        logEvent('task_created', { taskId: data.id, title: payload.title });
+        if (goal_id) {
+          await goalsService.linkTask(goal_id, data.id);
+          setGoalTasks((prev) => prev.map(gt => gt.task_id === tempId ? { goal_id, task_id: data.id } : gt));
+        }
+      } else {
+        // Rollback
+        setTasks((prev) => prev.filter(t => t.id !== tempId));
+        if (goal_id) {
+          setGoalTasks((prev) => prev.filter(gt => gt.task_id !== tempId));
+        }
+      }
+    } catch (err) {
+      // Rollback
+      setTasks((prev) => prev.filter(t => t.id !== tempId));
+      if (goal_id) {
+        setGoalTasks((prev) => prev.filter(gt => gt.task_id !== tempId));
       }
     }
-  }, [currentUser?.id, logEvent]);
+  }, [currentUser, tasks, goals, goalTasks, logEvent, addNotification]);
 
   const handleUpdateTask = useCallback(async (id, updatedData) => {
     if (!currentUser?.id) return;
     
     const existingTask = tasks.find(t => t.id === id);
     
-    // OPTIMISTIC UPDATE: Atualiza UI na hora
+    // OPTIMISTIC UPDATE
     setTasks((prev) => prev.map((t) => t.id === id ? { ...t, ...updatedData } : t));
-    
-    // Dispara logs analíticos locais imediatamente (non-blocking)
     logEvent('task_updated', { task_id: id });
     
-    // If completed was changed to true, log completion
     if (updatedData.completed === true) {
       logEvent('task_completed', { taskId: id });
       if (existingTask && existingTask.dueDate) {
         logEvent('calendar_task_completed', { taskId: id });
       }
       
-      // Ensure tasks are actually loaded before calculating alreadyHadSuccess
       if (tasks.length > 0) {
         const alreadyHadSuccess = tasks.some(t => t.id !== id && t.completed);
         if (!alreadyHadSuccess && !firstSuccessLogged.current) {
@@ -714,7 +1110,6 @@ export function AppProvider({ children }) {
       }
     }
 
-    // Check if dueDate is updated
     if (updatedData.dueDate !== undefined) {
       if (updatedData.dueDate && (!existingTask || !existingTask.dueDate)) {
         logEvent('calendar_task_scheduled', { taskId: id, date: updatedData.dueDate });
@@ -725,27 +1120,63 @@ export function AppProvider({ children }) {
       }
     }
 
-    // Dispara atualização na rede de forma assíncrona
+    if (currentUser.isDemo) {
+      const updatedList = tasks.map((t) => t.id === id ? { ...t, ...updatedData, updatedAt: new Date().toISOString() } : t);
+      setTasks(updatedList);
+      localStorage.setItem(`flowday_demo_tasks_${currentUser.id}`, JSON.stringify(updatedList));
+      return;
+    }
+
     tasksService.update(currentUser.id, id, updatedData).catch(err => {
       console.error('[AppContext] Erro ao atualizar tarefa:', err);
     });
-  }, [currentUser?.id, logEvent, tasks]);
+  }, [currentUser, tasks, logEvent]);
 
   const handleDeleteTask = useCallback(async (id) => {
     if (!currentUser?.id) return;
-    if (!window.confirm('Excluir esta tarefa permanentemente?')) return;
     
-    // OPTIMISTIC UPDATE
-    const updatedTasks = tasks.filter((t) => t.id !== id);
-    setTasks(updatedTasks);
-    setGoalTasks((prev) => prev.filter((gt) => gt.task_id !== id));
-    
-    const { error, degraded } = await tasksService.delete(currentUser.id, id);
-    if (!error || degraded) {
-      logEvent('task_deleted', { task_id: id });
-      resetAchievementsIfEmpty(currentUser.id, updatedTasks, goals);
+    if (undoAction && undoAction.id === id) {
+      clearTimeout(undoAction.timerId);
     }
-  }, [currentUser?.id, logEvent, tasks, goals, resetAchievementsIfEmpty]);
+
+    const taskToDelete = tasks.find(t => t.id === id);
+    if (!taskToDelete) return;
+
+    // 1. Marca visualmente como excluído na UI (esconde definindo deletedAt temporário)
+    const nowIso = new Date().toISOString();
+    setTasks(prev => prev.map(t => t.id === id ? { ...t, deletedAt: nowIso } : t));
+
+    // 2. Agenda a exclusão consolidada após 5 segundos
+    const timerId = setTimeout(async () => {
+      setUndoAction(null);
+
+      if (currentUser.isDemo) {
+        const updatedList = tasks.filter(t => t.id !== id);
+        setTasks(updatedList);
+        const updatedGT = goalTasks.filter(gt => gt.task_id !== id);
+        setGoalTasks(updatedGT);
+        localStorage.setItem(`flowday_demo_tasks_${currentUser.id}`, JSON.stringify(updatedList));
+        localStorage.setItem(`flowday_demo_goals_${currentUser.id}`, JSON.stringify({ goals, goalTasks: updatedGT }));
+        logEvent('task_deleted', { task_id: id });
+        return;
+      }
+
+      const { error, degraded } = await tasksService.delete(currentUser.id, id);
+      if (!error || degraded) {
+        logEvent('task_deleted', { task_id: id });
+        const finalTasks = tasks.filter(t => t.id !== id);
+        resetAchievementsIfEmpty(currentUser.id, finalTasks, goals);
+      }
+    }, 5000);
+
+    // 3. Ativa o Undo Action
+    setUndoAction({
+      type: 'task',
+      id,
+      timerId,
+      item: taskToDelete
+    });
+  }, [currentUser, tasks, goals, goalTasks, undoAction, logEvent, resetAchievementsIfEmpty]);
 
   const handleToggleComplete = useCallback(async (id) => {
     if (!currentUser?.id) return;
@@ -755,14 +1186,10 @@ export function AppProvider({ children }) {
     const next = !task.completed;
     const completedAt = next ? new Date().toISOString() : null;
     
-    // OPTIMISTIC UPDATE: altera estado local antes da requisição
     setTasks((prev) => prev.map((t) => t.id === id ? { ...t, completed: next, completedAt } : t));
     
-    // Dispara logs analíticos locais imediatamente (non-blocking)
     if (next) {
       logEvent('task_completed', { taskId: id });
-
-      // Detecta first_success_action
       const alreadyHadSuccess = tasks.some(t => t.id !== id && t.completed);
       if (!alreadyHadSuccess && !firstSuccessLogged.current) {
         firstSuccessLogged.current = true;
@@ -774,11 +1201,16 @@ export function AppProvider({ children }) {
       }
     }
 
-    // Executa chamada de rede assincronamente e lida com recorrência e reversão
+    if (currentUser.isDemo) {
+      const updated = tasks.map((t) => t.id === id ? { ...t, completed: next, completedAt, updatedAt: new Date().toISOString() } : t);
+      setTasks(updated);
+      localStorage.setItem(`flowday_demo_tasks_${currentUser.id}`, JSON.stringify(updated));
+      return;
+    }
+
     tasksService.toggleComplete(currentUser.id, id, task.completed).then(async ({ error, degraded }) => {
       if (!error || degraded) {
         if (next) {
-          // Trata tarefas recorrentes
           const meta = parseTaskMetadata(task.description);
           if (meta && meta.recurrence && meta.recurrence !== 'nenhuma') {
             const nextDueDate = calculateNextOccurrence(task.dueDate, meta.recurrence);
@@ -797,15 +1229,13 @@ export function AppProvider({ children }) {
           }
         }
       } else {
-        // Revert em caso de falha real
         setTasks((prev) => prev.map((t) => t.id === id ? { ...t, completed: !next, completedAt: task.completedAt } : t));
       }
     }).catch((err) => {
       console.error('[AppContext] Erro ao toggleComplete:', err);
-      // Revert em caso de falha real
       setTasks((prev) => prev.map((t) => t.id === id ? { ...t, completed: !next, completedAt: task.completedAt } : t));
     });
-  }, [currentUser?.id, logEvent, tasks]);
+  }, [currentUser, tasks, logEvent]);
 
   const handleUpdateProfile = useCallback(async (profileData) => {
     if (!currentUser?.id) return;
@@ -840,37 +1270,172 @@ export function AppProvider({ children }) {
   const handleAddGoal = useCallback(async (goalData) => {
     if (!currentUser?.id) return;
     const { actions, ...goalPayload } = goalData;
-    const { data } = await goalsService.create(currentUser.id, goalPayload);
-    if (data) {
-      setGoals((prev) => [data, ...prev]);
+    
+    if (currentUser.isDemo) {
+      const demoGoalId = 'dg_' + Date.now();
+      const newGoal = {
+        id: demoGoalId,
+        user_id: currentUser.id,
+        title: goalPayload.title,
+        description: goalPayload.description || '',
+        color: goalPayload.color || '#4A654E',
+        icon: goalPayload.icon || '🎯',
+        target_date: goalPayload.target_date || null,
+        start_time: goalPayload.start_time || null,
+        end_time: goalPayload.end_time || null,
+        status: 'active',
+        deletedAt: null
+      };
+
+      const updatedGoals = [newGoal, ...goals];
+      setGoals(updatedGoals);
       logEvent('goal_created', { title: goalPayload.title });
-      if (goalPayload.start_time && goalPayload.end_time) {
-        logEvent('goal_scheduled', { title: goalPayload.title, start_time: goalPayload.start_time, end_time: goalPayload.end_time });
-      }
+
+      let currentDemoTasks = [...tasks];
+      let currentDemoGT = [...goalTasks];
 
       if (actions && actions.length > 0) {
         for (const actionTitle of actions) {
+          const actionId = 'dt_' + Math.random().toString(36).substr(2, 9);
           const taskData = {
+            id: actionId,
+            user_id: currentUser.id,
             title: actionTitle,
             description: '',
             category: 'Trabalho',
             priority: 'Média',
             dueDate: null,
+            completed: false,
+            createdAt: new Date().toISOString(),
+            completedAt: null,
+            deletedAt: null
           };
-          const { data: taskResponse } = await tasksService.create(currentUser.id, taskData);
-          if (taskResponse) {
-             setTasks((prev) => [taskResponse, ...prev]);
-             await goalsService.linkTask(data.id, taskResponse.id);
-             setGoalTasks((prev) => [...prev, { goal_id: data.id, task_id: taskResponse.id }]);
+          currentDemoTasks.push(taskData);
+          currentDemoGT.push({ goal_id: demoGoalId, task_id: actionId });
+        }
+        setTasks(currentDemoTasks);
+        setGoalTasks(currentDemoGT);
+      }
+
+      localStorage.setItem(`flowday_demo_goals_${currentUser.id}`, JSON.stringify({ goals: updatedGoals, goalTasks: currentDemoGT }));
+      localStorage.setItem(`flowday_demo_tasks_${currentUser.id}`, JSON.stringify(currentDemoTasks));
+      addNotification('goal', 'Objetivo criado', goalPayload.title);
+      return;
+    }
+
+    const tempGoalId = 'temp_goal_' + Date.now();
+    const optimisticGoal = {
+      id: tempGoalId,
+      user_id: currentUser.id,
+      title: goalPayload.title,
+      description: goalPayload.description || '',
+      color: goalPayload.color || '#4A654E',
+      icon: goalPayload.icon || '🎯',
+      target_date: goalPayload.target_date || null,
+      start_time: goalPayload.start_time || null,
+      end_time: goalPayload.end_time || null,
+      status: 'active',
+      deletedAt: null
+    };
+
+    setGoals((prev) => [optimisticGoal, ...prev]);
+
+    const tempActions = [];
+    if (actions && actions.length > 0) {
+      actions.forEach((actionTitle, index) => {
+        const tempActionId = `temp_action_${index}_${Date.now()}`;
+        tempActions.push({
+          tempId: tempActionId,
+          task: {
+            id: tempActionId,
+            user_id: currentUser.id,
+            title: actionTitle,
+            description: '',
+            category: 'Trabalho',
+            priority: 'Média',
+            dueDate: null,
+            completed: false,
+            createdAt: new Date().toISOString(),
+            completedAt: null,
+            deletedAt: null
+          }
+        });
+      });
+      
+      setTasks((prev) => [...tempActions.map(ta => ta.task), ...prev]);
+      setGoalTasks((prev) => [...prev, ...tempActions.map(ta => ({ goal_id: tempGoalId, task_id: ta.tempId }))]);
+    }
+
+    try {
+      const { data } = await goalsService.create(currentUser.id, goalPayload);
+      if (data) {
+        setGoals((prev) => prev.map(g => g.id === tempGoalId ? data : g));
+        logEvent('goal_created', { title: goalPayload.title });
+        if (goalPayload.start_time && goalPayload.end_time) {
+          logEvent('goal_scheduled', { title: goalPayload.title, start_time: goalPayload.start_time, end_time: goalPayload.end_time });
+        }
+
+        if (tempActions.length > 0) {
+          for (let i = 0; i < tempActions.length; i++) {
+            const ta = tempActions[i];
+            const taskData = {
+              title: ta.task.title,
+              description: '',
+              category: 'Trabalho',
+              priority: 'Média',
+              dueDate: null,
+            };
+            const { data: taskResponse } = await tasksService.create(currentUser.id, taskData);
+            if (taskResponse) {
+              setTasks((prev) => prev.map(t => t.id === ta.tempId ? taskResponse : t));
+              await goalsService.linkTask(data.id, taskResponse.id);
+              setGoalTasks((prev) => prev.map(gt => 
+                (gt.goal_id === tempGoalId && gt.task_id === ta.tempId) 
+                  ? { goal_id: data.id, task_id: taskResponse.id } 
+                  : gt
+              ));
+            } else {
+              setTasks((prev) => prev.filter(t => t.id !== ta.tempId));
+              setGoalTasks((prev) => prev.filter(gt => gt.task_id !== ta.tempId));
+            }
           }
         }
+      } else {
+        // Rollback
+        setGoals((prev) => prev.filter(g => g.id !== tempGoalId));
+        if (tempActions.length > 0) {
+          const tempIds = tempActions.map(ta => ta.tempId);
+          setTasks((prev) => prev.filter(t => !tempIds.includes(t.id)));
+          setGoalTasks((prev) => prev.filter(gt => gt.goal_id !== tempGoalId));
+        }
+      }
+    } catch (err) {
+      // Rollback
+      setGoals((prev) => prev.filter(g => g.id !== tempGoalId));
+      if (tempActions.length > 0) {
+        const tempIds = tempActions.map(ta => ta.tempId);
+        setTasks((prev) => prev.filter(t => !tempIds.includes(t.id)));
+        setGoalTasks((prev) => prev.filter(gt => gt.goal_id !== tempGoalId));
       }
     }
-  }, [currentUser?.id, logEvent]);
+  }, [currentUser, goals, tasks, goalTasks, logEvent, addNotification]);
 
   const handleUpdateGoal = useCallback(async (id, updatedData) => {
     if (!currentUser?.id) return;
     const existingGoal = goals.find(g => g.id === id);
+    
+    if (currentUser.isDemo) {
+      const updatedGoals = goals.map((g) => g.id === id ? { ...g, ...updatedData } : g);
+      setGoals(updatedGoals);
+      localStorage.setItem(`flowday_demo_goals_${currentUser.id}`, JSON.stringify({ goals: updatedGoals, goalTasks }));
+      logEvent('goal_updated', { goal_id: id });
+      if (updatedData.status === 'completed') {
+        logEvent('goal_completed', { goal_id: id });
+        addNotification('goal', 'Objetivo Concluído! 🏆', existingGoal.title);
+      }
+      return;
+    }
+
     const { data: payload } = await goalsService.update(currentUser.id, id, updatedData);
     if (payload) {
       setGoals((prev) => prev.map((g) => g.id === id ? { ...g, ...payload } : g));
@@ -880,6 +1445,7 @@ export function AppProvider({ children }) {
       }
       if (updatedData.status === 'completed') {
         logEvent('goal_completed', { goal_id: id });
+        addNotification('goal', 'Objetivo Concluído! 🏆', existingGoal.title);
         if (existingGoal.start_time) {
           logEvent('goal_completed_with_schedule', { goal_id: id });
         }
@@ -889,55 +1455,86 @@ export function AppProvider({ children }) {
         logEvent('goal_reopened', { goal_id: id });
       }
     }
-  }, [currentUser?.id, logEvent, goals]);
+  }, [currentUser, goals, goalTasks, logEvent, addNotification]);
 
   const handleDeleteGoal = useCallback(async (id) => {
     if (!currentUser?.id) return;
     
-    const deleteGoalConfirm = window.confirm('Excluir este objetivo?');
-    if (!deleteGoalConfirm) return;
+    if (undoAction && undoAction.id === id) {
+      clearTimeout(undoAction.timerId);
+    }
 
-    const linkedTasks = goalTasks.filter(gt => gt.goal_id === id).map(gt => gt.task_id);
-    const deleteTasksConfirm = linkedTasks.length > 0 && window.confirm('Deseja excluir também todas as tarefas vinculadas a este objetivo?');
+    const goalToDelete = goals.find(g => g.id === id);
+    if (!goalToDelete) return;
 
-    const { error } = await goalsService.delete(currentUser.id, id);
-    if (!error) {
-      const updatedGoals = goals.filter((g) => g.id !== id);
-      setGoals(updatedGoals);
-      setGoalTasks((prev) => prev.filter((gt) => gt.goal_id !== id));
-      
-      let finalTasks = [...tasks];
-      if (deleteTasksConfirm) {
-        for (const taskId of linkedTasks) {
-          const { error: errTask, degraded } = await tasksService.delete(currentUser.id, taskId);
-          if (!errTask || degraded) {
-            finalTasks = finalTasks.filter(t => t.id !== taskId);
-          }
-        }
-        setTasks(finalTasks);
+    // 1. Marca visualmente como excluído
+    const nowIso = new Date().toISOString();
+    setGoals(prev => prev.map(g => g.id === id ? { ...g, deletedAt: nowIso } : g));
+
+    // 2. Agenda a exclusão real/lógica de rede após 5 segundos
+    const timerId = setTimeout(async () => {
+      setUndoAction(null);
+
+      if (currentUser.isDemo) {
+        const mockGoals = goals.filter(g => g.id !== id);
+        const updatedGT = goalTasks.filter(gt => gt.goal_id !== id);
+        setGoals(mockGoals);
+        setGoalTasks(updatedGT);
+        localStorage.setItem(`flowday_demo_goals_${currentUser.id}`, JSON.stringify({ goals: mockGoals, goalTasks: updatedGT }));
+        logEvent('goal_deleted', { goal_id: id });
+        return;
       }
 
-      logEvent('goal_deleted', { goal_id: id, deleted_linked_tasks: deleteTasksConfirm });
-      resetAchievementsIfEmpty(currentUser.id, finalTasks, updatedGoals);
-    }
-  }, [currentUser?.id, logEvent, tasks, goals, goalTasks, resetAchievementsIfEmpty]);
+      const { error } = await goalsService.delete(currentUser.id, id);
+      if (!error) {
+        const updatedGoals = goals.filter((g) => g.id !== id);
+        setGoals(updatedGoals);
+        setGoalTasks((prev) => prev.filter((gt) => gt.goal_id !== id));
+        logEvent('goal_deleted', { goal_id: id });
+        resetAchievementsIfEmpty(currentUser.id, tasks, updatedGoals);
+      }
+    }, 5000);
+
+    // 3. Ativa o Undo
+    setUndoAction({
+      type: 'goal',
+      id,
+      timerId,
+      item: goalToDelete
+    });
+  }, [currentUser, goals, goalTasks, tasks, undoAction, logEvent, resetAchievementsIfEmpty]);
 
   const handleLinkTask = useCallback(async (goalId, taskId) => {
     if (goalTasks.some((gt) => gt.goal_id === goalId && gt.task_id === taskId)) return;
+    
+    if (currentUser?.isDemo) {
+      const updatedGT = [...goalTasks, { goal_id: goalId, task_id: taskId }];
+      setGoalTasks(updatedGT);
+      localStorage.setItem(`flowday_demo_goals_${currentUser.id}`, JSON.stringify({ goals, goalTasks: updatedGT }));
+      return;
+    }
+
     const { error } = await goalsService.linkTask(goalId, taskId);
     if (!error) {
       setGoalTasks((prev) => [...prev, { goal_id: goalId, task_id: taskId }]);
       logEvent('task_linked_to_goal', { goal_id: goalId, task_id: taskId });
     }
-  }, [goalTasks, currentUser?.id, logEvent]);
+  }, [goalTasks, currentUser, goals, logEvent]);
 
   const handleUnlinkTask = useCallback(async (goalId, taskId) => {
+    if (currentUser?.isDemo) {
+      const updatedGT = goalTasks.filter(gt => !(gt.goal_id === goalId && gt.task_id === taskId));
+      setGoalTasks(updatedGT);
+      localStorage.setItem(`flowday_demo_goals_${currentUser.id}`, JSON.stringify({ goals, goalTasks: updatedGT }));
+      return;
+    }
+
     const { error } = await goalsService.unlinkTask(goalId, taskId);
     if (!error) {
       setGoalTasks((prev) => prev.filter((gt) => !(gt.goal_id === goalId && gt.task_id === taskId)));
       logEvent('task_unlinked_from_goal', { goal_id: goalId, task_id: taskId });
     }
-  }, [currentUser?.id, logEvent]);
+  }, [currentUser, goalTasks, goals, logEvent]);
 
   // ═══════════════════════════════════════════════════════════════════════════
   // CATEGORIAS CRUD (Bloco 4)
@@ -1088,7 +1685,7 @@ export function AppProvider({ children }) {
   // USER STATE INTELLIGENCE — Re-hidratação baseada em eventos (Event Sourcing)
   // ═══════════════════════════════════════════════════════════════════════════
   useEffect(() => {
-    if (!currentUser?.id) return;
+    if (!currentUser?.id || currentUser.isDemo) return;
 
     rehydrateUserState(currentUser.id).then((state) => {
       if (state?.has_first_success) firstSuccessLogged.current = true;
@@ -1101,7 +1698,150 @@ export function AppProvider({ children }) {
     });
 
     return unsub;
-  }, [currentUser?.id, rehydrateUserState]);
+  }, [currentUser?.id, currentUser?.isDemo, rehydrateUserState]);
+
+  // ── Lógica do Desfazer (Undo) e Lixeira ──
+  const triggerUndo = useCallback(() => {
+    if (!undoAction) return;
+    clearTimeout(undoAction.timerId);
+    
+    // Restaura localmente na UI
+    if (undoAction.type === 'task') {
+      setTasks(prev => prev.map(t => t.id === undoAction.id ? { ...t, deletedAt: null } : t));
+    } else if (undoAction.type === 'goal') {
+      setGoals(prev => prev.map(g => g.id === undoAction.id ? { ...g, deletedAt: null } : g));
+    }
+    
+    setUndoAction(null);
+    addNotification('system', 'Ação Desfeita', 'O item removido foi restaurado com sucesso.');
+  }, [undoAction, addNotification]);
+
+  const handleRestoreTask = useCallback(async (id) => {
+    if (!currentUser?.id) return;
+    setTasks(prev => prev.map(t => t.id === id ? { ...t, deletedAt: null } : t));
+    
+    if (currentUser.isDemo) {
+      const updated = tasks.map(t => t.id === id ? { ...t, deletedAt: null } : t);
+      localStorage.setItem(`flowday_demo_tasks_${currentUser.id}`, JSON.stringify(updated));
+      return;
+    }
+    await tasksService.restore(currentUser.id, id);
+    addNotification('system', 'Tarefa restaurada', 'A tarefa foi movida de volta à lista ativa.');
+  }, [currentUser, tasks, addNotification]);
+
+  const handleDeleteTaskPermanent = useCallback(async (id) => {
+    if (!currentUser?.id) return;
+    if (!window.confirm('Excluir esta tarefa permanentemente? Esta ação não pode ser desfeita.')) return;
+    
+    setTasks(prev => prev.filter(t => t.id !== id));
+    setGoalTasks(prev => prev.filter(gt => gt.task_id !== id));
+    
+    if (currentUser.isDemo) {
+      const updated = tasks.filter(t => t.id !== id);
+      const updatedGT = goalTasks.filter(gt => gt.task_id !== id);
+      localStorage.setItem(`flowday_demo_tasks_${currentUser.id}`, JSON.stringify(updated));
+      localStorage.setItem(`flowday_demo_goals_${currentUser.id}`, JSON.stringify({ goals, goalTasks: updatedGT }));
+      return;
+    }
+    await tasksService.deletePermanent(currentUser.id, id);
+    addNotification('system', 'Tarefa excluída', 'A tarefa foi removida em definitivo.');
+  }, [currentUser, tasks, goalTasks, goals, addNotification]);
+
+  const handleRestoreGoal = useCallback(async (id) => {
+    if (!currentUser?.id) return;
+    setGoals(prev => prev.map(g => g.id === id ? { ...g, deletedAt: null } : g));
+    
+    if (currentUser.isDemo) {
+      const mockGoals = goals.map(g => g.id === id ? { ...g, deletedAt: null } : g);
+      localStorage.setItem(`flowday_demo_goals_${currentUser.id}`, JSON.stringify({ goals: mockGoals, goalTasks }));
+      return;
+    }
+    await goalsService.restore(currentUser.id, id);
+    addNotification('system', 'Objetivo restaurado', 'O objetivo foi restaurado com sucesso.');
+  }, [currentUser, goals, goalTasks, addNotification]);
+
+  const handleDeleteGoalPermanent = useCallback(async (id) => {
+    if (!currentUser?.id) return;
+    if (!window.confirm('Excluir este objetivo permanentemente? Isso removerá todas as referências dele.')) return;
+    
+    setGoals(prev => prev.filter(g => g.id !== id));
+    setGoalTasks(prev => prev.filter(gt => gt.goal_id !== id));
+    
+    if (currentUser.isDemo) {
+      const mockGoals = goals.filter(g => g.id !== id);
+      const updatedGT = goalTasks.filter(gt => gt.goal_id !== id);
+      localStorage.setItem(`flowday_demo_goals_${currentUser.id}`, JSON.stringify({ goals: mockGoals, goalTasks: updatedGT }));
+      return;
+    }
+    await goalsService.deletePermanent(currentUser.id, id);
+    addNotification('system', 'Objetivo excluído', 'O objetivo foi removido em definitivo.');
+  }, [currentUser, goals, goalTasks, addNotification]);
+
+  // ── Explicação Detalhada do Health Score (Consistency Score) ──
+  const consistencyScoreExplanation = useMemo(() => {
+    if (!currentUser) return { positives: [], negatives: [] };
+    
+    const positives = [];
+    const negatives = [];
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+    // 1. Conclusão de tarefas nos últimos 7 dias
+    const recentTasks = tasks.filter(t => {
+      const date = t.dueDate || t.createdAt?.split('T')[0];
+      return date && new Date(date) >= sevenDaysAgo;
+    });
+    const taskCount = recentTasks.length;
+    const completedTaskCount = recentTasks.filter(t => t.completed).length;
+    
+    if (completedTaskCount > 0) {
+      positives.push({ text: `${completedTaskCount} tarefas concluídas nos últimos 7 dias`, value: `+${Math.round((completedTaskCount / Math.max(1, taskCount)) * 40)}%` });
+    } else if (taskCount > 0) {
+      negatives.push({ text: 'Nenhuma das tarefas recentes foi concluída', value: '-15%' });
+    }
+
+    // 2. Conclusão de hábitos nos últimos 7 dias
+    const recentLogs = habitLogs.filter(l => new Date(l.completed_date) >= sevenDaysAgo);
+    if (recentLogs.length > 0) {
+      positives.push({ text: `${recentLogs.length} execuções de hábitos registradas`, value: `+${Math.round((recentLogs.length / Math.max(1, habits.length * 7)) * 40)}%` });
+    } else if (habits.length > 0) {
+      negatives.push({ text: 'Nenhum hábito realizado recentemente', value: '-20%' });
+    }
+
+    // 3. Progresso dos objetivos ativos
+    const activeGoals = goals.filter(g => g.status === 'active' && !g.deletedAt);
+    let totalPct = 0;
+    activeGoals.forEach(goal => {
+      const linkedIds = goalTasks.filter(gt => gt.goal_id === goal.id).map(gt => gt.task_id);
+      const linked = tasks.filter(t => linkedIds.includes(t.id));
+      const done = linked.filter(t => t.completed).length;
+      const pct = linked.length > 0 ? (done / linked.length) : 0;
+      totalPct += pct;
+    });
+    
+    if (activeGoals.length > 0) {
+      const avgGoalProgress = Math.round((totalPct / activeGoals.length) * 100);
+      if (avgGoalProgress > 0) {
+        positives.push({ text: `Objetivos em andamento avançando (média de ${avgGoalProgress}% concluído)`, value: `+${Math.round((avgGoalProgress / 100) * 20)}%` });
+      }
+    }
+
+    // Penalidade: Tarefas Atrasadas
+    const lateTasks = tasks.filter(t => !t.completed && t.dueDate && new Date(t.dueDate) < new Date() && !t.deletedAt);
+    if (lateTasks.length > 0) {
+      negatives.push({ text: `${lateTasks.length} tarefas estão com prazo atrasado`, value: `-${Math.min(15, lateTasks.length * 2)}%` });
+    }
+
+    // Planejamento semanal
+    const weeklyPlan = currentUser?.user_metadata?.weekly_plan || null;
+    if (weeklyPlan) {
+      positives.push({ text: 'Planejamento semanal concluído', value: '+10% (Bônus)' });
+    } else {
+      negatives.push({ text: 'Nenhum planejamento semanal feito para este ciclo', value: '-5%' });
+    }
+
+    return { positives, negatives };
+  }, [tasks, habits, habitLogs, goals, goalTasks, currentUser]);
 
   // ═══════════════════════════════════════════════════════════════════════════
   // CONTEXT VALUE
@@ -1113,6 +1853,7 @@ export function AppProvider({ children }) {
     isInitializing,
     handleLoginSuccess,
     handleLogout,
+    handleStartDemoMode,
 
     // Navigation
     activeTab,
@@ -1123,20 +1864,38 @@ export function AppProvider({ children }) {
     // Theme
     theme,
     setTheme,
+    appBgColor,
+    setAppBgColor,
 
     // Data
-    tasks,
-    goals,
+    tasks: tasks.filter(t => !t.deletedAt),
+    goals: goals.filter(g => !g.deletedAt),
+    allTasks: tasks,
+    allGoals: goals,
+    deletedTasks: tasks.filter(t => t.deletedAt),
+    deletedGoals: goals.filter(g => g.deletedAt),
     goalTasks,
     unlockedAchievements,
     toastQueue,
     dismissToast,
+
+    // Notificações
+    notifications,
+    addNotification,
+    markNotificationsAsRead,
+    clearNotifications,
+
+    // Undo Action
+    undoAction,
+    triggerUndo,
 
     // Tasks actions
     handleAddTask,
     handleUpdateTask,
     handleDeleteTask,
     handleToggleComplete,
+    handleRestoreTask,
+    handleDeleteTaskPermanent,
 
     // Goals actions
     handleAddGoal,
@@ -1144,6 +1903,8 @@ export function AppProvider({ children }) {
     handleDeleteGoal,
     handleLinkTask,
     handleUnlinkTask,
+    handleRestoreGoal,
+    handleDeleteGoalPermanent,
 
     // Habits
     habitsManager,
@@ -1158,6 +1919,7 @@ export function AppProvider({ children }) {
     handleDeleteCategory,
     logEvent,
     consistencyScore,
+    consistencyScoreExplanation,
     handleCompleteOnboarding,
     supabaseConfigError,
 
