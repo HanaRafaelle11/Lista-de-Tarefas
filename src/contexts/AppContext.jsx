@@ -592,6 +592,33 @@ export function AppProvider({ children }) {
     const list = data || [];
     setUnlockedAchievements(list);
     setUnlockedKeys(new Set(list.map((a) => a.achievement_key)));
+
+    // Usa localStorage como ÚNICA fonte de verdade para "já foi dispensado".
+    // (Colunas seen/dismissed_at podem não existir no banco — não dependemos delas.)
+    const dismissedLocalKey = `myflowday_dismissed_achievements_${userId}`;
+    let dismissedLocal = {};
+    try {
+      const val = localStorage.getItem(dismissedLocalKey);
+      if (val) dismissedLocal = JSON.parse(val);
+    } catch (_) {}
+
+    // Só exibe toasts de conquistas que não foram dispensadas pelo usuário
+    const pendingToasts = list.filter((a) => !dismissedLocal[a.achievement_key]);
+
+    if (pendingToasts.length > 0) {
+      // ACHIEVEMENTS já está importado estaticamente no topo do arquivo
+      setToastQueue((prev) => {
+        const existingKeys = new Set(prev.map(t => t.achievement?.key));
+        const toAdd = pendingToasts
+          .filter(a => !existingKeys.has(a.achievement_key))
+          .map(a => ({
+            id: `${a.achievement_key}-restore-${Date.now()}`,
+            achievement: ACHIEVEMENTS.find(d => d.key === a.achievement_key)
+          }))
+          .filter(t => t.achievement);
+        return [...prev, ...toAdd];
+      });
+    }
   }, []);
 
   const loadHabits = useCallback(async (userId) => {
@@ -829,6 +856,26 @@ export function AppProvider({ children }) {
         if (error) return;
 
         newlyUnlocked.forEach((a) => {
+          // Guard: se já foi dispensada anteriormente (localStorage ou banco), não re-exibe
+          const dismissedLocalKey = `myflowday_dismissed_achievements_${currentUser.id}`;
+          let dismissedLocal = {};
+          try {
+            const val = localStorage.getItem(dismissedLocalKey);
+            if (val) dismissedLocal = JSON.parse(val);
+          } catch (_) {}
+
+          if (dismissedLocal[a.key]) {
+            // Já foi dispensada antes — apenas marca no unlockedKeys, sem toast
+            unlockedKeysRef.current.add(a.key);
+            setUnlockedKeys((prev) => { const n = new Set(prev); n.add(a.key); return n; });
+            setUnlockedAchievements((prev) => [
+              ...(prev || []),
+              { achievement_key: a.key, unlocked_at: new Date().toISOString(), seen: true, viewed_at: new Date().toISOString(), dismissed_at: dismissedLocal[a.key] },
+            ]);
+            achievementsService.markAsSeen(currentUser.id, [a.key]);
+            return;
+          }
+
           unlockedKeysRef.current.add(a.key);
           setUnlockedKeys((prev) => { const n = new Set(prev); n.add(a.key); return n; });
           setUnlockedAchievements((prev) => [
@@ -841,8 +888,12 @@ export function AppProvider({ children }) {
               dismissed_at: null
             },
           ]);
-          const id = `${a.key}-${Date.now()}`;
-          setToastQueue((prev) => [...prev, { id, achievement: a }]);
+          // Só adiciona ao toast se ainda não estiver na fila (evita duplicata com loadAchievements)
+          setToastQueue((prev) => {
+            if (prev.some(t => t.achievement?.key === a.key)) return prev;
+            const id = `${a.key}-${Date.now()}`;
+            return [...prev, { id, achievement: a }];
+          });
           addNotification('achievement', `Nova conquista: ${a.title}`, a.desc, { tab: 'evolution' });
 
           // Marca como visto no banco

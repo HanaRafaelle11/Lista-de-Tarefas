@@ -48,7 +48,7 @@ export const achievementsService = {
 
   /**
    * Marca conquistas como visualizadas (seen = true).
-   * @param {string[]} keys - array de achievement_key
+   * Silencia erro 42703 se coluna não existir no banco.
    */
   markAsSeen: async (userId, keys) => {
     requireUser(userId);
@@ -60,17 +60,20 @@ export const achievementsService = {
         .eq('user_id', userId)
         .in('achievement_key', keys);
 
-      if (error) throw error;
+      // Silencia erro de coluna ausente (42703) — estado é gerenciado via localStorage
+      if (error && error.code !== '42703') {
+        console.warn('[achievementsService.markAsSeen]', error.message);
+      }
       return { error: null };
     } catch (error) {
-      console.error('[achievementsService.markAsSeen]', error);
-      return { error };
+      console.warn('[achievementsService.markAsSeen]', error.message);
+      return { error: null }; // Não propaga: localStorage é fonte de verdade
     }
   },
 
   /**
    * Marca uma conquista como dispensada (dismissed_at = agora).
-   * @param {string} key - chave de achievement_key
+   * Silencia erro 42703 se coluna não existir — localStorage é fonte de verdade.
    */
   markAsDismissed: async (userId, key) => {
     requireUser(userId);
@@ -83,11 +86,14 @@ export const achievementsService = {
         .eq('user_id', userId)
         .eq('achievement_key', key);
 
-      if (error) throw error;
+      // Silencia erro de coluna ausente (42703)
+      if (error && error.code !== '42703') {
+        console.warn('[achievementsService.markAsDismissed]', error.message);
+      }
       return { error: null };
     } catch (error) {
-      console.error('[achievementsService.markAsDismissed]', error);
-      return { error };
+      console.warn('[achievementsService.markAsDismissed]', error.message);
+      return { error: null };
     }
   },
 
