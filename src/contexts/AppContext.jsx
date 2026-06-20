@@ -1178,6 +1178,49 @@ export function AppProvider({ children }) {
     });
   }, [currentUser, tasks, goals, goalTasks, undoAction, logEvent, resetAchievementsIfEmpty]);
 
+  // Exclusão em lote de tarefas concluídas (soft delete com undo em 5s)
+  const handleBulkDeleteCompleted = useCallback(async () => {
+    if (!currentUser?.id) return;
+    const completedTasks = tasks.filter(t => t.completed && !t.deletedAt);
+    if (completedTasks.length === 0) return;
+
+    const nowIso = new Date().toISOString();
+    const ids = completedTasks.map(t => t.id);
+
+    // 1. Soft delete imediato na UI
+    setTasks(prev => prev.map(t => ids.includes(t.id) ? { ...t, deletedAt: nowIso } : t));
+
+    // 2. Cancela qualquer undo ativo anterior para não conflitar
+    if (undoAction) clearTimeout(undoAction.timerId);
+
+    // 3. Agenda deleção real após 5 segundos
+    const timerId = setTimeout(async () => {
+      setUndoAction(null);
+      if (currentUser.isDemo) {
+        const updatedList = tasks.filter(t => !ids.includes(t.id));
+        const updatedGT = goalTasks.filter(gt => !ids.includes(gt.task_id));
+        setTasks(updatedList);
+        setGoalTasks(updatedGT);
+        localStorage.setItem(`flowday_demo_tasks_${currentUser.id}`, JSON.stringify(updatedList));
+        localStorage.setItem(`flowday_demo_goals_${currentUser.id}`, JSON.stringify({ goals, goalTasks: updatedGT }));
+        logEvent('bulk_tasks_deleted', { count: ids.length });
+        return;
+      }
+      await Promise.all(ids.map(id => tasksService.delete(currentUser.id, id)));
+      logEvent('bulk_tasks_deleted', { count: ids.length });
+    }, 5000);
+
+    // 4. Undo action para lote (restaura todos)
+    setUndoAction({
+      type: 'bulk_task',
+      ids,
+      timerId,
+      items: completedTasks,
+    });
+
+    return completedTasks.length;
+  }, [currentUser, tasks, goals, goalTasks, undoAction, logEvent]);
+
   const handleToggleComplete = useCallback(async (id) => {
     if (!currentUser?.id) return;
     const task = tasks.find((t) => t.id === id);
@@ -1708,13 +1751,18 @@ export function AppProvider({ children }) {
     // Restaura localmente na UI
     if (undoAction.type === 'task') {
       setTasks(prev => prev.map(t => t.id === undoAction.id ? { ...t, deletedAt: null } : t));
+    } else if (undoAction.type === 'bulk_task') {
+      // Restaura todas as tarefas do lote
+      const restoredIds = new Set(undoAction.ids);
+      setTasks(prev => prev.map(t => restoredIds.has(t.id) ? { ...t, deletedAt: null } : t));
     } else if (undoAction.type === 'goal') {
       setGoals(prev => prev.map(g => g.id === undoAction.id ? { ...g, deletedAt: null } : g));
     }
     
     setUndoAction(null);
-    addNotification('system', 'Ação Desfeita', 'O item removido foi restaurado com sucesso.');
+    addNotification('system', 'Ação Desfeita', 'Os itens removidos foram restaurados com sucesso.');
   }, [undoAction, addNotification]);
+
 
   const handleRestoreTask = useCallback(async (id) => {
     if (!currentUser?.id) return;
@@ -1893,6 +1941,7 @@ export function AppProvider({ children }) {
     handleAddTask,
     handleUpdateTask,
     handleDeleteTask,
+    handleBulkDeleteCompleted,
     handleToggleComplete,
     handleRestoreTask,
     handleDeleteTaskPermanent,

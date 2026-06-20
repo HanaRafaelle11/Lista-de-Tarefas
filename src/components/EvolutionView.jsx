@@ -554,18 +554,13 @@ export default function EvolutionView() {
             ✕
           </button>
           <h3 style={{ fontSize: '15px', fontWeight: 'bold', marginBottom: '8px', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <Star size={16} style={{ color: 'var(--primary)' }} /> Desempenho e Evolução
+            <Star size={16} style={{ color: 'var(--primary)' }} /> Sua evolução em números
           </h3>
-          <p style={{ fontSize: '13px', lineHeight: '1.5', color: 'var(--text-main)', marginBottom: '12px' }}>
-            Acompanhe sua evolução ao longo do tempo. Nesta tela você visualiza seus resultados, hábitos concluídos, metas alcançadas e indicadores de progresso. Use essas informações para identificar melhorias, manter a consistência e ajustar seu plano de ação sempre que necessário.
+          <p style={{ fontSize: '13px', lineHeight: '1.6', color: 'var(--text-muted)', marginBottom: '0' }}>
+            Aqui é onde tudo fica registrado: tarefas concluídas, hábitos mantidos, metas batidas
+            e tendências ao longo das semanas. Quanto mais você usa, mais preciso fica o retrato
+            do seu ritmo real.
           </p>
-          <h4 style={{ fontSize: '13px', fontWeight: 'bold', marginBottom: '6px', color: 'var(--text-main)' }}>O que você encontra aqui:</h4>
-          <ul style={{ fontSize: '13px', lineHeight: '1.5', color: 'var(--text-muted)', paddingLeft: '20px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-            <li>Indicadores de desempenho.</li>
-            <li>Histórico da sua evolução.</li>
-            <li>Progresso das metas e objetivos.</li>
-            <li>Tendências e resultados ao longo das semanas.</li>
-          </ul>
         </section>
       )}
 
@@ -574,7 +569,7 @@ export default function EvolutionView() {
         <div className="evo-card-header">
           <h3 className="evo-card-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Award size={20} style={{ color: 'var(--primary)' }} />
-            Relatório Semanal Flowday
+            Resumo da Semana
           </h3>
           <button 
             onClick={() => setIsWeeklyPlannerOpen(true)}

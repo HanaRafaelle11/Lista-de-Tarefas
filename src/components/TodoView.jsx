@@ -247,6 +247,7 @@ export default function TodoView() {
     handleAddTask: onAddTask,
     handleUpdateTask: onUpdateTask,
     handleDeleteTask: onDeleteTask,
+    handleBulkDeleteCompleted: onBulkDeleteCompleted,
     handleToggleComplete: onToggleComplete, // Original onToggleComplete from context
     categories,
     handleAddCategory,
@@ -267,6 +268,7 @@ export default function TodoView() {
   const [customizingTemplate, setCustomizingTemplate] = useState(null);
   const [isSyncModalOpen, setIsSyncModalOpen] = useState(false);
   const [showCompletedKanban, setShowCompletedKanban] = useState(false);
+  const [showBulkConfirm, setShowBulkConfirm] = useState(false);
 
   // Estados para AchievementModal
   const [showAchievementModal, setShowAchievementModal] = useState(false);
@@ -917,6 +919,55 @@ export default function TodoView() {
               </button>
             ))}
           </div>
+        </div>
+      )}
+
+      {/* Botão de limpeza em lote e banner de confirmação */}
+      {viewMode === 'list' && completed > 0 && (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', marginBottom: '4px', gap: '8px' }}>
+          {showBulkConfirm ? (
+            <div
+              className="animate-fade-in"
+              style={{
+                display: 'flex', alignItems: 'center', gap: '10px',
+                padding: '10px 14px', borderRadius: 'var(--radius-sm)',
+                background: 'color-mix(in srgb, var(--danger) 10%, var(--bg-card))',
+                border: '1px solid color-mix(in srgb, var(--danger) 30%, transparent)',
+                fontSize: '13px', color: 'var(--text-main)'
+              }}
+            >
+              <span>Remover <strong>{completed}</strong> {completed === 1 ? 'tarefa concluída' : 'tarefas concluídas'}?</span>
+              <button
+                onClick={async () => { await onBulkDeleteCompleted(); setShowBulkConfirm(false); }}
+                style={{ padding: '5px 12px', fontSize: '12px', fontWeight: '700', borderRadius: 'var(--radius-xs)', background: 'var(--danger)', color: '#fff', border: 'none', cursor: 'pointer' }}
+              >
+                Sim, remover
+              </button>
+              <button
+                onClick={() => setShowBulkConfirm(false)}
+                style={{ padding: '5px 10px', fontSize: '12px', borderRadius: 'var(--radius-xs)', background: 'var(--bg-card)', color: 'var(--text-muted)', border: '1px solid var(--border-medium)', cursor: 'pointer' }}
+              >
+                Cancelar
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setShowBulkConfirm(true)}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: '6px',
+                padding: '7px 14px', fontSize: '12px', fontWeight: '600',
+                borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-medium)',
+                background: 'var(--bg-card)', color: 'var(--text-muted)',
+                cursor: 'pointer', transition: 'all 0.15s'
+              }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--danger)'; e.currentTarget.style.color = 'var(--danger)'; }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border-medium)'; e.currentTarget.style.color = 'var(--text-muted)'; }}
+              title={`Apagar as ${completed} tarefas concluídas`}
+            >
+              <Trash2 size={13} />
+              Limpar concluídas ({completed})
+            </button>
+          )}
         </div>
       )}
 

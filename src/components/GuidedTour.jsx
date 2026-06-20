@@ -5,10 +5,9 @@ export default function GuidedTour() {
   const [run, setRun] = useState(false);
 
   useEffect(() => {
-    // Only run the tour once
-    const hasSeenTour = localStorage.getItem('flowday_has_seen_tour');
+    // v2: nova chave para reexibir o tour com copy atualizado
+    const hasSeenTour = localStorage.getItem('flowday_tour_v2');
     if (!hasSeenTour) {
-      // Delay slightly to ensure UI is rendered
       const timer = setTimeout(() => {
         setRun(true);
       }, 1000);
@@ -22,39 +21,39 @@ export default function GuidedTour() {
   const steps = [
     {
       target: `${targetPrefix}home`,
-      title: 'Mapa de Produtividade',
-      content: 'Acompanhe sua produtividade através dos indicadores gerados automaticamente com base em suas tarefas concluídas, hábitos e objetivos.',
+      title: 'Tudo começa aqui',
+      content: 'Seu painel principal. Tarefas, hábitos e objetivos em um só lugar, organizados pelo que mais importa agora.',
       disableBeacon: true,
       placement: isMobile ? 'top' : 'bottom',
     },
     {
       target: `${targetPrefix}home`,
-      title: 'Radar Semanal',
-      content: 'Visualize rapidamente seus pontos fortes, áreas de atenção e evolução da semana.',
+      title: 'Seu ritmo da semana',
+      content: 'Veja como foi sua semana: onde você foi bem e onde vale prestar atenção. Tudo calculado automaticamente.',
       placement: isMobile ? 'top' : 'bottom',
     },
     {
       target: `${targetPrefix}goals`,
-      title: 'Objetivos',
-      content: 'Defina metas de curto, médio e longo prazo para direcionar suas ações.',
+      title: 'Defina para onde ir',
+      content: 'Crie metas e acompanhe o avanço real. Cada tarefa concluída vira progresso visível nos seus objetivos.',
       placement: isMobile ? 'top' : 'bottom',
     },
     {
       target: `${targetPrefix}goals`,
-      title: 'Hábitos',
-      content: 'Construa consistência registrando hábitos diários e acompanhando suas sequências.',
+      title: 'Construa constância',
+      content: 'Registre hábitos diários e veja suas sequências crescerem. Pequenos passos, todo dia.',
       placement: isMobile ? 'top' : 'bottom',
     },
     {
       target: `${targetPrefix}tasks`,
-      title: 'Kanban',
-      content: 'Organize tarefas por etapas e acompanhe o progresso visualmente.',
+      title: 'Organize do seu jeito',
+      content: 'Liste, mova e priorize suas tarefas. Você decide o formato que funciona melhor pra você: lista, kanban ou matriz.',
       placement: isMobile ? 'top' : 'bottom',
     },
     {
       target: `${targetPrefix}analytics`,
-      title: 'Relatórios',
-      content: 'Analise sua evolução e desempenho através de métricas e históricos.',
+      title: 'Conheça seu padrão',
+      content: 'Métricas do seu comportamento real. Descubra quando você rende mais e o que ainda pode melhorar.',
       placement: isMobile ? 'top' : 'bottom',
     }
   ];
@@ -65,7 +64,7 @@ export default function GuidedTour() {
 
     if (finishedStatuses.includes(status)) {
       setRun(false);
-      localStorage.setItem('flowday_has_seen_tour', 'true');
+      localStorage.setItem('flowday_tour_v2', 'true');
     }
   };
 

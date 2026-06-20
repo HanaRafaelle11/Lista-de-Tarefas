@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { ChevronDown, ChevronUp, HelpCircle } from 'lucide-react';
+import { ChevronDown, ChevronUp, HelpCircle, ArrowLeft } from 'lucide-react';
+
 
 const faqs = [
   {
@@ -15,12 +16,12 @@ const faqs = [
   {
     id: 3,
     question: 'O que é o "Score de Consistência"?',
-    answer: 'É uma pontuação de 0 a 100 que reflete a regularidade das suas atividades nos últimos 7 dias. Ele considera tarefas concluídas, hábitos mantidos e a progressão dos seus objetivos. Quanto mais consistente você for, mais alto é o score — e isso se reflete em insights mais precisos sobre seus padrões de produtividade.',
+    answer: 'Uma pontuação de 0 a 100 que reflete a regularidade das suas atividades nos últimos 7 dias. Ela considera tarefas concluídas, hábitos mantidos e a progressão dos seus objetivos. Quanto mais consistente você for, mais alto é o score, e isso se reflete em insights mais precisos sobre seus padrões de produtividade.',
   },
   {
     id: 4,
     question: 'Como funcionam os Objetivos e as Tarefas vinculadas?',
-    answer: 'Objetivos são metas de médio e longo prazo. Você pode vincular tarefas a cada objetivo para acompanhar o progresso automaticamente. Quando você conclui um objetivo com tarefas vinculadas, o MyFlowDay pergunta se deseja marcá-las como concluídas também — evitando inconsistências entre as seções.',
+    answer: 'Objetivos são metas de médio e longo prazo. Você pode vincular tarefas a cada objetivo para acompanhar o progresso automaticamente. Quando você conclui um objetivo com tarefas vinculadas, o MyFlowDay pergunta se deseja marcá-las como concluídas também, evitando inconsistências entre as seções.',
   },
   {
     id: 5,
@@ -30,7 +31,7 @@ const faqs = [
   {
     id: 6,
     question: 'O app funciona offline?',
-    answer: 'Sim! O MyFlowDay é um Progressive Web App (PWA) e pode ser instalado no seu celular ou computador. Você consegue criar tarefas e registrar hábitos mesmo sem conexão — os dados são sincronizados automaticamente quando a internet volta.',
+    answer: 'Sim! O MyFlowDay é um Progressive Web App (PWA) e pode ser instalado no seu celular ou computador. Você consegue criar tarefas e registrar hábitos mesmo sem conexão, e os dados são sincronizados automaticamente quando a internet volta.',
   },
   {
     id: 7,
@@ -40,12 +41,12 @@ const faqs = [
   {
     id: 8,
     question: 'Como posso enviar um feedback ou reportar um problema?',
-    answer: 'Adoramos ouvir nossos usuários! Vá em Configurações → "Compartilhe com o MyFlowDay" e nos envie sua mensagem diretamente pelo app. Você também pode abrir uma issue no nosso repositório público no GitHub. Toda sugestão é bem-vinda e lida com atenção.',
+    answer: 'Vá em Configurações e toque em "Compartilhe com o MyFlowDay" para enviar sua mensagem diretamente pelo app. Você também pode abrir uma issue no repositório público no GitHub. Toda sugestão é bem-vinda e lida com atenção.',
   },
   {
     id: 9,
     question: 'O MyFlowDay vai ter mais recursos no futuro?',
-    answer: 'Definitivamente! Estamos trabalhando em novas funcionalidades como relatórios avançados, integração com Google Calendar, modo colaborativo para equipes e muito mais. Acompanhe as atualizações pelo app e compartilhe suas ideias — o roadmap do MyFlowDay é construído junto com a comunidade.',
+    answer: 'Definitivamente! Funcionalidades como relatórios avançados, integração com Google Calendar e modo colaborativo estão no radar. Acompanhe as atualizações pelo app e compartilhe suas ideias. O roadmap do MyFlowDay é construído junto com a comunidade.',
   },
 ];
 
@@ -101,12 +102,48 @@ function FaqItem({ item }) {
 }
 
 export default function FaqView() {
+  const goBack = () => {
+    if (window.history.length > 1) {
+      window.history.back();
+    } else {
+      window.history.pushState(null, '', '/');
+      window.dispatchEvent(new Event('popstate'));
+    }
+  };
+
   return (
+    <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-app)' }}>
+      {/* Top nav com botão voltar */}
+      <div style={{
+        position: 'sticky', top: 0, zIndex: 100,
+        backgroundColor: 'var(--bg-card)',
+        borderBottom: '1px solid var(--border-light)',
+        padding: '12px 20px',
+        display: 'flex', alignItems: 'center', gap: '12px',
+      }}>
+        <button
+          onClick={goBack}
+          aria-label="Voltar"
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: '6px',
+            padding: '7px 14px', fontSize: '13px', fontWeight: '600',
+            borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-medium)',
+            background: 'var(--bg-app)', color: 'var(--text-main)',
+            cursor: 'pointer', transition: 'background 0.15s'
+          }}
+          onMouseEnter={e => e.currentTarget.style.background = 'var(--primary-glow)'}
+          onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-app)'}
+        >
+          <ArrowLeft size={15} /> Voltar
+        </button>
+        <span style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-main)' }}>Perguntas Frequentes</span>
+      </div>
+
     <div
       style={{
         maxWidth: '760px',
         margin: '0 auto',
-        padding: '48px 24px 80px',
+        padding: '40px 24px 80px',
         display: 'flex',
         flexDirection: 'column',
         gap: '40px',
@@ -166,9 +203,10 @@ export default function FaqView() {
           Ainda tem dúvidas?
         </p>
         <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '0' }}>
-          Vá em <strong>Configurações → Compartilhe com o MyFlowDay</strong> e nos envie sua mensagem. Respondemos pessoalmente! 🙌
+          Vá em <strong>Configurações → Compartilhe com o MyFlowDay</strong> e manda sua mensagem. Toda dúvida é respondida pessoalmente! 🙌
         </p>
       </div>
+    </div>
     </div>
   );
 }
