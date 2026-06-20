@@ -161,12 +161,13 @@ export function AppProvider({ children }) {
       return;
     }
     // 1. Recalcula insights comportamentais
-    const newInsights = generateInsights(tasks);
+    const activeTasks = tasks.filter(t => !t.deletedAt);
+    const newInsights = generateInsights(activeTasks);
     setInsights(newInsights);
 
     // 2. Recalcula sugestões de retenção baseadas no progresso
     const isObCompleted = !!currentUser?.user_metadata?.onboarding_completed;
-    const newSuggestions = getEngagementSuggestions(userState, tasks, isObCompleted);
+    const newSuggestions = getEngagementSuggestions(userState, activeTasks, isObCompleted);
     setSuggestions(newSuggestions);
   }, [tasks, userState, currentUser?.id, currentUser?.user_metadata?.onboarding_completed]);
 
@@ -525,8 +526,11 @@ export function AppProvider({ children }) {
   const consistencyScore = useMemo(() => {
     if (!currentUser) return 0;
 
+    const activeTasks = tasks.filter(t => !t.deletedAt);
+    const activeGoals = goals.filter(g => !g.deletedAt);
+
     // Se a conta está limpa (sem dados base), score é absoluto 0.
-    if (tasks.length === 0 && habits.length === 0 && goals.length === 0) {
+    if (activeTasks.length === 0 && habits.length === 0 && activeGoals.length === 0) {
       return 0;
     }
 
@@ -534,7 +538,7 @@ export function AppProvider({ children }) {
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
     // 1. Taxa de conclusão de tarefas nos últimos 7 dias (40% de peso)
-    const recentTasks = tasks.filter(t => {
+    const recentTasks = activeTasks.filter(t => {
       const date = t.dueDate || t.createdAt?.split('T')[0];
       return date && new Date(date) >= sevenDaysAgo;
     });
@@ -548,16 +552,16 @@ export function AppProvider({ children }) {
     const habitRate = totalPossibleLogs > 0 ? (recentLogs.length / totalPossibleLogs) : 0;
 
     // 3. Progresso dos objetivos ativos (20% de peso)
-    const activeGoals = goals.filter(g => g.status === 'active');
+    const activeGoalsFiltered = activeGoals.filter(g => g.status === 'active');
     let totalPct = 0;
-    activeGoals.forEach(goal => {
+    activeGoalsFiltered.forEach(goal => {
       const linkedIds = goalTasks.filter(gt => gt.goal_id === goal.id).map(gt => gt.task_id);
-      const linked = tasks.filter(t => linkedIds.includes(t.id));
+      const linked = activeTasks.filter(t => linkedIds.includes(t.id));
       const done = linked.filter(t => t.completed).length;
       const pct = linked.length > 0 ? (done / linked.length) : 0;
       totalPct += pct;
     });
-    const goalRate = activeGoals.length > 0 ? (totalPct / activeGoals.length) : 0;
+    const goalRate = activeGoalsFiltered.length > 0 ? (totalPct / activeGoalsFiltered.length) : 0;
 
     const finalScore = Math.min(100, Math.round(
       (taskRate * 40) + 
@@ -936,6 +940,18 @@ export function AppProvider({ children }) {
   const handleCompleteOnboarding = useCallback(async () => {
     if (!currentUser?.id) return;
     try {
+      localStorage.setItem(`flowday_onboarding_completed_${currentUser.id}`, 'true');
+      if (currentUser.isDemo) {
+        setCurrentUser(prev => ({
+          ...prev,
+          user_metadata: {
+            ...prev.user_metadata,
+            onboarding_completed: true
+          }
+        }));
+        logEvent('onboarding_completed');
+        return;
+      }
       const { error } = await supabase.auth.updateUser({
         data: { onboarding_completed: true }
       });
@@ -957,17 +973,27 @@ export function AppProvider({ children }) {
   // TASKS CRUD
   // ═══════════════════════════════════════════════════════════════════════════
   const resetAchievementsIfEmpty = useCallback(async (userId, updatedTasks, updatedGoals) => {
-    if (updatedTasks.length === 0 && updatedGoals.length === 0) {
+    const activeTasks = updatedTasks.filter(t => !t.deletedAt);
+    const activeGoals = updatedGoals.filter(g => !g.deletedAt);
+    if (activeTasks.length === 0 && activeGoals.length === 0) {
       console.log('[AppContext] Limpeza total de tarefas e objetivos detectada. Resetando conquistas.');
       try {
-        await achievementsService.resetAll(userId);
+        if (currentUser?.isDemo) {
+          const demoAchievementsKey = `flowday_demo_achievements_${currentUser.id}`;
+          localStorage.setItem(demoAchievementsKey, JSON.stringify([]));
+        } else {
+          await achievementsService.resetAll(userId);
+        }
         setUnlockedAchievements([]);
         setUnlockedKeys(new Set());
+        if (unlockedKeysRef.current) {
+          unlockedKeysRef.current = new Set();
+        }
       } catch (err) {
         console.warn('[AppContext] Erro ao resetar conquistas:', err);
       }
     }
-  }, []);
+  }, [currentUser]);
 
   const handleAddTask = useCallback(async (taskData) => {
     if (!currentUser?.id) return;
@@ -1127,13 +1153,14 @@ export function AppProvider({ children }) {
       });
     }
 
-    // 3. Agenda a expiração do undo (apenas limpa o estado de undoAction, a deleção já foi persistida)
+    // 3. Agenda a expiração do undo
     const timerId = setTimeout(() => {
       setUndoAction(null);
+      const finalTasks = tasks.filter(t => t.id !== id);
       if (!currentUser.isDemo) {
-        const finalTasks = tasks.filter(t => t.id !== id);
-        resetAchievementsIfEmpty(currentUser.id, finalTasks, goals);
+        setTasks(finalTasks);
       }
+      resetAchievementsIfEmpty(currentUser.id, finalTasks, goals);
     }, 5000);
 
     // 4. Ativa o Undo Action
@@ -1175,10 +1202,15 @@ export function AppProvider({ children }) {
       });
     }
 
-    // 4. Agenda a expiração do undo
+    // 4. Agenda a expiração do undo (10 segundos)
     const timerId = setTimeout(() => {
       setUndoAction(null);
-    }, 5000);
+      const finalTasks = tasks.filter(t => !ids.includes(t.id));
+      if (!currentUser.isDemo) {
+        setTasks(finalTasks);
+      }
+      resetAchievementsIfEmpty(currentUser.id, finalTasks, goals);
+    }, 10000);
 
     // 5. Undo action para lote (restaura todos)
     setUndoAction({
@@ -1503,12 +1535,12 @@ export function AppProvider({ children }) {
     // 3. Agenda a expiração do undo
     const timerId = setTimeout(() => {
       setUndoAction(null);
+      const updatedGoals = goals.filter((g) => g.id !== id);
       if (!currentUser.isDemo) {
-        const updatedGoals = goals.filter((g) => g.id !== id);
         setGoals(updatedGoals);
         setGoalTasks((prev) => prev.filter((gt) => gt.goal_id !== id));
-        resetAchievementsIfEmpty(currentUser.id, tasks, updatedGoals);
       }
+      resetAchievementsIfEmpty(currentUser.id, tasks, updatedGoals);
     }, 5000);
 
     // 4. Ativa o Undo
@@ -1517,6 +1549,100 @@ export function AppProvider({ children }) {
       id,
       timerId,
       item: goalToDelete
+    });
+  }, [currentUser, goals, goalTasks, tasks, undoAction, logEvent, resetAchievementsIfEmpty]);
+
+  const handleBulkDeleteCompletedGoals = useCallback(async () => {
+    if (!currentUser?.id) return;
+    const completedGoals = goals.filter(g => g.status === 'completed' && !g.deletedAt);
+    if (completedGoals.length === 0) return;
+
+    const nowIso = new Date().toISOString();
+    const ids = completedGoals.map(g => g.id);
+
+    // 1. Soft delete imediato na UI
+    setGoals(prev => prev.map(g => ids.includes(g.id) ? { ...g, deletedAt: nowIso } : g));
+
+    // 2. Cancela qualquer undo ativo anterior para não conflitar
+    if (undoAction) clearTimeout(undoAction.timerId);
+
+    // 3. Executa a deleção no banco imediatamente
+    if (currentUser.isDemo) {
+      const mockGoals = goals.filter(g => !ids.includes(g.id));
+      const updatedGT = goalTasks.filter(gt => !ids.includes(gt.goal_id));
+      setGoals(mockGoals);
+      setGoalTasks(updatedGT);
+      localStorage.setItem(`flowday_demo_goals_${currentUser.id}`, JSON.stringify({ goals: mockGoals, goalTasks: updatedGT }));
+      logEvent('bulk_goals_deleted', { count: ids.length });
+    } else {
+      Promise.all(ids.map(id => goalsService.delete(currentUser.id, id))).then(() => {
+        logEvent('bulk_goals_deleted', { count: ids.length });
+      });
+    }
+
+    // 4. Agenda a expiração do undo (10 segundos)
+    const timerId = setTimeout(() => {
+      setUndoAction(null);
+      const finalGoals = goals.filter(g => !ids.includes(g.id));
+      if (!currentUser.isDemo) {
+        setGoals(finalGoals);
+        setGoalTasks(prev => prev.filter(gt => !ids.includes(gt.goal_id)));
+      }
+      resetAchievementsIfEmpty(currentUser.id, tasks, finalGoals);
+    }, 10000);
+
+    // 5. Ativa o Undo
+    setUndoAction({
+      type: 'bulk_goal',
+      ids,
+      timerId,
+      items: completedGoals
+    });
+  }, [currentUser, goals, goalTasks, tasks, undoAction, logEvent, resetAchievementsIfEmpty]);
+
+  const handleDeleteAllGoals = useCallback(async () => {
+    if (!currentUser?.id) return;
+    const activeGoals = goals.filter(g => !g.deletedAt);
+    if (activeGoals.length === 0) return;
+
+    const nowIso = new Date().toISOString();
+    const ids = activeGoals.map(g => g.id);
+
+    // 1. Soft delete imediato na UI
+    setGoals(prev => prev.map(g => ids.includes(g.id) ? { ...g, deletedAt: nowIso } : g));
+
+    // 2. Cancela qualquer undo ativo anterior para não conflitar
+    if (undoAction) clearTimeout(undoAction.timerId);
+
+    // 3. Executa a deleção no banco imediatamente
+    if (currentUser.isDemo) {
+      setGoals([]);
+      setGoalTasks([]);
+      localStorage.setItem(`flowday_demo_goals_${currentUser.id}`, JSON.stringify({ goals: [], goalTasks: [] }));
+      logEvent('all_goals_deleted', { count: ids.length });
+    } else {
+      Promise.all(ids.map(id => goalsService.delete(currentUser.id, id))).then(() => {
+        logEvent('all_goals_deleted', { count: ids.length });
+      });
+    }
+
+    // 4. Agenda a expiração do undo (10 segundos)
+    const timerId = setTimeout(() => {
+      setUndoAction(null);
+      const finalGoals = goals.filter(g => !ids.includes(g.id));
+      if (!currentUser.isDemo) {
+        setGoals(finalGoals);
+        setGoalTasks(prev => prev.filter(gt => !ids.includes(gt.goal_id)));
+      }
+      resetAchievementsIfEmpty(currentUser.id, tasks, finalGoals);
+    }, 10000);
+
+    // 5. Ativa o Undo
+    setUndoAction({
+      type: 'bulk_goal',
+      ids,
+      timerId,
+      items: activeGoals
     });
   }, [currentUser, goals, goalTasks, tasks, undoAction, logEvent, resetAchievementsIfEmpty]);
 
@@ -1747,6 +1873,15 @@ export function AppProvider({ children }) {
         const mockGoals = goals.map(g => g.id === undoAction.id ? { ...g, deletedAt: null } : g);
         localStorage.setItem(`flowday_demo_goals_${currentUser.id}`, JSON.stringify({ goals: mockGoals, goalTasks }));
       }
+    } else if (undoAction.type === 'bulk_goal') {
+      const restoredIds = new Set(undoAction.ids);
+      setGoals(prev => prev.map(g => restoredIds.has(g.id) ? { ...g, deletedAt: null } : g));
+      if (!currentUser.isDemo) {
+        await Promise.all(undoAction.ids.map(id => goalsService.restore(currentUser.id, id)));
+      } else {
+        const mockGoals = goals.map(g => restoredIds.has(g.id) ? { ...g, deletedAt: null } : g);
+        localStorage.setItem(`flowday_demo_goals_${currentUser.id}`, JSON.stringify({ goals: mockGoals, goalTasks }));
+      }
     }
     
     setUndoAction(null);
@@ -1940,6 +2075,8 @@ export function AppProvider({ children }) {
     handleAddGoal,
     handleUpdateGoal,
     handleDeleteGoal,
+    handleBulkDeleteCompletedGoals,
+    handleDeleteAllGoals,
     handleLinkTask,
     handleUnlinkTask,
     handleRestoreGoal,

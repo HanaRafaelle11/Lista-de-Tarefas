@@ -68,7 +68,9 @@ export default function GoalsView() {
     habitsManager,
     shouldOpenGoalModal,
     setShouldOpenGoalModal,
-    isInitializing
+    isInitializing,
+    handleBulkDeleteCompletedGoals,
+    handleDeleteAllGoals
   } = useAppContext();
   const [filter, setFilter] = useState('active');
   const [isGoalModalOpen, setIsGoalModalOpen] = useState(false);
@@ -79,6 +81,9 @@ export default function GoalsView() {
   // Confirmation dialog for completing a goal with incomplete linked tasks
   const [pendingCompleteGoalId, setPendingCompleteGoalId] = useState(null);
 
+  const [showBulkConfirmCompleted, setShowBulkConfirmCompleted] = useState(false);
+  const [showBulkConfirmAll, setShowBulkConfirmAll] = useState(false);
+
   useEffect(() => {
     if (shouldOpenGoalModal) {
       setShouldOpenGoalModal(false);
@@ -87,19 +92,23 @@ export default function GoalsView() {
     }
   }, [shouldOpenGoalModal, setShouldOpenGoalModal]);
 
+  const activeGoals = useMemo(() => {
+    return (goals || []).filter(g => !g.deletedAt);
+  }, [goals]);
+
   // Filtrar objetivos por status
   const filteredGoals = useMemo(() => {
-    if (filter === 'all') return goals;
-    return goals.filter(g => g.status === filter);
-  }, [goals, filter]);
+    if (filter === 'all') return activeGoals;
+    return activeGoals.filter(g => g.status === filter);
+  }, [activeGoals, filter]);
 
   // Contagens por status
   const counts = useMemo(() => ({
-    all: goals.length,
-    active: goals.filter(g => g.status === 'active').length,
-    completed: goals.filter(g => g.status === 'completed').length,
-    archived: goals.filter(g => g.status === 'archived').length,
-  }), [goals]);
+    all: activeGoals.length,
+    active: activeGoals.filter(g => g.status === 'active').length,
+    completed: activeGoals.filter(g => g.status === 'completed').length,
+    archived: activeGoals.filter(g => g.status === 'archived').length,
+  }), [activeGoals]);
 
   // Abrir modal de novo objetivo
   const openNewGoalModal = () => {
@@ -204,7 +213,18 @@ export default function GoalsView() {
           </p>
         </div>
 
-        <div style={{ display: 'flex', gap: '10px' }}>
+        <div 
+          className="no-scrollbar"
+          style={{ 
+            display: 'flex', 
+            gap: '10px', 
+            overflowX: 'auto', 
+            width: '100%', 
+            whiteSpace: 'nowrap',
+            paddingBottom: '4px',
+            flexShrink: 0
+          }}
+        >
           <button
             onClick={() => setIsTemplatesDrawerOpen(true)}
             className="goals-add-btn"
@@ -245,6 +265,131 @@ export default function GoalsView() {
           </button>
         ))}
       </div>
+
+      {/* Botões de limpeza em lote de objetivos */}
+      {activeGoals.length > 0 && (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', marginTop: '12px', marginBottom: '8px', gap: '12px', flexWrap: 'wrap' }}>
+          
+          {/* Limpar concluídos */}
+          {counts.completed > 0 && (
+            <div>
+              {showBulkConfirmCompleted ? (
+                <div
+                  className="animate-fade-in"
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: '8px',
+                    padding: '6px 12px', borderRadius: 'var(--radius-sm)',
+                    background: 'color-mix(in srgb, var(--danger) 10%, var(--bg-card))',
+                    border: '1px solid color-mix(in srgb, var(--danger) 30%, transparent)',
+                    fontSize: '12.5px', color: 'var(--text-main)'
+                  }}
+                >
+                  <span>Remover {counts.completed} objetivo{counts.completed > 1 ? 's' : ''} concluído{counts.completed > 1 ? 's' : ''}?</span>
+                  <button
+                    onClick={() => {
+                      handleBulkDeleteCompletedGoals();
+                      setShowBulkConfirmCompleted(false);
+                    }}
+                    className="btn-confirm-danger"
+                    style={{
+                      padding: '4px 10px', borderRadius: '4px',
+                      fontSize: '11.5px', fontWeight: '700', cursor: 'pointer'
+                    }}
+                  >
+                    Sim, remover
+                  </button>
+                  <button
+                    onClick={() => setShowBulkConfirmCompleted(false)}
+                    style={{
+                      background: 'none', border: '1px solid var(--border-medium)',
+                      color: 'var(--text-main)', padding: '3px 8px', borderRadius: '4px',
+                      fontSize: '11.5px', fontWeight: '600', cursor: 'pointer'
+                    }}
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setShowBulkConfirmCompleted(true)}
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: '6px',
+                    padding: '7px 14px', fontSize: '12px', fontWeight: '600',
+                    borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-medium)',
+                    background: 'var(--bg-card)', color: 'var(--text-muted)',
+                    cursor: 'pointer', transition: 'all 0.15s'
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--danger)'; e.currentTarget.style.color = 'var(--danger)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border-medium)'; e.currentTarget.style.color = 'var(--text-muted)'; }}
+                  title={`Apagar os ${counts.completed} objetivos concluídos`}
+                >
+                  <span>🗑 Limpar concluídos ({counts.completed})</span>
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Apagar todos */}
+          {counts.all > 0 && (
+            <div>
+              {showBulkConfirmAll ? (
+                <div
+                  className="animate-fade-in"
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: '8px',
+                    padding: '6px 12px', borderRadius: 'var(--radius-sm)',
+                    background: 'color-mix(in srgb, var(--danger) 10%, var(--bg-card))',
+                    border: '1px solid color-mix(in srgb, var(--danger) 30%, transparent)',
+                    fontSize: '12.5px', color: 'var(--text-main)'
+                  }}
+                >
+                  <span>Remover todos os {counts.all} objetivos?</span>
+                  <button
+                    onClick={() => {
+                      handleDeleteAllGoals();
+                      setShowBulkConfirmAll(false);
+                    }}
+                    className="btn-confirm-danger"
+                    style={{
+                      padding: '4px 10px', borderRadius: '4px',
+                      fontSize: '11.5px', fontWeight: '700', cursor: 'pointer'
+                    }}
+                  >
+                    Sim, remover
+                  </button>
+                  <button
+                    onClick={() => setShowBulkConfirmAll(false)}
+                    style={{
+                      background: 'none', border: '1px solid var(--border-medium)',
+                      color: 'var(--text-main)', padding: '3px 8px', borderRadius: '4px',
+                      fontSize: '11.5px', fontWeight: '600', cursor: 'pointer'
+                    }}
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setShowBulkConfirmAll(true)}
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: '6px',
+                    padding: '7px 14px', fontSize: '12px', fontWeight: '600',
+                    borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-medium)',
+                    background: 'var(--bg-card)', color: 'var(--text-muted)',
+                    cursor: 'pointer', transition: 'all 0.15s'
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--danger)'; e.currentTarget.style.color = 'var(--danger)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border-medium)'; e.currentTarget.style.color = 'var(--text-muted)'; }}
+                  title="Apagar todos os objetivos"
+                >
+                  <span>🗑 Apagar todos ({counts.all})</span>
+                </button>
+              )}
+            </div>
+          )}
+
+        </div>
+      )}
 
       {/* ── Lista de Objetivos ──────────────────────────── */}
       {isInitializing ? (

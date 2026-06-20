@@ -1,19 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { Joyride, STATUS } from 'react-joyride';
+import { useAppContext } from '../contexts/AppContext';
 
 export default function GuidedTour() {
+  const { currentUser } = useAppContext();
   const [run, setRun] = useState(false);
 
   useEffect(() => {
-    // v2: nova chave para reexibir o tour com copy atualizado
-    const hasSeenTour = localStorage.getItem('flowday_tour_v2');
+    if (!currentUser) return;
+    const tourKey = `flowday_tour_v2_${currentUser.id}`;
+    const hasSeenTour = localStorage.getItem(tourKey);
     if (!hasSeenTour) {
       const timer = setTimeout(() => {
         setRun(true);
       }, 1000);
       return () => clearTimeout(timer);
     }
-  }, []);
+  }, [currentUser]);
 
   const isMobile = window.innerWidth <= 768;
   const targetPrefix = isMobile ? '#tour-nav-mobile-' : '#tour-nav-desktop-';
@@ -64,7 +67,9 @@ export default function GuidedTour() {
 
     if (finishedStatuses.includes(status)) {
       setRun(false);
-      localStorage.setItem('flowday_tour_v2', 'true');
+      if (currentUser?.id) {
+        localStorage.setItem(`flowday_tour_v2_${currentUser.id}`, 'true');
+      }
     }
   };
 

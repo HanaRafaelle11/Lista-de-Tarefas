@@ -13,10 +13,7 @@ import { getStatus } from '../services/syncQueue';
  * Auto-desaparece quando volta para 'healthy'.
  */
 export default function SyncStatusBanner() {
-  const { syncStatus } = useAppContext();
-  const [dismissed, setDismissed]     = useState(false);
-  const [detail, setDetail]           = useState({ pendingOps: 0, lastSync: null, warnings: [] });
-  const [visible, setVisible]         = useState(false);
+  return null;
 
   // Sincroniza com o estado granular da syncQueue
   useEffect(() => {

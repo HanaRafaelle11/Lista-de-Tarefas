@@ -287,7 +287,11 @@ export default function EvolutionView() {
     localStorage.setItem('flowday_hide_evo_guide', 'true');
   };
 
-  const stats = useMemo(() => calcStats(tasks, goals), [tasks, goals]);
+  // Filtra itens deletados antes de calcular stats
+  const activeTasks = useMemo(() => tasks.filter(t => !t.deletedAt), [tasks]);
+  const activeGoals = useMemo(() => goals.filter(g => !g.deletedAt), [goals]);
+
+  const stats = useMemo(() => calcStats(activeTasks, activeGoals), [activeTasks, activeGoals]);
   const streak = stats.currentStreak;
 
   // Mapa de conquistas desbloqueadas: key -> unlocked_at
@@ -307,8 +311,8 @@ export default function EvolutionView() {
     ? Math.round((streak / nextMilestone) * 100)
     : 100;
 
-  // Objetivos concluídos com detalhes
-  const completedGoals = goals.filter(g => g.status === 'completed');
+  // Objetivos concluídos com detalhes (excluindo deletados)
+  const completedGoals = activeGoals.filter(g => g.status === 'completed');
 
   // Lógica do Relatório Semanal
   const weeklyReportData = useMemo(() => {
@@ -316,7 +320,7 @@ export default function EvolutionView() {
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
     const dateStr = `${sevenDaysAgo.getFullYear()}-${String(sevenDaysAgo.getMonth() + 1).padStart(2, '0')}-${String(sevenDaysAgo.getDate()).padStart(2, '0')}`;
 
-    const recentCompletedTasks = tasks.filter(t => t.completed && t.dueDate && t.dueDate >= dateStr).length;
+    const recentCompletedTasks = activeTasks.filter(t => t.completed && t.dueDate && t.dueDate >= dateStr).length;
     const recentHabitLogsCount = habitsManager.habitLogs.filter(l => l.completed_date >= dateStr).length;
     
     // Plano semanal carregado do metadata
@@ -326,10 +330,10 @@ export default function EvolutionView() {
     let planTasks = [];
     if (weeklyPlan?.linkedGoals?.length > 0) {
       // Tarefas pendentes cujos objetivos estão no plano
-      planTasks = tasks.filter(t => !t.completed);
+      planTasks = activeTasks.filter(t => !t.completed);
     } else {
       // Se não há objetivos vinculados, mostra as 5 tarefas pendentes mais recentes
-      planTasks = tasks.filter(t => !t.completed).slice(0, 5);
+      planTasks = activeTasks.filter(t => !t.completed).slice(0, 5);
     }
     
     return {
@@ -338,7 +342,7 @@ export default function EvolutionView() {
       plan: weeklyPlan,
       planTasks: planTasks.slice(0, 8), // Limita a 8 tarefas
     };
-  }, [tasks, habitsManager.habitLogs, currentUser]);
+  }, [activeTasks, habitsManager.habitLogs, currentUser]);
 
   // Mensagem motivacional
   const getMotivation = () => {
@@ -354,7 +358,7 @@ export default function EvolutionView() {
   const { setActiveTab } = useAppContext();
 
   // ─── Empty State Global ─────────────────────────────────────────────────────
-  const hasAnyData = tasks.length > 0 || goals.length > 0;
+  const hasAnyData = activeTasks.length > 0 || activeGoals.length > 0;
 
   if (!hasAnyData) {
     return (

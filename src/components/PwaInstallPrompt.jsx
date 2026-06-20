@@ -61,7 +61,7 @@ export default function PwaInstallPrompt() {
   return (
     <div className="pwa-install-prompt animate-fade-in" style={{
       position: 'fixed',
-      bottom: '80px',
+      bottom: 'calc(96px + env(safe-area-inset-bottom))',
       left: '50%',
       transform: 'translateX(-50%)',
       width: '90%',

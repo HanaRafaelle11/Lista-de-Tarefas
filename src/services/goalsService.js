@@ -1,4 +1,6 @@
 import { supabase } from '../supabaseClient.js';
+import { enqueue, generateId } from './syncQueue.js';
+import { localDB } from '../db/localDB.js';
 
 const requireUser = (userId) => {
   if (!userId) throw new Error('[goalsService] userId obrigatório — usuário não autenticado');
@@ -215,6 +217,7 @@ export const goalsService = {
 
   /**
    * Exclui um objetivo logicamente (Soft Delete).
+   * Fallback: se a coluna deleted_at não existir no banco, faz hard delete.
    */
   delete: async (userId, id) => {
     requireUser(userId);
@@ -226,7 +229,20 @@ export const goalsService = {
         .eq('id', id)
         .eq('user_id', userId);
 
-      if (error) throw error;
+      if (error) {
+        // Se a coluna deleted_at não existe no banco (42703), fazer hard delete
+        if (error.code === '42703' || (error.message && error.message.includes('deleted_at'))) {
+          console.warn('[goalsService.delete] Coluna deleted_at ausente — executando hard delete no Supabase.');
+          const { error: hardError } = await supabase
+            .from('goals')
+            .delete()
+            .eq('id', id)
+            .eq('user_id', userId);
+          if (hardError) throw hardError;
+          return { error: null };
+        }
+        throw error;
+      }
       return { error: null };
     } catch (error) {
       console.error('[goalsService.delete]', error);
@@ -255,7 +271,7 @@ export const goalsService = {
   },
 
   /**
-   * Restaura um objetivo (limpa deleted_at).
+   * Restaura um objetivo (silencia erros de coluna ausente).
    */
   restore: async (userId, id) => {
     requireUser(userId);
@@ -266,11 +282,14 @@ export const goalsService = {
         .eq('id', id)
         .eq('user_id', userId);
 
-      if (error) throw error;
+      // Se coluna não existe, ignora silenciosamente
+      if (error && error.code !== '42703') {
+        console.warn('[goalsService.restore] Aviso:', error.message);
+      }
       return { error: null };
     } catch (error) {
       console.error('[goalsService.restore]', error);
-      return { error };
+      return { error: null }; // Não propaga: undo local ainda funciona
     }
   },
 

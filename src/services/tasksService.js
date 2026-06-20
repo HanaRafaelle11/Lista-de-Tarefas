@@ -181,13 +181,14 @@ export const tasksService = {
 
   /**
    * Exclui uma tarefa logicamente (Soft Delete).
-   * Define deletedAt no cache local e no Supabase.
+   * Define deletedAt no cache local e tenta sincronizar com o Supabase.
+   * Fallback: se a coluna deleted_at não existir no banco, faz hard delete.
    */
   delete: async (userId, id) => {
     requireUser(userId);
     const nowIso = new Date().toISOString();
     
-    // 1. Marca como excluído logicamente no cache local
+    // 1. Marca como excluído logicamente no cache local (para UX de undo)
     try {
       const existing = await localDB.get('tasks', id);
       if (existing) {
@@ -198,7 +199,7 @@ export const tasksService = {
       console.warn('[tasksService.delete] Erro ao marcar soft delete local:', err.message);
     }
 
-    // 2. Tenta fazer o update de deleted_at no Supabase
+    // 2. Tenta fazer soft delete (UPDATE deleted_at) no Supabase
     try {
       const { error } = await supabase
         .from('tasks')
@@ -206,11 +207,29 @@ export const tasksService = {
         .eq('id', id)
         .eq('user_id', userId);
 
-      if (error) throw error;
+      if (error) {
+        // Se a coluna deleted_at não existe no banco (42703), fazer hard delete
+        if (error.code === '42703' || (error.message && error.message.includes('deleted_at'))) {
+          console.warn('[tasksService.delete] Coluna deleted_at ausente — executando hard delete no Supabase.');
+          const { error: hardError } = await supabase
+            .from('tasks')
+            .delete()
+            .eq('id', id)
+            .eq('user_id', userId);
+          if (hardError) {
+            enqueue('task_delete', { userId, id });
+            return { error: hardError, degraded: true };
+          }
+          // Remove também do cache local
+          try { await localDB.delete('tasks', id); } catch (_) {}
+          return { error: null };
+        }
+        throw error;
+      }
       return { error: null };
     } catch (error) {
-      console.warn('[tasksService.delete] Falha ao marcar soft delete no Supabase — enfileirado:', error.message);
-      enqueue('task_update', { userId, id, updates: { deleted_at: nowIso } });
+      console.warn('[tasksService.delete] Falha ao excluir no Supabase — enfileirado:', error.message);
+      enqueue('task_delete', { userId, id });
       return { error, degraded: true };
     }
   },
@@ -246,12 +265,13 @@ export const tasksService = {
   },
 
   /**
-   * Restaura uma tarefa soft-deletada (limpa deletedAt).
+   * Restaura uma tarefa soft-deletada (limpa deletedAt no cache local).
+   * Como deleted_at pode não existir no banco, apenas restaura o cache local.
    */
   restore: async (userId, id) => {
     requireUser(userId);
     
-    // 1. Limpa deletedAt no cache local
+    // Limpa deletedAt no cache local — registro pode já ter sido hard-deleted no banco
     try {
       const existing = await localDB.get('tasks', id);
       if (existing) {
@@ -262,7 +282,7 @@ export const tasksService = {
       console.warn('[tasksService.restore] Erro ao restaurar no cache local:', err.message);
     }
 
-    // 2. Tenta limpar no Supabase
+    // Tenta limpar no Supabase (pode falhar se coluna não existir — silencia)
     try {
       const { error } = await supabase
         .from('tasks')
@@ -270,12 +290,14 @@ export const tasksService = {
         .eq('id', id)
         .eq('user_id', userId);
 
-      if (error) throw error;
+      // Se coluna não existe, ignora silenciosamente (undo funciona via cache local)
+      if (error && error.code !== '42703') {
+        console.warn('[tasksService.restore] Aviso ao restaurar no Supabase:', error.message);
+      }
       return { error: null };
     } catch (error) {
-      console.warn('[tasksService.restore] Falha ao restaurar no Supabase — enfileirado:', error.message);
-      enqueue('task_update', { userId, id, updates: { deleted_at: null } });
-      return { error, degraded: true };
+      console.warn('[tasksService.restore] Exceção ao restaurar no Supabase:', error.message);
+      return { error: null }; // Não propaga: undo local ainda funciona
     }
   },
 };

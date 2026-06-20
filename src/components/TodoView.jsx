@@ -775,7 +775,18 @@ export default function TodoView() {
           )}
         </div>
 
-        <div style={{ display: 'flex', gap: '8px' }}>
+        <div 
+          className="no-scrollbar"
+          style={{ 
+            display: 'flex', 
+            gap: '8px', 
+            overflowX: 'auto', 
+            width: '100%', 
+            whiteSpace: 'nowrap',
+            paddingBottom: '4px',
+            flexShrink: 0
+          }}
+        >
           <button 
             onClick={() => setShowCategoryManager(!showCategoryManager)} 
             className="tasks-add-btn" 
@@ -939,7 +950,8 @@ export default function TodoView() {
               <span>Remover <strong>{completed}</strong> {completed === 1 ? 'tarefa concluída' : 'tarefas concluídas'}?</span>
               <button
                 onClick={async () => { await onBulkDeleteCompleted(); setShowBulkConfirm(false); }}
-                style={{ padding: '5px 12px', fontSize: '12px', fontWeight: '700', borderRadius: 'var(--radius-xs)', background: 'var(--danger)', color: '#fff', border: 'none', cursor: 'pointer' }}
+                className="btn-confirm-danger"
+                style={{ padding: '5px 12px', fontSize: '12px', fontWeight: '700', borderRadius: 'var(--radius-xs)', cursor: 'pointer' }}
               >
                 Sim, remover
               </button>

@@ -105,9 +105,10 @@ export const ACHIEVEMENTS = [
 
 // ─── Cálculo de Streak ───────────────────────────────────────────────────────
 export function calcStreak(tasks) {
+  const activeTasks = (tasks || []).filter(t => !t.deletedAt);
   const completedDates = [
     ...new Set(
-      tasks
+      activeTasks
         .filter(t => t.completed && (t.dueDate || t.createdAt))
         .map(t => t.dueDate || t.createdAt.split('T')[0])
     )
@@ -139,8 +140,9 @@ export function calcStreak(tasks) {
 
 // ─── Cálculo de dias ativos ──────────────────────────────────────────────────
 export function calcActiveDays(tasks) {
+  const activeTasks = (tasks || []).filter(t => !t.deletedAt);
   return new Set(
-    tasks
+    activeTasks
       .filter(t => t.completed && t.dueDate)
       .map(t => t.dueDate)
   ).size;
@@ -148,11 +150,13 @@ export function calcActiveDays(tasks) {
 
 // ─── Calcular todas as stats ─────────────────────────────────────────────────
 export function calcStats(tasks, goals, habits = [], habitLogs = []) {
+  const activeTasks = (tasks || []).filter(t => !t.deletedAt);
+  const activeGoals = (goals || []).filter(g => !g.deletedAt);
   let petTasksCompleted = 0;
   let financeTasksCompleted = 0;
   let careerTasksCompleted = 0;
 
-  tasks.forEach(t => {
+  activeTasks.forEach(t => {
     if (t.completed) {
       const marker = '--flowday-meta--';
       if (t.description && t.description.includes(marker)) {
@@ -175,15 +179,15 @@ export function calcStats(tasks, goals, habits = [], habitLogs = []) {
   const habits100PercentToday = habits.length > 0 && completedHabitsToday === habits.length;
 
   return {
-    completedTasks: tasks.filter(t => t.completed).length,
-    totalTasks: tasks.length,
-    totalGoals: goals.length,
-    activeGoals: goals.filter(g => g.status === 'active').length,
-    completedGoals: goals.filter(g => g.status === 'completed').length,
-    currentStreak: calcStreak(tasks),
-    activeDays: calcActiveDays(tasks),
-    completionRate: tasks.length > 0
-      ? Math.round((tasks.filter(t => t.completed).length / tasks.length) * 100)
+    completedTasks: activeTasks.filter(t => t.completed).length,
+    totalTasks: activeTasks.length,
+    totalGoals: activeGoals.length,
+    activeGoals: activeGoals.filter(g => g.status === 'active').length,
+    completedGoals: activeGoals.filter(g => g.status === 'completed').length,
+    currentStreak: calcStreak(activeTasks),
+    activeDays: calcActiveDays(activeTasks),
+    completionRate: activeTasks.length > 0
+      ? Math.round((activeTasks.filter(t => t.completed).length / activeTasks.length) * 100)
       : 0,
     petTasksCompleted,
     financeTasksCompleted,

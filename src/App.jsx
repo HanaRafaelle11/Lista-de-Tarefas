@@ -250,7 +250,9 @@ function AppLayout() {
               ? 'Tarefa removida' 
               : undoAction.type === 'bulk_task' 
                 ? 'Tarefas removidas' 
-                : 'Objetivo removido'}
+                : undoAction.type === 'bulk_goal'
+                  ? 'Objetivos removidos'
+                  : 'Objetivo removido'}
           </span>
           <button className="undo-toast-btn" onClick={triggerUndo}>
             DESFAZER

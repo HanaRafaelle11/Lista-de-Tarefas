@@ -23,6 +23,9 @@
   
   --secondary: #22D3EE;
   
+  --danger: #EF4444;
+  --danger-hover: #DC2626;
+  
   /* Cores de Categorias */
   --cat-trabalho: #6B7F8A;
   --cat-trabalho-bg: #F0F4F6;
@@ -119,6 +122,14 @@ a {
   max-width: 1200px;
   margin: 0 auto;
   padding: 0 var(--space-6);
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 
 /* Animações */
@@ -4367,6 +4378,9 @@ button[title="Sair do MyFlowDay"]:hover {
   --primary-light:    rgba(34, 211, 238, 0.12);
   --primary-hover:    #06B6D4;
   --primary-glow:     rgba(34, 211, 238, 0.15);
+  
+  --danger:           #F87171;
+  --danger-hover:     #EF4444;
 
   /* Categorias dark */
   --cat-trabalho-bg:  #1A2025;
@@ -6709,6 +6723,27 @@ body,
   border-color: var(--border-light) !important;
   cursor: not-allowed;
 }
+
+/* Hide scrollbar utility */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+.btn-confirm-danger {
+  background-color: var(--danger) !important;
+  color: #ffffff !important;
+  border: none !important;
+}
+
+.btn-confirm-danger:hover {
+  background-color: var(--danger-hover) !important;
+}
+
+
 
 
 

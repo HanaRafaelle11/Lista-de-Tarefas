@@ -66,11 +66,16 @@ export default function HomeView() {
   
   // Persistent dismiss for "Resumo de Hoje" card (resets daily)
   const todaySummaryKey = `flowday_today_summary_dismissed_${currentUser?.id || 'guest'}_${new Date().toISOString().split('T')[0]}`;
-  const [showTodaySummary, setShowTodaySummary] = useState(() => localStorage.getItem(todaySummaryKey) !== 'true');
+  const [showTodaySummary, setShowTodaySummary] = useState(false);
   const dismissTodaySummary = () => {
     localStorage.setItem(todaySummaryKey, 'true');
     setShowTodaySummary(false);
   };
+
+  useEffect(() => {
+    const dismissed = localStorage.getItem(todaySummaryKey) === 'true';
+    setShowTodaySummary(!dismissed);
+  }, [todaySummaryKey]);
   
   const { habits, habitLogs } = habitsManager;
 
@@ -161,7 +166,8 @@ export default function HomeView() {
   const [activeHomeTab, setActiveHomeTab] = useState('progresso');
   const ONBOARDING_TOTAL_STEPS = 5;
 
-  const onboardingCompleted = !!currentUser?.user_metadata?.onboarding_completed;
+  const localOnboardingCompletedKey = `flowday_onboarding_completed_${currentUser?.id || 'guest'}`;
+  const onboardingCompleted = !!currentUser?.user_metadata?.onboarding_completed || localStorage.getItem(localOnboardingCompletedKey) === 'true';
   
   const startedKey = `flowday_onboarding_started_${currentUser?.id || 'guest'}`;
   const stepKey = `flowday_onboarding_step_${currentUser?.id || 'guest'}`;
@@ -689,155 +695,212 @@ export default function HomeView() {
           </div>
         )}
 
-        {activeHomeTab === 'aura' && (
-          <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
-            
-            {/* Assistente Aura */}
-            <AuraAssistantWidget 
-              analysis={auraAnalysis} 
-              onActionClick={(task, actionType) => {
-                if (actionType === 'today') {
-                  const todayStr = new Date().toISOString().split('T')[0];
-                  handleUpdateTask(task.id, { dueDate: todayStr });
-                } else if (actionType === 'tomorrow') {
-                  const tomorrow = new Date();
-                  tomorrow.setDate(tomorrow.getDate() + 1);
-                  const tomorrowStr = tomorrow.toISOString().split('T')[0];
-                  handleUpdateTask(task.id, { dueDate: tomorrowStr });
-                } else {
-                  onStartTask(task);
-                }
-              }} 
-            />
-
-            {/* Sugestões de Engajamento */}
-            {suggestions && suggestions.length > 0 && (
-              <section className="engagement-suggestions-section animate-fade-in">
-                <h3 style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-main)', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span>⚡</span> Sugestões recomendadas para você
+        {activeHomeTab === 'aura' && (() => {
+          const hasNoData = tasks.filter(t => !t.deletedAt).length === 0 && (habits || []).length === 0 && goals.filter(g => !g.deletedAt).length === 0;
+          if (hasNoData) {
+            return (
+              <div 
+                className="animate-fade-in" 
+                style={{ 
+                  display: 'flex', 
+                  flexDirection: 'column', 
+                  alignItems: 'center', 
+                  justifyContent: 'center', 
+                  textAlign: 'center',
+                  padding: '40px 20px',
+                  background: 'var(--bg-card)',
+                  border: '1px solid var(--border-light)',
+                  borderRadius: 'var(--radius-md)',
+                  boxShadow: 'var(--shadow-sm)',
+                  gap: '16px',
+                  marginTop: '16px'
+                }}
+              >
+                <div style={{ fontSize: '48px' }}>💡</div>
+                <h3 style={{ fontSize: '16px', fontWeight: '700', color: 'var(--text-main)', margin: 0 }}>
+                  Você ainda não possui dados suficientes.
                 </h3>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
-                  {suggestions.map((sug) => (
-                    <div 
-                      key={sug.id} 
-                      className="suggestion-card-premium" 
-                      style={{ 
-                        padding: '16px', 
-                        borderRadius: 'var(--radius-md)', 
-                        backgroundColor: 'var(--bg-card)', 
-                        border: '1px solid var(--border-medium)',
-                        boxShadow: 'var(--shadow-sm)',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        justifyContent: 'space-between',
-                        gap: '12px',
-                        transition: 'all 0.2s ease'
-                      }}
-                    >
-                      <div>
-                        <h4 style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-main)', margin: '0 0 6px' }}>
-                          {sug.title}
-                        </h4>
-                        <p style={{ fontSize: '12.5px', color: 'var(--text-muted)', margin: 0, lineHeight: '1.5' }}>
-                          {sug.message}
-                        </p>
-                      </div>
-                      {sug.ctaText && (
-                        <button 
-                          onClick={() => {
-                            if (sug.actionTab) setActiveTab(sug.actionTab);
-                            if (sug.id === 'onboarding_guided_loop' || sug.id === 'onboarding_loop') {
-                              localStorage.setItem(startedKey, 'true');
-                              localStorage.setItem(stepKey, '1');
-                              setOnboardingStep(1);
-                              logEvent('onboarding_started');
-                            }
-                          }} 
-                          className="btn-primary-glow"
-                          style={{ 
-                            alignSelf: 'flex-start',
-                            padding: '8px 16px', 
-                            fontSize: '12px', 
-                            fontWeight: '600', 
-                            borderRadius: 'var(--radius-sm)'
-                          }}
-                        >
-                          {sug.ctaText}
-                        </button>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </section>
-            )}
+                <p style={{ fontSize: '13.5px', color: 'var(--text-muted)', margin: 0, maxWidth: '400px', lineHeight: '1.6' }}>
+                  Crie tarefas, hábitos ou objetivos para receber insights.
+                </p>
+              </div>
+            );
+          }
+          return (
+            <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+              
+              {/* Assistente Aura */}
+              <AuraAssistantWidget 
+                analysis={auraAnalysis} 
+                onActionClick={(task, actionType) => {
+                  if (actionType === 'today') {
+                    const todayStr = new Date().toISOString().split('T')[0];
+                    handleUpdateTask(task.id, { dueDate: todayStr });
+                  } else if (actionType === 'tomorrow') {
+                    const tomorrow = new Date();
+                    tomorrow.setDate(tomorrow.getDate() + 1);
+                    const tomorrowStr = tomorrow.toISOString().split('T')[0];
+                    handleUpdateTask(task.id, { dueDate: tomorrowStr });
+                  } else {
+                    onStartTask(task);
+                  }
+                }} 
+              />
 
-            {/* Insights Comportamentais Inteligentes */}
-            {insights && insights.length > 0 && (() => {
-              const insightIconMap = {
-                '📊': <BarChart3 size={18} style={{ color: 'var(--primary)' }} />,
-                '⚠️': <AlertTriangle size={18} style={{ color: '#ef4444' }} />,
-                '🔥': <Flame size={18} style={{ color: '#f59e0b' }} />,
-                '⚡': <Zap size={18} style={{ color: 'var(--primary)' }} />,
-                '📅': <Calendar size={18} style={{ color: 'var(--primary)' }} />,
-                '🏆': <Award size={18} style={{ color: '#eab308' }} />,
-                '💡': <Lightbulb size={18} style={{ color: '#eab308' }} />,
-              };
-              return (
+              {/* Sugestões de Engajamento */}
+              {suggestions && suggestions.length > 0 && (
+                <section className="engagement-suggestions-section animate-fade-in">
+                  <h3 style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-main)', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span>⚡</span> Sugestões recomendadas para você
+                  </h3>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
+                    {suggestions.map((sug) => (
+                      <div 
+                        key={sug.id} 
+                        className="suggestion-card-premium" 
+                        style={{ 
+                          padding: '16px', 
+                          borderRadius: 'var(--radius-md)', 
+                          backgroundColor: 'var(--bg-card)', 
+                          border: '1px solid var(--border-medium)',
+                          boxShadow: 'var(--shadow-sm)',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          justifyContent: 'space-between',
+                          gap: '12px',
+                          transition: 'all 0.2s ease'
+                        }}
+                      >
+                        <div>
+                          <h4 style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-main)', margin: '0 0 6px' }}>
+                            {sug.title}
+                          </h4>
+                          <p style={{ fontSize: '12.5px', color: 'var(--text-muted)', margin: 0, lineHeight: '1.5' }}>
+                            {sug.message}
+                          </p>
+                        </div>
+                        {sug.ctaText && (
+                          <button 
+                            onClick={() => {
+                              if (sug.actionTab) setActiveTab(sug.actionTab);
+                              if (sug.id === 'onboarding_guided_loop' || sug.id === 'onboarding_loop') {
+                                localStorage.setItem(startedKey, 'true');
+                                localStorage.setItem(stepKey, '1');
+                                setOnboardingStep(1);
+                                logEvent('onboarding_started');
+                              }
+                            }} 
+                            className="btn-primary-glow"
+                            style={{ 
+                              alignSelf: 'flex-start',
+                              padding: '8px 16px', 
+                              fontSize: '12px', 
+                              fontWeight: '600', 
+                              borderRadius: 'var(--radius-sm)'
+                            }}
+                          >
+                            {sug.ctaText}
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              )}
+
+              {/* Insights Comportamentais Inteligentes */}
+              {(!insights || insights.length === 0) ? (
                 <section className="behavioral-insights-section animate-fade-in">
                   <div 
                     style={{ 
-                      background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(16, 185, 129, 0.05) 100%)', 
-                      border: '1px solid var(--primary-light)', 
+                      background: 'var(--bg-card)', 
+                      border: '1px dashed var(--border-medium)', 
                       borderRadius: 'var(--radius-md)', 
-                      padding: '20px' 
+                      padding: '24px',
+                      textAlign: 'center',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '10px'
                     }}
                   >
-                    <h3 style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-main)', margin: '0 0 14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <Sparkles size={16} style={{ color: 'var(--primary)' }} /> Insights do MyFlowDay
+                    <div style={{ fontSize: '32px' }}>💡</div>
+                    <h3 style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-main)', margin: 0 }}>
+                      Você ainda não possui dados suficientes.
                     </h3>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                      {insights.map((ins, idx) => (
-                        <div 
-                          key={idx} 
-                          style={{ 
-                            display: 'flex', 
-                            alignItems: 'flex-start', 
-                            gap: '12px', 
-                            padding: '10.5px 12px', 
-                            backgroundColor: 'var(--bg-card)', 
-                            border: '1px solid var(--border-light)', 
-                            borderRadius: 'var(--radius-sm)' 
-                          }}
-                        >
-                          <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginTop: '2px' }}>
-                            {insightIconMap[ins.emoji] || <Lightbulb size={18} style={{ color: 'var(--text-muted)' }} />}
-                          </span>
-                          <div style={{ flex: 1 }}>
-                            <p style={{ fontSize: '13px', color: 'var(--text-main)', margin: 0, lineHeight: '1.5' }}>
-                              {ins.message}
-                            </p>
-                            {ins.confidenceLevel && (
-                              <div style={{ display: 'flex', gap: '10px', fontSize: '10.5px', color: 'var(--text-light)', marginTop: '6px', flexWrap: 'wrap' }}>
-                                <span>Confiança: <strong style={{ color: ins.confidenceLevel === 'alta' ? '#22c55e' : ins.confidenceLevel === 'média' ? '#eab308' : '#ef4444' }}>{ins.confidenceLevel.toUpperCase()}</strong></span>
-                                <span>•</span>
-                                <span>Precisão: <strong>{ins.estimatedAccuracy}%</strong></span>
-                                <span>•</span>
-                                <span>Amostra: <strong>{ins.sampleSize} {ins.sampleSize === 1 ? 'atividade' : 'atividades'}</strong></span>
-                                <span>•</span>
-                                <span>Período: <strong>{ins.timeRangeWeeks} {ins.timeRangeWeeks === 1 ? 'semana' : 'semanas'}</strong></span>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
+                    <p style={{ fontSize: '13px', color: 'var(--text-muted)', margin: 0, maxWidth: '350px', lineHeight: '1.6' }}>
+                      Crie tarefas, hábitos ou objetivos para receber insights.
+                    </p>
                   </div>
                 </section>
-              );
-            })()}
+              ) : (() => {
+                const insightIconMap = {
+                  '📊': <BarChart3 size={18} style={{ color: 'var(--primary)' }} />,
+                  '⚠️': <AlertTriangle size={18} style={{ color: '#ef4444' }} />,
+                  '🔥': <Flame size={18} style={{ color: '#f59e0b' }} />,
+                  '⚡': <Zap size={18} style={{ color: 'var(--primary)' }} />,
+                  '📅': <Calendar size={18} style={{ color: 'var(--primary)' }} />,
+                  '🏆': <Award size={18} style={{ color: '#eab308' }} />,
+                  '💡': <Lightbulb size={18} style={{ color: '#eab308' }} />,
+                };
+                return (
+                  <section className="behavioral-insights-section animate-fade-in">
+                    <div 
+                      style={{ 
+                        background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(16, 185, 129, 0.05) 100%)', 
+                        border: '1px solid var(--primary-light)', 
+                        borderRadius: 'var(--radius-md)', 
+                        padding: '20px' 
+                      }}
+                    >
+                      <h3 style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-main)', margin: '0 0 14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <Sparkles size={16} style={{ color: 'var(--primary)' }} /> Insights do MyFlowDay
+                      </h3>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        {insights.map((ins, idx) => (
+                          <div 
+                            key={idx} 
+                            style={{ 
+                              display: 'flex', 
+                              alignItems: 'flex-start', 
+                              gap: '12px', 
+                              padding: '10.5px 12px', 
+                              backgroundColor: 'var(--bg-card)', 
+                              border: '1px solid var(--border-light)', 
+                              borderRadius: 'var(--radius-sm)' 
+                            }}
+                          >
+                            <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginTop: '2px' }}>
+                              {insightIconMap[ins.emoji] || <Lightbulb size={18} style={{ color: 'var(--text-muted)' }} />}
+                            </span>
+                            <div style={{ flex: 1 }}>
+                              <p style={{ fontSize: '13px', color: 'var(--text-main)', margin: 0, lineHeight: '1.5' }}>
+                                {ins.message}
+                              </p>
+                              {ins.confidenceLevel && (
+                                <div style={{ display: 'flex', gap: '10px', fontSize: '10.5px', color: 'var(--text-light)', marginTop: '6px', flexWrap: 'wrap' }}>
+                                  <span>Confiança: <strong style={{ color: ins.confidenceLevel === 'alta' ? '#22c55e' : ins.confidenceLevel === 'média' ? '#eab308' : '#ef4444' }}>{ins.confidenceLevel.toUpperCase()}</strong></span>
+                                  <span>•</span>
+                                  <span>Precisão: <strong>{ins.estimatedAccuracy}%</strong></span>
+                                  <span>•</span>
+                                  <span>Amostra: <strong>{ins.sampleSize} {ins.sampleSize === 1 ? 'atividade' : 'atividades'}</strong></span>
+                                  <span>•</span>
+                                  <span>Período: <strong>{ins.timeRangeWeeks} {ins.timeRangeWeeks === 1 ? 'semana' : 'semanas'}</strong></span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </section>
+                );
+              })()}
 
-          </div>
-        )}
+            </div>
+          );
+        })()}
       </div>
 
     </div>

@@ -27,18 +27,21 @@ export default function PerformanceView() {
   const [pomodoroStats, setPomodoroStats] = useState({ count: 0, hours: 0 });
   const [activeDays, setActiveDays] = useState(0);
 
-  const completedTasks = useMemo(() => tasks.filter(t => t.completed), [tasks]);
+  const activeTasks = useMemo(() => tasks.filter(t => !t.deletedAt), [tasks]);
+  const completedTasks = useMemo(() => activeTasks.filter(t => t.completed), [activeTasks]);
   const habits = habitsManager.habits;
   const habitLogs = habitsManager.habitLogs;
 
+  const activeGoals = useMemo(() => goals.filter(g => !g.deletedAt), [goals]);
+
   const totalEvents = useMemo(() => {
-    return completedTasks.length + goals.filter(g => g.status === 'completed').length;
-  }, [completedTasks, goals]);
+    return completedTasks.length + activeGoals.filter(g => g.status === 'completed').length;
+  }, [completedTasks, activeGoals]);
 
   const hasTwoWeeksHistory = useMemo(() => {
     const allDates = [
       ...completedTasks.map(t => t.completedAt || t.dueDate || t.createdAt),
-      ...goals.filter(g => g.status === 'completed').map(g => g.updated_at || g.created_at)
+      ...activeGoals.filter(g => g.status === 'completed').map(g => g.updated_at || g.created_at)
     ].filter(Boolean).map(d => new Date(d).getTime());
     if (allDates.length === 0) return false;
     const minDate = Math.min(...allDates);
@@ -126,7 +129,7 @@ export default function PerformanceView() {
     });
 
     // Contabiliza objetivos concluídos
-    const completedGoals = goals.filter(g => g.status === 'completed');
+    const completedGoals = activeGoals.filter(g => g.status === 'completed');
     completedGoals.forEach(goal => {
       const date = goal.updated_at?.split('T')[0] || goal.created_at?.split('T')[0];
       if (date) {
@@ -207,7 +210,7 @@ export default function PerformanceView() {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    return goals.map(goal => {
+    return activeGoals.map(goal => {
       // Tarefas vinculadas
       const linkedTaskIds = goalTasks.filter(gt => gt.goal_id === goal.id).map(gt => gt.task_id);
       const linked = tasks.filter(t => linkedTaskIds.includes(t.id));
@@ -261,6 +264,9 @@ export default function PerformanceView() {
   const stagnantGoals = useMemo(() => {
     return goalHealthList.filter(g => g.status === 'active' && g.daysStagnant > 5);
   }, [goalHealthList]);
+
+  // Subtrai objetivos deletados do cálculo de saúde
+  const visibleGoals = activeGoals;
 
   // 5. Streaks Central
   const streaksData = useMemo(() => {
@@ -324,7 +330,7 @@ export default function PerformanceView() {
   // 6. Insights Automáticos
   const autoInsights = useMemo(() => {
     const list = [];
-    if (completedTasks.length === 0 && goals.length === 0) {
+    if (completedTasks.length === 0 && activeGoals.length === 0) {
       return [];
     }
 
@@ -381,7 +387,7 @@ export default function PerformanceView() {
 
 
     // Insight de Horário de Objetivos
-    const completedGoals = goals.filter(g => g.status === 'completed');
+    const completedGoals = activeGoals.filter(g => g.status === 'completed');
     const goalsWithTime = completedGoals.filter(g => g.start_time && g.end_time);
     if (goalsWithTime.length > 0) {
       const hourCounts = {};
@@ -400,7 +406,7 @@ export default function PerformanceView() {
     }
 
     return list.slice(0, 4); // Limita a 4 insights principais
-  }, [radarSemanal, productivityHours, habits, habitLogs, stagnantGoals, goals, totalEvents, hasEnoughForDayOfWeek]);
+  }, [radarSemanal, productivityHours, habits, habitLogs, stagnantGoals, activeGoals, totalEvents, hasEnoughForDayOfWeek]);
 
   // 7. Perfil de Produtividade
   const productivityProfile = useMemo(() => {
@@ -527,7 +533,7 @@ export default function PerformanceView() {
   };
 
   // Zero state top-level: não há nenhuma tarefa concluída nem objetivo
-  const hasNoData = completedTasks.length === 0 && goals.length === 0;
+  const hasNoData = completedTasks.length === 0 && activeGoals.length === 0;
 
   return (
     <div className="performance-view-container animate-fade-in" style={{ padding: '24px 0' }}>
@@ -763,7 +769,7 @@ export default function PerformanceView() {
           <h3 style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Calendar size={18} /> Radar Semanal
           </h3>
-          {completedTasks.length === 0 && goals.length === 0 ? (
+          {completedTasks.length === 0 && activeGoals.length === 0 ? (
             <div style={{ padding: '24px', textAlign: 'center', backgroundColor: 'var(--bg-app)', borderRadius: 'var(--radius-md)', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', border: '1px dashed var(--border-medium)', gap: '8px' }}>
               <Radar size={28} color="var(--text-light)" style={{ opacity: 0.5 }} />
               <p style={{ fontSize: '13px', color: 'var(--text-main)', fontWeight: '600', margin: 0 }}>Radar inativo</p>
