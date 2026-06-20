@@ -48,6 +48,21 @@ const faqs = [
     question: 'O MyFlowDay vai ter mais recursos no futuro?',
     answer: 'Definitivamente! Funcionalidades como relatórios avançados, integração com Google Calendar e modo colaborativo estão no radar. Acompanhe as atualizações pelo app e compartilhe suas ideias. O roadmap do MyFlowDay é construído junto com a comunidade.',
   },
+  {
+    id: 10,
+    question: 'O que são os "Modelos Prontos"?',
+    answer: 'Modelos Prontos são estruturas de tarefas e objetivos pré-configuradas para diferentes áreas (como planejamento semanal, rotinas saudáveis e estudos). Eles servem como ponto de partida prático para você não ter que organizar tudo do zero.',
+  },
+  {
+    id: 11,
+    question: 'O que é o Método Eisenhower?',
+    answer: 'É um método de priorização que organiza tarefas em quatro quadrantes com base em Urgência e Importância: Fazer, Agendar, Delegar e Eliminar. No MyFlowDay, você conta com uma visualização exclusiva de matriz para organizar seu dia com foco no que realmente importa.',
+  },
+  {
+    id: 12,
+    question: 'Qual o diferencial do MyFlowDay em relação aos outros apps de produtividade?',
+    answer: 'Enquanto outros aplicativos focam em cobrar listas intermináveis e geram ansiedade por meio de autocobrança excessiva, o MyFlowDay promove a produtividade sustentável. Nós combinamos o controle de tarefas com o hábito saudável, acompanhamento de energia e um score de consistência dinâmico, ajudando você a render sem atingir o esgotamento (burnout).',
+  },
 ];
 
 function FaqItem({ item }) {
@@ -101,9 +116,11 @@ function FaqItem({ item }) {
   );
 }
 
-export default function FaqView() {
+export default function FaqView({ onGoBack }) {
   const goBack = () => {
-    if (window.history.length > 1) {
+    if (onGoBack) {
+      onGoBack();
+    } else if (window.history.length > 1) {
       window.history.back();
     } else {
       window.history.pushState(null, '', '/');

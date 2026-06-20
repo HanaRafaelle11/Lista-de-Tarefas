@@ -309,6 +309,7 @@ export default function FocusView() {
     { value: 'forest.wav',      label: 'Floresta',     emoji: '🌲' },
     { value: 'cafe.wav',        label: 'Cafeteria',    emoji: '☕' },
     { value: 'ocean.wav',       label: 'Ondas do Mar', emoji: '🌊' },
+    { value: 'fireplace.wav',   label: 'Lareira',      emoji: '🔥' },
     { value: 'white-noise.wav', label: 'Ruído Branco', emoji: '🤍' },
   ];
 

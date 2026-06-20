@@ -168,7 +168,14 @@ function AppLayout() {
   }
 
   if (legalRoute === 'faq') {
-    return <FaqView />;
+    return (
+      <FaqView
+        onGoBack={() => {
+          window.history.pushState(null, '', '/');
+          window.dispatchEvent(new Event('popstate'));
+        }}
+      />
+    );
   }
 
   // Tela de erro caso falte configuração do Supabase (Bloco 2)
@@ -239,7 +246,11 @@ function AppLayout() {
       {undoAction && (
         <div className="undo-toast animate-scale-up">
           <span className="undo-toast-text">
-            {undoAction.type === 'task' ? 'Tarefa removida' : 'Objetivo removido'}
+            {undoAction.type === 'task' 
+              ? 'Tarefa removida' 
+              : undoAction.type === 'bulk_task' 
+                ? 'Tarefas removidas' 
+                : 'Objetivo removido'}
           </span>
           <button className="undo-toast-btn" onClick={triggerUndo}>
             DESFAZER

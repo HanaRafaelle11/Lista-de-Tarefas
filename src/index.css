@@ -399,12 +399,27 @@ a {
     min-height: 56px !important;
   }
 
-  /* Modal mais largo e com margem inferior para teclado */
+  /* Modal mais largo e com margem inferior para teclado (rolagem no overlay) */
+  .modal-overlay {
+    align-items: flex-start !important;
+    overflow-y: auto !important;
+    padding: 12px !important;
+  }
+
   .modal-content {
     max-width: 95%;
-    margin: auto;
-    max-height: 90vh;
-    overflow-y: auto;
+    margin: 10px auto 30px !important;
+    max-height: none !important;
+    overflow-y: visible !important;
+  }
+
+  .notification-dropdown {
+    position: fixed !important;
+    top: 55px !important;
+    left: 10px !important;
+    right: 10px !important;
+    width: auto !important;
+    max-width: calc(100vw - 20px) !important;
   }
 
   /* Filtros - scroll horizontal em mobile */

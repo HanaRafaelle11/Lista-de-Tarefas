@@ -304,6 +304,60 @@ function generateOcean() {
   saveWav('ocean.wav', filtered);
 }
 
+function generateFireplace() {
+  console.log('\n🔥 Gerando lareira...');
+  const samples = new Float32Array(TOTAL_SAMPLES);
+  const pink = new PinkNoise();
+
+  // Para gerenciar estalos (crackles)
+  let crackleDecay = 0.992;
+  let crackleAmp = 0;
+  
+  // Para gerenciar o sopro/chiado do fogo (hissing)
+  let hissDecay = 0.9995;
+  let hissAmp = 0;
+
+  for (let i = 0; i < TOTAL_SAMPLES; i++) {
+    const t = i / SAMPLE_RATE;
+
+    // 1. Ruído base da chama/combustão (ruído rosa modulado para dar sensação de labaredas oscilantes)
+    const flameMod = 0.5 + 0.3 * Math.sin(2 * Math.PI * t / 4.1) + 0.2 * Math.sin(2 * Math.PI * t / 1.7);
+    const flameBase = pink.next() * (0.35 + 0.15 * Math.sin(2 * Math.PI * flameMod * t));
+
+    // 2. Estalos de madeira (Wood crackles - impulsos rápidos)
+    if (Math.random() < 0.0002) { // aprox 4.4 estalos por segundo
+      crackleAmp = 0.6 + Math.random() * 0.4;
+      crackleDecay = 0.985 + Math.random() * 0.012;
+    }
+
+    let crackle = 0;
+    if (crackleAmp > 0.001) {
+      crackle = whiteNoise() * crackleAmp;
+      crackleAmp *= crackleDecay;
+    }
+
+    // 3. Pequenos chiados de seiva/gás (sap hissing - mais longos e agudos)
+    if (Math.random() < 0.00005) {
+      hissAmp = 0.2 + Math.random() * 0.3;
+      hissDecay = 0.999 + Math.random() * 0.0008;
+    }
+
+    let hiss = 0;
+    if (hissAmp > 0.001) {
+      hiss = whiteNoise() * hissAmp * (0.4 + 0.6 * Math.sin(2 * Math.PI * 400 * t));
+      hissAmp *= hissDecay;
+    }
+
+    samples[i] = flameBase + crackle * 0.65 + hiss * 0.15;
+  }
+
+  // Filtramos levemente para aquecer o som geral sem abafar os estalos
+  const filtered = lowPassFilter(samples, 0.45);
+  applyFades(filtered, 2.0);
+  normalize(filtered, 0.78);
+  saveWav('fireplace.wav', filtered);
+}
+
 // ─── Execução ─────────────────────────────────────────────────────────────────
 
 (function main() {
@@ -323,9 +377,11 @@ function generateOcean() {
   generateForest();
   generateCafe();
   generateOcean();
+  generateFireplace();
 
   console.log('\n✨ Todos os sons foram gerados com sucesso!');
   console.log(`📂 Localização: ${OUT_DIR}`);
   console.log('\n⚠️  IMPORTANTE: Os arquivos foram gerados como .wav');
   console.log('   O FocusView foi atualizado para referenciar .wav automaticamente.');
+  console.log('   (Novo som: fireplace.wav)');
 })();

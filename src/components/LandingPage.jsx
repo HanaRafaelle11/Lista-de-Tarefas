@@ -164,7 +164,7 @@ export default function LandingPage({ onEnterApp }) {
             animation: 'fadeSlideIn 0.6s ease both',
           }}
         >
-          ✨ O Duolingo da Produtividade + O Fitbit do Trabalho Pessoal
+          ✨ Produtividade Sustentável e Foco Saudável
         </div>
 
         <h1
@@ -326,7 +326,7 @@ export default function LandingPage({ onEnterApp }) {
               </div>
               <h3 style={{ fontSize: '18px', fontWeight: 800, color: 'var(--text-main)' }}>Consistência Sem Pressão</h3>
               <p style={{ fontSize: '14px', color: 'var(--text-muted)', lineHeight: '1.6' }}>
-                Substitua a autocobrança desenfreada por ofensivas (streaks) inspiradoras inspiradas no Duolingo, focando na frequência diária e não em listas gigantescas.
+                Substitua a autocobrança desenfreada por ofensivas (streaks) saudáveis, focando na frequência diária e na construção de hábitos consistentes, sem ansiedade.
               </p>
             </div>
 
@@ -344,7 +344,7 @@ export default function LandingPage({ onEnterApp }) {
               </div>
               <h3 style={{ fontSize: '18px', fontWeight: 800, color: 'var(--text-main)' }}>Dados de Produtividade</h3>
               <p style={{ fontSize: '14px', color: 'var(--text-muted)', lineHeight: '1.6' }}>
-                Funciona como um Fitbit do seu trabalho pessoal. Monitore de forma inteligente seus blocos de foco, dias produtivos e níveis de energia biológica ao longo do tempo.
+                Monitore de forma inteligente sua energia e seu foco pessoal. Acompanhe seus blocos de concentração, dias de maior rendimento e padrões de produtividade ao longo do tempo.
               </p>
             </div>
 
@@ -407,7 +407,7 @@ export default function LandingPage({ onEnterApp }) {
             <p style={{ fontSize: '16px', color: 'var(--text-muted)', lineHeight: '1.8', maxWidth: '780px', margin: '8px auto 0' }}>
               A maioria dos gerenciadores de tarefas foi criada por e para corporações frias. Eles tratam você como um robô: basta empilhar cartões de tarefas, cobrar prazos cruéis e gerar ansiedade quando algo atrasa. 
               <br /><br />
-              No <strong>MyFlowDay</strong>, nós mudamos as regras. Acreditamos que a produtividade duradoura nasce do autoconhecimento, não da culpa. Nós somos o <strong>Fitbit do seu trabalho pessoal</strong>. Em vez de apenas registrar pendências, nós ajudamos você a mapear sua energia diária. Entenda seus limites, proteja seu foco profundo e evolua 1% a cada dia no seu ritmo.
+              No <strong>MyFlowDay</strong>, nós mudamos as regras. Acreditamos que a produtividade duradoura nasce do autoconhecimento, não da culpa. Somos o parceiro ideal para a sua jornada profissional e pessoal. Em vez de apenas registrar pendências, nós ajudamos você a mapear sua energia diária. Entenda seus limites, proteja seu foco profundo e evolua 1% a cada dia no seu ritmo.
             </p>
 
             <div style={{ display: 'flex', gap: '20px', justifyContent: 'center', marginTop: '16px', flexWrap: 'wrap' }}>

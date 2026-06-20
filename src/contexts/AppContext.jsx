@@ -588,42 +588,6 @@ export function AppProvider({ children }) {
     const list = data || [];
     setUnlockedAchievements(list);
     setUnlockedKeys(new Set(list.map((a) => a.achievement_key)));
-
-    // Filtra conquistas que ainda não foram dispensadas no banco E nem localmente
-    const dismissedLocalKey = `myflowday_dismissed_achievements_${userId}`;
-    let localDismissed = {};
-    try {
-      const localVal = localStorage.getItem(dismissedLocalKey);
-      if (localVal) localDismissed = JSON.parse(localVal);
-    } catch (e) {
-      console.warn('[AppContext] Falha ao ler localStorage de dismissals:', e);
-    }
-
-    const toQueue = list.filter(a => !a.dismissed_at && !localDismissed[a.achievement_key]);
-    if (toQueue.length > 0) {
-      const newItems = toQueue.map((a) => {
-        const achievementInfo = ACHIEVEMENTS.find(ac => ac.key === a.achievement_key);
-        if (achievementInfo) {
-          const id = `${a.achievement_key}-${Date.now()}`;
-          // Se ainda não foi visto, registra seen no banco de dados imediatamente
-          if (!a.seen) {
-            achievementsService.markAsSeen(userId, [a.achievement_key]).catch(() => {});
-          }
-          return { id, achievement: achievementInfo };
-        }
-        return null;
-      }).filter(Boolean);
-
-      setToastQueue((prev) => [...prev, ...newItems]);
-
-      // Atualiza localmente no estado para seen: true
-      setUnlockedAchievements((prev) =>
-        (prev || []).map((item) => {
-          const matched = toQueue.find(q => q.achievement_key === item.achievement_key);
-          return matched ? { ...item, seen: true, viewed_at: item.viewed_at || new Date().toISOString() } : item;
-        })
-      );
-    }
   }, []);
 
   const loadHabits = useCallback(async (userId) => {
@@ -1146,30 +1110,33 @@ export function AppProvider({ children }) {
     const nowIso = new Date().toISOString();
     setTasks(prev => prev.map(t => t.id === id ? { ...t, deletedAt: nowIso } : t));
 
-    // 2. Agenda a exclusão consolidada após 5 segundos
-    const timerId = setTimeout(async () => {
+    // 2. Executa a deleção lógica imediatamente no banco/cache
+    if (currentUser.isDemo) {
+      const updatedList = tasks.filter(t => t.id !== id);
+      setTasks(updatedList);
+      const updatedGT = goalTasks.filter(gt => gt.task_id !== id);
+      setGoalTasks(updatedGT);
+      localStorage.setItem(`flowday_demo_tasks_${currentUser.id}`, JSON.stringify(updatedList));
+      localStorage.setItem(`flowday_demo_goals_${currentUser.id}`, JSON.stringify({ goals, goalTasks: updatedGT }));
+      logEvent('task_deleted', { task_id: id });
+    } else {
+      tasksService.delete(currentUser.id, id).then(({ error, degraded }) => {
+        if (!error || degraded) {
+          logEvent('task_deleted', { task_id: id });
+        }
+      });
+    }
+
+    // 3. Agenda a expiração do undo (apenas limpa o estado de undoAction, a deleção já foi persistida)
+    const timerId = setTimeout(() => {
       setUndoAction(null);
-
-      if (currentUser.isDemo) {
-        const updatedList = tasks.filter(t => t.id !== id);
-        setTasks(updatedList);
-        const updatedGT = goalTasks.filter(gt => gt.task_id !== id);
-        setGoalTasks(updatedGT);
-        localStorage.setItem(`flowday_demo_tasks_${currentUser.id}`, JSON.stringify(updatedList));
-        localStorage.setItem(`flowday_demo_goals_${currentUser.id}`, JSON.stringify({ goals, goalTasks: updatedGT }));
-        logEvent('task_deleted', { task_id: id });
-        return;
-      }
-
-      const { error, degraded } = await tasksService.delete(currentUser.id, id);
-      if (!error || degraded) {
-        logEvent('task_deleted', { task_id: id });
+      if (!currentUser.isDemo) {
         const finalTasks = tasks.filter(t => t.id !== id);
         resetAchievementsIfEmpty(currentUser.id, finalTasks, goals);
       }
     }, 5000);
 
-    // 3. Ativa o Undo Action
+    // 4. Ativa o Undo Action
     setUndoAction({
       type: 'task',
       id,
@@ -1193,24 +1160,27 @@ export function AppProvider({ children }) {
     // 2. Cancela qualquer undo ativo anterior para não conflitar
     if (undoAction) clearTimeout(undoAction.timerId);
 
-    // 3. Agenda deleção real após 5 segundos
-    const timerId = setTimeout(async () => {
-      setUndoAction(null);
-      if (currentUser.isDemo) {
-        const updatedList = tasks.filter(t => !ids.includes(t.id));
-        const updatedGT = goalTasks.filter(gt => !ids.includes(gt.task_id));
-        setTasks(updatedList);
-        setGoalTasks(updatedGT);
-        localStorage.setItem(`flowday_demo_tasks_${currentUser.id}`, JSON.stringify(updatedList));
-        localStorage.setItem(`flowday_demo_goals_${currentUser.id}`, JSON.stringify({ goals, goalTasks: updatedGT }));
-        logEvent('bulk_tasks_deleted', { count: ids.length });
-        return;
-      }
-      await Promise.all(ids.map(id => tasksService.delete(currentUser.id, id)));
+    // 3. Executa a deleção no banco imediatamente
+    if (currentUser.isDemo) {
+      const updatedList = tasks.filter(t => !ids.includes(t.id));
+      const updatedGT = goalTasks.filter(gt => !ids.includes(gt.task_id));
+      setTasks(updatedList);
+      setGoalTasks(updatedGT);
+      localStorage.setItem(`flowday_demo_tasks_${currentUser.id}`, JSON.stringify(updatedList));
+      localStorage.setItem(`flowday_demo_goals_${currentUser.id}`, JSON.stringify({ goals, goalTasks: updatedGT }));
       logEvent('bulk_tasks_deleted', { count: ids.length });
+    } else {
+      Promise.all(ids.map(id => tasksService.delete(currentUser.id, id))).then(() => {
+        logEvent('bulk_tasks_deleted', { count: ids.length });
+      });
+    }
+
+    // 4. Agenda a expiração do undo
+    const timerId = setTimeout(() => {
+      setUndoAction(null);
     }, 5000);
 
-    // 4. Undo action para lote (restaura todos)
+    // 5. Undo action para lote (restaura todos)
     setUndoAction({
       type: 'bulk_task',
       ids,
@@ -1514,31 +1484,34 @@ export function AppProvider({ children }) {
     const nowIso = new Date().toISOString();
     setGoals(prev => prev.map(g => g.id === id ? { ...g, deletedAt: nowIso } : g));
 
-    // 2. Agenda a exclusão real/lógica de rede após 5 segundos
-    const timerId = setTimeout(async () => {
+    // 2. Executa a deleção imediatamente no banco
+    if (currentUser.isDemo) {
+      const mockGoals = goals.filter(g => g.id !== id);
+      const updatedGT = goalTasks.filter(gt => gt.goal_id !== id);
+      setGoals(mockGoals);
+      setGoalTasks(updatedGT);
+      localStorage.setItem(`flowday_demo_goals_${currentUser.id}`, JSON.stringify({ goals: mockGoals, goalTasks: updatedGT }));
+      logEvent('goal_deleted', { goal_id: id });
+    } else {
+      goalsService.delete(currentUser.id, id).then(({ error }) => {
+        if (!error) {
+          logEvent('goal_deleted', { goal_id: id });
+        }
+      });
+    }
+
+    // 3. Agenda a expiração do undo
+    const timerId = setTimeout(() => {
       setUndoAction(null);
-
-      if (currentUser.isDemo) {
-        const mockGoals = goals.filter(g => g.id !== id);
-        const updatedGT = goalTasks.filter(gt => gt.goal_id !== id);
-        setGoals(mockGoals);
-        setGoalTasks(updatedGT);
-        localStorage.setItem(`flowday_demo_goals_${currentUser.id}`, JSON.stringify({ goals: mockGoals, goalTasks: updatedGT }));
-        logEvent('goal_deleted', { goal_id: id });
-        return;
-      }
-
-      const { error } = await goalsService.delete(currentUser.id, id);
-      if (!error) {
+      if (!currentUser.isDemo) {
         const updatedGoals = goals.filter((g) => g.id !== id);
         setGoals(updatedGoals);
         setGoalTasks((prev) => prev.filter((gt) => gt.goal_id !== id));
-        logEvent('goal_deleted', { goal_id: id });
         resetAchievementsIfEmpty(currentUser.id, tasks, updatedGoals);
       }
     }, 5000);
 
-    // 3. Ativa o Undo
+    // 4. Ativa o Undo
     setUndoAction({
       type: 'goal',
       id,
@@ -1744,24 +1717,41 @@ export function AppProvider({ children }) {
   }, [currentUser?.id, currentUser?.isDemo, rehydrateUserState]);
 
   // ── Lógica do Desfazer (Undo) e Lixeira ──
-  const triggerUndo = useCallback(() => {
+  const triggerUndo = useCallback(async () => {
     if (!undoAction) return;
     clearTimeout(undoAction.timerId);
     
-    // Restaura localmente na UI
+    // Restaura localmente na UI e no banco
     if (undoAction.type === 'task') {
       setTasks(prev => prev.map(t => t.id === undoAction.id ? { ...t, deletedAt: null } : t));
+      if (!currentUser.isDemo) {
+        await tasksService.restore(currentUser.id, undoAction.id);
+      } else {
+        const updated = tasks.map(t => t.id === undoAction.id ? { ...t, deletedAt: null } : t);
+        localStorage.setItem(`flowday_demo_tasks_${currentUser.id}`, JSON.stringify(updated));
+      }
     } else if (undoAction.type === 'bulk_task') {
-      // Restaura todas as tarefas do lote
       const restoredIds = new Set(undoAction.ids);
       setTasks(prev => prev.map(t => restoredIds.has(t.id) ? { ...t, deletedAt: null } : t));
+      if (!currentUser.isDemo) {
+        await Promise.all(undoAction.ids.map(id => tasksService.restore(currentUser.id, id)));
+      } else {
+        const updated = tasks.map(t => restoredIds.has(t.id) ? { ...t, deletedAt: null } : t);
+        localStorage.setItem(`flowday_demo_tasks_${currentUser.id}`, JSON.stringify(updated));
+      }
     } else if (undoAction.type === 'goal') {
       setGoals(prev => prev.map(g => g.id === undoAction.id ? { ...g, deletedAt: null } : g));
+      if (!currentUser.isDemo) {
+        await goalsService.restore(currentUser.id, undoAction.id);
+      } else {
+        const mockGoals = goals.map(g => g.id === undoAction.id ? { ...g, deletedAt: null } : g);
+        localStorage.setItem(`flowday_demo_goals_${currentUser.id}`, JSON.stringify({ goals: mockGoals, goalTasks }));
+      }
     }
     
     setUndoAction(null);
     addNotification('system', 'Ação Desfeita', 'Os itens removidos foram restaurados com sucesso.');
-  }, [undoAction, addNotification]);
+  }, [currentUser, undoAction, tasks, goals, goalTasks, addNotification]);
 
 
   const handleRestoreTask = useCallback(async (id) => {
