@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Calendar, Trash2, Edit2, AlertCircle, CalendarPlus, Check, Repeat } from 'lucide-react';
-import { parseTaskMetadata, formatDescriptionWithoutMetadata } from '../contexts/AppContext';
+import { parseTaskMetadata, formatDescriptionWithoutMetadata, useAppContext } from '../contexts/AppContext';
 import CategoryIcon from './CategoryIcon';
 
 // ─── Redireciona para o Google Calendar web pré-preenchido ───────────────────
@@ -18,8 +18,13 @@ function exportTaskToCalendar(task) {
 
 export default function TodoItem({ item, onToggleComplete, onDelete, onEdit }) {
   const [calExported, setCalExported] = useState(false);
+  const { isPro, openPaywall } = useAppContext();
 
   const handleExportCalendar = () => {
+    if (!isPro) {
+      openPaywall('google_calendar_task_item');
+      return;
+    }
     exportTaskToCalendar(item);
     setCalExported(true);
     setTimeout(() => setCalExported(false), 2500);

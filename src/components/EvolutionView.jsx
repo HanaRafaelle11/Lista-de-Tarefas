@@ -203,18 +203,45 @@ function CategoryDonut({ tasks }) {
   return (
     <div className="evo-donut-container">
       <svg width="140" height="140" viewBox="0 0 140 140">
+        <defs>
+          <pattern id="pattern-Trabalho" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+            <line x1="0" y1="0" x2="0" y2="8" stroke="white" strokeWidth="2.5" opacity="0.4" />
+          </pattern>
+          <pattern id="pattern-Pessoal" width="6" height="6" patternUnits="userSpaceOnUse">
+            <circle cx="3" cy="3" r="1.5" fill="white" opacity="0.4" />
+          </pattern>
+          <pattern id="pattern-Estudos" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(-45)">
+            <line x1="0" y1="0" x2="0" y2="8" stroke="white" strokeWidth="2.5" opacity="0.4" />
+          </pattern>
+          <pattern id="pattern-Lazer" width="10" height="10" patternUnits="userSpaceOnUse">
+            <path d="M 0 0 L 10 10 M 10 0 L 0 10" stroke="white" strokeWidth="1.5" opacity="0.4" />
+          </pattern>
+          <pattern id="pattern-Pets" width="6" height="6" patternUnits="userSpaceOnUse">
+            <rect width="3" height="3" fill="white" opacity="0.4" />
+          </pattern>
+        </defs>
         <circle cx="70" cy="70" r="50" fill="transparent" stroke="var(--border-light)" strokeWidth="14" />
         {slices.map((s, i) => (
-          <circle
-            key={i}
-            cx="70" cy="70" r="50"
-            fill="transparent"
-            stroke={s.color}
-            strokeWidth="14"
-            strokeDasharray={`${s.len} ${circumference - s.len}`}
-            strokeDashoffset="0"
-            style={{ transform: `rotate(${s.rotation}deg)`, transformOrigin: '70px 70px' }}
-          />
+          <React.Fragment key={i}>
+            <circle
+              cx="70" cy="70" r="50"
+              fill="transparent"
+              stroke={s.color}
+              strokeWidth="14"
+              strokeDasharray={`${s.len} ${circumference - s.len}`}
+              strokeDashoffset="0"
+              style={{ transform: `rotate(${s.rotation}deg)`, transformOrigin: '70px 70px' }}
+            />
+            <circle
+              cx="70" cy="70" r="50"
+              fill="transparent"
+              stroke={`url(#pattern-${s.c})`}
+              strokeWidth="14"
+              strokeDasharray={`${s.len} ${circumference - s.len}`}
+              strokeDashoffset="0"
+              style={{ transform: `rotate(${s.rotation}deg)`, transformOrigin: '70px 70px' }}
+            />
+          </React.Fragment>
         ))}
         <text x="70" y="66" textAnchor="middle" style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '20px', fill: 'var(--text-main)' }}>{total}</text>
         <text x="70" y="82" textAnchor="middle" style={{ fontFamily: 'var(--font-body)', fontSize: '10px', fill: 'var(--text-muted)' }}>TAREFAS</text>
@@ -222,7 +249,10 @@ function CategoryDonut({ tasks }) {
       <div className="evo-donut-legend">
         {categories.map(c => (
           <div key={c} className="evo-legend-row" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span className="evo-legend-dot" style={{ backgroundColor: colors[c] }} />
+            <svg width="14" height="14" style={{ borderRadius: '50%', flexShrink: 0 }}>
+              <circle cx="7" cy="7" r="7" fill={colors[c]} />
+              <circle cx="7" cy="7" r="7" fill={`url(#pattern-${c})`} />
+            </svg>
             <span className="evo-legend-cat" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
               <CategoryIcon categoryId={c} size={14} />
               <span>{c}</span>
@@ -273,7 +303,7 @@ export default function EvolutionView() {
     unlockedAchievements, 
     habitsManager, 
     isPro, 
-    handleSimulateUpgrade, 
+    openPaywall, 
     handleUpdateTask,
     handleToggleComplete,
     currentUser 
@@ -325,10 +355,11 @@ export default function EvolutionView() {
     
     // Plano semanal carregado do metadata
     const weeklyPlan = currentUser?.user_metadata?.weekly_plan || null;
+    const hasWeeklyPlan = !!(weeklyPlan && (weeklyPlan.focus?.trim() || weeklyPlan.criticalPriorities?.filter(p => p.trim()).length > 0 || weeklyPlan.linkedGoals?.length > 0));
 
     // Tarefas pendentes vinculadas ao plano (por objetivos selecionados)
     let planTasks = [];
-    if (weeklyPlan?.linkedGoals?.length > 0) {
+    if (hasWeeklyPlan && weeklyPlan?.linkedGoals?.length > 0) {
       // Tarefas pendentes cujos objetivos estão no plano
       planTasks = activeTasks.filter(t => !t.completed);
     } else {
@@ -339,7 +370,7 @@ export default function EvolutionView() {
     return {
       completedTasks: recentCompletedTasks,
       completedHabits: recentHabitLogsCount,
-      plan: weeklyPlan,
+      plan: hasWeeklyPlan ? weeklyPlan : null,
       planTasks: planTasks.slice(0, 8), // Limita a 8 tarefas
     };
   }, [activeTasks, habitsManager.habitLogs, currentUser]);
@@ -901,11 +932,11 @@ export default function EvolutionView() {
               Obtenha insights sobre a sua alocação de tempo e esforço com relatórios de distribuição por categoria e nível de prioridade.
             </p>
             <button 
-              onClick={handleSimulateUpgrade} 
+              onClick={() => openPaywall('evolution_charts')} 
               className="btn-primary-glow"
               style={{ padding: '8px 16px', fontSize: '13px', cursor: 'pointer' }}
             >
-              Simular Upgrade Pro ⚡
+              Ativar Flowday Pro ⚡
             </button>
           </div>
         )}

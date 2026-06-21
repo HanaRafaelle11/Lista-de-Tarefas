@@ -254,7 +254,10 @@ export default function TodoView() {
     handleDeleteCategory,
     habitsManager,
     logEvent,
-    goals
+    goals,
+    isPro,
+    openPaywall,
+    hiddenTasksCount
   } = useAppContext();
 
   // Estados locais
@@ -561,6 +564,11 @@ export default function TodoView() {
   };
 
   const handleExportGoogleCalendar = () => {
+    if (!isPro) {
+      openPaywall('google_calendar');
+      setIsSyncModalOpen(false);
+      return;
+    }
     exportAllTasksToCalendar(tasks);
     window.open('https://calendar.google.com/calendar/r/settings/export', '_blank');
     setIsSyncModalOpen(false);
@@ -568,6 +576,11 @@ export default function TodoView() {
   };
 
   const handleExportIcsOnly = () => {
+    if (!isPro) {
+      openPaywall('google_calendar');
+      setIsSyncModalOpen(false);
+      return;
+    }
     exportAllTasksToCalendar(tasks);
     setIsSyncModalOpen(false);
     logEvent('calendar_ics_sync_clicked');
@@ -738,6 +751,50 @@ export default function TodoView() {
           ))}
         </div>
       </div>
+
+      {/* Aviso de Tarefas Ocultas (Plano Free) */}
+      {!isPro && hiddenTasksCount > 0 && (
+        <div 
+          className="animate-fade-in"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '12px 16px',
+            backgroundColor: 'rgba(2, 132, 199, 0.08)',
+            border: '1px solid rgba(2, 132, 199, 0.2)',
+            borderRadius: 'var(--radius-md)',
+            marginBottom: '20px',
+            gap: '12px',
+            flexWrap: 'wrap'
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Award size={18} style={{ color: 'var(--primary)', flexShrink: 0 }} />
+            <span style={{ fontSize: '13px', color: 'var(--text-main)', lineHeight: '1.5' }}>
+              Você possui <strong>{hiddenTasksCount}</strong> {hiddenTasksCount === 1 ? 'tarefa antiga oculta' : 'tarefas antigas ocultas'} pelo limite de 30 dias do plano Free.
+            </span>
+          </div>
+          <button
+            onClick={() => openPaywall('tasks_history_limit_warning')}
+            style={{
+              padding: '6px 12px',
+              backgroundColor: 'var(--primary)',
+              color: '#fff',
+              border: 'none',
+              borderRadius: 'var(--radius-sm)',
+              fontSize: '12px',
+              fontWeight: '700',
+              cursor: 'pointer',
+              transition: 'opacity 0.2s'
+            }}
+            onMouseEnter={e => e.target.style.opacity = 0.9}
+            onMouseLeave={e => e.target.style.opacity = 1}
+          >
+            Desbloquear Histórico Pro ⚡
+          </button>
+        </div>
+      )}
 
       {/* Caixa de Entrada Rápida (Inbox Bloco 4) */}
       <form onSubmit={handleQuickAddSubmit} className="quick-inbox-container">

@@ -10,6 +10,7 @@ import FaqView from './components/FaqView';
 
 import AchievementToastManager from './components/AchievementToast';
 import SyncStatusBanner from './components/SyncStatusBanner';
+import PaywallModal from './components/PaywallModal';
 const HomeView = lazy(() => import('./components/HomeView'));
 const GoalsView = lazy(() => import('./components/GoalsView'));
 const TodoView = lazy(() => import('./components/TodoView'));
@@ -19,6 +20,7 @@ const PerformanceView = lazy(() => import('./components/PerformanceView'));
 const ProfileView = lazy(() => import('./components/ProfileView'));
 const AdminDashboard = lazy(() => import('./components/AdminDashboard'));
 const SettingsView = lazy(() => import('./components/SettingsView'));
+const CoachView = lazy(() => import('./components/CoachView'));
 const DevToolsWidget = lazy(() => import('./components/DevToolsWidget'));
 const GuidedTour = lazy(() => import('./components/GuidedTour'));
 const NotificationEngine = lazy(() => import('./components/NotificationEngine'));
@@ -234,6 +236,7 @@ function AppLayout() {
             {activeTab === 'goals'       && <GoalsView />}
             {activeTab === 'tasks'       && <TodoView />}
             {activeTab === 'focus'       && <FocusView />}
+            {activeTab === 'coach'       && <CoachView />}
             {activeTab === 'analytics'   && <EvolutionView />}
             {activeTab === 'performance' && <PerformanceView />}
             {activeTab === 'profile'     && <ProfileView />}
@@ -267,6 +270,7 @@ function AppLayout() {
       )}
 
       <AchievementToastManager queue={toastQueue} onDismiss={dismissToast} />
+      <PaywallModal />
       <Suspense fallback={null}>
         <GuidedTour />
         <NotificationEngine />

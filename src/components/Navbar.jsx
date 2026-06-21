@@ -21,6 +21,7 @@ export default function Navbar() {
     { key: 'goals',       icon: 'objectives',   label: 'Objetivos' },
     { key: 'tasks',       icon: 'tasks',        label: 'Tarefas'   },
     { key: 'focus',       icon: 'focus',        label: 'Foco'      },
+    { key: 'coach',       icon: 'insights',     label: 'Coach'     },
     { key: 'analytics',   icon: 'evolution',    label: 'Evolução'  },
     { key: 'performance', icon: 'performance',  label: 'Desempenho'},
   ];

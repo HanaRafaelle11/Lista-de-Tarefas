@@ -3,7 +3,7 @@ import { Play, Pause, RotateCcw, CheckCircle2, Moon, Sun, Volume2, Settings, Vol
 import { useAppContext, parseTaskMetadata } from '../contexts/AppContext';
 
 export default function FocusView() {
-  const { tasks, handleToggleComplete, logEvent, isPro, handleSimulateUpgrade } = useAppContext();
+  const { tasks, handleToggleComplete, logEvent, isPro, openPaywall } = useAppContext();
   const pendingTasks = tasks.filter(t => !t.completed);
 
   // Estados do Timer
@@ -242,7 +242,7 @@ export default function FocusView() {
     }
 
     if (focusVal > 25 && !isPro) {
-      alert('Tempos superiores a 25 minutos estão disponíveis apenas no plano Pro!');
+      openPaywall('focus_timer_limit');
       return;
     }
 
@@ -623,7 +623,7 @@ export default function FocusView() {
               <span style={{ fontSize: '11px', fontWeight: '700', color: 'var(--primary)' }}>Versão Pro Desbloqueia</span>
               <p style={{ fontSize: '10px', color: 'var(--text-muted)', margin: '4px 0 8px' }}>Pomodoro personalizável superior a 25 minutos e gráficos de produtividade.</p>
               <button 
-                onClick={handleSimulateUpgrade}
+                onClick={() => openPaywall('focus_bottom_upsell')}
                 style={{ padding: '6px 12px', fontSize: '10px', fontWeight: '600', backgroundColor: 'var(--primary-light)', color: 'var(--primary)', borderRadius: '6px', width: '100%', cursor: 'pointer' }}
               >
                 Testar Pro Grátis ⚡

@@ -20,7 +20,9 @@ export default function PerformanceView() {
     consistencyScoreExplanation,
     setActiveTab,
     isInitializing,
-    currentUser
+    currentUser,
+    isPro,
+    openPaywall
   } = useAppContext();
 
   const [showHealthExplanation, setShowHealthExplanation] = useState(false);
@@ -412,8 +414,8 @@ export default function PerformanceView() {
   const productivityProfile = useMemo(() => {
     if (totalEvents < 7) {
       return {
-        title: 'Ainda aprendendo sobre seu perfil...',
-        desc: 'Ainda estamos aprendendo sobre sua rotina. Conclua pelo menos 7 atividades para que possamos mapear seu perfil de produtividade.'
+        title: 'Seu perfil está sendo descoberto.',
+        desc: 'Conclua pelo menos 7 atividades para identificarmos padrões.'
       };
     }
     const counts = productivityHours.counts;
@@ -620,7 +622,7 @@ export default function PerformanceView() {
           </div>
 
           {/* Accordion do Health Score */}
-          <div className="health-accordion animate-fade-in" style={{ marginTop: '12px' }}>
+          <div className="health-accordion animate-fade-in" style={{ marginTop: '12px', width: '100%' }}>
             <button 
               className="health-accordion-header" 
               onClick={() => setShowHealthExplanation(!showHealthExplanation)}
@@ -630,34 +632,32 @@ export default function PerformanceView() {
               <span>{showHealthExplanation ? '▲' : '▼'}</span>
             </button>
             {showHealthExplanation && (
-              <div className="health-accordion-content animate-fade-in">
-                {consistencyScoreExplanation.positives.length > 0 && (
-                  <div>
-                    <h4 style={{ fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', color: '#22c55e', marginBottom: '6px' }}>Fatores Positivos</h4>
-                    {consistencyScoreExplanation.positives.map((f, i) => (
-                      <div key={i} className="health-factor-row health-factor-row--positive" style={{ display: 'flex', justifyContent: 'space-between', margin: '4px 0' }}>
-                        <span>{f.text}</span>
-                        <span>{f.value}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                {consistencyScoreExplanation.negatives.length > 0 && (
-                  <div style={{ marginTop: '10px' }}>
-                    <h4 style={{ fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', color: '#ef4444', marginBottom: '6px' }}>Fatores Negativos</h4>
-                    {consistencyScoreExplanation.negatives.map((f, i) => (
-                      <div key={i} className="health-factor-row health-factor-row--negative" style={{ display: 'flex', justifyContent: 'space-between', margin: '4px 0' }}>
-                        <span>{f.text}</span>
-                        <span>{f.value}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                {consistencyScoreExplanation.positives.length === 0 && consistencyScoreExplanation.negatives.length === 0 && (
-                  <p style={{ fontSize: '12px', color: 'var(--text-light)', fontStyle: 'italic', margin: 0 }}>
-                    Nenhuma atividade recente registrada para calcular os fatores.
+              <div className="health-accordion-content animate-fade-in" style={{ padding: '16px', background: 'var(--bg-card)', border: '1px solid var(--border-light)', borderRadius: '0 0 var(--radius-md) var(--radius-md)' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                  <p style={{ fontSize: '13px', color: 'var(--text-main)', fontStyle: 'italic', margin: '0 0 6px 0', borderBottom: '1px dashed var(--border-light)', paddingBottom: '8px', lineHeight: '1.4' }}>
+                    💡 "{consistencyScoreExplanation.motivationalMessage}"
                   </p>
-                )}
+                  
+                  {consistencyScoreExplanation.breakdown && Object.entries(consistencyScoreExplanation.breakdown).map(([key, item]) => (
+                    <div key={key} style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '12.5px' }}>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontWeight: '600', color: 'var(--text-main)' }}>
+                          <span style={{ fontSize: '11px' }}>{item.ok ? '✅' : '⬜'}</span>
+                          {item.label}
+                        </span>
+                        <span style={{ fontWeight: '700', color: item.ok ? 'var(--primary)' : 'var(--text-light)' }}>
+                          {item.valueText}
+                        </span>
+                      </div>
+                      <div style={{ height: '6px', width: '100%', backgroundColor: 'var(--bg-app)', borderRadius: '3px', overflow: 'hidden' }}>
+                        <div style={{ height: '6px', width: `${item.pct}%`, backgroundColor: item.ok ? 'var(--primary)' : 'var(--border-medium)', borderRadius: '3px', transition: 'width 0.3s ease' }} />
+                      </div>
+                      <span style={{ fontSize: '11px', color: 'var(--text-light)', lineHeight: '1.3' }}>
+                        {item.desc}
+                      </span>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </div>
@@ -735,33 +735,43 @@ export default function PerformanceView() {
           <h3 style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Clock size={18} /> Mapa de Produtividade
           </h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            {[
-              { label: 'Matutino (06h - 12h)', pct: productivityHours.matutinoPct, color: 'var(--primary)' },
-              { label: 'Vespertino (12h - 18h)', pct: productivityHours.vespertinoPct, color: '#C89658' },
-              { label: 'Noturno (18h - 00h)', pct: productivityHours.noturnoPct, color: '#6B7F8A' },
-              { label: 'Madrugada (00h - 06h)', pct: productivityHours.madrugadaPct, color: '#C06C6C' }
-            ].map(period => {
-              let semaforo = '🔴';
-              if (period.pct >= 40) semaforo = '🟢';
-              else if (period.pct >= 15) semaforo = '🟡';
-              return (
-                <div key={period.label} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <span style={{ fontSize: '16px' }}>{semaforo}</span>
-                  <div style={{ flex: 1 }}>
-                    <span style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-main)' }}>{period.label}</span>
-                    <div style={{ height: '8px', width: '100%', backgroundColor: 'var(--bg-app)', borderRadius: '4px', overflow: 'hidden', marginTop: '4px' }}>
-                      <div style={{ height: '8px', width: `${period.pct}%`, backgroundColor: period.color }} />
+          {totalEvents < 7 ? (
+            <div style={{ padding: '24px', textAlign: 'center', backgroundColor: 'var(--bg-app)', borderRadius: 'var(--radius-md)', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', border: '1px dashed var(--border-medium)', gap: '8px' }}>
+              <Clock size={28} color="var(--text-light)" style={{ opacity: 0.5 }} />
+              <p style={{ fontSize: '13.5px', color: 'var(--text-main)', fontWeight: '600', margin: 0 }}>Estamos aprendendo sua rotina.</p>
+              <p style={{ fontSize: '11.5px', color: 'var(--text-light)', margin: 0, lineHeight: '1.4' }}>Conclua mais atividades para descobrir seus horários naturais de maior foco.</p>
+            </div>
+          ) : (
+            <>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {[
+                  { label: 'Matutino (06h - 12h)', pct: productivityHours.matutinoPct, color: 'var(--primary)' },
+                  { label: 'Vespertino (12h - 18h)', pct: productivityHours.vespertinoPct, color: '#C89658' },
+                  { label: 'Noturno (18h - 00h)', pct: productivityHours.noturnoPct, color: '#6B7F8A' },
+                  { label: 'Madrugada (00h - 06h)', pct: productivityHours.madrugadaPct, color: '#C06C6C' }
+                ].map(period => {
+                  let semaforo = '🔴';
+                  if (period.pct >= 40) semaforo = '🟢';
+                  else if (period.pct >= 15) semaforo = '🟡';
+                  return (
+                    <div key={period.label} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <span style={{ fontSize: '16px' }}>{semaforo}</span>
+                      <div style={{ flex: 1 }}>
+                        <span style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-main)' }}>{period.label}</span>
+                        <div style={{ height: '8px', width: '100%', backgroundColor: 'var(--bg-app)', borderRadius: '4px', overflow: 'hidden', marginTop: '4px' }}>
+                          <div style={{ height: '8px', width: `${period.pct}%`, backgroundColor: period.color }} />
+                        </div>
+                      </div>
+                      <span style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text-main)' }}>{period.pct}%</span>
                     </div>
-                  </div>
-                  <span style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text-main)' }}>{period.pct}%</span>
-                </div>
-              );
-            })}
-          </div>
-          <p style={{ fontSize: '12px', color: 'var(--text-light)', borderTop: '1px solid var(--border-light)', paddingTop: '10px' }}>
-            💡 <strong>Recomendação:</strong> {productivityHours.recommendation}
-          </p>
+                  );
+                })}
+              </div>
+              <p style={{ fontSize: '12px', color: 'var(--text-light)', borderTop: '1px solid var(--border-light)', paddingTop: '10px' }}>
+                💡 <strong>Recomendação:</strong> {productivityHours.recommendation}
+              </p>
+            </>
+          )}
         </div>
 
         {/* Bloco 5: Radar Semanal */}
@@ -840,14 +850,32 @@ export default function PerformanceView() {
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                         <strong style={{ fontSize: '14px', color: 'var(--text-main)' }}>{goal.title}</strong>
                       </div>
-                      <span style={{ fontSize: '12px', fontWeight: '800', color: healthColor }}>Saúde: {goal.health}%</span>
+                      {isPro ? (
+                        <span style={{ fontSize: '12px', fontWeight: '800', color: healthColor }}>Saúde: {goal.health}%</span>
+                      ) : (
+                        <span 
+                          onClick={() => openPaywall('goal_health')}
+                          style={{ fontSize: '11px', fontWeight: 'bold', color: 'var(--primary)', backgroundColor: 'var(--primary-light)', padding: '2px 6px', borderRadius: '4px', display: 'inline-flex', alignItems: 'center', gap: '2px', cursor: 'pointer' }}
+                        >
+                          🔒 Pro
+                        </span>
+                      )}
                     </div>
 
                     <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
                       <span>Progresso: {goal.doneTasks}/{goal.totalTasks} tarefas</span>
-                      <span style={{ display: 'block', marginTop: '2px', color: goal.daysStagnant > 5 ? '#C06C6C' : 'var(--text-light)' }}>
-                        🕒 {goal.daysStagnant === 0 ? 'Movimentado hoje' : `${goal.daysStagnant} dias sem novas ações`}
-                      </span>
+                      {isPro ? (
+                        <span style={{ display: 'block', marginTop: '2px', color: goal.daysStagnant > 5 ? '#C06C6C' : 'var(--text-light)' }}>
+                          🕒 {goal.daysStagnant === 0 ? 'Movimentado hoje' : `${goal.daysStagnant} dias sem novas ações`}
+                        </span>
+                      ) : (
+                        <span 
+                          onClick={() => openPaywall('goal_health')}
+                          style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px', color: 'var(--text-light)', cursor: 'pointer' }}
+                        >
+                          🕒 🔒 Requer Pro
+                        </span>
+                      )}
                     </div>
                   </div>
                 );
@@ -857,30 +885,62 @@ export default function PerformanceView() {
         </div>
 
         {/* Bloco 7: Insights Automáticos Cards */}
-        <div className="perf-card-double-span" style={{ backgroundColor: 'var(--bg-card)', padding: '24px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-light)' }}>
+        <div className="perf-card-double-span" style={{ backgroundColor: 'var(--bg-card)', padding: '24px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-light)', position: 'relative', overflow: 'hidden' }}>
           <h3 style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
             <ArrowUpRight size={18} /> Insights Comportamentais Recentes
           </h3>
-          {autoInsights.length === 0 ? (
-            <div style={{ padding: '28px 24px', textAlign: 'center', backgroundColor: 'var(--bg-app)', borderRadius: 'var(--radius-md)', border: '1px dashed var(--border-medium)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
-              <Lightbulb size={32} color="var(--text-light)" style={{ opacity: 0.5 }} />
-              <p style={{ fontSize: '14px', color: 'var(--text-main)', fontWeight: '700', margin: 0 }}>
-                Seus insights estão sendo preparados!
-              </p>
-              <p style={{ fontSize: '13px', color: 'var(--text-muted)', lineHeight: '1.6', maxWidth: '460px', margin: 0 }}>
-                Complete suas primeiras tarefas para que a nossa IA entenda sua rotina e monte seu gráfico de produtividade real.
-              </p>
-            </div>
-          ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '16px' }}>
-              {autoInsights.map(insight => (
-                <div key={insight.id} style={{ padding: '14px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-light)', backgroundColor: 'var(--bg-app)', display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
-                  <div style={{ width: '32px', height: '32px', borderRadius: '8px', backgroundColor: 'var(--primary-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    <InsightIcon icon={insight.icon} size={16} />
+          <div style={{ filter: !isPro ? 'blur(4px)' : 'none', pointerEvents: !isPro ? 'none' : 'auto', userSelect: !isPro ? 'none' : 'auto' }}>
+            {autoInsights.length === 0 ? (
+              <div style={{ padding: '28px 24px', textAlign: 'center', backgroundColor: 'var(--bg-app)', borderRadius: 'var(--radius-md)', border: '1px dashed var(--border-medium)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
+                <Lightbulb size={32} color="var(--text-light)" style={{ opacity: 0.5 }} />
+                <p style={{ fontSize: '14px', color: 'var(--text-main)', fontWeight: '700', margin: 0 }}>
+                  Seus insights estão sendo preparados!
+                </p>
+                <p style={{ fontSize: '13px', color: 'var(--text-muted)', lineHeight: '1.6', maxWidth: '460px', margin: 0 }}>
+                  Complete suas primeiras tarefas para que a nossa IA entenda sua rotina e monte seu gráfico de produtividade real.
+                </p>
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '16px' }}>
+                {autoInsights.map(insight => (
+                  <div key={insight.id} style={{ padding: '14px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-light)', backgroundColor: 'var(--bg-app)', display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                    <div style={{ width: '32px', height: '32px', borderRadius: '8px', backgroundColor: 'var(--primary-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <InsightIcon icon={insight.icon} size={16} />
+                    </div>
+                    <p style={{ fontSize: '12.5px', color: 'var(--text-main)', lineHeight: '1.5', margin: 0 }}>{insight.text}</p>
                   </div>
-                  <p style={{ fontSize: '12.5px', color: 'var(--text-main)', lineHeight: '1.5', margin: 0 }}>{insight.text}</p>
-                </div>
-              ))}
+                ))}
+              </div>
+            )}
+          </div>
+
+          {!isPro && (
+            <div style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: 'rgba(10, 15, 30, 0.65)',
+              backdropFilter: 'blur(2px)',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '24px',
+              textAlign: 'center',
+              zIndex: 10
+            }}>
+              <p style={{ fontSize: '14px', fontWeight: '600', color: '#fff', marginBottom: '12px', textShadow: '0 2px 4px rgba(0,0,0,0.5)' }}>
+                Deseja descobrir seus padrões e tendências? Desbloqueie o painel Pro.
+              </p>
+              <button
+                onClick={() => openPaywall('performance_insights')}
+                className="btn-primary-glow"
+                style={{ padding: '8px 18px', fontSize: '13px', fontWeight: 'bold' }}
+              >
+                Conhecer Planos Pro ⚡
+              </button>
             </div>
           )}
         </div>

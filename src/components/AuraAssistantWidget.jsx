@@ -13,7 +13,7 @@ export default function AuraAssistantWidget({ analysis, onActionClick }) {
     <div className="aura-assistant-widget animate-fade-in">
       <div className="aura-assistant-header">
         <Sparkles size={16} className="aura-assistant-icon" />
-        <span className="aura-assistant-title">Central de Insights</span>
+        <span className="aura-assistant-title">Coach MyFlowDay</span>
       </div>
 
       <div className="aura-assistant-body">

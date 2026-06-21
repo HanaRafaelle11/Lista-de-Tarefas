@@ -3,7 +3,7 @@ import { useAppContext } from '../contexts/AppContext';
 import { useNotifications } from '../hooks/useNotifications';
 
 export default function NotificationEngine() {
-  const { tasks, goals, currentUser } = useAppContext();
+  const { tasks, goals, currentUser, isPro, hiddenTasksCount, hiddenGoalsCount, userState } = useAppContext();
   const { isSupported, isEnabled, permission, sendNotification } = useNotifications();
   const notifiedSet = useRef(new Set());
 
@@ -69,6 +69,51 @@ export default function NotificationEngine() {
            notifiedSet.current.add(notifId);
         }
       }
+
+      // 4. Growth Engine: Notificação de limite de histórico (3 em 3 dias)
+      if (!isPro && (hiddenTasksCount > 0 || hiddenGoalsCount > 0)) {
+        const lastSentKey = 'flowday_notif_last_history_limit';
+        const lastSent = localStorage.getItem(lastSentKey);
+        const threeDaysMs = 3 * 24 * 60 * 60 * 1000;
+        if (!lastSent || (now.getTime() - parseInt(lastSent, 10)) >= threeDaysMs) {
+          sendNotification('Histórico Oculto (Plano Free)', {
+            body: `Você possui itens antigos que estão ocultados. Desbloqueie o histórico completo com o Flowday Pro!`,
+            icon: '/icon-192x192.png',
+            tag: 'history_limit_warning'
+          });
+          localStorage.setItem(lastSentKey, now.getTime().toString());
+        }
+      }
+
+      // 5. Growth Engine: Notificação de reengajamento para at_risk / churned (3 em 3 dias)
+      if (userState && (userState.stage === 'at_risk' || userState.stage === 'churned')) {
+        const lastSentKey = 'flowday_notif_last_reengagement';
+        const lastSent = localStorage.getItem(lastSentKey);
+        const threeDaysMs = 3 * 24 * 60 * 60 * 1000;
+        if (!lastSent || (now.getTime() - parseInt(lastSent, 10)) >= threeDaysMs) {
+          sendNotification('Dê um Flow no seu dia! ⚡', {
+            body: 'Que tal planejar um passo simples para hoje? Dê um Flow no seu dia! ⚡',
+            icon: '/icon-192x192.png',
+            tag: 'reengagement_warning'
+          });
+          localStorage.setItem(lastSentKey, now.getTime().toString());
+        }
+      }
+
+      // 6. Growth Engine: Trial Upsell Lembrete Semanal
+      if (!isPro) {
+        const lastSentKey = 'flowday_notif_last_trial_upsell';
+        const lastSent = localStorage.getItem(lastSentKey);
+        const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+        if (!lastSent || (now.getTime() - parseInt(lastSent, 10)) >= sevenDaysMs) {
+          sendNotification('Experimente o Flowday Pro Grátis', {
+            body: 'Inicie seu teste gratuito de 7 dias do plano Pro e desbloqueie análises e o Coach!',
+            icon: '/icon-192x192.png',
+            tag: 'trial_upsell'
+          });
+          localStorage.setItem(lastSentKey, now.getTime().toString());
+        }
+      }
     };
 
     // Run immediately, then every minute
@@ -76,7 +121,7 @@ export default function NotificationEngine() {
     const intervalId = setInterval(checkNotifications, 60000);
 
     return () => clearInterval(intervalId);
-  }, [tasks, goals, isSupported, isEnabled, permission, currentUser, sendNotification]);
+  }, [tasks, goals, isSupported, isEnabled, permission, currentUser, sendNotification, isPro, hiddenTasksCount, hiddenGoalsCount, userState]);
 
   // Se houver suporte a Service Worker, podemos tentar delegar agendamentos aqui também.
   useEffect(() => {

@@ -94,7 +94,7 @@ export default function PrivacyView({ onGoBack, onNavigateToTerms }) {
             </div>
           </div>
           <p style={{ color: '#94A3B8', fontSize: '15px', lineHeight: '1.6', marginBottom: '12px' }}>
-            O <strong>MyFlowDay</strong> é um aplicativo web de produtividade pessoal que oferece gerenciamento de tarefas, acompanhamento de metas, calendário integrado e modo foco. Ele é projetado para ajudar você a gerenciar sua rotina diária de forma limpa e intuitiva.
+            O <strong>MyFlowDay</strong> é um aplicativo web de produtividade pessoal que oferece gerenciamento de tarefas, acompanhamento de metas, calendário integrado e modo foco. Ele é projetado para ajudar você a gerenciar sua rotina diária de forma limpa e intuitiva. A controladora dos dados e encarregada pelo tratamento é <strong>Hana Oliveira Rafaelle</strong>.
           </p>
           <p style={{ color: '#94A3B8', fontSize: '15px', lineHeight: '1.6', marginBottom: '16px' }}>
             Este documento rege o tratamento de dados pessoais da nossa plataforma, em conformidade com a <strong>Lei Geral de Proteção de Dados (LGPD — Lei nº 13.709/2018)</strong> e as diretrizes e políticas de conformidade do Google Cloud OAuth 2.0.
@@ -114,7 +114,7 @@ export default function PrivacyView({ onGoBack, onNavigateToTerms }) {
             </div>
           </div>
           <p style={{ color: '#94A3B8', fontSize: '15px', lineHeight: '1.6', marginBottom: '16px' }}>
-            Coletamos apenas informações estritamente necessárias para a prestação do serviço de produtividade:
+            Coletamos apenas informações estritamente necessárias para a prestação do serviço de produtividade. Nosso login com Google OAuth coleta e processa apenas o seu endereço de e-mail, nome e foto de perfil. Garantimos transparência absoluta: não solicitamos, acessamos ou armazenamos qualquer outro dado de sua conta Google, tais como arquivos do Google Drive, contatos ou agendas.
           </p>
 
           <div style={{ overflowX: 'auto', marginBottom: '16px' }}>
@@ -213,7 +213,7 @@ export default function PrivacyView({ onGoBack, onNavigateToTerms }) {
             </div>
           </div>
           <p style={{ color: '#94A3B8', fontSize: '15px', lineHeight: '1.6' }}>
-            Seus dados são retidos na infraestrutura do Supabase enquanto sua conta estiver ativa. Caso decida solicitar a exclusão de sua conta, todos os registros relacionados (e-mail, nome, tarefas e metas) são deletados permanentemente de nossos bancos de dados ativos em até 7 dias úteis.
+            Seus dados são retidos na infraestrutura do Supabase enquanto sua conta estiver ativa. Caso decida solicitar a exclusão de sua conta, todos os registros relacionados (e-mail, nome, tarefas e metas) são deletados de forma definitiva e permanente de nossos bancos de dados ativos em até 7 dias úteis.
           </p>
         </section>
 
@@ -241,7 +241,7 @@ export default function PrivacyView({ onGoBack, onNavigateToTerms }) {
             </div>
           </div>
           <p style={{ color: '#94A3B8', fontSize: '15px', lineHeight: '1.6' }}>
-            Utilizamos apenas cookies essenciais para manter a autenticação ativa (Supabase tokens) e o `localStorage` do seu navegador para guardar preferências locais de interface (como tema claro/escuro) locais em sua máquina. Não usamos cookies analíticos ou de publicidade de terceiros.
+            Utilizamos apenas cookies essenciais e de sessão para manter a autenticação ativa (tokens do Supabase) e o <code>localStorage</code> do seu navegador para guardar preferências locais de interface (como tema claro/escuro). Declaramos explicitamente que não utilizamos cookies de remarketing, publicidade, rastreamento de terceiros ou anúncios.
           </p>
         </section>
 
@@ -255,13 +255,13 @@ export default function PrivacyView({ onGoBack, onNavigateToTerms }) {
             </div>
           </div>
           <p style={{ color: '#94A3B8', fontSize: '15px', lineHeight: '1.6', marginBottom: '16px' }}>
-            Para exercer seus direitos de privacidade ou esclarecer dúvidas sobre seus dados, entre em contato direto pelo canal:
+            Para exercer seus direitos de privacidade ou esclarecer dúvidas sobre seus dados, entre em contato direto pelo canal do encarregado:
           </p>
           <div style={{ display: 'flex', alignItems: 'center', gap: '16px', backgroundColor: '#0F172A', border: '1px solid #334155', borderRadius: '10px', padding: '18px 20px' }}>
             <div style={{ width: '44px', height: '44px', borderRadius: '50%', backgroundColor: '#22D3EE', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0F172A', fontWeight: 'bold', fontSize: '18px' }}>HR</div>
             <div>
-              <div style={{ fontWeight: 600, fontSize: '15px', color: '#F8FAFC' }}>Hana Oliveira &mdash; Canal Fale com a Gente</div>
-              <div style={{ fontSize: '13px', color: '#22D3EE' }}><a href="mailto:suporte@myflowday.com.br" style={{ color: '#22D3EE', textDecoration: 'none' }}>suporte@myflowday.com.br</a></div>
+              <div style={{ fontWeight: 600, fontSize: '15px', color: '#F8FAFC' }}>Hana Oliveira Rafaelle &mdash; Encarregada LGPD</div>
+              <div style={{ fontSize: '13px', color: '#22D3EE' }}><a href="mailto:rafaelle@flowday.app" style={{ color: '#22D3EE', textDecoration: 'none' }}>rafaelle@flowday.app</a></div>
             </div>
           </div>
         </section>

@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { Target, CheckCircle, Clock, ChevronRight, Award, Plus, Flame, Calendar, Lightbulb, Sparkles, AlertTriangle, BarChart3, Zap } from 'lucide-react';
+import { Target, CheckCircle, Clock, ChevronRight, Award, Plus, Flame, Calendar, Lightbulb, Sparkles, AlertTriangle, BarChart3, Zap, Brain } from 'lucide-react';
 import { calcStreak, ACHIEVEMENTS } from '../hooks/useAchievements';
 import { useAuraAssistant } from '../hooks/useAuraAssistant';
 import AuraAssistantWidget from './AuraAssistantWidget';
@@ -301,38 +301,36 @@ export default function HomeView() {
           onClick={() => setShowHealthExplanation(!showHealthExplanation)}
           type="button"
         >
-          <span>🎯 Como seu score foi calculado?</span>
+          <span>🎯 Detalhamento do Score</span>
           <span>{showHealthExplanation ? '▲' : '▼'}</span>
         </button>
         {showHealthExplanation && (
-          <div className="health-accordion-content animate-fade-in">
-            {consistencyScoreExplanation.positives.length > 0 && (
-              <div>
-                <h4 style={{ fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', color: '#22c55e', marginBottom: '6px' }}>Fatores Positivos</h4>
-                {consistencyScoreExplanation.positives.map((f, i) => (
-                  <div key={i} className="health-factor-row health-factor-row--positive" style={{ display: 'flex', justifyContent: 'space-between', margin: '4px 0' }}>
-                    <span>{f.text}</span>
-                    <span>{f.value}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-            {consistencyScoreExplanation.negatives.length > 0 && (
-              <div style={{ marginTop: '10px' }}>
-                <h4 style={{ fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', color: '#ef4444', marginBottom: '6px' }}>Fatores Negativos</h4>
-                {consistencyScoreExplanation.negatives.map((f, i) => (
-                  <div key={i} className="health-factor-row health-factor-row--negative" style={{ display: 'flex', justifyContent: 'space-between', margin: '4px 0' }}>
-                    <span>{f.text}</span>
-                    <span>{f.value}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-            {consistencyScoreExplanation.positives.length === 0 && consistencyScoreExplanation.negatives.length === 0 && (
-              <p style={{ fontSize: '12px', color: 'var(--text-light)', fontStyle: 'italic', margin: 0 }}>
-                Nenhuma atividade recente registrada para calcular os fatores.
+          <div className="health-accordion-content animate-fade-in" style={{ padding: '16px', background: 'var(--bg-card)', border: '1px solid var(--border-light)', borderRadius: '0 0 var(--radius-md) var(--radius-md)' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <p style={{ fontSize: '13px', color: 'var(--text-main)', fontStyle: 'italic', margin: '0 0 6px 0', borderBottom: '1px dashed var(--border-light)', paddingBottom: '8px', lineHeight: '1.4' }}>
+                💡 "{consistencyScoreExplanation.motivationalMessage}"
               </p>
-            )}
+              
+              {consistencyScoreExplanation.breakdown && Object.entries(consistencyScoreExplanation.breakdown).map(([key, item]) => (
+                <div key={key} style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '12.5px' }}>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontWeight: '600', color: 'var(--text-main)' }}>
+                      <span style={{ fontSize: '11px' }}>{item.ok ? '✅' : '⬜'}</span>
+                      {item.label}
+                    </span>
+                    <span style={{ fontWeight: '700', color: item.ok ? 'var(--primary)' : 'var(--text-light)' }}>
+                      {item.valueText}
+                    </span>
+                  </div>
+                  <div style={{ height: '6px', width: '100%', backgroundColor: 'var(--bg-app)', borderRadius: '3px', overflow: 'hidden' }}>
+                    <div style={{ height: '6px', width: `${item.pct}%`, backgroundColor: item.ok ? 'var(--primary)' : 'var(--border-medium)', borderRadius: '3px', transition: 'width 0.3s ease' }} />
+                  </div>
+                  <span style={{ fontSize: '11px', color: 'var(--text-light)', lineHeight: '1.3' }}>
+                    {item.desc}
+                  </span>
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </div>
@@ -432,17 +430,43 @@ export default function HomeView() {
             </div>
           </div>
         ) : (
-          <div className="home-hero-empty-card">
+          <div className="home-hero-empty-card premium-glass" style={{ border: '1px solid var(--border-medium)', background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.4) 0%, rgba(15, 23, 42, 0.6) 100%)', backdropFilter: 'blur(12px)', borderRadius: 'var(--radius-lg)', padding: '40px 24px', textAlign: 'center' }}>
             <div className="home-hero-empty-glow" />
-            <Award size={48} className="home-hero-empty-icon" />
-            <h4 className="home-hero-empty-title">Você está em dia com tudo!</h4>
-            <p className="home-hero-empty-text">
-              Nenhuma tarefa pendente de prioridade alta ou média.
-              Aproveite para planejar seus próximos objetivos.
+            <Award size={48} className="home-hero-empty-icon" style={{ color: 'var(--primary)', filter: 'drop-shadow(0 0 8px var(--primary-light))', opacity: 0.8 }} />
+            <h4 className="home-hero-empty-title" style={{ fontSize: '20px', fontWeight: '800', color: 'var(--text-main)', margin: '8px 0', fontFamily: 'var(--font-display)' }}>Sua jornada de evolução começa aqui</h4>
+            <p className="home-hero-empty-text" style={{ fontSize: '14px', color: 'var(--text-muted)', maxWidth: '520px', margin: '0 auto 24px', lineHeight: '1.6' }}>
+              "Pequenos passos constroem grandes mudanças." <br />
+              Comece definindo um objetivo para direcionar seu foco, ou adicione suas primeiras tarefas para criar impulso diário.
             </p>
-            <button onClick={() => setActiveTab('tasks')} className="home-hero-empty-btn">
-              Criar Nova Tarefa
-            </button>
+            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', justifyContent: 'center' }}>
+              <button 
+                onClick={() => {
+                  setShouldOpenGoalModal(true);
+                  setActiveTab('goals');
+                }}
+                className="btn-primary-glow"
+                style={{ padding: '10px 20px', fontSize: '13.5px', display: 'flex', alignItems: 'center', gap: '6px' }}
+              >
+                <Target size={15} />
+                + Novo Objetivo
+              </button>
+              <button 
+                onClick={() => setActiveTab('tasks')}
+                className="btn-secondary"
+                style={{ padding: '10px 20px', fontSize: '13.5px', display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: 'rgba(255,255,255,0.05)', borderColor: 'var(--border-medium)', color: 'var(--text-main)' }}
+              >
+                <Plus size={15} />
+                + Nova Tarefa
+              </button>
+              <button 
+                onClick={handleStartOnboarding}
+                className="btn-secondary"
+                style={{ padding: '10px 20px', fontSize: '13.5px', display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--primary)', borderColor: 'var(--primary-light)', backgroundColor: 'transparent' }}
+              >
+                <Sparkles size={15} />
+                Guia Rápido 🚀
+              </button>
+            </div>
           </div>
         )}
       </section>
@@ -727,25 +751,52 @@ export default function HomeView() {
             );
           }
           return (
-            <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+             <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
               
-              {/* Assistente Aura */}
-              <AuraAssistantWidget 
-                analysis={auraAnalysis} 
-                onActionClick={(task, actionType) => {
-                  if (actionType === 'today') {
-                    const todayStr = new Date().toISOString().split('T')[0];
-                    handleUpdateTask(task.id, { dueDate: todayStr });
-                  } else if (actionType === 'tomorrow') {
-                    const tomorrow = new Date();
-                    tomorrow.setDate(tomorrow.getDate() + 1);
-                    const tomorrowStr = tomorrow.toISOString().split('T')[0];
-                    handleUpdateTask(task.id, { dueDate: tomorrowStr });
-                  } else {
-                    onStartTask(task);
-                  }
-                }} 
-              />
+              {/* Coach MyFlowDay */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <AuraAssistantWidget 
+                  analysis={auraAnalysis} 
+                  onActionClick={(task, actionType) => {
+                    if (actionType === 'today') {
+                      const todayStr = new Date().toISOString().split('T')[0];
+                      handleUpdateTask(task.id, { dueDate: todayStr });
+                    } else if (actionType === 'tomorrow') {
+                      const tomorrow = new Date();
+                      tomorrow.setDate(tomorrow.getDate() + 1);
+                      const tomorrowStr = tomorrow.toISOString().split('T')[0];
+                      handleUpdateTask(task.id, { dueDate: tomorrowStr });
+                    } else {
+                      onStartTask(task);
+                    }
+                  }} 
+                />
+                <button
+                  onClick={() => setActiveTab('coach')}
+                  className="btn-secondary"
+                  style={{
+                    alignSelf: 'flex-start',
+                    padding: '8px 16px',
+                    fontSize: '12.5px',
+                    fontWeight: '600',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    marginTop: '-16px',
+                    backgroundColor: 'var(--bg-card)',
+                    border: '1px solid var(--border-medium)',
+                    color: 'var(--text-main)',
+                    borderRadius: 'var(--radius-sm)',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                    zIndex: 1
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.backgroundColor = 'var(--bg-card-hover)'}
+                  onMouseLeave={e => e.currentTarget.style.backgroundColor = 'var(--bg-card)'}
+                >
+                  <Brain size={14} className="text-primary" /> Conversar com seu Coach MyFlowDay
+                </button>
+              </div>
 
               {/* Sugestões de Engajamento */}
               {suggestions && suggestions.length > 0 && (

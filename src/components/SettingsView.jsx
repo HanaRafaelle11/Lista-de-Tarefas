@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Settings, User, Moon, Sun, Bell, Shield, Heart, BellOff, BellRing, CheckCircle, Award, MessageSquare, Calendar, X } from 'lucide-react';
+import { Settings, User, Moon, Sun, Bell, Shield, Heart, BellOff, BellRing, CheckCircle, Award, MessageSquare, Calendar, X, Download, AlertTriangle } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import { useNotifications } from '../hooks/useNotifications';
 import { useAppContext } from '../contexts/AppContext';
@@ -16,16 +16,24 @@ export default function SettingsView() {
     isPro,
     handleSimulateUpgrade,
     tasks,
+    allTasks,
+    allGoals,
+    goals,
+    consistencyScore,
+    habitsManager,
     deletedTasks,
     deletedGoals,
     handleRestoreTask,
     handleDeleteTaskPermanent,
     handleRestoreGoal,
-    handleDeleteGoalPermanent
+    handleDeleteGoalPermanent,
+    openPaywall,
+    handleCancelSubscription
   } = useAppContext();
   const [loading, setLoading] = useState(false);
   const [feedbackText, setFeedbackText] = useState('');
   const [feedbackStatus, setFeedbackStatus] = useState('idle'); // idle, sending, sent, error
+  const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
   const [settingsTab, setSettingsTab] = useState('general'); // 'general' | 'trash'
   const [isSyncModalOpen, setIsSyncModalOpen] = useState(false);
   const notifications = useNotifications();
@@ -205,6 +213,270 @@ export default function SettingsView() {
   const handleExportIcsOnly = () => {
     exportAllTasksToCalendar(tasks);
     setIsSyncModalOpen(false);
+  };
+
+  const calcStreakLocal = (tasksList) => {
+    const completed = tasksList.filter(t => t.completed && (t.dueDate || t.completedAt));
+    if (completed.length === 0) return 0;
+    const dates = [...new Set(completed.map(t => t.completedAt?.split('T')[0] || t.dueDate))].sort().reverse();
+    if (dates.length === 0) return 0;
+    const todayStr = new Date().toISOString().split('T')[0];
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = yesterday.toISOString().split('T')[0];
+    
+    if (dates[0] !== todayStr && dates[0] !== yesterdayStr) return 0;
+    let streakCount = 1;
+    for (let i = 1; i < dates.length; i++) {
+      const prev = new Date(dates[i-1]);
+      const curr = new Date(dates[i]);
+      const diff = (prev - curr) / (1000 * 60 * 60 * 24);
+      if (diff === 1) streakCount++;
+      else if (diff > 1) break;
+    }
+    return streakCount;
+  };
+
+  const handleExportCSVData = () => {
+    if (!isPro) {
+      openPaywall('export_csv');
+      return;
+    }
+    const header = "Tipo,Título,Categoria,Prioridade,Status,Criado Em,Concluído Em,Data Limite\n";
+    const tasksRows = (allTasks || []).map(t => {
+      const title = `"${t.title.replace(/"/g, '""')}"`;
+      const category = `"${(t.category || '').replace(/"/g, '""')}"`;
+      const status = t.completed ? "Concluído" : "Pendente";
+      return `Tarefa,${title},${category},${t.priority || ''},${status},${t.createdAt || ''},${t.completedAt || ''},${t.dueDate || ''}`;
+    });
+    const goalsRows = (allGoals || []).map(g => {
+      const title = `"${g.title.replace(/"/g, '""')}"`;
+      const status = g.status === 'completed' ? "Alcançado" : "Ativo";
+      return `Objetivo,${title},,,${status},${g.created_at || ''},${g.updated_at || ''},${g.target_date || ''}`;
+    });
+    const csvContent = "data:text/csv;charset=utf-8,\uFEFF" + header + [...tasksRows, ...goalsRows].join("\n");
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `myflowday_progresso_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleExportPDFData = () => {
+    if (!isPro) {
+      openPaywall('export_pdf');
+      return;
+    }
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) {
+      alert("Por favor, libere popups para gerar o relatório em PDF.");
+      return;
+    }
+
+    const today = new Date().toLocaleDateString('pt-BR');
+    const tasksList = (allTasks || []).filter(t => !t.deletedAt);
+    const goalsList = (allGoals || []).filter(g => !g.deletedAt);
+    const habitsList = habitsManager?.habits || [];
+
+    const tasksHtml = tasksList.map(t => `
+      <tr>
+        <td style="padding: 8px; border-bottom: 1px solid #ddd; font-size: 13px;">${t.title}</td>
+        <td style="padding: 8px; border-bottom: 1px solid #ddd; font-size: 13px;">${t.category || 'Geral'}</td>
+        <td style="padding: 8px; border-bottom: 1px solid #ddd; font-size: 13px;">${t.priority}</td>
+        <td style="padding: 8px; border-bottom: 1px solid #ddd; font-size: 13px;">${t.completed ? 'Concluída ✅' : 'Pendente ⏳'}</td>
+      </tr>
+    `).join('');
+
+    const goalsHtml = goalsList.map(g => `
+      <tr>
+        <td style="padding: 8px; border-bottom: 1px solid #ddd; font-size: 13px;">${g.icon || '🎯'} ${g.title}</td>
+        <td style="padding: 8px; border-bottom: 1px solid #ddd; font-size: 13px;">${g.status === 'completed' ? 'Alcançado 🏆' : 'Ativo ⚡'}</td>
+      </tr>
+    `).join('');
+
+    const habitsHtml = habitsList.map(h => `
+      <tr>
+        <td style="padding: 8px; border-bottom: 1px solid #ddd; font-size: 13px;">${h.title}</td>
+        <td style="padding: 8px; border-bottom: 1px solid #ddd; font-size: 13px;">${h.frequency === 'diaria' ? 'Diário' : 'Semanal'}</td>
+      </tr>
+    `).join('');
+
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Relatório de Evolução MyFlowDay - ${today}</title>
+          <style>
+            body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: #1e293b; margin: 40px; }
+            h1 { color: #0284c7; font-size: 24px; margin-bottom: 4px; }
+            .subtitle { color: #64748b; font-size: 14px; margin-bottom: 24px; }
+            h2 { color: #0f172a; border-bottom: 2px solid #e2e8f0; padding-bottom: 6px; margin-top: 30px; font-size: 16px; }
+            table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+            th { text-align: left; background-color: #f8fafc; padding: 10px 8px; border-bottom: 2px solid #e2e8f0; font-size: 13px; color: #475569; }
+            td { font-size: 13px; color: #1e293b; }
+          </style>
+        </head>
+        <body>
+          <h1>Relatório de Evolução MyFlowDay ⚡</h1>
+          <div class="subtitle">Gerado em: ${today} | Score de Consistência Atual: ${consistencyScore}/100</div>
+
+          <h2>Objetivos</h2>
+          <table>
+            <thead>
+              <tr><th>Objetivo</th><th>Status</th></tr>
+            </thead>
+            <tbody>
+              ${goalsHtml || '<tr><td colspan="2" style="padding:8px;color:#94a3b8;">Nenhum objetivo registrado</td></tr>'}
+            </tbody>
+          </table>
+
+          <h2>Tarefas</h2>
+          <table>
+            <thead>
+              <tr><th>Título</th><th>Categoria</th><th>Prioridade</th><th>Status</th></tr>
+            </thead>
+            <tbody>
+              ${tasksHtml || '<tr><td colspan="4" style="padding:8px;color:#94a3b8;">Nenhuma tarefa registrada</td></tr>'}
+            </tbody>
+          </table>
+
+          <h2>Hábitos</h2>
+          <table>
+            <thead>
+              <tr><th>Hábito</th><th>Frequência</th></tr>
+            </thead>
+            <tbody>
+              ${habitsHtml || '<tr><td colspan="2" style="padding:8px;color:#94a3b8;">Nenhum hábito registrado</td></tr>'}
+            </tbody>
+          </table>
+
+          <script>
+            window.onload = function() {
+              window.print();
+              window.close();
+            };
+          </script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+  };
+
+  const handleExportPNGData = () => {
+    if (!isPro) {
+      openPaywall('export_png');
+      return;
+    }
+    const canvas = document.createElement("canvas");
+    canvas.width = 600;
+    canvas.height = 400;
+    const ctx = canvas.getContext("2d");
+
+    // Background Gradient (Flowday style)
+    const gradient = ctx.createLinearGradient(0, 0, 600, 400);
+    gradient.addColorStop(0, '#0f172a'); // Dark slate
+    gradient.addColorStop(1, '#1e1b4b'); // Deep indigo
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, 600, 400);
+
+    // Accent lighting glows
+    ctx.fillStyle = 'rgba(2, 132, 199, 0.15)'; // Cyan glow
+    ctx.beginPath();
+    ctx.arc(100, 100, 150, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = 'rgba(99, 102, 241, 0.12)'; // Indigo glow
+    ctx.beginPath();
+    ctx.arc(500, 300, 180, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Border highlights
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(10, 10, 580, 380);
+
+    // Header Branding
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 24px sans-serif';
+    ctx.fillText("MyFlowDay ⚡", 40, 60);
+
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = '14px sans-serif';
+    ctx.fillText("MEU DIÁRIO DE EVOLUÇÃO", 40, 85);
+
+    // Date
+    const today = new Date().toLocaleDateString('pt-BR');
+    ctx.textAlign = 'right';
+    ctx.fillText(today, 560, 60);
+    ctx.textAlign = 'left';
+
+    // Consistency Score Big Circle
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.02)';
+    ctx.beginPath();
+    ctx.arc(140, 240, 75, 0, Math.PI * 2);
+    ctx.fill();
+    
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+    ctx.lineWidth = 6;
+    ctx.beginPath();
+    ctx.arc(140, 240, 75, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // Actual Score Progress Arc (Cyan color)
+    ctx.strokeStyle = '#0284c7';
+    ctx.lineWidth = 8;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    const startAngle = -Math.PI / 2;
+    const endAngle = startAngle + (Math.PI * 2 * (consistencyScore / 100));
+    ctx.arc(140, 240, 75, startAngle, endAngle);
+    ctx.stroke();
+
+    // Text inside Score Circle
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 36px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(String(consistencyScore), 140, 240);
+    
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = '12px sans-serif';
+    ctx.fillText("Consistência", 140, 270);
+    ctx.textAlign = 'left';
+
+    // Stats Column
+    const activeTasks = (allTasks || []).filter(t => !t.deletedAt);
+    const completedTasksCount = activeTasks.filter(t => t.completed).length;
+    const activeGoalsCount = (allGoals || []).filter(g => !g.deletedAt && g.status === 'active').length;
+    const streak = calcStreakLocal(allTasks || []);
+
+    const drawStat = (label, value, y) => {
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = '13px sans-serif';
+      ctx.fillText(label, 270, y);
+
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 22px sans-serif';
+      ctx.fillText(String(value), 270, y + 25);
+    };
+
+    drawStat("Tarefas Concluídas", completedTasksCount, 160);
+    drawStat("Objetivos Ativos", activeGoalsCount, 240);
+    drawStat("Streak Atual", `${streak} ${streak === 1 ? 'dia' : 'dias'} 🔥`, 320);
+
+    // Footer message
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+    ctx.font = 'italic 11px sans-serif';
+    ctx.fillText("Construindo hábitos e autoconhecimento diário.", 40, 370);
+
+    // Trigger download
+    const dataUrl = canvas.toDataURL("image/png");
+    const link = document.createElement("a");
+    link.download = `myflowday_evolucao_${new Date().toISOString().split('T')[0]}.png`;
+    link.href = dataUrl;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const handleSendFeedback = async () => {
@@ -610,13 +882,19 @@ export default function SettingsView() {
                 <p style={{ fontSize: '12px', color: 'var(--text-light)' }}>
                   {isPro 
                     ? 'Você possui acesso ilimitado a todos os recursos de evolução pessoal.'
-                    : 'Acesse ferramentas avançadas de produtividade e foco.'}
+                    : 'Acesse ferramentas avançadas de produtividade, foco e IA.'}
                 </p>
               </div>
             </div>
 
             <button
-              onClick={handleSimulateUpgrade}
+              onClick={() => {
+                if (isPro) {
+                  setIsCancelModalOpen(true);
+                } else {
+                  openPaywall('settings_page');
+                }
+              }}
               style={{
                 alignSelf: 'flex-start',
                 marginTop: '8px',
@@ -631,10 +909,139 @@ export default function SettingsView() {
                 border: isPro ? '1px solid var(--prio-alta-border)' : 'none'
               }}
             >
-              {isPro ? 'Voltar para o Plano Grátis (Simulado)' : 'Ativar Flowday Pro ⚡ (Simulado)'}
+              {isPro ? 'Cancelar Assinatura Pro (Simulado)' : 'Ativar Flowday Pro ⚡'}
             </button>
           </div>
         </div>
+
+        {/* Exportação de Dados */}
+        <div style={{ backgroundColor: 'var(--bg-card)', padding: '24px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-light)' }}>
+          <h2 style={{ fontSize: '16px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+            <Download size={18} /> Exportar Dados
+          </h2>
+          <p style={{ fontSize: '12px', color: 'var(--text-light)', lineHeight: '1.5', margin: '0 0 16px' }}>
+            Faça download dos seus objetivos, tarefas e rotinas em múltiplos formatos. Recursos exclusivos do plano Pro.
+          </p>
+          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+            <button
+              onClick={handleExportCSVData}
+              style={{
+                padding: '10px 16px',
+                borderRadius: '6px',
+                backgroundColor: 'var(--bg-app)',
+                border: '1px solid var(--border-medium)',
+                color: 'var(--text-main)',
+                fontSize: '13px',
+                fontWeight: '600',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px'
+              }}
+            >
+              CSV
+            </button>
+            <button
+              onClick={handleExportPDFData}
+              style={{
+                padding: '10px 16px',
+                borderRadius: '6px',
+                backgroundColor: 'var(--bg-app)',
+                border: '1px solid var(--border-medium)',
+                color: 'var(--text-main)',
+                fontSize: '13px',
+                fontWeight: '600',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px'
+              }}
+            >
+              PDF (Relatório)
+            </button>
+            <button
+              onClick={handleExportPNGData}
+              style={{
+                padding: '10px 16px',
+                borderRadius: '6px',
+                backgroundColor: 'var(--bg-app)',
+                border: '1px solid var(--border-medium)',
+                color: 'var(--text-main)',
+                fontSize: '13px',
+                fontWeight: '600',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px'
+              }}
+            >
+              PNG (Card de Progresso)
+            </button>
+          </div>
+        </div>
+
+        {/* Modal de Cancelamento Pro */}
+        {isCancelModalOpen && (
+          <div 
+            className="modal-overlay" 
+            onClick={() => setIsCancelModalOpen(false)}
+            style={{ 
+              position: 'fixed', 
+              top: 0, 
+              left: 0, 
+              right: 0, 
+              bottom: 0, 
+              backgroundColor: 'rgba(0,0,0,0.6)', 
+              backdropFilter: 'blur(8px)',
+              zIndex: 99999, 
+              display: 'flex', 
+              justifyContent: 'center', 
+              alignItems: 'center' 
+            }}
+          >
+            <div 
+              className="modal-content"
+              onClick={(e) => e.stopPropagation()}
+              style={{ 
+                maxWidth: '440px', 
+                width: '95%', 
+                padding: '24px', 
+                backgroundColor: 'var(--bg-card)', 
+                borderRadius: 'var(--radius-lg)', 
+                border: '1px solid var(--border-light)',
+                textAlign: 'center'
+              }}
+            >
+              <div style={{ display: 'inline-flex', padding: '12px', borderRadius: '50%', backgroundColor: 'rgba(192, 108, 108, 0.1)', color: '#C06C6C', marginBottom: '16px' }}>
+                <AlertTriangle size={32} />
+              </div>
+              <h3 style={{ fontSize: '18px', fontWeight: '850', color: 'var(--text-main)', margin: '0 0 12px' }}>
+                Sentiremos sua falta no Pro! 🥺
+              </h3>
+              <p style={{ fontSize: '13px', color: 'var(--text-muted)', lineHeight: '1.6', margin: '0 0 20px' }}>
+                Ao cancelar sua assinatura, seu histórico continuará salvo de forma segura, mas você voltará a ver <strong>apenas os últimos 30 dias</strong> na sua linha de tempo e perderá o acesso ao Coach MyFlowDay, análises avançadas e sincronização de calendários.
+              </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <button
+                  onClick={() => setIsCancelModalOpen(false)}
+                  style={{ width: '100%', padding: '12px', borderRadius: '6px', border: 'none', backgroundColor: 'var(--primary)', color: 'white', fontWeight: '700', fontSize: '13px', cursor: 'pointer' }}
+                >
+                  Manter Assinatura Pro ⚡
+                </button>
+                <button
+                  onClick={async () => {
+                    await handleCancelSubscription();
+                    setIsCancelModalOpen(false);
+                    alert("Sua assinatura Pro foi cancelada. Você retornou ao plano gratuito.");
+                  }}
+                  style={{ width: '100%', padding: '12px', borderRadius: '6px', border: '1px solid var(--border-medium)', backgroundColor: 'transparent', color: '#c06c6c', fontWeight: '600', fontSize: '13px', cursor: 'pointer' }}
+                >
+                  Confirmar Cancelamento (Simulado)
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Configurações de Produtividade */}
         <div style={{ backgroundColor: 'var(--bg-card)', padding: '24px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-light)' }}>
@@ -650,7 +1057,11 @@ export default function SettingsView() {
             </p>
             <button
               onClick={() => {
-                setIsSyncModalOpen(true);
+                if (!isPro) {
+                  openPaywall('google_calendar');
+                } else {
+                  setIsSyncModalOpen(true);
+                }
               }}
               style={{
                 alignSelf: 'flex-start',

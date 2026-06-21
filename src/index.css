@@ -5077,7 +5077,7 @@ button[title="Sair do MyFlowDay"]:hover {
   }
   /* Safe area space for floating nav */
   .app-main-content {
-    padding-bottom: 90px !important;
+    padding-bottom: 120px !important;
   }
   /* Aura Assistant responsiveness */
   .aura-assistant-card {
@@ -5184,6 +5184,9 @@ button[title="Sair do MyFlowDay"]:hover {
 @media (max-width: 768px) {
   .hide-on-mobile {
     display: none !important;
+  }
+  .app-main-content {
+    padding-bottom: 120px !important;
   }
 }
 

@@ -7,7 +7,7 @@ import { exportAllTasksToCalendar } from '../services/googleCalendarService';
 export default function WeeklyPlannerModal({ isOpen, onClose, tasks, onUpdateTask }) {
   if (!isOpen) return null;
 
-  const { goals, currentUser, setCurrentUser, logEvent } = useAppContext();
+  const { goals, currentUser, setCurrentUser, logEvent, isPro, openPaywall } = useAppContext();
   
   // Tab ativa
   const [plannerTab, setPlannerTab] = useState('focus'); // focus, schedule
@@ -122,13 +122,14 @@ export default function WeeklyPlannerModal({ isOpen, onClose, tasks, onUpdateTas
         linkedGoals: selectedGoals
       };
 
-      const { data, error } = await supabase.auth.updateUser({
-        data: {
-          weekly_plan: planData
-        }
-      });
-
-      if (error) throw error;
+      if (!currentUser.isDemo) {
+        const { error } = await supabase.auth.updateUser({
+          data: {
+            weekly_plan: planData
+          }
+        });
+        if (error) throw error;
+      }
       
       setCurrentUser(prev => ({
         ...prev,
@@ -144,7 +145,25 @@ export default function WeeklyPlannerModal({ isOpen, onClose, tasks, onUpdateTas
       setPlannerTab('schedule'); // Avança para o agendamento de tarefas
     } catch (err) {
       console.error('[WeeklyPlannerModal] Erro ao salvar plano semanal:', err);
-      alert('Erro ao salvar planejamento. Tente novamente.');
+      // Fallback local caso esteja offline
+      if (currentUser) {
+        const planData = {
+          focus: weeklyFocus,
+          criticalPriorities: criticalPriorities.filter(p => p.trim() !== ''),
+          linkedGoals: selectedGoals
+        };
+        setCurrentUser(prev => ({
+          ...prev,
+          user_metadata: {
+            ...prev.user_metadata,
+            weekly_plan: planData
+          }
+        }));
+        alert('Planejamento salvo localmente (sem sincronização). ⚡');
+        setPlannerTab('schedule');
+      } else {
+        alert('Erro ao salvar planejamento. Tente novamente.');
+      }
     } finally {
       setSaving(false);
     }
@@ -161,10 +180,12 @@ export default function WeeklyPlannerModal({ isOpen, onClose, tasks, onUpdateTas
 
     setSaving(true);
     try {
-      const { error } = await supabase.auth.updateUser({
-        data: { weekly_plan: null }
-      });
-      if (error) throw error;
+      if (!currentUser.isDemo) {
+        const { error } = await supabase.auth.updateUser({
+          data: { weekly_plan: null }
+        });
+        if (error) throw error;
+      }
       
       setCurrentUser(prev => ({
         ...prev,
@@ -177,12 +198,26 @@ export default function WeeklyPlannerModal({ isOpen, onClose, tasks, onUpdateTas
       onClose();
     } catch (err) {
       console.error('[WeeklyPlannerModal] Erro ao limpar plano:', err);
+      // Garantir limpeza local robusta mesmo em caso de erro da chamada remota
+      setCurrentUser(prev => ({
+        ...prev,
+        user_metadata: { ...prev.user_metadata, weekly_plan: null }
+      }));
+      setWeeklyFocus('');
+      setCriticalPriorities(['']);
+      setSelectedGoals([]);
+      setConfirmClear(false);
+      onClose();
     } finally {
       setSaving(false);
     }
   };
 
   const handleExportGoogleCalendar = () => {
+    if (!isPro) {
+      openPaywall('google_calendar');
+      return;
+    }
     exportAllTasksToCalendar(tasks);
     window.open('https://calendar.google.com/calendar/r/settings/export', '_blank');
     setIsSyncModalOpen(false);
@@ -190,6 +225,10 @@ export default function WeeklyPlannerModal({ isOpen, onClose, tasks, onUpdateTas
   };
 
   const handleExportIcsOnly = () => {
+    if (!isPro) {
+      openPaywall('google_calendar');
+      return;
+    }
     exportAllTasksToCalendar(tasks);
     setIsSyncModalOpen(false);
     logEvent('weekly_planner_calendar_ics_sync_clicked');
@@ -221,6 +260,10 @@ export default function WeeklyPlannerModal({ isOpen, onClose, tasks, onUpdateTas
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <button
               onClick={() => {
+                if (!isPro) {
+                  openPaywall('google_calendar');
+                  return;
+                }
                 setIsSyncModalOpen(true);
                 logEvent('weekly_planner_calendar_sync');
               }}

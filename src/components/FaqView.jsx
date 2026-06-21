@@ -61,7 +61,17 @@ const faqs = [
   {
     id: 12,
     question: 'Qual o diferencial do MyFlowDay em relação aos outros apps de produtividade?',
-    answer: 'Enquanto outros aplicativos focam em cobrar listas intermináveis e geram ansiedade por meio de autocobrança excessiva, o MyFlowDay promove a produtividade sustentável. Nós combinamos o controle de tarefas com o hábito saudável, acompanhamento de energia e um score de consistência dinâmico, ajudando você a render sem atingir o esgotamento (burnout).',
+    answer: 'O MyFlowDay é focado em produtividade consciente e autoconhecimento pessoal. Mais do que apenas gerenciar listas de afazeres, a plataforma integra o acompanhamento de hábitos saudáveis, o nível de energia e um score de consistência gradual, incentivando o progresso diário contínuo e sustentável, sem pressões ou cobranças excessivas.',
+  },
+  {
+    id: 13,
+    question: 'O MyFlowDay utiliza Inteligência Artificial?',
+    answer: 'O MyFlowDay conta com recursos de análise inteligente para gerar insights comportamentais a partir do seu histórico de uso, ajudando você a descobrir seus melhores horários de foco e ritmo de consistência. Todo esse processamento é feito de forma segura e local para garantir sua total privacidade.',
+  },
+  {
+    id: 14,
+    question: 'Posso exportar meus dados?',
+    answer: 'Sim! Valorizamos a portabilidade dos seus dados. Você pode exportar suas tarefas agendadas diretamente em formato de calendário (.ics) para sincronizar com Google Calendar e outras plataformas pelo Planejador Semanal, ou solicitar a exportação completa nas Configurações do seu perfil.',
   },
 ];
 

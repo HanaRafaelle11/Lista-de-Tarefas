@@ -173,6 +173,10 @@ export function AppProvider({ children }) {
 
   // ── Feature Flags & Assinatura (SaaS) ───────────────────────────────────────
   const [isPro, setIsPro] = useState(false);
+  const [isPaywallOpen, setIsPaywallOpen] = useState(false);
+  const [paywallSource, setPaywallSource] = useState('');
+  const [subscriptionStatus, setSubscriptionStatus] = useState('free'); // 'active', 'canceled', 'free'
+  const [subscriptionPlan, setSubscriptionPlan] = useState('free'); // 'pro', 'free'
 
   // Determina se usuário logado é administrador
   const isAdmin = useMemo(() => {
@@ -184,22 +188,31 @@ export function AppProvider({ children }) {
   const loadSubscription = useCallback(async (userId) => {
     if (!userId) {
       setIsPro(false);
+      setSubscriptionStatus('free');
+      setSubscriptionPlan('free');
       return;
     }
     try {
       const { data, error } = await supabase
         .from('subscriptions')
-        .select('status')
+        .select('status, plan')
         .eq('user_id', userId)
         .maybeSingle();
       if (!error && data) {
-        setIsPro(data.status === 'active');
+        const active = data.status === 'active';
+        setIsPro(active);
+        setSubscriptionStatus(data.status);
+        setSubscriptionPlan(data.plan || 'pro');
       } else {
         setIsPro(false);
+        setSubscriptionStatus('free');
+        setSubscriptionPlan('free');
       }
     } catch (err) {
       console.warn('[AppContext] Erro ao carregar assinatura:', err.message);
       setIsPro(false);
+      setSubscriptionStatus('free');
+      setSubscriptionPlan('free');
     }
   }, []);
 
@@ -434,6 +447,8 @@ export function AppProvider({ children }) {
     }
 
     setIsPro(true);
+    setSubscriptionStatus('active');
+    setSubscriptionPlan('pro');
     setIsInitializing(false);
     
     // Notificação de boas vindas
@@ -706,7 +721,22 @@ export function AppProvider({ children }) {
       if (!active) return;
       if (session?.user) {
         const u = buildUser(session.user);
-        setCurrentUser(u);
+        if (e === 'USER_UPDATED') {
+          setCurrentUser(prev => {
+            if (!prev) return u;
+            const localWeeklyPlan = prev.user_metadata?.weekly_plan;
+            const updatedWeeklyPlan = u.user_metadata?.weekly_plan;
+            return {
+              ...u,
+              user_metadata: {
+                ...u.user_metadata,
+                weekly_plan: localWeeklyPlan === null ? null : updatedWeeklyPlan
+              }
+            };
+          });
+        } else {
+          setCurrentUser(u);
+        }
       } else {
         setCurrentUser(null);
       }
@@ -731,6 +761,8 @@ export function AppProvider({ children }) {
       setHabitLogs([]);
       setNotifications([]);
       setIsPro(false);
+      setSubscriptionStatus('free');
+      setSubscriptionPlan('free');
       return;
     }
 
@@ -849,11 +881,17 @@ export function AppProvider({ children }) {
           return;
         }
 
-        const { error } = await achievementsService.unlock(
-          currentUser.id,
-          newlyUnlocked.map((a) => a.key)
-        );
-        if (error) return;
+        try {
+          const { error } = await achievementsService.unlock(
+            currentUser.id,
+            newlyUnlocked.map((a) => a.key)
+          );
+          if (error) {
+            console.warn('[AppContext] Falha ao sincronizar conquistas com o Supabase, continuando fluxo local:', error);
+          }
+        } catch (err) {
+          console.warn('[AppContext] Erro ao invocar achievementsService.unlock, prosseguindo localmente:', err);
+        }
 
         newlyUnlocked.forEach((a) => {
           // Guard: se já foi dispensada anteriormente (localStorage ou banco), não re-exibe
@@ -1795,33 +1833,84 @@ export function AppProvider({ children }) {
     }
   }, [currentUser, logEvent]);
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // SIMULADOR DE UPGRADE PRO (Bloco 6)
-  // ═══════════════════════════════════════════════════════════════════════════
-  const handleSimulateUpgrade = useCallback(async () => {
+  const openPaywall = useCallback((source) => {
+    setIsPaywallOpen(true);
+    setPaywallSource(source || '');
+    logEvent('paywall_viewed', { source: source || 'unknown' });
+  }, [logEvent]);
+
+  const closePaywall = useCallback(() => {
+    setIsPaywallOpen(false);
+  }, []);
+
+  const handleUpgradeSuccess = useCallback(async (simulationType) => {
     if (!currentUser?.id) return;
     try {
-      const nextPro = !isPro;
-      logEvent(nextPro ? 'upgrade_clicked' : 'downgrade_clicked');
-      logEvent(nextPro ? 'upgrade_started' : 'downgrade_started');
+      logEvent('upgrade_clicked', { method: simulationType });
+      logEvent('upgrade_started', { method: simulationType });
       
       const { error } = await supabase
         .from('subscriptions')
         .upsert({
           user_id: currentUser.id,
-          status: nextPro ? 'active' : 'canceled',
+          status: 'active',
           plan: 'pro',
+          price: 14.90,
           updated_at: new Date().toISOString()
         }, { onConflict: 'user_id' });
+        
       if (error) throw error;
       
-      setIsPro(nextPro);
-      logEvent(nextPro ? 'upgrade_completed' : 'downgrade_completed');
-      logEvent(nextPro ? 'subscription_started' : 'subscription_cancelled');
+      setIsPro(true);
+      setSubscriptionStatus('active');
+      setSubscriptionPlan('pro');
+      
+      logEvent('upgrade_completed', { method: simulationType });
+      logEvent('subscription_started', { method: simulationType });
     } catch (e) {
-      console.error('Erro ao mudar assinatura:', e);
+      console.error('Erro ao ativar assinatura Pro:', e);
+      throw e;
     }
-  }, [currentUser, isPro, logEvent]);
+  }, [currentUser, logEvent]);
+
+  const handleCancelSubscription = useCallback(async () => {
+    if (!currentUser?.id) return;
+    try {
+      logEvent('downgrade_clicked');
+      logEvent('downgrade_started');
+      
+      const { error } = await supabase
+        .from('subscriptions')
+        .upsert({
+          user_id: currentUser.id,
+          status: 'canceled',
+          plan: 'free',
+          price: 0.00,
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'user_id' });
+        
+      if (error) throw error;
+      
+      setIsPro(false);
+      setSubscriptionStatus('canceled');
+      setSubscriptionPlan('free');
+      
+      logEvent('downgrade_completed');
+      logEvent('subscription_cancelled');
+    } catch (e) {
+      console.error('Erro ao cancelar assinatura:', e);
+      throw e;
+    }
+  }, [currentUser, logEvent]);
+
+  const handleSimulateUpgrade = useCallback(async () => {
+    if (!currentUser?.id) return;
+    if (isPro) {
+      await handleCancelSubscription();
+    } else {
+      openPaywall('admin_simulation');
+    }
+  }, [currentUser, isPro, handleCancelSubscription, openPaywall]);
 
   // ═══════════════════════════════════════════════════════════════════════════
   // HABITS — interface compatível com useHabits anterior
@@ -2003,15 +2092,19 @@ export function AppProvider({ children }) {
 
   // ── Explicação Detalhada do Health Score (Consistency Score) ──
   const consistencyScoreExplanation = useMemo(() => {
-    if (!currentUser) return { positives: [], negatives: [] };
+    if (!currentUser) return { positives: [], negatives: [], breakdown: {}, motivationalMessage: '' };
     
     const positives = [];
     const negatives = [];
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    const sevenDaysAgoStr = sevenDaysAgo.toISOString().split('T')[0];
+
+    const activeTasks = tasks.filter(t => !t.deletedAt);
+    const activeGoals = goals.filter(g => !g.deletedAt);
 
     // 1. Conclusão de tarefas nos últimos 7 dias
-    const recentTasks = tasks.filter(t => {
+    const recentTasks = activeTasks.filter(t => {
       const date = t.dueDate || t.createdAt?.split('T')[0];
       return date && new Date(date) >= sevenDaysAgo;
     });
@@ -2033,25 +2126,25 @@ export function AppProvider({ children }) {
     }
 
     // 3. Progresso dos objetivos ativos
-    const activeGoals = goals.filter(g => g.status === 'active' && !g.deletedAt);
+    const activeGoalsFiltered = activeGoals.filter(g => g.status === 'active');
     let totalPct = 0;
-    activeGoals.forEach(goal => {
+    activeGoalsFiltered.forEach(goal => {
       const linkedIds = goalTasks.filter(gt => gt.goal_id === goal.id).map(gt => gt.task_id);
-      const linked = tasks.filter(t => linkedIds.includes(t.id));
+      const linked = activeTasks.filter(t => linkedIds.includes(t.id));
       const done = linked.filter(t => t.completed).length;
       const pct = linked.length > 0 ? (done / linked.length) : 0;
       totalPct += pct;
     });
     
-    if (activeGoals.length > 0) {
-      const avgGoalProgress = Math.round((totalPct / activeGoals.length) * 100);
+    if (activeGoalsFiltered.length > 0) {
+      const avgGoalProgress = Math.round((totalPct / activeGoalsFiltered.length) * 100);
       if (avgGoalProgress > 0) {
         positives.push({ text: `Objetivos em andamento avançando (média de ${avgGoalProgress}% concluído)`, value: `+${Math.round((avgGoalProgress / 100) * 20)}%` });
       }
     }
 
     // Penalidade: Tarefas Atrasadas
-    const lateTasks = tasks.filter(t => !t.completed && t.dueDate && new Date(t.dueDate) < new Date() && !t.deletedAt);
+    const lateTasks = activeTasks.filter(t => !t.completed && t.dueDate && new Date(t.dueDate) < new Date());
     if (lateTasks.length > 0) {
       negatives.push({ text: `${lateTasks.length} tarefas estão com prazo atrasado`, value: `-${Math.min(15, lateTasks.length * 2)}%` });
     }
@@ -2064,8 +2157,149 @@ export function AppProvider({ children }) {
       negatives.push({ text: 'Nenhum planejamento semanal feito para este ciclo', value: '-5%' });
     }
 
-    return { positives, negatives };
-  }, [tasks, habits, habitLogs, goals, goalTasks, currentUser]);
+    // ─── CÁLCULO DO DETALHAMENTO TRANSPARENTE (6 COMPONENTES) ───
+    
+    // A. Dias ativos recentes
+    const activeDates = new Set();
+    activeTasks.filter(t => t.completed && t.completedAt).forEach(t => {
+      const dateStr = t.completedAt.split('T')[0];
+      if (dateStr >= sevenDaysAgoStr) activeDates.add(dateStr);
+    });
+    habitLogs.filter(l => l.completed_date >= sevenDaysAgoStr).forEach(l => {
+      activeDates.add(l.completed_date);
+    });
+    const activeDaysRecent = activeDates.size;
+    const diasAtivosPct = Math.round((activeDaysRecent / 7) * 100);
+    const diasAtivosOk = activeDaysRecent >= 3;
+
+    // B. Sequência atual
+    const streak = calcStreak(tasks);
+    const sequenciaPct = Math.min(100, Math.round((streak / 7) * 100));
+    const sequenciaOk = streak >= 1;
+
+    // C. Sessões de foco concluídas
+    const focusCount = userState?.stats?.sessions || 0;
+    const finalFocusCount = (currentUser?.isDemo && focusCount === 0) ? 8 : focusCount;
+    const focoPct = Math.min(100, Math.round((finalFocusCount / 5) * 100));
+    const focoOk = finalFocusCount >= 1;
+
+    // D. Tarefas finalizadas
+    const completedTasksCount = activeTasks.filter(t => t.completed).length;
+    const totalTasksCount = activeTasks.length;
+    const taskRate = totalTasksCount > 0 ? (completedTasksCount / totalTasksCount) : 0;
+    const tarefasPct = Math.round(taskRate * 100);
+    const tarefasOk = completedTasksCount >= 1;
+
+    // E. Objetivos movimentados
+    const completedGoalsCount = activeGoals.filter(g => g.status === 'completed').length;
+    const totalGoalsCount = activeGoals.length;
+    const goalRate = activeGoalsFiltered.length > 0 ? (totalPct / activeGoalsFiltered.length) : 0;
+    const objetivosPct = Math.round((completedGoalsCount > 0 || goalRate > 0) ? (completedGoalsCount / Math.max(1, totalGoalsCount) * 50 + goalRate * 50) : 0);
+    const objetivosOk = activeGoals.length > 0;
+
+    // F. Regularidade semanal
+    const hasWeeklyPlan = !!(weeklyPlan && (weeklyPlan.focus || weeklyPlan.linkedGoals?.length > 0));
+    const regularidadePct = hasWeeklyPlan ? 100 : 0;
+    const regularidadeOk = hasWeeklyPlan;
+
+    const breakdown = {
+      diasAtivos: {
+        pct: diasAtivosPct,
+        valueText: `${activeDaysRecent} de 7 dias`,
+        label: 'Dias ativos recentes',
+        desc: 'Sua frequência diária de atividades concluídas na última semana.',
+        ok: diasAtivosOk
+      },
+      sequencia: {
+        pct: sequenciaPct,
+        valueText: `${streak} ${streak === 1 ? 'dia' : 'dias'}`,
+        label: 'Sequência atual',
+        desc: 'Dias consecutivos em ação. A regularidade constrói hábitos sólidos.',
+        ok: sequenciaOk
+      },
+      foco: {
+        pct: focoPct,
+        valueText: `${finalFocusCount} ${finalFocusCount === 1 ? 'sessão' : 'sessões'}`,
+        label: 'Sessões de foco concluídas',
+        desc: 'Períodos de concentração profunda no modo foco (Pomodoro).',
+        ok: focoOk
+      },
+      tarefas: {
+        pct: tarefasPct,
+        valueText: `${completedTasksCount} de ${totalTasksCount}`,
+        label: 'Tarefas finalizadas',
+        desc: 'A proporção de tarefas concluídas em relação às criadas.',
+        ok: tarefasOk
+      },
+      objetivos: {
+        pct: objetivosPct,
+        valueText: `${completedGoalsCount} concluídos`,
+        label: 'Objetivos movimentados',
+        desc: 'Progresso das suas grandes metas de longo prazo.',
+        ok: objetivosOk
+      },
+      regularidade: {
+        pct: regularidadePct,
+        valueText: hasWeeklyPlan ? 'Planejado' : 'Pendente',
+        label: 'Regularidade semanal',
+        desc: 'Planejar sua semana no planejador acalma a mente e define o rumo.',
+        ok: regularidadeOk
+      }
+    };
+
+    // Mensagem motivacional amigável baseada em score
+    let motivationalMessage = "Você está construindo seu ritmo. Continue com pequenos avanços!";
+    if (consistencyScore >= 85) {
+      motivationalMessage = "Incrível! Sua consistência está fantástica. Você está no controle absoluto da sua evolução.";
+    } else if (consistencyScore >= 50) {
+      motivationalMessage = "Pequenos avanços aumentam sua consistência. Mantenha o foco!";
+    } else if (consistencyScore > 0) {
+      motivationalMessage = "Você está definindo seu ritmo. Cada pequena ação conta para sua evolução!";
+    } else {
+      motivationalMessage = "Sua jornada de evolução começa agora. Defina uma tarefa ou objetivo para iniciar!";
+    }
+
+    return { positives, negatives, breakdown, motivationalMessage };
+  }, [tasks, habits, habitLogs, goals, goalTasks, currentUser, userState, consistencyScore]);
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // VISIBLE DATA & HIDDEN COUNTS (SaaS History Limits)
+  // ═══════════════════════════════════════════════════════════════════════════
+  const visibleTasks = useMemo(() => {
+    const activeTasks = tasks.filter(t => !t.deletedAt);
+    if (isPro) return activeTasks;
+    const limit = Date.now() - 30 * 24 * 60 * 60 * 1000;
+    return activeTasks.filter(task => {
+      const dateStr = task.completedAt || task.dueDate || task.createdAt;
+      if (!dateStr) return true;
+      const time = new Date(dateStr).getTime();
+      return time >= limit || time > Date.now();
+    });
+  }, [tasks, isPro]);
+
+  const visibleGoals = useMemo(() => {
+    const activeGoals = goals.filter(g => !g.deletedAt);
+    if (isPro) return activeGoals;
+    const limit = Date.now() - 30 * 24 * 60 * 60 * 1000;
+    return activeGoals.filter(goal => {
+      const dateStr = goal.updated_at || goal.created_at;
+      if (!dateStr) return true;
+      const time = new Date(dateStr).getTime();
+      return time >= limit || time > Date.now();
+    });
+  }, [goals, isPro]);
+
+  const hiddenTasksCount = useMemo(() => {
+    if (isPro) return 0;
+    const activeTasks = tasks.filter(t => !t.deletedAt);
+    return activeTasks.length - visibleTasks.length;
+  }, [tasks, visibleTasks, isPro]);
+
+  const hiddenGoalsCount = useMemo(() => {
+    if (isPro) return 0;
+    const activeGoals = goals.filter(g => !g.deletedAt);
+    return activeGoals.length - visibleGoals.length;
+  }, [goals, visibleGoals, isPro]);
 
   // ═══════════════════════════════════════════════════════════════════════════
   // CONTEXT VALUE
@@ -2092,8 +2326,8 @@ export function AppProvider({ children }) {
     setAppBgColor,
 
     // Data
-    tasks: tasks.filter(t => !t.deletedAt),
-    goals: goals.filter(g => !g.deletedAt),
+    tasks: visibleTasks,
+    goals: visibleGoals,
     allTasks: tasks,
     allGoals: goals,
     deletedTasks: tasks.filter(t => t.deletedAt),
@@ -2149,6 +2383,18 @@ export function AppProvider({ children }) {
     consistencyScoreExplanation,
     handleCompleteOnboarding,
     supabaseConfigError,
+
+    // Paywall and billing state/actions
+    isPaywallOpen,
+    paywallSource,
+    subscriptionStatus,
+    subscriptionPlan,
+    hiddenTasksCount,
+    hiddenGoalsCount,
+    openPaywall,
+    closePaywall,
+    handleUpgradeSuccess,
+    handleCancelSubscription,
 
     // Profiles additions
     userProfile,
