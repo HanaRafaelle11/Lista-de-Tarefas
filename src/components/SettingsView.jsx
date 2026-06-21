@@ -213,8 +213,10 @@ export default function SettingsView() {
       return;
     }
     setFeedbackStatus('sending');
+    let emailSent = false;
+
+    // 1. Tenta inserir na tabela 'feedback' do Supabase
     try {
-      // 1. Tenta inserir no Supabase na tabela 'feedback'
       const { error: dbError } = await supabase
         .from('feedback')
         .insert({
@@ -223,14 +225,16 @@ export default function SettingsView() {
           user_email: currentUser?.email || null,
           created_at: new Date().toISOString(),
         });
-
       if (dbError) {
-        // Tabela pode ainda não existir — fallback para log local
-        console.warn('[Feedback] Tabela não encontrada, usando fallback:', dbError.message);
+        console.warn('[Feedback] Tabela não encontrada ou falha ao inserir no banco:', dbError.message);
       }
+    } catch (e) {
+      console.warn('[Feedback] Falha ao tentar gravar no banco de dados:', e.message);
+    }
 
-      // 2. Dispara a requisição para a Supabase Edge Function 'send-feedback-email'
-      if (supabase.functions && typeof supabase.functions.invoke === 'function') {
+    // 2. Tenta disparar a Edge Function do Supabase
+    if (supabase.functions && typeof supabase.functions.invoke === 'function') {
+      try {
         const { error: funcError } = await supabase.functions.invoke('send-feedback-email', {
           body: {
             message: feedbackText.trim(),
@@ -238,18 +242,64 @@ export default function SettingsView() {
             userEmail: currentUser?.email || null,
           }
         });
-
-        if (funcError) {
-          console.error('[Feedback] Falha ao despachar email pela Edge Function:', funcError.message);
-          throw funcError;
+        if (!funcError) {
+          emailSent = true;
+          console.log('[Feedback] E-mail enviado com sucesso via Edge Function.');
+        } else {
+          console.warn('[Feedback] Edge Function retornou erro:', funcError.message);
         }
+      } catch (err) {
+        console.warn('[Feedback] Falha ao invocar Edge Function:', err.message);
       }
+    }
 
+    // 3. Fallback: Se a Edge Function não enviou o e-mail, tenta via FormSubmit.co
+    if (!emailSent) {
+      try {
+        const adminEmails = ['admin@flowday.app', 'rafaelle@flowday.app', 'rafox@flowday.app'];
+        const userEmail = currentUser?.email || '';
+        // Envia para o próprio e-mail do admin logado se for teste, ou para o admin principal
+        const recipientEmail = adminEmails.includes(userEmail) ? userEmail : 'rafaelle@flowday.app';
+        
+        console.log(`[Feedback] Enviando e-mail de feedback via FormSubmit para: ${recipientEmail}`);
+        const response = await fetch(`https://formsubmit.co/ajax/${recipientEmail}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          },
+          body: JSON.stringify({
+            name: currentUser?.name || 'Usuário Flowday',
+            email: userEmail || 'no-reply@flowday.app',
+            message: feedbackText.trim(),
+            _subject: `Novo Feedback do Flowday - ${userEmail || 'Anônimo'}`,
+          })
+        });
+
+        if (response.ok) {
+          const resData = await response.json();
+          if (resData.success === 'true' || resData.success === true) {
+            emailSent = true;
+            console.log('[Feedback] E-mail enviado com sucesso via FormSubmit.');
+          } else {
+            console.warn('[Feedback] FormSubmit retornou resposta negativa:', resData);
+          }
+        } else {
+          console.warn('[Feedback] Resposta HTTP negativa do FormSubmit:', response.status);
+        }
+      } catch (err) {
+        console.warn('[Feedback] Erro no fallback do FormSubmit:', err.message);
+      }
+    }
+
+    // 4. Conclusão do envio
+    if (emailSent) {
       setFeedbackText('');
       setFeedbackStatus('sent');
       setTimeout(() => setFeedbackStatus('idle'), 4000);
-    } catch (err) {
-      console.warn('[Feedback] Salvando localmente devido a falha no serviço:', err);
+    } else {
+      // Se ambos falharam (ex: sem internet), salva em localStorage como fallback de emergência
+      console.warn('[Feedback] Salvando localmente devido a falhas em todos os canais de envio.');
       try {
         const localFeedbackKey = 'flowday_local_feedback';
         const existing = JSON.parse(localStorage.getItem(localFeedbackKey) || '[]');
@@ -263,7 +313,7 @@ export default function SettingsView() {
         localStorage.setItem(localFeedbackKey, JSON.stringify(existing));
         
         setFeedbackText('');
-        setFeedbackStatus('sent');
+        setFeedbackStatus('sent'); // Exibe "sent" para o usuário indicando gravação (offline)
         setTimeout(() => setFeedbackStatus('idle'), 4000);
       } catch (localErr) {
         console.error('[Feedback] Erro fatal ao salvar feedback localmente:', localErr);

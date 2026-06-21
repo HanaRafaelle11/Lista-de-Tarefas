@@ -35,6 +35,7 @@ const mapGoal = (g) => {
 export const goalsService = {
   /**
    * Carrega todos os objetivos do usuário + tabela de vínculos.
+   * Integra com IndexedDB para cache e suporte offline.
    */
   getAll: async (userId) => {
     requireUser(userId);
@@ -60,32 +61,79 @@ export const goalsService = {
         goalTasks = gtData || [];
       }
 
-      return { data: { goals: mappedGoals, goalTasks }, error: null };
+      // Sincroniza em background o cache do IndexedDB
+      let allGoals = [...mappedGoals];
+      try {
+        const localGoals = await localDB.getAll('goals');
+        const localDeleted = localGoals.filter(g => g.user_id === userId && g.deletedAt);
+        allGoals = [...mappedGoals, ...localDeleted];
+
+        await localDB.clear('goals');
+        await localDB.putMany('goals', allGoals);
+      } catch (err) {
+        console.warn('[goalsService.getAll] Erro ao sincronizar cache local:', err.message);
+      }
+
+      return { data: { goals: allGoals, goalTasks }, error: null };
     } catch (error) {
-      console.error('[goalsService.getAll]', error);
-      return { data: null, error };
+      console.warn('[goalsService.getAll] Falha ao carregar objetivos — usando IndexedDB offline:', error.message);
+      try {
+        const localGoals = await localDB.getAll('goals');
+        const userGoals = localGoals.filter(g => g.user_id === userId);
+        return { data: { goals: userGoals, goalTasks: [] }, error, degraded: true };
+      } catch (dbErr) {
+        return { data: { goals: [], goalTasks: [] }, error: dbErr, degraded: true };
+      }
     }
   },
 
   /**
    * Cria um novo objetivo.
+   * Salva no cache local do IndexedDB e tenta enviar ao Supabase.
    */
   create: async (userId, goalData) => {
     requireUser(userId);
+    const clientId = goalData.id || generateId();
+    const nowIso = new Date().toISOString();
+
+    const optimistic = {
+      id:          clientId,
+      user_id:     userId,
+      title:       goalData.title,
+      description: goalData.description || '',
+      color:       goalData.color || '#4A654E',
+      icon:        goalData.icon || '🎯',
+      target_date: goalData.target_date || null,
+      start_time:  goalData.start_time || null,
+      end_time:    goalData.end_time || null,
+      status:      'active',
+      created_at:  nowIso,
+      updated_at:  nowIso,
+      deletedAt:   null
+    };
+
+    // 1. Salva no cache do localDB imediatamente
+    try {
+      await localDB.put('goals', optimistic);
+    } catch (err) {
+      console.warn('[goalsService.create] Erro ao salvar no cache local:', err.message);
+    }
+
     try {
       // 1. Tentar gravar diretamente com colunas nativas
       const { data, error } = await supabase
         .from('goals')
         .insert([{
-          user_id: userId,
-          title: goalData.title,
+          id:          clientId,
+          user_id:     userId,
+          title:       goalData.title,
           description: goalData.description || '',
-          color: goalData.color || '#4A654E',
-          icon: goalData.icon || '🎯',
+          color:       goalData.color || '#4A654E',
+          icon:        goalData.icon || '🎯',
           target_date: goalData.target_date || null,
-          start_time: goalData.start_time || null,
-          end_time: goalData.end_time || null,
-          status: 'active',
+          start_time:  goalData.start_time || null,
+          end_time:    goalData.end_time || null,
+          status:      'active',
         }])
         .select()
         .single();
@@ -104,13 +152,14 @@ export const goalsService = {
           const { data: fallbackData, error: fallbackError } = await supabase
             .from('goals')
             .insert([{
-              user_id: userId,
-              title: goalData.title,
+              id:          clientId,
+              user_id:     userId,
+              title:       goalData.title,
               description: enrichedDescription,
-              color: goalData.color || '#4A654E',
-              icon: goalData.icon || '🎯',
+              color:       goalData.color || '#4A654E',
+              icon:        goalData.icon || '🎯',
               target_date: goalData.target_date || null,
-              status: 'active',
+              status:      'active',
             }])
             .select()
             .single();
@@ -122,16 +171,35 @@ export const goalsService = {
       }
       return { data: mapGoal(data), error: null };
     } catch (error) {
-      console.error('[goalsService.create]', error);
-      return { data: null, error };
+      console.warn('[goalsService.create] Falha ao criar no Supabase — enfileirado para sync:', error.message);
+      enqueue('goal_create', { userId, goalData, goalId: clientId }, clientId);
+      return { data: optimistic, error, degraded: true };
     }
   },
 
   /**
    * Atualiza campos de um objetivo.
+   * Atualiza cache local e sincroniza com o Supabase.
    */
   update: async (userId, id, updates) => {
     requireUser(userId);
+    const nowIso = new Date().toISOString();
+
+    // 1. Salva no cache do localDB imediatamente
+    try {
+      const existing = await localDB.get('goals', id);
+      if (existing) {
+        const updated = {
+          ...existing,
+          ...updates,
+          updated_at: nowIso
+        };
+        await localDB.put('goals', updated);
+      }
+    } catch (err) {
+      console.warn('[goalsService.update] Erro ao atualizar cache local:', err.message);
+    }
+
     try {
       const payload = {};
       ['title', 'description', 'color', 'icon', 'status', 'start_time', 'end_time'].forEach((k) => {
@@ -210,18 +278,32 @@ export const goalsService = {
       }
       return { data: mapGoal(data), error: null };
     } catch (error) {
-      console.error('[goalsService.update]', error);
-      return { data: null, error };
+      console.warn('[goalsService.update] Falha ao atualizar objetivo no Supabase — enfileirado para retry:', error.message);
+      enqueue('goal_update', { userId, id, updates }, id);
+      return { error, degraded: true };
     }
   },
 
   /**
    * Exclui um objetivo logicamente (Soft Delete).
-   * Fallback: se a coluna deleted_at não existir no banco, faz hard delete.
+   * Fallback: se a coluna deleted_at não existir no banco, faz hard delete no Supabase
+   * mas mantém no IndexedDB para que apareça na lixeira.
    */
   delete: async (userId, id) => {
     requireUser(userId);
     const nowIso = new Date().toISOString();
+    
+    // 1. Marca como excluído logicamente no cache local (para UX de lixeira)
+    try {
+      const existing = await localDB.get('goals', id);
+      if (existing) {
+        existing.deletedAt = nowIso;
+        await localDB.put('goals', existing);
+      }
+    } catch (err) {
+      console.warn('[goalsService.delete] Erro ao marcar soft delete local:', err.message);
+    }
+
     try {
       const { error } = await supabase
         .from('goals')
@@ -238,15 +320,20 @@ export const goalsService = {
             .delete()
             .eq('id', id)
             .eq('user_id', userId);
-          if (hardError) throw hardError;
+          if (hardError) {
+            enqueue('goal_delete', { userId, id });
+            return { error: hardError, degraded: true };
+          }
+          // Mantém no cache local com deletedAt para que vá para a lixeira
           return { error: null };
         }
         throw error;
       }
       return { error: null };
     } catch (error) {
-      console.error('[goalsService.delete]', error);
-      return { error };
+      console.warn('[goalsService.delete] Falha ao excluir no Supabase — enfileirado:', error.message);
+      enqueue('goal_delete', { userId, id });
+      return { error, degraded: true };
     }
   },
 
@@ -255,6 +342,14 @@ export const goalsService = {
    */
   deletePermanent: async (userId, id) => {
     requireUser(userId);
+    
+    // 1. Remove do cache local
+    try {
+      await localDB.delete('goals', id);
+    } catch (err) {
+      console.warn('[goalsService.deletePermanent] Erro ao excluir do cache local:', err.message);
+    }
+
     try {
       const { error } = await supabase
         .from('goals')
@@ -265,31 +360,74 @@ export const goalsService = {
       if (error) throw error;
       return { error: null };
     } catch (error) {
-      console.error('[goalsService.deletePermanent]', error);
-      return { error };
+      console.warn('[goalsService.deletePermanent] Falha ao excluir do Supabase — enfileirado:', error.message);
+      enqueue('goal_delete', { userId, id });
+      return { error, degraded: true };
     }
   },
 
   /**
-   * Restaura um objetivo (silencia erros de coluna ausente).
+   * Restaura um objetivo.
+   * Recria o registro (upsert) no Supabase caso ele tenha sido hard-deleted.
    */
   restore: async (userId, id) => {
     requireUser(userId);
+    
     try {
-      const { error } = await supabase
-        .from('goals')
-        .update({ deleted_at: null })
-        .eq('id', id)
-        .eq('user_id', userId);
+      const existing = await localDB.get('goals', id);
+      if (existing) {
+        existing.deletedAt = null;
+        await localDB.put('goals', existing);
 
-      // Se coluna não existe, ignora silenciosamente
-      if (error && error.code !== '42703') {
-        console.warn('[goalsService.restore] Aviso:', error.message);
+        // Tenta upsert para recriar no Supabase caso tenha sido hard-deleted
+        const { error } = await supabase
+          .from('goals')
+          .upsert({
+            id:          existing.id,
+            user_id:     userId,
+            title:       existing.title,
+            description: existing.description || '',
+            color:       existing.color || '#4A654E',
+            icon:        existing.icon || '🎯',
+            target_date: existing.target_date || null,
+            status:      existing.status || 'active',
+            start_time:  existing.start_time || null,
+            end_time:    existing.end_time || null,
+            deleted_at:  null
+          });
+
+        if (error) {
+          // Se a coluna deleted_at ou start_time/end_time não existe no banco, tenta o fallback de descrição
+          if (error.code === '42703' || error.code === 'PGRST204' || (error.message && (error.message.includes('deleted_at') || error.message.includes('end_time')))) {
+            const serializedMeta = {
+              start_time: existing.start_time || null,
+              end_time: existing.end_time || null
+            };
+            const cleanDesc = (existing.description || '').split('\n\n--flowday-meta--')[0].trim();
+            const enrichedDescription = `${cleanDesc}\n\n--flowday-meta--\n${JSON.stringify(serializedMeta)}`;
+
+            const { error: upsertErr } = await supabase
+              .from('goals')
+              .upsert({
+                id:          existing.id,
+                user_id:     userId,
+                title:       existing.title,
+                description: enrichedDescription,
+                color:       existing.color || '#4A654E',
+                icon:        existing.icon || '🎯',
+                target_date: existing.target_date || null,
+                status:      existing.status || 'active'
+              });
+            if (upsertErr) throw upsertErr;
+          } else {
+            throw error;
+          }
+        }
       }
       return { error: null };
     } catch (error) {
-      console.error('[goalsService.restore]', error);
-      return { error: null }; // Não propaga: undo local ainda funciona
+      console.warn('[goalsService.restore] Erro ao restaurar objetivo:', error.message);
+      return { error };
     }
   },
 

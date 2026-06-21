@@ -42,12 +42,20 @@ export const tasksService = {
       
       const mapped = (data || []).map(mapTask);
       
-      // Sincroniza em background o cache do IndexedDB
-      localDB.clear('tasks')
-        .then(() => localDB.putMany('tasks', mapped))
-        .catch(err => console.warn('[tasksService.getAll] Erro ao salvar cache local:', err.message));
+      // Recupera tarefas deletadas locais para não perdê-las na sincronização
+      let allTasks = [...mapped];
+      try {
+        const localTasks = await localDB.getAll('tasks');
+        const localDeleted = localTasks.filter(t => t.user_id === userId && t.deletedAt);
+        allTasks = [...mapped, ...localDeleted];
+        
+        await localDB.clear('tasks');
+        await localDB.putMany('tasks', allTasks);
+      } catch (err) {
+        console.warn('[tasksService.getAll] Erro ao sincronizar com cache local:', err.message);
+      }
 
-      return { data: mapped, error: null };
+      return { data: allTasks, error: null };
     } catch (error) {
       console.warn('[tasksService.getAll] Falha ao carregar tarefas — usando IndexedDB offline:', error.message);
       try {
@@ -220,8 +228,7 @@ export const tasksService = {
             enqueue('task_delete', { userId, id });
             return { error: hardError, degraded: true };
           }
-          // Remove também do cache local
-          try { await localDB.delete('tasks', id); } catch (_) {}
+          // Mantém no cache local com deletedAt para que vá para a lixeira
           return { error: null };
         }
         throw error;
@@ -271,33 +278,54 @@ export const tasksService = {
   restore: async (userId, id) => {
     requireUser(userId);
     
-    // Limpa deletedAt no cache local — registro pode já ter sido hard-deleted no banco
     try {
       const existing = await localDB.get('tasks', id);
       if (existing) {
         existing.deletedAt = null;
         await localDB.put('tasks', existing);
-      }
-    } catch (err) {
-      console.warn('[tasksService.restore] Erro ao restaurar no cache local:', err.message);
-    }
 
-    // Tenta limpar no Supabase (pode falhar se coluna não existir — silencia)
-    try {
-      const { error } = await supabase
-        .from('tasks')
-        .update({ deleted_at: null })
-        .eq('id', id)
-        .eq('user_id', userId);
+        // Tenta upsert para recriar no Supabase caso tenha sido hard-deleted
+        const { error } = await supabase
+          .from('tasks')
+          .upsert({
+            id:          existing.id,
+            user_id:     userId,
+            title:       existing.title,
+            description: existing.description || '',
+            category:    existing.category || 'Pessoal',
+            priority:    existing.priority || 'Média',
+            due_date:    existing.dueDate || null,
+            completed:   existing.completed || false,
+            completed_at: existing.completedAt || null,
+            deleted_at:  null
+          });
 
-      // Se coluna não existe, ignora silenciosamente (undo funciona via cache local)
-      if (error && error.code !== '42703') {
-        console.warn('[tasksService.restore] Aviso ao restaurar no Supabase:', error.message);
+        if (error) {
+          // Se a coluna deleted_at não existe no banco, tenta sem ela
+          if (error.code === '42703' || (error.message && error.message.includes('deleted_at'))) {
+            const { error: upsertErr } = await supabase
+              .from('tasks')
+              .upsert({
+                id:          existing.id,
+                user_id:     userId,
+                title:       existing.title,
+                description: existing.description || '',
+                category:    existing.category || 'Pessoal',
+                priority:    existing.priority || 'Média',
+                due_date:    existing.dueDate || null,
+                completed:   existing.completed || false,
+                completed_at: existing.completedAt || null
+              });
+            if (upsertErr) throw upsertErr;
+          } else {
+            throw error;
+          }
+        }
       }
       return { error: null };
     } catch (error) {
-      console.warn('[tasksService.restore] Exceção ao restaurar no Supabase:', error.message);
-      return { error: null }; // Não propaga: undo local ainda funciona
+      console.warn('[tasksService.restore] Erro ao restaurar:', error.message);
+      return { error };
     }
   },
 };

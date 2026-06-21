@@ -130,6 +130,9 @@ const TYPE_PRIORITIES = {
   task_create:    2, // Prioridade média
   task_update:    2,
   task_delete:    2,
+  goal_create:    2,
+  goal_update:    2,
+  goal_delete:    2,
   event:          3  // Prioridade baixa (analytics/batch)
 };
 
@@ -141,6 +144,7 @@ function getPriority(item) {
 function optimizeQueue(queue) {
   const optimized = [];
   const taskOps = {}; // Agrupa operações por ID da tarefa
+  const goalOps = {}; // Agrupa operações por ID do objetivo
 
   for (const item of queue) {
     if (item.type === 'task_create') {
@@ -159,6 +163,23 @@ function optimizeQueue(queue) {
         taskOps[taskId].delete = item;
       } else {
         taskOps[taskId] = { create: null, updates: [], delete: item };
+      }
+    } else if (item.type === 'goal_create') {
+      const goalId = item.payload.goalId || item.idempotency_key;
+      goalOps[goalId] = { create: item, updates: [], delete: null };
+    } else if (item.type === 'goal_update') {
+      const goalId = item.payload.id;
+      if (goalOps[goalId]) {
+        goalOps[goalId].updates.push(item);
+      } else {
+        goalOps[goalId] = { create: null, updates: [item], delete: null };
+      }
+    } else if (item.type === 'goal_delete') {
+      const goalId = item.payload.id;
+      if (goalOps[goalId]) {
+        goalOps[goalId].delete = item;
+      } else {
+        goalOps[goalId] = { create: null, updates: [], delete: item };
       }
     } else {
       optimized.push(item);
@@ -193,6 +214,57 @@ function optimizeQueue(queue) {
 
       mergedData.updated_at = lastUpdateAt;
       ops.create.payload.taskData = mergedData;
+      optimized.push(ops.create);
+      continue;
+    }
+
+    // Caso 4: Múltiplas atualizações offline (mantém um único update com propriedades mescladas)
+    if (ops.updates.length > 0) {
+      const firstUpdate = ops.updates[0];
+      let mergedUpdates = {};
+      let lastUpdateAt = firstUpdate.payload.updates.updated_at || firstUpdate.enqueuedAt;
+
+      for (const up of ops.updates) {
+        Object.assign(mergedUpdates, up.payload.updates);
+        if (up.payload.updates && up.payload.updates.updated_at) {
+          lastUpdateAt = up.payload.updates.updated_at;
+        }
+      }
+
+      mergedUpdates.updated_at = lastUpdateAt;
+      firstUpdate.payload.updates = mergedUpdates;
+      optimized.push(firstUpdate);
+    }
+  }
+
+  // Resolve e otimiza transições de estado de goals pendentes
+  for (const [goalId, ops] of Object.entries(goalOps)) {
+    // Caso 1: Criado e excluído offline sem nunca ir para o server
+    if (ops.create && ops.delete) {
+      console.log(`[syncQueue] Deduplicação Semântica: Goal ${goalId} criado e deletado localmente offline. Cancelando ambos.`);
+      continue;
+    }
+
+    // Caso 2: Deletado offline (descarte atualizações locais e envie apenas o delete)
+    if (ops.delete) {
+      optimized.push(ops.delete);
+      continue;
+    }
+
+    // Caso 3: Criado offline e atualizado offline (mescla atualizações na criação)
+    if (ops.create) {
+      let mergedData = { ...ops.create.payload.goalData };
+      let lastUpdateAt = ops.create.payload.goalData.updated_at || ops.create.enqueuedAt;
+
+      for (const up of ops.updates) {
+        Object.assign(mergedData, up.payload.updates);
+        if (up.payload.updates && up.payload.updates.updated_at) {
+          lastUpdateAt = up.payload.updates.updated_at;
+        }
+      }
+
+      mergedData.updated_at = lastUpdateAt;
+      ops.create.payload.goalData = mergedData;
       optimized.push(ops.create);
       continue;
     }
@@ -590,6 +662,139 @@ async function trySend(item) {
       const { userId, id } = payload;
       const { error } = await supabase
         .from('tasks')
+        .delete()
+        .eq('id', id)
+        .eq('user_id', userId);
+      if (error) throw error;
+      return true;
+    }
+
+    if (type === 'goal_create') {
+      const { userId, goalData, goalId } = payload;
+      const { error } = await supabase
+        .from('goals')
+        .upsert([{
+          id:          goalId || idempotency_key,
+          user_id:     userId,
+          title:       goalData.title,
+          description: goalData.description || '',
+          color:       goalData.color || '#4A654E',
+          icon:        goalData.icon || '🎯',
+          target_date: goalData.target_date || null,
+          start_time:  goalData.start_time || null,
+          end_time:    goalData.end_time || null,
+          status:      'active'
+        }], { onConflict: 'id' });
+
+      if (error) {
+        // Fallback para colunas inexistentes (start_time/end_time)
+        if (error.code === 'PGRST204' || (error.message && error.message.includes("end_time"))) {
+          const serializedMeta = {
+            start_time: goalData.start_time || null,
+            end_time: goalData.end_time || null
+          };
+          const cleanDesc = (goalData.description || '').split('\n\n--flowday-meta--')[0].trim();
+          const enrichedDescription = `${cleanDesc}\n\n--flowday-meta--\n${JSON.stringify(serializedMeta)}`;
+
+          const { error: fallbackError } = await supabase
+            .from('goals')
+            .upsert([{
+              id:          goalId || idempotency_key,
+              user_id:     userId,
+              title:       goalData.title,
+              description: enrichedDescription,
+              color:       goalData.color || '#4A654E',
+              icon:        goalData.icon || '🎯',
+              target_date: goalData.target_date || null,
+              status:      'active'
+            }], { onConflict: 'id' });
+          if (fallbackError) throw fallbackError;
+        } else {
+          throw error;
+        }
+      }
+      return true;
+    }
+
+    if (type === 'goal_update') {
+      const { userId, id, updates } = payload;
+      const { error } = await supabase
+        .from('goals')
+        .update({
+          title:       updates.title,
+          description: updates.description,
+          color:       updates.color,
+          icon:        updates.icon,
+          status:      updates.status,
+          target_date: updates.target_date,
+          start_time:  updates.start_time,
+          end_time:    updates.end_time
+        })
+        .eq('id', id)
+        .eq('user_id', userId);
+
+      if (error) {
+        if (error.code === 'PGRST204' || (error.message && error.message.includes("end_time"))) {
+          // Fallback de serialização na descrição
+          const { data: currentGoal } = await supabase
+            .from('goals')
+            .select('description')
+            .eq('id', id)
+            .eq('user_id', userId)
+            .single();
+
+          let currentStart = null;
+          let currentEnd = null;
+          let currentDescClean = '';
+
+          if (currentGoal && currentGoal.description) {
+            currentDescClean = currentGoal.description;
+            if (currentGoal.description.includes('--flowday-meta--')) {
+              const parts = currentGoal.description.split('--flowday-meta--');
+              currentDescClean = parts[0].trim();
+              try {
+                const meta = JSON.parse(parts[1].trim());
+                currentStart = meta.start_time || null;
+                currentEnd = meta.end_time || null;
+              } catch (e) {}
+            }
+          }
+
+          const updatedDescClean = updates.description !== undefined ? (updates.description || '') : currentDescClean;
+          const nextStart = updates.start_time !== undefined ? updates.start_time : currentStart;
+          const nextEnd = updates.end_time !== undefined ? updates.end_time : currentEnd;
+
+          const serializedMeta = {
+            start_time: nextStart,
+            end_time: nextEnd
+          };
+          const enrichedDescription = `${updatedDescClean}\n\n--flowday-meta--\n${JSON.stringify(serializedMeta)}`;
+
+          const fallbackPayload = {};
+          if (updates.title !== undefined) fallbackPayload.title = updates.title;
+          fallbackPayload.description = enrichedDescription;
+          if (updates.color !== undefined) fallbackPayload.color = updates.color;
+          if (updates.icon !== undefined) fallbackPayload.icon = updates.icon;
+          if (updates.status !== undefined) fallbackPayload.status = updates.status;
+          if (updates.target_date !== undefined) fallbackPayload.target_date = updates.target_date || null;
+
+          const { error: fallbackError } = await supabase
+            .from('goals')
+            .update(fallbackPayload)
+            .eq('id', id)
+            .eq('user_id', userId);
+          if (fallbackError) throw fallbackError;
+        } else {
+          throw error;
+        }
+      }
+      return true;
+    }
+
+    if (type === 'goal_delete') {
+      const { userId, id } = payload;
+      const { error } = await supabase
+        .from('goals')
         .delete()
         .eq('id', id)
         .eq('user_id', userId);
