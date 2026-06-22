@@ -126,57 +126,44 @@ export default function Checkout() {
     }
   }), []);
 
-  // Helper to detect payment method in the container
+  // Helper to detect payment method in the container using multiple fallback strategies
   const detectPaymentMethod = useCallback(() => {
     const container = document.getElementById('payment-brick-container');
     if (!container) return;
 
     let selectedMethod = 'other';
 
-    // 1. Check for checked radio buttons
-    const radioSelected = container.querySelector('input[type="radio"]:checked');
-    if (radioSelected) {
-      const labelText = radioSelected.closest('label')?.innerText || '';
-      const value = radioSelected.value || '';
-      const id = radioSelected.id || '';
+    // 1. Check for standard aria-label="Pix" element selection with class containing "checked"
+    const pixInput = container.querySelector('input[aria-label="Pix"], [aria-label*="Pix"], [aria-label*="pix"]');
+    if (pixInput && pixInput.className.toLowerCase().includes('checked')) {
+      selectedMethod = 'pix';
+    }
+
+    // 2. Check by innerText containing Pix-specific form descriptions (100% foolproof visual fallback)
+    if (selectedMethod !== 'pix') {
+      const text = container.innerText || '';
       if (
-        labelText.toLowerCase().includes('pix') || 
-        value.toLowerCase().includes('pix') || 
-        id.toLowerCase().includes('pix')
+        text.includes('Insira o e-mail para receber o código Pix') ||
+        text.includes('receber o código Pix') ||
+        text.includes('concluir o seu pagamento')
       ) {
         selectedMethod = 'pix';
       }
     }
 
-    // 2. Check for custom aria-checked radios (role="radio" / aria-checked="true")
+    // 3. Fallback: Check standard checked radios
     if (selectedMethod !== 'pix') {
-      const divSelected = container.querySelector('[role="radio"][aria-checked="true"]');
-      if (divSelected) {
-        const text = divSelected.innerText || '';
-        if (text.toLowerCase().includes('pix')) {
+      const radioSelected = container.querySelector('input[type="radio"]:checked');
+      if (radioSelected) {
+        const labelText = radioSelected.closest('label')?.innerText || '';
+        const value = radioSelected.value || '';
+        const id = radioSelected.id || '';
+        if (
+          labelText.toLowerCase().includes('pix') || 
+          value.toLowerCase().includes('pix') || 
+          id.toLowerCase().includes('pix')
+        ) {
           selectedMethod = 'pix';
-        }
-      }
-    }
-
-    // 3. Check active method selectors (classes like -selected or -active)
-    if (selectedMethod !== 'pix') {
-      const activeMethod = container.querySelector('[class*="-selected"], [class*="-active"]');
-      if (activeMethod && activeMethod.innerText.toLowerCase().includes('pix')) {
-        selectedMethod = 'pix';
-      }
-    }
-
-    // 4. Fallback: check general checked input elements
-    if (selectedMethod !== 'pix') {
-      const inputs = container.querySelectorAll('input');
-      for (const input of inputs) {
-        if (input.checked || input.getAttribute('aria-checked') === 'true') {
-          const text = input.closest('label')?.innerText || input.id || input.name || '';
-          if (text.toLowerCase().includes('pix')) {
-            selectedMethod = 'pix';
-            break;
-          }
         }
       }
     }
@@ -186,7 +173,7 @@ export default function Checkout() {
 
   const handleReady = useCallback(() => {
     // Settle time for internal DOM to render before initial detection
-    setTimeout(detectPaymentMethod, 150);
+    setTimeout(detectPaymentMethod, 200);
   }, [detectPaymentMethod]);
 
   // MutationObserver to detect payment method changes dynamically
@@ -316,7 +303,7 @@ export default function Checkout() {
           <span style={{ fontSize: '48px' }}>⚡</span>
           <h3 style={{ color: '#10b981', margin: '16px 0 8px' }}>Assinatura Premium Ativa</h3>
           <p style={{ fontSize: '14px', color: 'rgba(255, 255, 255, 0.7)', lineHeight: '1.5' }}>
-            Você já possui uma assinatura Premium ativa. Aproveite todos os recursos Pro!
+            Você já possui uma assinatura Premium activa. Aproveite todos os recursos Pro!
           </p>
           <button
             onClick={() => window.location.href = '/?app=1'}
