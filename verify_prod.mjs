@@ -14,7 +14,7 @@ const get = (url) => new Promise((resolve, reject) => {
 
 async function run() {
   console.log("Fetching production HTML...");
-  const html = await get('https://myflowday.vercel.app');
+  const html = await get('https://myflowday.com.br');
   
   const match = html.match(/src="(\/assets\/index-.*?\.js)"/);
   if (!match) {
@@ -22,7 +22,7 @@ async function run() {
     process.exit(1);
   }
   
-  const jsUrl = `https://myflowday.vercel.app${match[1]}`;
+  const jsUrl = `https://myflowday.com.br${match[1]}`;
   console.log(`Found JS bundle: ${jsUrl}`);
   console.log("Fetching bundle...");
   
@@ -48,7 +48,7 @@ async function run() {
   if (!goalsViewMatch) {
     console.error("❌ FAILED: Could not find GoalsView bundle in HTML preloads!");
   } else {
-    const goalsUrl = `https://myflowday.vercel.app${goalsViewMatch[1]}`;
+    const goalsUrl = `https://myflowday.com.br${goalsViewMatch[1]}`;
     console.log(`Fetching ${goalsUrl}...`);
     const goalsJs = await get(goalsUrl);
     if (goalsJs.includes('Excluir') && goalsJs.includes('var(--danger)')) {
@@ -62,7 +62,7 @@ async function run() {
   const viteConfigMatch = js.includes('navigateFallback');
   // navigateFallback is in the service worker, not the main JS!
   console.log("Fetching Service Worker...");
-  const sw = await get('https://myflowday.vercel.app/sw.js');
+  const sw = await get('https://myflowday.com.br/sw.js');
   if (sw.includes('navigateFallback') || sw.includes('index.html')) {
     console.log("✅ SUCCESS: Service worker includes navigateFallback routing rules!");
   } else {
