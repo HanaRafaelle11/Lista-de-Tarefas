@@ -10,7 +10,6 @@ export default function PaywallModal() {
     isPaywallOpen, 
     closePaywall, 
     currentUser, 
-    theme,
     isPro,
     subscriptionStatus,
     churnRisk
@@ -98,32 +97,32 @@ export default function PaywallModal() {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
         <div style={{ textAlign: 'center', marginBottom: '8px' }}>
-          <div style={{ display: 'inline-flex', padding: '10px', borderRadius: '50%', backgroundColor: 'var(--primary-light)', color: 'var(--primary)', marginBottom: '12px' }}>
+          <div style={{ display: 'inline-flex', padding: '10px', borderRadius: '50%', backgroundColor: 'rgba(0, 115, 230, 0.15)', color: '#3b82f6', marginBottom: '12px' }}>
             <Award size={36} />
           </div>
-          <h2 style={{ fontSize: '24px', fontWeight: '800', color: 'var(--text-main)', margin: '0 0 6px', fontFamily: 'var(--font-display)', letterSpacing: '-0.5px' }}>
+          <h2 style={{ fontSize: '24px', fontWeight: '800', color: '#ffffff', margin: '0 0 6px', fontFamily: 'var(--font-display)', letterSpacing: '-0.5px' }}>
             MyFlowDay Pro ⚡
           </h2>
-          <p style={{ fontSize: '14px', color: 'var(--text-muted)', margin: 0, maxWidth: '440px', marginLeft: 'auto', marginRight: 'auto', lineHeight: '1.5' }}>
+          <p style={{ fontSize: '14px', color: '#e5e7eb', margin: 0, maxWidth: '440px', marginLeft: 'auto', marginRight: 'auto', lineHeight: '1.5' }}>
             Tenha acesso completo a ferramentas premium de autoconhecimento e acompanhe a sua evolução consciente.
           </p>
         </div>
 
         {/* Pro features list */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))', gap: '16px', backgroundColor: 'rgba(255,255,255,0.02)', padding: '20px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-light)' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))', gap: '16px', backgroundColor: 'rgba(255,255,255,0.02)', padding: '20px', borderRadius: 'var(--radius-md)', border: '1px solid rgba(255, 255, 255, 0.08)' }}>
           {features.map((f, i) => (
             <div key={i} style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
-              <Zap size={15} style={{ color: 'var(--primary)', marginTop: '3px', flexShrink: 0 }} />
+              <Zap size={15} style={{ color: '#3b82f6', marginTop: '3px', flexShrink: 0 }} />
               <div>
-                <strong style={{ fontSize: '13.5px', color: 'var(--text-main)', display: 'block', marginBottom: '2px' }}>{f.t}</strong>
-                <span style={{ fontSize: '12px', color: 'var(--text-light)', display: 'block', lineHeight: '1.4' }}>{f.d}</span>
+                <strong style={{ fontSize: '13.5px', color: '#ffffff', display: 'block', marginBottom: '2px' }}>{f.t}</strong>
+                <span style={{ fontSize: '12px', color: '#d1d5db', display: 'block', lineHeight: '1.4' }}>{f.d}</span>
               </div>
             </div>
           ))}
         </div>
 
         {/* Pricing details and Checkout Action */}
-        <div style={{ borderTop: '1px solid var(--border-light)', paddingTop: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <div style={{ borderTop: '1px solid rgba(255, 255, 255, 0.08)', paddingTop: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
           {isReactivation && (
             <div style={{ 
               backgroundColor: 'rgba(16, 185, 129, 0.1)', 
@@ -142,24 +141,24 @@ export default function PaywallModal() {
             </div>
           )}
 
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.01)', padding: '16px 20px', borderRadius: '8px', border: '1px solid var(--primary-light)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.01)', padding: '16px 20px', borderRadius: '8px', border: '1px solid rgba(0, 115, 230, 0.3)' }}>
             <div>
-              <span style={{ fontSize: '11px', color: 'var(--primary)', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
+              <span style={{ fontSize: '11px', color: '#3b82f6', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
                 {isReactivation ? 'Oferta de Reativação Pro' : 'Plano Mensal Recorrente'}
               </span>
-              <strong style={{ display: 'block', fontSize: '15px', color: 'var(--text-main)', marginTop: '2px' }}>Acesso Total Pro ⚡</strong>
+              <strong style={{ display: 'block', fontSize: '15px', color: '#ffffff', marginTop: '2px' }}>Acesso Total Pro ⚡</strong>
             </div>
             <div style={{ textAlign: 'right' }}>
               {isReactivation ? (
                 <>
-                  <span style={{ fontSize: '14px', color: 'var(--text-light)', textDecoration: 'line-through', marginRight: '6px' }}>R$ 14,90</span>
+                  <span style={{ fontSize: '14px', color: '#9ca3af', textDecoration: 'line-through', marginRight: '6px' }}>R$ 14,90</span>
                   <span style={{ fontSize: '24px', fontWeight: '800', color: '#10b981' }}>R$ 11,90</span>
-                  <span style={{ fontSize: '13px', color: 'var(--text-light)', marginLeft: '2px' }}>/mês</span>
+                  <span style={{ fontSize: '13px', color: '#9ca3af', marginLeft: '2px' }}>/mês</span>
                 </>
               ) : (
                 <>
-                  <span style={{ fontSize: '24px', fontWeight: '800', color: 'var(--text-main)' }}>R$ 14,90</span>
-                  <span style={{ fontSize: '13px', color: 'var(--text-light)', marginLeft: '2px' }}>/mês</span>
+                  <span style={{ fontSize: '24px', fontWeight: '800', color: '#ffffff' }}>R$ 14,90</span>
+                  <span style={{ fontSize: '13px', color: '#9ca3af', marginLeft: '2px' }}>/mês</span>
                 </>
               )}
             </div>
@@ -173,7 +172,7 @@ export default function PaywallModal() {
               padding: '16px', 
               borderRadius: '8px', 
               border: 'none', 
-              backgroundColor: isReactivation ? '#10b981' : 'var(--primary)', 
+              backgroundColor: isReactivation ? '#10b981' : '#3b82f6', 
               color: 'white', 
               fontWeight: '700', 
               fontSize: '15px', 
@@ -192,7 +191,7 @@ export default function PaywallModal() {
             <ExternalLink size={16} />
           </button>
 
-          <span style={{ fontSize: '11.5px', color: 'var(--text-light)', textAlign: 'center', display: 'block', fontStyle: 'italic' }}>
+          <span style={{ fontSize: '11.5px', color: '#9ca3af', textAlign: 'center', display: 'block', fontStyle: 'italic' }}>
             Pagamento seguro processado via Mercado Pago. Cancele a qualquer momento.
           </span>
         </div>
@@ -203,12 +202,12 @@ export default function PaywallModal() {
   const renderProcessing = () => {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '50px 20px', gap: '20px' }}>
-        <Loader2 className="animate-spin" size={44} style={{ color: 'var(--primary)' }} />
+        <Loader2 className="animate-spin" size={44} style={{ color: '#3b82f6' }} />
         <div style={{ textAlign: 'center' }}>
-          <h3 style={{ fontSize: '17px', fontWeight: '700', color: 'var(--text-main)', margin: '0 0 8px' }}>
+          <h3 style={{ fontSize: '17px', fontWeight: '700', color: '#ffffff', margin: '0 0 8px' }}>
             Conectando ao Mercado Pago
           </h3>
-          <p style={{ fontSize: '13.5px', color: 'var(--text-light)', margin: 0, maxWidth: '320px', lineHeight: '1.5' }}>
+          <p style={{ fontSize: '13.5px', color: '#d1d5db', margin: 0, maxWidth: '320px', lineHeight: '1.5' }}>
             Criando sua preferência segura de checkout. Você será redirecionado em instantes...
           </p>
         </div>
@@ -231,20 +230,20 @@ export default function PaywallModal() {
         }}>
           <Sparkles size={52} />
         </div>
-        <h2 style={{ fontSize: '26px', fontWeight: '800', color: 'var(--text-main)', margin: 0, fontFamily: 'var(--font-display)', letterSpacing: '-0.5px' }}>
+        <h2 style={{ fontSize: '26px', fontWeight: '800', color: '#ffffff', margin: 0, fontFamily: 'var(--font-display)', letterSpacing: '-0.5px' }}>
           🎉 Bem-vinda ao MyFlowDay Pro ⚡
         </h2>
         
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxWidth: '460px' }}>
-          <p style={{ fontSize: '15px', color: 'var(--text-main)', fontWeight: '600', lineHeight: '1.6', margin: 0 }}>
+          <p style={{ fontSize: '15px', color: '#ffffff', fontWeight: '600', lineHeight: '1.6', margin: 0 }}>
             Seu espaço de produtividade acaba de ganhar uma nova camada de inteligência.
           </p>
-          <p style={{ fontSize: '13.5px', color: 'var(--text-muted)', lineHeight: '1.6', margin: 0 }}>
+          <p style={{ fontSize: '13.5px', color: '#d1d5db', lineHeight: '1.6', margin: 0 }}>
             Agora você pode entender seus padrões de produtividade e acompanhar sua evolução com análises avançadas.
           </p>
         </div>
 
-        <div style={{ borderTop: '1px solid var(--border-light)', width: '100%', marginTop: '12px', paddingTop: '20px' }}>
+        <div style={{ borderTop: '1px solid rgba(255, 255, 255, 0.08)', width: '100%', marginTop: '12px', paddingTop: '20px' }}>
           <button
             type="button"
             onClick={closePaywall}
@@ -253,7 +252,7 @@ export default function PaywallModal() {
               padding: '14px', 
               borderRadius: '8px', 
               border: 'none', 
-              backgroundColor: 'var(--primary)', 
+              backgroundColor: '#3b82f6', 
               color: 'white', 
               fontWeight: '700', 
               fontSize: '14px', 
@@ -289,7 +288,7 @@ export default function PaywallModal() {
               setCheckoutStatus('checkout');
               setErrorMessage('');
             }}
-            style={{ flex: 1, padding: '12px', borderRadius: '8px', border: 'none', backgroundColor: 'var(--primary)', color: '#ffffff', fontWeight: '700', fontSize: '13px', cursor: 'pointer' }}
+            style={{ flex: 1, padding: '12px', borderRadius: '8px', border: 'none', backgroundColor: '#3b82f6', color: '#ffffff', fontWeight: '700', fontSize: '13px', cursor: 'pointer' }}
           >
             Tentar Novamente
           </button>
@@ -334,9 +333,10 @@ export default function PaywallModal() {
           maxWidth: '580px',
           maxHeight: '90vh',
           overflowY: 'auto',
-          backgroundColor: checkoutStatus === 'error' ? '#1e1e26' : (theme === 'dark' ? 'rgba(15, 23, 42, 0.85)' : 'rgba(255, 255, 255, 0.95)'),
+          backgroundColor: '#1e1e26',
+          color: '#ffffff',
           backdropFilter: 'blur(20px)',
-          border: checkoutStatus === 'error' ? '1px solid rgba(255, 255, 255, 0.15)' : '1px solid rgba(255, 255, 255, 0.08)',
+          border: '1px solid rgba(255, 255, 255, 0.08)',
           borderRadius: 'var(--radius-lg)',
           boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
           padding: '28px',
@@ -354,7 +354,7 @@ export default function PaywallModal() {
               right: '20px', 
               background: 'none', 
               border: 'none', 
-              color: checkoutStatus === 'error' ? '#f3f4f6' : 'var(--text-light)', 
+              color: '#f3f4f6', 
               cursor: 'pointer', 
               padding: '6px',
               borderRadius: '50%',
