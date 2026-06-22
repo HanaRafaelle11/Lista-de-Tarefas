@@ -152,3 +152,16 @@ FROM calendar c
 LEFT JOIN new_subs n ON c.month = n.month
 LEFT JOIN reactivated_subs r ON c.month = r.month
 ORDER BY c.month ASC;
+
+-- 6. Security Hardening: Revoke public select access to prevent exposing metrics
+REVOKE SELECT ON public.vw_mrr_metrics FROM anon, authenticated, public;
+REVOKE SELECT ON public.vw_churn_metrics FROM anon, authenticated, public;
+REVOKE SELECT ON public.vw_arpu_metrics FROM anon, authenticated, public;
+REVOKE SELECT ON public.vw_cohort_retention FROM anon, authenticated, public;
+REVOKE SELECT ON public.vw_growth_metrics FROM anon, authenticated, public;
+
+GRANT SELECT ON public.vw_mrr_metrics TO service_role;
+GRANT SELECT ON public.vw_churn_metrics TO service_role;
+GRANT SELECT ON public.vw_arpu_metrics TO service_role;
+GRANT SELECT ON public.vw_cohort_retention TO service_role;
+GRANT SELECT ON public.vw_growth_metrics TO service_role;

@@ -622,3 +622,18 @@ USING (
 -- 9. Goals Schedule Support
 ALTER TABLE public.goals ADD COLUMN IF NOT EXISTS start_time TIME;
 ALTER TABLE public.goals ADD COLUMN IF NOT EXISTS end_time TIME;
+
+-- 10. Security Hardening for Analytics views & Materialized views
+REVOKE SELECT ON public.mv_retention_metrics FROM anon, authenticated, public;
+REVOKE SELECT ON public.vw_mrr_metrics FROM anon, authenticated, public;
+REVOKE SELECT ON public.vw_churn_metrics FROM anon, authenticated, public;
+REVOKE SELECT ON public.vw_arpu_metrics FROM anon, authenticated, public;
+REVOKE SELECT ON public.vw_cohort_retention FROM anon, authenticated, public;
+REVOKE SELECT ON public.vw_growth_metrics FROM anon, authenticated, public;
+
+GRANT SELECT ON public.mv_retention_metrics TO service_role;
+GRANT SELECT ON public.vw_mrr_metrics TO service_role;
+GRANT SELECT ON public.vw_churn_metrics TO service_role;
+GRANT SELECT ON public.vw_arpu_metrics TO service_role;
+GRANT SELECT ON public.vw_cohort_retention TO service_role;
+GRANT SELECT ON public.vw_growth_metrics TO service_role;
