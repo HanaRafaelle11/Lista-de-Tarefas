@@ -45,49 +45,11 @@ export default function PaywallModal() {
       return;
     }
 
-    if (!currentUser?.id || !currentUser?.email) {
-      setErrorMessage('Você precisa estar logado para iniciar o checkout.');
-      setCheckoutStatus('error');
-      return;
-    }
+    closePaywall(); // Fecha o modal de paywall
 
-    setCheckoutStatus('processing');
-    setErrorMessage('');
-
-    try {
-      const endpoint = isReactivation ? '/api/billing/reactivate' : '/api/checkout.js';
-      console.log(`[Paywall] Chamando API de checkout (${endpoint}) para:`, currentUser.email);
-      
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          userId: currentUser.id,
-          email: currentUser.email
-        })
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || 'Falha ao iniciar checkout.');
-      }
-
-      const data = await response.json();
-      
-      if (data.init_point) {
-        console.log('[Paywall] Redirecionando para Mercado Pago:', data.init_point);
-        // Redireciona o usuário para a página oficial do Mercado Pago Sandbox/Produção
-        window.location.href = data.init_point;
-      } else {
-        throw new Error('Retorno inválido do servidor de checkout.');
-      }
-    } catch (err) {
-      console.error('[Paywall] Erro no fluxo de checkout:', err);
-      setErrorMessage(err.message || 'Não foi possível conectar ao Mercado Pago. Tente novamente mais tarde.');
-      setCheckoutStatus('error');
-    }
+    // Navega localmente para a rota do checkout interno
+    window.history.pushState(null, '', '/checkout');
+    window.dispatchEvent(new Event('popstate'));
   };
 
   const renderCheckoutForm = () => {

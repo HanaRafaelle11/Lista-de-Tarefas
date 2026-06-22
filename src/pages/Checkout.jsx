@@ -68,6 +68,33 @@ export default function Checkout() {
       color: '#ffffff',
       fontFamily: 'sans-serif'
     }}>
+      <div style={{ marginBottom: '20px' }}>
+        <button
+          onClick={() => {
+            window.history.pushState(null, '', '/?app=1');
+            window.dispatchEvent(new Event('popstate'));
+          }}
+          style={{
+            background: 'none',
+            border: 'none',
+            color: 'rgba(255, 255, 255, 0.6)',
+            fontSize: '13px',
+            fontWeight: '600',
+            cursor: 'pointer',
+            padding: '4px 0',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            transition: 'color 0.2s',
+            fontFamily: 'sans-serif'
+          }}
+          onMouseEnter={(e) => e.target.style.color = '#ffffff'}
+          onMouseLeave={(e) => e.target.style.color = 'rgba(255, 255, 255, 0.6)'}
+        >
+          ← Voltar para o aplicativo
+        </button>
+      </div>
+
       <h2 style={{ fontSize: '24px', fontWeight: '800', marginBottom: '8px', textAlign: 'center' }}>
         MyFlowDay Premium ⚡
       </h2>
