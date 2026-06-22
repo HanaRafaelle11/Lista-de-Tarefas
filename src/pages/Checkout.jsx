@@ -234,7 +234,14 @@ export default function Checkout() {
         <>
           <Payment
             initialization={{
-              amount: 14.90
+              amount: 14.90,
+              payer: {
+                email: currentUser?.email || '',
+                identification: {
+                  type: 'CPF',
+                  number: ''
+                }
+              }
             }}
             customization={{
               paymentMethods: {
