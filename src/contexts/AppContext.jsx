@@ -114,7 +114,7 @@ export function AppProvider({ children }) {
     const vol = localStorage.getItem('flowday_ambient_sound_volume');
     return vol !== null ? Number(vol) : 0.5;
   });
-  const [isAmbientPlaying, setIsAmbientPlaying] = useState(() => localStorage.getItem('flowday_ambient_is_playing') === 'true');
+  const [isAmbientPlaying, setIsAmbientPlaying] = useState(false);
   const [audioBlocked, setAudioBlocked] = useState(false);
 
   const ambientAudioRef = useRef(null);
@@ -884,6 +884,8 @@ export function AppProvider({ children }) {
 
   // 2. Efeito central de carga de dados baseado em currentUser?.id
   useEffect(() => {
+    setIsAmbientPlaying(false);
+
     if (!currentUser?.id) {
       setUserProfile(null);
       setTasks([]);
