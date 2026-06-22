@@ -131,12 +131,24 @@ export default function Checkout() {
         <>
           <Payment
             initialization={{
-              amount: 14.90,
+              amount: 14.90
+            }}
+            customization={{
               paymentMethods: {
-                types: ['card', 'ticket', 'bank_transfer'] // 👈 Define os tipos explicitamente pro Brick rodar
+                creditCard: "all",
+                debitCard: "all",
+                ticket: "all",
+                bankTransfer: "all"
               }
             }}
             onSubmit={onSubmit}
+            onError={(err) => {
+              console.error('Mercado Pago Brick Error:', err);
+              setError(
+                "Não foi possível carregar o formulário de pagamento. Por favor, verifique se as credenciais de produção do Mercado Pago estão ativadas e homologadas na sua conta."
+              );
+              setStatus('error');
+            }}
           />
 
           
