@@ -1,8 +1,22 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { initMercadoPago, Payment } from '@mercadopago/sdk-react';
 import { useAppContext } from '../contexts/AppContext';
 
 initMercadoPago('APP_USR-0e956167-6396-46c8-be7e-adb93cc9ae11');
+
+// Memoized payment component to prevent re-rendering when parent state changes
+const MemoizedPayment = React.memo(({ initialization, customization, onSubmit, onError }) => {
+  return (
+    <Payment
+      initialization={initialization}
+      customization={customization}
+      onSubmit={onSubmit}
+      onError={onError}
+    />
+  );
+});
+MemoizedPayment.displayName = 'MemoizedPayment';
 
 export default function Checkout() {
   const { currentUser, isPro, userProfile } = useAppContext();
@@ -10,13 +24,21 @@ export default function Checkout() {
   const [error, setError] = useState(null);
   const [pixData, setPixData] = useState(null);
   const [userCpf, setUserCpf] = useState('');
+  const [showCpfField, setShowCpfField] = useState(false);
+  const [pixEmailContainer, setPixEmailContainer] = useState(null);
 
-  const onSubmit = async (param) => {
+  // Sync ref to avoid onSubmit dependency invalidation
+  const userCpfRef = useRef(userCpf);
+  useEffect(() => {
+    userCpfRef.current = userCpf;
+  }, [userCpf]);
+
+  const handleSubmit = useCallback(async (param) => {
     try {
       setError(null);
       setStatus('processando');
       const paymentData = param.formData || param;
-      const cleanCpf = userCpf.replace(/\D/g, '');
+      const cleanCpf = userCpfRef.current.replace(/\D/g, '');
       if (paymentData.payment_method_id === 'pix') {
         if (!cleanCpf) {
           throw new Error('O CPF é obrigatório para prosseguir com o pagamento via Pix.');
@@ -71,8 +93,181 @@ export default function Checkout() {
       setError(err.message);
       setStatus('error');
     }
-  };
+  }, [currentUser?.id]);
 
+  const handleError = useCallback((err) => {
+    console.error('Mercado Pago Brick Error:', err);
+    setError(
+      "Não foi possível carregar o formulário de pagamento. Por favor, verifique se as credenciais de produção do Mercado Pago estão ativadas e homologadas na sua conta."
+    );
+    setStatus('error');
+  }, []);
+
+  const initialization = useMemo(() => ({
+    amount: 14.90,
+    payer: {
+      email: currentUser?.email || '',
+    }
+  }), [currentUser?.email]);
+
+  const customization = useMemo(() => ({
+    paymentMethods: {
+      creditCard: "all",
+      debitCard: "all",
+      bankTransfer: ["pix"]
+    },
+    visual: {
+      style: {
+        theme: 'dark',
+        customVariables: {
+          baseColor: '#10b981',
+          buttonTextColor: '#ffffff'
+        }
+      }
+    }
+  }), []);
+
+  // MutationObserver to detect payment method changes dynamically
+  useEffect(() => {
+    const container = document.getElementById('payment-brick-container');
+    if (!container) return;
+
+    const handler = () => {
+      let isPix = false;
+
+      // Check for checked radio buttons
+      const radioSelected = container.querySelector('input[type="radio"]:checked');
+      if (radioSelected) {
+        const labelText = radioSelected.closest('label')?.innerText || '';
+        const value = radioSelected.value || '';
+        const id = radioSelected.id || '';
+        if (
+          labelText.toLowerCase().includes('pix') || 
+          value.toLowerCase().includes('pix') || 
+          id.toLowerCase().includes('pix')
+        ) {
+          isPix = true;
+        }
+      }
+
+      // Check for custom aria-checked radios
+      const divSelected = container.querySelector('[role="radio"][aria-checked="true"]');
+      if (divSelected) {
+        const text = divSelected.innerText || '';
+        if (text.toLowerCase().includes('pix')) {
+          isPix = true;
+        }
+      }
+
+      // Check active method selectors
+      const activeMethod = container.querySelector('[class*="-selected"], [class*="-active"]');
+      if (activeMethod && activeMethod.innerText.toLowerCase().includes('pix')) {
+        isPix = true;
+      }
+
+      // Fallback: check general checked input elements
+      const inputs = container.querySelectorAll('input');
+      for (const input of inputs) {
+        if (input.checked || input.getAttribute('aria-checked') === 'true') {
+          const text = input.closest('label')?.innerText || input.id || input.name || '';
+          if (text.toLowerCase().includes('pix')) {
+            isPix = true;
+            break;
+          }
+        }
+      }
+
+      setShowCpfField(isPix);
+
+      if (isPix) {
+        const emailInput = container.querySelector('input[type="email"], input[id*="email"], input[class*="email"]');
+        if (emailInput) {
+          const target = emailInput.closest('.svelte-form-group') || emailInput.closest('[class*="form-group"]') || emailInput.parentElement;
+          if (target) {
+            let cpfTarget = container.querySelector('#custom-cpf-portal-container');
+            if (!cpfTarget) {
+              cpfTarget = document.createElement('div');
+              cpfTarget.id = 'custom-cpf-portal-container';
+              cpfTarget.style.marginTop = '16px';
+              cpfTarget.style.marginBottom = '16px';
+              target.parentNode.insertBefore(cpfTarget, target.nextSibling);
+            }
+            setPixEmailContainer(cpfTarget);
+            return;
+          }
+        }
+      }
+
+      // Clean up portal container if not Pix
+      const existing = container.querySelector('#custom-cpf-portal-container');
+      if (existing) {
+        existing.remove();
+      }
+      setPixEmailContainer(null);
+    };
+
+    handler();
+
+    const observer = new MutationObserver(handler);
+    observer.observe(container, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['class', 'checked', 'aria-checked']
+    });
+
+    return () => {
+      observer.disconnect();
+      const existing = container.querySelector('#custom-cpf-portal-container');
+      if (existing) {
+        existing.remove();
+      }
+    };
+  }, []);
+
+  const renderCpfInput = () => {
+    return (
+      <div style={{ marginTop: '10px', marginBottom: '10px' }}>
+        <label style={{
+          display: 'block',
+          fontSize: '13px',
+          fontWeight: '600',
+          color: 'rgba(255, 255, 255, 0.6)',
+          marginBottom: '8px',
+          fontFamily: 'sans-serif'
+        }}>
+          CPF do Pagador (Obrigatório para Pix)
+        </label>
+        <input
+          type="text"
+          value={userCpf}
+          onChange={(e) => setUserCpf(e.target.value)}
+          placeholder="000.000.000-00"
+          style={{
+            width: '100%',
+            padding: '12px 16px',
+            backgroundColor: '#13131a',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+            borderRadius: '8px',
+            color: '#ffffff',
+            fontSize: '14px',
+            outline: 'none',
+            boxSizing: 'border-box',
+            transition: 'border-color 0.2s, box-shadow 0.2s',
+            fontFamily: 'sans-serif'
+          }}
+          onFocus={(e) => {
+            e.target.style.borderColor = '#10b981';
+            e.target.style.boxShadow = '0 0 0 2px rgba(16, 185, 129, 0.2)';
+          }}
+          onBlur={(e) => {
+            e.target.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+            e.target.style.boxShadow = 'none';
+          }}
+        />
+      </div>
+    );
+  };
 
   return (
     <div style={{
@@ -250,83 +445,20 @@ export default function Checkout() {
         </div>
       ) : (
         <>
-          <Payment
-            initialization={{
-              amount: 14.90,
-              payer: {
-                email: currentUser?.email || '',
-                identification: {
-                  type: 'CPF',
-                  number: userCpf.replace(/\D/g, '')
-                }
-              }
-            }}
-            customization={{
-              paymentMethods: {
-                creditCard: "all",
-                debitCard: "all",
-                bankTransfer: ["pix"]
-              },
-              visual: {
-                style: {
-                  theme: 'dark',
-                  customVariables: {
-                    baseColor: '#10b981',
-                    buttonTextColor: '#ffffff'
-                  }
-                }
-              }
-            }}
-            onSubmit={onSubmit}
-            onError={(err) => {
-              console.error('Mercado Pago Brick Error:', err);
-              setError(
-                "Não foi possível carregar o formulário de pagamento. Por favor, verifique se as credenciais de produção do Mercado Pago estão ativadas e homologadas na sua conta."
-              );
-              setStatus('error');
-            }}
-          />
-
-          <div style={{ marginTop: '20px', marginBottom: '10px' }}>
-            <label style={{
-              display: 'block',
-              fontSize: '13px',
-              fontWeight: '600',
-              color: 'rgba(255, 255, 255, 0.6)',
-              marginBottom: '8px',
-              fontFamily: 'sans-serif'
-            }}>
-              CPF do Pagador (Obrigatório para Pix)
-            </label>
-            <input
-              type="text"
-              value={userCpf}
-              onChange={(e) => setUserCpf(e.target.value)}
-              placeholder="000.000.000-00"
-              style={{
-                width: '100%',
-                padding: '12px 16px',
-                backgroundColor: '#13131a',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
-                borderRadius: '8px',
-                color: '#ffffff',
-                fontSize: '14px',
-                outline: 'none',
-                boxSizing: 'border-box',
-                transition: 'border-color 0.2s, box-shadow 0.2s',
-                fontFamily: 'sans-serif'
-              }}
-              onFocus={(e) => {
-                e.target.style.borderColor = '#10b981';
-                e.target.style.boxShadow = '0 0 0 2px rgba(16, 185, 129, 0.2)';
-              }}
-              onBlur={(e) => {
-                e.target.style.borderColor = 'rgba(255, 255, 255, 0.1)';
-                e.target.style.boxShadow = 'none';
-              }}
+          <div id="payment-brick-container">
+            <MemoizedPayment
+              initialization={initialization}
+              customization={customization}
+              onSubmit={handleSubmit}
+              onError={handleError}
             />
           </div>
 
+          {/* Portal rendering if email field container is found */}
+          {pixEmailContainer && createPortal(renderCpfInput(), pixEmailContainer)}
+
+          {/* Fallback rendering inline below brick container if Portal target not ready/found */}
+          {showCpfField && !pixEmailContainer && renderCpfInput()}
           
           {status === 'processando' && (
             <div style={{ textAlign: 'center', marginTop: '16px', fontSize: '13px', color: 'rgba(255, 255, 255, 0.5)' }}>
