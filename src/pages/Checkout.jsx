@@ -102,10 +102,16 @@ export default function Checkout() {
         throw new Error('Email obrigatório.');
       }
 
+      let installments = paymentData.installments || 1;
+      if (!installments || installments < 1) {
+        installments = 1;
+      }
+
       const payload = {
         token: paymentData.token,
         payment_method_id: paymentData.payment_method_id,
         amount: 14.90,
+        installments,
         userId: currentUser?.id,
         payer: {
           ...paymentData.payer,

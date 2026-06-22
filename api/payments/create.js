@@ -88,7 +88,7 @@ export default async function handler(req, res) {
     return;
   }
 
-  const { token, payment_method_id, amount, userId, payer } = req.body || {};
+  const { token, payment_method_id, amount, userId, payer, installments } = req.body || {};
 
   if (!userId) {
     res.status(400).json({ error: 'userId é obrigatório.' });
@@ -171,6 +171,16 @@ export default async function handler(req, res) {
 
     if (payment_method_id !== 'pix') {
       payload.token = token;
+
+      const resolvedInstallments = Number(installments) || 1;
+      console.log("[MP] installments received:", resolvedInstallments);
+
+      if (!Number.isInteger(resolvedInstallments) || resolvedInstallments < 1 || resolvedInstallments > 12) {
+        res.status(400).json({ error: 'Invalid installments value' });
+        return;
+      }
+
+      payload.installments = resolvedInstallments;
     }
 
     const loggedPayload = {
