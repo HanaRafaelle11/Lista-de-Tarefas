@@ -1,18 +1,18 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { createPortal } from 'react-dom';
 import { initMercadoPago, Payment } from '@mercadopago/sdk-react';
 import { useAppContext } from '../contexts/AppContext';
 
 initMercadoPago('APP_USR-0e956167-6396-46c8-be7e-adb93cc9ae11');
 
 // Memoized payment component to prevent re-rendering when parent state changes
-const MemoizedPayment = React.memo(({ initialization, customization, onSubmit, onError }) => {
+const MemoizedPayment = React.memo(({ initialization, customization, onSubmit, onError, onReady }) => {
   return (
     <Payment
       initialization={initialization}
       customization={customization}
       onSubmit={onSubmit}
       onError={onError}
+      onReady={onReady}
     />
   );
 });
@@ -24,8 +24,7 @@ export default function Checkout() {
   const [error, setError] = useState(null);
   const [pixData, setPixData] = useState(null);
   const [userCpf, setUserCpf] = useState('');
-  const [showCpfField, setShowCpfField] = useState(false);
-  const [pixEmailContainer, setPixEmailContainer] = useState(null);
+  const [paymentMethod, setPaymentMethod] = useState('other');
 
   // Sync ref to avoid onSubmit dependency invalidation
   const userCpfRef = useRef(userCpf);
@@ -127,88 +126,77 @@ export default function Checkout() {
     }
   }), []);
 
-  // MutationObserver to detect payment method changes dynamically
-  useEffect(() => {
+  // Helper to detect payment method in the container
+  const detectPaymentMethod = useCallback(() => {
     const container = document.getElementById('payment-brick-container');
     if (!container) return;
 
-    const handler = () => {
-      let isPix = false;
+    let selectedMethod = 'other';
 
-      // Check for checked radio buttons
-      const radioSelected = container.querySelector('input[type="radio"]:checked');
-      if (radioSelected) {
-        const labelText = radioSelected.closest('label')?.innerText || '';
-        const value = radioSelected.value || '';
-        const id = radioSelected.id || '';
-        if (
-          labelText.toLowerCase().includes('pix') || 
-          value.toLowerCase().includes('pix') || 
-          id.toLowerCase().includes('pix')
-        ) {
-          isPix = true;
-        }
+    // 1. Check for checked radio buttons
+    const radioSelected = container.querySelector('input[type="radio"]:checked');
+    if (radioSelected) {
+      const labelText = radioSelected.closest('label')?.innerText || '';
+      const value = radioSelected.value || '';
+      const id = radioSelected.id || '';
+      if (
+        labelText.toLowerCase().includes('pix') || 
+        value.toLowerCase().includes('pix') || 
+        id.toLowerCase().includes('pix')
+      ) {
+        selectedMethod = 'pix';
       }
+    }
 
-      // Check for custom aria-checked radios
+    // 2. Check for custom aria-checked radios (role="radio" / aria-checked="true")
+    if (selectedMethod !== 'pix') {
       const divSelected = container.querySelector('[role="radio"][aria-checked="true"]');
       if (divSelected) {
         const text = divSelected.innerText || '';
         if (text.toLowerCase().includes('pix')) {
-          isPix = true;
+          selectedMethod = 'pix';
         }
       }
+    }
 
-      // Check active method selectors
+    // 3. Check active method selectors (classes like -selected or -active)
+    if (selectedMethod !== 'pix') {
       const activeMethod = container.querySelector('[class*="-selected"], [class*="-active"]');
       if (activeMethod && activeMethod.innerText.toLowerCase().includes('pix')) {
-        isPix = true;
+        selectedMethod = 'pix';
       }
+    }
 
-      // Fallback: check general checked input elements
+    // 4. Fallback: check general checked input elements
+    if (selectedMethod !== 'pix') {
       const inputs = container.querySelectorAll('input');
       for (const input of inputs) {
         if (input.checked || input.getAttribute('aria-checked') === 'true') {
           const text = input.closest('label')?.innerText || input.id || input.name || '';
           if (text.toLowerCase().includes('pix')) {
-            isPix = true;
+            selectedMethod = 'pix';
             break;
           }
         }
       }
+    }
 
-      setShowCpfField(isPix);
+    setPaymentMethod(selectedMethod);
+  }, []);
 
-      if (isPix) {
-        const emailInput = container.querySelector('input[type="email"], input[id*="email"], input[class*="email"]');
-        if (emailInput) {
-          const target = emailInput.closest('.svelte-form-group') || emailInput.closest('[class*="form-group"]') || emailInput.parentElement;
-          if (target) {
-            let cpfTarget = container.querySelector('#custom-cpf-portal-container');
-            if (!cpfTarget) {
-              cpfTarget = document.createElement('div');
-              cpfTarget.id = 'custom-cpf-portal-container';
-              cpfTarget.style.marginTop = '16px';
-              cpfTarget.style.marginBottom = '16px';
-              target.parentNode.insertBefore(cpfTarget, target.nextSibling);
-            }
-            setPixEmailContainer(cpfTarget);
-            return;
-          }
-        }
-      }
+  const handleReady = useCallback(() => {
+    // Settle time for internal DOM to render before initial detection
+    setTimeout(detectPaymentMethod, 150);
+  }, [detectPaymentMethod]);
 
-      // Clean up portal container if not Pix
-      const existing = container.querySelector('#custom-cpf-portal-container');
-      if (existing) {
-        existing.remove();
-      }
-      setPixEmailContainer(null);
-    };
+  // MutationObserver to detect payment method changes dynamically
+  useEffect(() => {
+    const container = document.getElementById('payment-brick-container');
+    if (!container) return;
 
-    handler();
+    detectPaymentMethod();
 
-    const observer = new MutationObserver(handler);
+    const observer = new MutationObserver(detectPaymentMethod);
     observer.observe(container, {
       childList: true,
       subtree: true,
@@ -216,18 +204,12 @@ export default function Checkout() {
       attributeFilter: ['class', 'checked', 'aria-checked']
     });
 
-    return () => {
-      observer.disconnect();
-      const existing = container.querySelector('#custom-cpf-portal-container');
-      if (existing) {
-        existing.remove();
-      }
-    };
-  }, []);
+    return () => observer.disconnect();
+  }, [detectPaymentMethod]);
 
   const renderCpfInput = () => {
     return (
-      <div style={{ marginTop: '10px', marginBottom: '10px' }}>
+      <div style={{ marginTop: '16px', marginBottom: '16px' }}>
         <label style={{
           display: 'block',
           fontSize: '13px',
@@ -451,14 +433,12 @@ export default function Checkout() {
               customization={customization}
               onSubmit={handleSubmit}
               onError={handleError}
+              onReady={handleReady}
             />
           </div>
 
-          {/* Portal rendering if email field container is found */}
-          {pixEmailContainer && createPortal(renderCpfInput(), pixEmailContainer)}
-
-          {/* Fallback rendering inline below brick container if Portal target not ready/found */}
-          {showCpfField && !pixEmailContainer && renderCpfInput()}
+          {/* Simple React conditional flow rendering below container */}
+          {paymentMethod === 'pix' && renderCpfInput()}
           
           {status === 'processando' && (
             <div style={{ textAlign: 'center', marginTop: '16px', fontSize: '13px', color: 'rgba(255, 255, 255, 0.5)' }}>
