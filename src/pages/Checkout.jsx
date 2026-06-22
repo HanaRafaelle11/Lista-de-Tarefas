@@ -234,7 +234,10 @@ export default function Checkout() {
         <>
           <Payment
             initialization={{
-              amount: 14.90
+              amount: 14.90,
+              payer: {
+                email: currentUser?.email || ''
+              }
             }}
             customization={{
               paymentMethods: {
@@ -243,12 +246,13 @@ export default function Checkout() {
                 bankTransfer: ["pix"]
               },
               visual: {
-                theme: 'dark',
-                customVariables: {
-                  baseColor: '#10b981',
-                  buttonTextColor: '#ffffff'
-                },
-                hideIdentification: false
+                style: {
+                  theme: 'dark',
+                  customVariables: {
+                    baseColor: '#10b981',
+                    buttonTextColor: '#ffffff'
+                  }
+                }
               }
             }}
             onSubmit={onSubmit}
