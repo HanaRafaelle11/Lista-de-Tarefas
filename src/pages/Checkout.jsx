@@ -137,8 +137,7 @@ export default function Checkout() {
               paymentMethods: {
                 creditCard: "all",
                 debitCard: "all",
-                ticket: "all",
-                bankTransfer: "all"
+                bankTransfer: ["pix"] // 👈 Define explicitamente o Pix pro Brick carregar apenas Cartões e Pix
               }
             }}
             onSubmit={onSubmit}
