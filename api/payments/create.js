@@ -25,15 +25,21 @@ export default async function handler(req, res) {
     return;
   }
 
-  const { token, payment_method_id, amount, userId } = req.body || {};
+  const { token, payment_method_id, amount, userId, payer } = req.body || {};
 
   if (!userId) {
     res.status(400).json({ error: 'userId é obrigatório.' });
     return;
   }
 
-  if (!token || !payment_method_id) {
-    res.status(400).json({ error: 'token e payment_method_id são obrigatórios.' });
+  if (!payment_method_id) {
+    res.status(400).json({ error: 'payment_method_id é obrigatório.' });
+    return;
+  }
+
+  // Token is required only if it is NOT Pix
+  if (payment_method_id !== 'pix' && !token) {
+    res.status(400).json({ error: 'token é obrigatório para pagamentos com cartão.' });
     return;
   }
 
@@ -42,15 +48,29 @@ export default async function handler(req, res) {
     
     const payload = {
       transaction_amount: Number(amount) || 14.90,
-      token,
       payment_method_id,
       payer: {
-        email: "test_user@test.com"
+        email: payer?.email || "test_user@test.com"
       },
       description: "MyFlowDay Premium Plan"
     };
 
-    console.log(`[API Payment] Iniciando pagamento com o Mercado Pago para o usuário ${userId}...`);
+    if (payment_method_id !== 'pix') {
+      payload.token = token;
+    } else {
+      // Forward additional payer information needed for Pix in Brazil
+      if (payer?.identification) {
+        payload.payer.identification = payer.identification;
+      }
+      if (payer?.first_name) {
+        payload.payer.first_name = payer.first_name;
+      }
+      if (payer?.last_name) {
+        payload.payer.last_name = payer.last_name;
+      }
+    }
+
+    console.log(`[API Payment] Iniciando pagamento com o Mercado Pago (${payment_method_id}) para o usuário ${userId}...`);
 
     const mpResponse = await fetch('https://api.mercadopago.com/v1/payments', {
       method: 'POST',
@@ -105,6 +125,18 @@ export default async function handler(req, res) {
       }
 
       res.status(200).json({ success: true, paymentId, status: paymentStatus });
+    } else if (paymentStatus === 'pending' && payment_method_id === 'pix') {
+      const qrCode = paymentResult.point_of_interaction?.transaction_data?.qr_code;
+      const qrCodeBase64 = paymentResult.point_of_interaction?.transaction_data?.qr_code_base64;
+      
+      res.status(200).json({ 
+        success: true, 
+        paymentId, 
+        status: 'pending', 
+        paymentMethod: 'pix',
+        qr_code: qrCode, 
+        qr_code_base64: qrCodeBase64 
+      });
     } else {
       console.warn(`[API Payment] Pagamento não foi aprovado pelo MP. Status: ${paymentStatus}`);
       res.status(400).json({ error: `Pagamento não aprovado. Status: ${paymentStatus}`, paymentId, status: paymentStatus });

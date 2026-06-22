@@ -8,6 +8,7 @@ export default function Checkout() {
   const { currentUser, isPro, userProfile } = useAppContext();
   const [status, setStatus] = useState(null);
   const [error, setError] = useState(null);
+  const [pixData, setPixData] = useState(null);
 
   const onSubmit = async (param) => {
     try {
@@ -37,7 +38,16 @@ export default function Checkout() {
         throw new Error(errJson.error || 'Erro ao processar pagamento.');
       }
 
-      setStatus('success');
+      const resData = await response.json();
+      if (resData.status === 'pending' && resData.paymentMethod === 'pix') {
+        setPixData({
+          qr_code: resData.qr_code,
+          qr_code_base64: resData.qr_code_base64
+        });
+        setStatus('pix_pending');
+      } else {
+        setStatus('success');
+      }
     } catch (err) {
       console.error('Checkout error:', err);
       setError(err.message);
@@ -127,6 +137,72 @@ export default function Checkout() {
             Ir para o App
           </button>
         </div>
+      ) : pixData ? (
+        <div style={{ textAlign: 'center', padding: '20px 0' }}>
+          <span style={{ fontSize: '48px' }}>⚡</span>
+          <h3 style={{ color: '#10b981', margin: '16px 0 8px' }}>Pagamento via Pix Gerado</h3>
+          <p style={{ fontSize: '14px', color: 'rgba(255, 255, 255, 0.7)', lineHeight: '1.5', marginBottom: '20px' }}>
+            Escaneie o código QR abaixo com o app do seu banco ou copie o código Copia e Cola para pagar. O acesso Pro é liberado imediatamente após o pagamento.
+          </p>
+          
+          {pixData.qr_code_base64 && (
+            <div style={{
+              backgroundColor: '#ffffff',
+              padding: '16px',
+              borderRadius: '12px',
+              display: 'inline-block',
+              marginBottom: '20px',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.3)'
+            }}>
+              <img 
+                src={`data:image/jpeg;base64,${pixData.qr_code_base64}`} 
+                alt="QR Code Pix" 
+                style={{ width: '200px', height: '200px', display: 'block' }}
+              />
+            </div>
+          )}
+
+          {pixData.qr_code && (
+            <div style={{ marginBottom: '24px' }}>
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(pixData.qr_code);
+                  alert('Código Pix Copia e Cola copiado!');
+                }}
+                style={{
+                  backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                  color: '#ffffff',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  borderRadius: '8px',
+                  padding: '10px 16px',
+                  fontSize: '13px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  width: '100%',
+                  transition: 'background-color 0.2s'
+                }}
+              >
+                📋 Copiar Código Pix Copia e Cola
+              </button>
+            </div>
+          )}
+
+          <button
+            onClick={() => window.location.href = '/?app=1'}
+            style={{
+              backgroundColor: '#10b981',
+              color: '#ffffff',
+              border: 'none',
+              borderRadius: '8px',
+              padding: '12px 24px',
+              fontWeight: '600',
+              cursor: 'pointer',
+              width: '100%'
+            }}
+          >
+            Ir para o App (Consultar liberação)
+          </button>
+        </div>
       ) : (
         <>
           <Payment
@@ -137,7 +213,16 @@ export default function Checkout() {
               paymentMethods: {
                 creditCard: "all",
                 debitCard: "all",
-                bankTransfer: ["pix"] // 👈 Define explicitamente o Pix pro Brick carregar apenas Cartões e Pix
+                bankTransfer: ["pix"]
+              },
+              visual: {
+                style: {
+                  theme: 'dark',
+                  customVariables: {
+                    baseColor: '#10b981',
+                    buttonTextColor: '#ffffff'
+                  }
+                }
               }
             }}
             onSubmit={onSubmit}
