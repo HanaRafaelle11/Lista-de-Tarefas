@@ -250,19 +250,6 @@ export default function Checkout() {
         </div>
       ) : (
         <>
-          <div className="mb-4">
-            <label className="block text-sm font-semibold text-gray-300 mb-2">
-              CPF do Pagador (Obrigatório para Pix)
-            </label>
-            <input
-              type="text"
-              value={userCpf}
-              onChange={(e) => setUserCpf(e.target.value)}
-              placeholder="000.000.000-00"
-              className="w-full p-3 bg-white/5 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-emerald-500 transition-colors"
-            />
-          </div>
-
           <Payment
             initialization={{
               amount: 14.90,
@@ -299,6 +286,46 @@ export default function Checkout() {
               setStatus('error');
             }}
           />
+
+          <div style={{ marginTop: '20px', marginBottom: '10px' }}>
+            <label style={{
+              display: 'block',
+              fontSize: '13px',
+              fontWeight: '600',
+              color: 'rgba(255, 255, 255, 0.6)',
+              marginBottom: '8px',
+              fontFamily: 'sans-serif'
+            }}>
+              CPF do Pagador (Obrigatório para Pix)
+            </label>
+            <input
+              type="text"
+              value={userCpf}
+              onChange={(e) => setUserCpf(e.target.value)}
+              placeholder="000.000.000-00"
+              style={{
+                width: '100%',
+                padding: '12px 16px',
+                backgroundColor: '#13131a',
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+                borderRadius: '8px',
+                color: '#ffffff',
+                fontSize: '14px',
+                outline: 'none',
+                boxSizing: 'border-box',
+                transition: 'border-color 0.2s, box-shadow 0.2s',
+                fontFamily: 'sans-serif'
+              }}
+              onFocus={(e) => {
+                e.target.style.borderColor = '#10b981';
+                e.target.style.boxShadow = '0 0 0 2px rgba(16, 185, 129, 0.2)';
+              }}
+              onBlur={(e) => {
+                e.target.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+                e.target.style.boxShadow = 'none';
+              }}
+            />
+          </div>
 
           
           {status === 'processando' && (

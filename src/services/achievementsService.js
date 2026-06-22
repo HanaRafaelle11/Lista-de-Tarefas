@@ -13,7 +13,7 @@ export const achievementsService = {
     try {
       const { data, error } = await supabase
         .from('user_achievements')
-        .select('achievement_key, unlocked_at, seen, viewed_at, dismissed_at')
+        .select('achievement_key, unlocked_at, seen, viewed_at')
         .eq('user_id', userId);
 
       if (error) throw error;
@@ -82,7 +82,7 @@ export const achievementsService = {
       const now = new Date().toISOString();
       const { error } = await supabase
         .from('user_achievements')
-        .update({ seen: true, viewed_at: now, dismissed_at: now })
+        .update({ seen: true, viewed_at: now })
         .eq('user_id', userId)
         .eq('achievement_key', key);
 
