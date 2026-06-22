@@ -19,9 +19,11 @@ export default function Checkout() {
         token: paymentData.token,
         payment_method_id: paymentData.payment_method_id,
         amount: 14.90,
-        userId: currentUser?.id
+        userId: currentUser?.id,
+        payer: paymentData.payer
       };
 
+      // Rota que processa o token do Brick
       const response = await fetch('/api/payments/create', {
         method: 'POST',
         headers: {
@@ -130,7 +132,10 @@ export default function Checkout() {
         <>
           <Payment
             initialization={{
-              amount: 14.90
+              amount: 14.90,
+              paymentMethods: {
+                types: ['card', 'ticket', 'bank_transfer'] // 👈 Define os tipos explicitamente pro Brick rodar
+              }
             }}
             onSubmit={onSubmit}
           />
