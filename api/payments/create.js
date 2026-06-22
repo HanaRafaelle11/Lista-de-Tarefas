@@ -84,7 +84,10 @@ export default async function handler(req, res) {
 
     if (!mpResponse.ok) {
       const errData = await mpResponse.json().catch(() => ({}));
-      console.error('[API Payment] Erro no Mercado Pago:', errData);
+      console.error('[API Payment] Erro completo do Mercado Pago:', JSON.stringify(errData, null, 2));
+      if (errData.cause) {
+        console.error('[API Payment] Causa do Erro:', JSON.stringify(errData.cause, null, 2));
+      }
       res.status(400).json({ error: 'Falha no processamento do pagamento no Mercado Pago.', details: errData });
       return;
     }
