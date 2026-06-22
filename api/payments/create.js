@@ -72,6 +72,16 @@ export default async function handler(req, res) {
 
     console.log(`[API Payment] Iniciando pagamento com o Mercado Pago (${payment_method_id}) para o usuário ${userId}...`);
 
+    console.log('[MP] Payload enviado:');
+    console.log(JSON.stringify({
+      transaction_amount: payload.transaction_amount,
+      payment_method_id: payload.payment_method_id,
+      payer: {
+        email: payload.payer?.email,
+        identification: payload.payer?.identification
+      }
+    }, null, 2));
+
     const mpResponse = await fetch('https://api.mercadopago.com/v1/payments', {
       method: 'POST',
       headers: {
@@ -84,19 +94,30 @@ export default async function handler(req, res) {
 
     if (!mpResponse.ok) {
       const errData = await mpResponse.json().catch(() => ({}));
-      console.error('[API Payment] Erro completo do Mercado Pago:', JSON.stringify(errData, null, 2));
-      if (errData.cause) {
-        console.error('[API Payment] Causa do Erro:', JSON.stringify(errData.cause, null, 2));
-      }
+      console.error('[MP] Erro ao criar pagamento');
+      console.error(JSON.stringify(errData, null, 2));
       res.status(400).json({ error: 'Falha no processamento do pagamento no Mercado Pago.', details: errData });
       return;
     }
 
     const paymentResult = await mpResponse.json();
+    console.log('[MP] Payment response:');
+    console.log(JSON.stringify(paymentResult, null, 2));
+
     const paymentId = String(paymentResult.id);
     const paymentStatus = paymentResult.status;
 
-    console.log(`[API Payment] Pagamento criado no MP. ID: ${paymentId}, Status: ${paymentStatus}`);
+    const richResponse = {
+      id: paymentResult.id,
+      status: paymentResult.status,
+      status_detail: paymentResult.status_detail,
+      transaction_amount: paymentResult.transaction_amount,
+      payment_method_id: paymentResult.payment_method_id,
+      point_of_interaction: paymentResult.point_of_interaction,
+      payer: paymentResult.payer,
+      date_created: paymentResult.date_created,
+      date_approved: paymentResult.date_approved
+    };
 
     if (paymentStatus === 'approved') {
       const customerId = paymentResult.payer?.id || `mp_cust_${crypto.randomUUID().slice(0, 8)}`;
@@ -127,25 +148,35 @@ export default async function handler(req, res) {
         console.log('[API Payment] Assinatura salva com sucesso em subscriptions.');
       }
 
-      res.status(200).json({ success: true, paymentId, status: paymentStatus });
+      res.status(200).json({ success: true, ...richResponse });
     } else if (paymentStatus === 'pending' && payment_method_id === 'pix') {
       const qrCode = paymentResult.point_of_interaction?.transaction_data?.qr_code;
       const qrCodeBase64 = paymentResult.point_of_interaction?.transaction_data?.qr_code_base64;
       
       res.status(200).json({ 
         success: true, 
-        paymentId, 
-        status: 'pending', 
         paymentMethod: 'pix',
         qr_code: qrCode, 
-        qr_code_base64: qrCodeBase64 
+        qr_code_base64: qrCodeBase64,
+        ...richResponse
       });
     } else {
       console.warn(`[API Payment] Pagamento não foi aprovado pelo MP. Status: ${paymentStatus}`);
-      res.status(400).json({ error: `Pagamento não aprovado. Status: ${paymentStatus}`, paymentId, status: paymentStatus });
+      res.status(400).json({ 
+        error: `Pagamento não aprovado. Status: ${paymentStatus}`, 
+        success: false,
+        ...richResponse
+      });
     }
   } catch (error) {
-    console.error('[API Payment] Erro crítico no pagamento:', error);
+    console.error('[MP] Erro crítico ao processar pagamento:', error);
+    console.error(JSON.stringify({
+       message: error.message,
+       cause: error.cause,
+       status: error.status,
+       response: error.response,
+       api_response: error.api_response
+    }, null, 2));
     res.status(500).json({ error: 'Erro crítico interno ao processar pagamento.', message: error.message });
   }
 }
