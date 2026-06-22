@@ -668,6 +668,10 @@ BEGIN
     ALTER FUNCTION public.set_updated_at() SET search_path = public;
     REVOKE EXECUTE ON FUNCTION public.set_updated_at() FROM public, anon;
     GRANT EXECUTE ON FUNCTION public.set_updated_at() TO authenticated;
+  ELSIF EXISTS (SELECT 1 FROM pg_proc JOIN pg_namespace ON pg_proc.pronamespace = pg_namespace.oid WHERE proname = 'handle_updated_at' AND nspname = 'public') THEN
+    ALTER FUNCTION public.handle_updated_at() SET search_path = public;
+    REVOKE EXECUTE ON FUNCTION public.handle_updated_at() FROM public, anon;
+    GRANT EXECUTE ON FUNCTION public.handle_updated_at() TO authenticated;
   END IF;
 
   IF EXISTS (SELECT 1 FROM pg_proc JOIN pg_namespace ON pg_proc.pronamespace = pg_namespace.oid WHERE proname = 'handle_new_user' AND nspname = 'public') THEN

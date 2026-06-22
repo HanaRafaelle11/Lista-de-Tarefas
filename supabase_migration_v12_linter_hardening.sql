@@ -7,22 +7,37 @@ ALTER FUNCTION public.get_admin_dashboard_metrics() SET search_path = public;
 ALTER FUNCTION public.get_user_detail_metrics(uuid) SET search_path = public;
 ALTER FUNCTION public.get_admin_users_list() SET search_path = public;
 ALTER FUNCTION public.refresh_analytics_materialized_views() SET search_path = public;
-ALTER FUNCTION public.handle_new_user() SET search_path = public;
-ALTER FUNCTION public.set_updated_at() SET search_path = public;
 
 -- 2. Revoke execution privileges from public and anon
 REVOKE EXECUTE ON FUNCTION public.get_admin_dashboard_metrics() FROM public, anon;
 REVOKE EXECUTE ON FUNCTION public.get_user_detail_metrics(uuid) FROM public, anon;
 REVOKE EXECUTE ON FUNCTION public.get_admin_users_list() FROM public, anon;
 REVOKE EXECUTE ON FUNCTION public.refresh_analytics_materialized_views() FROM public, anon;
-REVOKE EXECUTE ON FUNCTION public.handle_new_user() FROM public, anon;
-REVOKE EXECUTE ON FUNCTION public.set_updated_at() FROM public, anon;
 
 -- 3. Explicitly grant permissions back to authorized roles
 GRANT EXECUTE ON FUNCTION public.get_admin_dashboard_metrics() TO authenticated;
 GRANT EXECUTE ON FUNCTION public.get_user_detail_metrics(uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.get_admin_users_list() TO authenticated;
-GRANT EXECUTE ON FUNCTION public.set_updated_at() TO authenticated;
+
+-- 3.1. Conditional hardening for other functions if they exist in the DB
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_proc JOIN pg_namespace ON pg_proc.pronamespace = pg_namespace.oid WHERE proname = 'set_updated_at' AND nspname = 'public') THEN
+    ALTER FUNCTION public.set_updated_at() SET search_path = public;
+    REVOKE EXECUTE ON FUNCTION public.set_updated_at() FROM public, anon;
+    GRANT EXECUTE ON FUNCTION public.set_updated_at() TO authenticated;
+  ELSIF EXISTS (SELECT 1 FROM pg_proc JOIN pg_namespace ON pg_proc.pronamespace = pg_namespace.oid WHERE proname = 'handle_updated_at' AND nspname = 'public') THEN
+    ALTER FUNCTION public.handle_updated_at() SET search_path = public;
+    REVOKE EXECUTE ON FUNCTION public.handle_updated_at() FROM public, anon;
+    GRANT EXECUTE ON FUNCTION public.handle_updated_at() TO authenticated;
+  END IF;
+
+  IF EXISTS (SELECT 1 FROM pg_proc JOIN pg_namespace ON pg_proc.pronamespace = pg_namespace.oid WHERE proname = 'handle_new_user' AND nspname = 'public') THEN
+    ALTER FUNCTION public.handle_new_user() SET search_path = public;
+    REVOKE EXECUTE ON FUNCTION public.handle_new_user() FROM public, anon;
+  END IF;
+END $$;
+
 
 -- 4. Revoke SELECT on analytical materialized views from anon, authenticated, and public
 REVOKE SELECT ON public.mv_active_users_daily FROM anon, authenticated, public;
