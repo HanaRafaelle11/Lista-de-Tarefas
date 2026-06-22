@@ -15,8 +15,12 @@ export default function CoachView() {
     setCurrentUser,
     isPro,
     openPaywall,
-    logEvent
+    logEvent,
+    setActiveTab,
+    setShouldOpenGoalModal
   } = useAppContext();
+
+  const hasData = goals.length > 0 || tasks.length > 0;
 
   // Carregar periodicidade preferida das configurações do usuário (user_metadata)
   const [periodicity, setPeriodicity] = useState(() => {
@@ -111,76 +115,163 @@ export default function CoachView() {
       <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
         
         {/* Letter/Card container */}
-        <div 
-          style={{
-            background: 'var(--bg-card)',
-            border: '1px solid var(--border-light)',
-            borderRadius: 'var(--radius-lg)',
-            padding: '32px',
-            position: 'relative',
-            overflow: 'hidden',
-            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12)'
-          }}
-        >
-          {/* Decorative subtle top gradient line */}
-          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '4px', background: 'linear-gradient(90deg, var(--primary), #3b82f6)' }} />
-          
-          {/* Greeting & Subtitle */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
+        {!hasData ? (
+          <div 
+            style={{
+              background: 'var(--bg-card)',
+              border: '1px solid var(--border-light)',
+              borderRadius: 'var(--radius-lg)',
+              padding: '40px 32px',
+              position: 'relative',
+              overflow: 'hidden',
+              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12)',
+              textAlign: 'center',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: '20px'
+            }}
+          >
+            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '4px', background: 'linear-gradient(90deg, var(--primary), #3b82f6)' }} />
+            
             <div style={{
-              width: '42px',
-              height: '42px',
-              borderRadius: '12px',
+              width: '56px',
+              height: '56px',
+              borderRadius: '50%',
               backgroundColor: 'var(--primary-light)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              color: 'var(--primary)'
+              color: 'var(--primary)',
+              marginBottom: '8px'
             }}>
-              <Sparkles size={20} />
+              <Brain size={28} />
             </div>
-            <div>
-              <h3 style={{ fontSize: '16px', fontWeight: '700', color: 'var(--text-main)', margin: 0 }}>
-                {isPro ? 'Análise Personalizada da Semana' : 'Resumo Semanal'}
-              </h3>
-              <span style={{ fontSize: '11px', color: 'var(--text-light)' }}>
-                Gerado reativamente com base no seu ritmo
-              </span>
+
+            <h3 style={{ fontSize: '18px', fontWeight: '750', color: 'var(--text-main)', margin: 0, maxWidth: '520px', lineHeight: '1.4' }}>
+              Seu coach ainda não possui informações suficientes para gerar análises.
+            </h3>
+            
+            <p style={{ fontSize: '14px', color: 'var(--text-muted)', margin: 0, maxWidth: '520px', lineHeight: '1.6' }}>
+              Crie seus primeiros objetivos e tarefas para começar a receber insights personalizados sobre sua produtividade, consistência e hábitos.
+            </p>
+
+            <div style={{ display: 'flex', gap: '12px', marginTop: '8px', flexWrap: 'wrap', justifyContent: 'center' }}>
+              <button 
+                type="button"
+                onClick={() => {
+                  setActiveTab('goals');
+                  setShouldOpenGoalModal(true);
+                }}
+                style={{ 
+                  padding: '10px 20px', 
+                  fontSize: '13.5px', 
+                  fontWeight: '600', 
+                  borderRadius: '8px', 
+                  border: 'none', 
+                  backgroundColor: 'var(--primary)',
+                  color: 'white',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}
+              >
+                <Target size={16} /> Criar Primeiro Objetivo
+              </button>
+              <button 
+                type="button"
+                onClick={() => setActiveTab('tasks')}
+                style={{ 
+                  padding: '10px 20px', 
+                  fontSize: '13.5px', 
+                  fontWeight: '600', 
+                  borderRadius: '8px', 
+                  border: '1px solid var(--border-medium)', 
+                  backgroundColor: 'var(--bg-app)',
+                  color: 'var(--text-main)',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}
+              >
+                <ArrowUpRight size={16} /> Adicionar Tarefa
+              </button>
             </div>
           </div>
-
-          {/* Coach Message content */}
+        ) : (
           <div 
-            style={{ 
-              fontSize: '14.5px', 
-              color: 'var(--text-main)', 
-              lineHeight: '1.8', 
-              whiteSpace: 'pre-line',
-              fontFamily: 'inherit',
-              padding: '16px',
-              backgroundColor: 'var(--bg-app)',
-              borderRadius: 'var(--radius-md)',
-              border: '1px solid var(--border-medium)',
-              marginBottom: '24px'
+            style={{
+              background: 'var(--bg-card)',
+              border: '1px solid var(--border-light)',
+              borderRadius: 'var(--radius-lg)',
+              padding: '32px',
+              position: 'relative',
+              overflow: 'hidden',
+              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12)'
             }}
           >
-            {coachData.message}
-          </div>
+            {/* Decorative subtle top gradient line */}
+            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '4px', background: 'linear-gradient(90deg, var(--primary), #3b82f6)' }} />
+            
+            {/* Greeting & Subtitle */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
+              <div style={{
+                width: '42px',
+                height: '42px',
+                borderRadius: '12px',
+                backgroundColor: 'var(--primary-light)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: 'var(--primary)'
+              }}>
+                <Sparkles size={20} />
+              </div>
+              <div>
+                <h3 style={{ fontSize: '16px', fontWeight: '700', color: 'var(--text-main)', margin: 0 }}>
+                  {isPro ? 'Análise Personalizada da Semana' : 'Resumo Semanal'}
+                </h3>
+                <span style={{ fontSize: '11px', color: 'var(--text-light)' }}>
+                  Gerado reativamente com base no seu ritmo
+                </span>
+              </div>
+            </div>
 
-          {/* Positioning text inside the card */}
-          <div 
-            style={{ 
-              fontSize: '12px', 
-              color: 'var(--text-muted)', 
-              textAlign: 'center',
-              borderTop: '1px solid var(--border-light)',
-              paddingTop: '20px',
-              fontStyle: 'italic'
-            }}
-          >
-            "O MyFlowDay ajuda você a compreender sua própria forma de funcionar e desenvolver uma produtividade mais sustentável."
+            {/* Coach Message content */}
+            <div 
+              style={{ 
+                fontSize: '14.5px', 
+                color: 'var(--text-main)', 
+                lineHeight: '1.8', 
+                whiteSpace: 'pre-line',
+                fontFamily: 'inherit',
+                padding: '16px',
+                backgroundColor: 'var(--bg-app)',
+                borderRadius: 'var(--radius-md)',
+                border: '1px solid var(--border-medium)',
+                marginBottom: '24px'
+              }}
+            >
+              {coachData.message}
+            </div>
+
+            {/* Positioning text inside the card */}
+            <div 
+              style={{ 
+                fontSize: '12px', 
+                color: 'var(--text-muted)', 
+                textAlign: 'center',
+                borderTop: '1px solid var(--border-light)',
+                paddingTop: '20px',
+                fontStyle: 'italic'
+              }}
+            >
+              "O MyFlowDay ajuda você a compreender sua própria forma de funcionar e desenvolver uma produtividade mais sustentável."
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Periodicity Settings */}
         <div 

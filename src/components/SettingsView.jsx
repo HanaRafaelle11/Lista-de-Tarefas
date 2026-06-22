@@ -5,6 +5,45 @@ import { useNotifications } from '../hooks/useNotifications';
 import { useAppContext } from '../contexts/AppContext';
 import { exportAllTasksToCalendar } from '../services/googleCalendarService';
 
+function useEffectiveTheme(theme) {
+  const [effectiveTheme, setEffectiveTheme] = useState(() => {
+    if (theme === 'light') return 'light';
+    if (theme === 'dark') return 'dark';
+    if (typeof window === 'undefined') return 'light';
+    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  });
+
+  useEffect(() => {
+    if (theme !== 'system') {
+      setEffectiveTheme(theme);
+      return;
+    }
+
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    const handleChange = (e) => {
+      setEffectiveTheme(e.matches ? 'dark' : 'light');
+    };
+
+    setEffectiveTheme(mediaQuery.matches ? 'dark' : 'light');
+
+    if (mediaQuery.addEventListener) {
+      mediaQuery.addEventListener('change', handleChange);
+    } else {
+      mediaQuery.addListener(handleChange);
+    }
+
+    return () => {
+      if (mediaQuery.removeEventListener) {
+        mediaQuery.removeEventListener('change', handleChange);
+      } else {
+        mediaQuery.removeListener(handleChange);
+      }
+    };
+  }, [theme]);
+
+  return effectiveTheme;
+}
+
 export default function SettingsView() {
   const {
     theme,
@@ -33,6 +72,7 @@ export default function SettingsView() {
     settingsTab,
     setSettingsTab
   } = useAppContext();
+  const effectiveTheme = useEffectiveTheme(theme);
   const [loading, setLoading] = useState(false);
   const [feedbackText, setFeedbackText] = useState('');
   const [feedbackStatus, setFeedbackStatus] = useState('idle'); // idle, sending, sent, error
@@ -1142,7 +1182,7 @@ export default function SettingsView() {
             ))}
           </div>
 
-          {theme !== 'dark' && (
+          {effectiveTheme === 'light' && (
             <div style={{ marginTop: '20px', paddingTop: '16px', borderTop: '1px solid var(--border-light)' }}>
               <span style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-main)', display: 'block', marginBottom: '10px' }}>
                 Cor de Fundo Personalizada (Modo Claro)

@@ -10,6 +10,7 @@ export default function PaywallModal() {
     isPaywallOpen, 
     closePaywall, 
     currentUser, 
+    userProfile,
     isPro,
     subscriptionStatus,
     churnRisk
@@ -39,6 +40,11 @@ export default function PaywallModal() {
   if (!isPaywallOpen) return null;
 
   const handleStartCheckout = async () => {
+    if (isPro || userProfile?.plano === 'premium') {
+      setCheckoutStatus('success');
+      return;
+    }
+
     if (!currentUser?.id || !currentUser?.email) {
       setErrorMessage('Você precisa estar logado para iniciar o checkout.');
       setCheckoutStatus('error');
@@ -167,27 +173,34 @@ export default function PaywallModal() {
           <button
             type="button"
             onClick={handleStartCheckout}
+            disabled={isPro || userProfile?.plano === 'premium'}
             style={{ 
               width: '100%', 
               padding: '16px', 
               borderRadius: '8px', 
               border: 'none', 
-              backgroundColor: isReactivation ? '#10b981' : '#3b82f6', 
-              color: 'white', 
+              backgroundColor: (isPro || userProfile?.plano === 'premium')
+                ? 'var(--border-medium)'
+                : (isReactivation ? '#10b981' : '#3b82f6'), 
+              color: (isPro || userProfile?.plano === 'premium') ? 'var(--text-light)' : 'white', 
               fontWeight: '700', 
               fontSize: '15px', 
-              cursor: 'pointer', 
+              cursor: (isPro || userProfile?.plano === 'premium') ? 'not-allowed' : 'pointer', 
               display: 'flex', 
               alignItems: 'center', 
               justifyContent: 'center', 
               gap: '10px', 
               transition: 'all 0.2s', 
-              boxShadow: isReactivation 
-                ? '0 4px 20px rgba(16, 185, 129, 0.25)' 
-                : '0 4px 20px rgba(0, 115, 230, 0.25)' 
+              boxShadow: (isPro || userProfile?.plano === 'premium')
+                ? 'none'
+                : (isReactivation 
+                  ? '0 4px 20px rgba(16, 185, 129, 0.25)' 
+                  : '0 4px 20px rgba(0, 115, 230, 0.25)')
             }}
           >
-            {isReactivation ? 'Retomar MyFlowDay Pro com Desconto ⚡' : 'Assinar MyFlowDay Pro ⚡'}
+            {(isPro || userProfile?.plano === 'premium') 
+              ? 'Você já possui uma assinatura Premium ativa' 
+              : (isReactivation ? 'Retomar MyFlowDay Pro com Desconto ⚡' : 'Assinar MyFlowDay Pro ⚡')}
             <ExternalLink size={16} />
           </button>
 

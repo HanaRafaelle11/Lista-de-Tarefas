@@ -5,7 +5,7 @@ import { useAppContext } from '../contexts/AppContext';
 initMercadoPago('TEST-335ed727-9096-42ae-948f-fbff929c3571');
 
 export default function Checkout() {
-  const { currentUser } = useAppContext();
+  const { currentUser, isPro, userProfile } = useAppContext();
   const [status, setStatus] = useState(null);
   const [error, setError] = useState(null);
 
@@ -104,7 +104,31 @@ export default function Checkout() {
         <span style={{ fontSize: '18px', fontWeight: '800', color: '#10b981' }}>R$ 14,90 / mês</span>
       </div>
 
-      {status === 'success' ? (
+      {(isPro || userProfile?.plano === 'premium') ? (
+        <div style={{ textAlign: 'center', padding: '20px 0' }}>
+          <span style={{ fontSize: '48px' }}>⚡</span>
+          <h3 style={{ color: '#10b981', margin: '16px 0 8px' }}>Assinatura Premium Ativa</h3>
+          <p style={{ fontSize: '14px', color: 'rgba(255, 255, 255, 0.7)', lineHeight: '1.5' }}>
+            Você já possui uma assinatura Premium ativa. Aproveite todos os recursos Pro!
+          </p>
+          <button
+            onClick={() => window.location.href = '/?app=1'}
+            style={{
+              marginTop: '20px',
+              backgroundColor: '#3b82f6',
+              color: '#ffffff',
+              border: 'none',
+              borderRadius: '8px',
+              padding: '12px 24px',
+              fontWeight: '600',
+              cursor: 'pointer',
+              width: '100%'
+            }}
+          >
+            Ir para o App
+          </button>
+        </div>
+      ) : status === 'success' ? (
         <div style={{ textAlign: 'center', padding: '20px 0' }}>
           <span style={{ fontSize: '48px' }}>🎉</span>
           <h3 style={{ color: '#10b981', margin: '16px 0 8px' }}>Assinatura Ativada!</h3>
