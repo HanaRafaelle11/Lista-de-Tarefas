@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { initMercadoPago, Payment } from '@mercadopago/sdk-react';
 import { useAppContext } from '../contexts/AppContext';
 
-initMercadoPago('TEST-335ed727-9096-42ae-948f-fbff929c3571');
+initMercadoPago('APP_USR-0e956167-6396-46c8-be7e-adb93cc9ae11');
 
 export default function Checkout() {
   const { currentUser, isPro, userProfile } = useAppContext();
