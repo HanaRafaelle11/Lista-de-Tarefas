@@ -10,16 +10,20 @@
     "preview": "vite preview",
     "check:schema": "node scripts/checkSchemaDrift.js",
     "check:infra": "node scripts/preDeployValidation.js",
-    "check:sanity": "node scripts/runSanityTest.js"
+    "check:sanity": "node scripts/runSanityTest.js",
+    "test:billing": "node scripts/runBillingTests.js"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.108.1",
+    "@mercadopago/sdk-react": "^1.0.7",
+    "@supabase/supabase-js": "^2.108.2",
+    "dotenv": "^17.4.2",
     "emoji-picker-react": "^4.19.1",
     "lucide-react": "^1.17.0",
     "mobile-drag-drop": "^3.0.0-rc.0",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
-    "react-joyride": "^3.1.0"
+    "react-joyride": "^3.1.0",
+    "web-push": "^3.6.7"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

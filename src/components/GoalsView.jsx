@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Plus, Target, Sprout, Award, Archive, Sparkles, X, AlertTriangle } from 'lucide-react';
+import { Plus, Target, Sprout, Award, Archive, Sparkles, X, AlertTriangle, Trash2 } from 'lucide-react';
 import GoalCard from './GoalCard';
 import GoalModal from './GoalModal';
 import GoalTasksModal from './GoalTasksModal';
@@ -65,12 +65,17 @@ export default function GoalsView() {
     handleLinkTask: onLinkTask,
     handleUnlinkTask: onUnlinkTask,
     handleUpdateTask: onUpdateTask,
+    handleDeleteTask: onDeleteTask,
     habitsManager,
     shouldOpenGoalModal,
     setShouldOpenGoalModal,
     isInitializing,
     handleBulkDeleteCompletedGoals,
-    handleDeleteAllGoals
+    handleDeleteAllGoals,
+    deletedGoals,
+    setActiveTab,
+    setSettingsTab,
+    handleDuplicateGoal
   } = useAppContext();
   const [filter, setFilter] = useState('active');
   const [isGoalModalOpen, setIsGoalModalOpen] = useState(false);
@@ -169,6 +174,15 @@ export default function GoalsView() {
     onUpdateGoal(id, { status: 'active' });
   };
 
+  // Confirmar e excluir objetivo
+  const handleDeleteGoalWithConfirm = (id) => {
+    if (window.confirm("Tem certeza que deseja excluir este objetivo por completo?")) {
+      onDeleteGoal(id);
+      setIsGoalModalOpen(false);
+      setEditingGoal(null);
+    }
+  };
+
   // Abrir modal de gerenciamento de tarefas
   const handleManageTasks = (goal) => {
     setManagingGoal(goal);
@@ -253,17 +267,42 @@ export default function GoalsView() {
       <HabitsWidget habitsManager={habitsManager} goals={goals} />
 
       {/* ── Filtros ──────────────────────────────────────── */}
-      <div className="goals-filter-row">
-        {filters.map(({ key, label }) => (
-          <button
-            key={key}
-            onClick={() => setFilter(key)}
-            className={`goals-filter-pill ${filter === key ? 'active' : ''}`}
-          >
-            {label}
-            <span className="goals-filter-count">{counts[key]}</span>
-          </button>
-        ))}
+      <div className="goals-filter-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', flexWrap: 'wrap', gap: '8px' }}>
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+          {filters.map(({ key, label }) => (
+            <button
+              key={key}
+              onClick={() => setFilter(key)}
+              className={`goals-filter-pill ${filter === key ? 'active' : ''}`}
+            >
+              {label}
+              <span className="goals-filter-count">{counts[key]}</span>
+            </button>
+          ))}
+        </div>
+        <button
+          onClick={() => {
+            setSettingsTab('trash');
+            setActiveTab('settings');
+          }}
+          className="goals-filter-pill"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            backgroundColor: 'transparent',
+            border: '1px dashed var(--border-medium)',
+            cursor: 'pointer',
+            padding: '6px 12px',
+            borderRadius: '20px',
+            color: 'var(--text-light)',
+            transition: 'all 0.2s ease'
+          }}
+          title="Ver objetivos na lixeira"
+        >
+          <Trash2 size={14} />
+          <span>Lixeira ({deletedGoals?.length || 0})</span>
+        </button>
       </div>
 
       {/* Botões de limpeza em lote de objetivos */}
@@ -415,8 +454,9 @@ export default function GoalsView() {
               onComplete={handleCompleteGoal}
               onArchive={handleArchiveGoal}
               onRestore={handleRestoreGoal}
-              onDelete={onDeleteGoal}
+              onDelete={handleDeleteGoalWithConfirm}
               onManageTasks={handleManageTasks}
+              onDuplicate={handleDuplicateGoal}
             />
           ))}
         </div>
@@ -428,7 +468,7 @@ export default function GoalsView() {
           isOpen={isGoalModalOpen}
           onClose={() => { setIsGoalModalOpen(false); setEditingGoal(null); }}
           onSave={handleSaveGoal}
-          onDelete={() => { onDeleteGoal(editingGoal.id); setIsGoalModalOpen(false); setEditingGoal(null); }}
+          onDelete={() => handleDeleteGoalWithConfirm(editingGoal.id)}
           editingGoal={editingGoal}
         />
       )}
@@ -441,6 +481,7 @@ export default function GoalsView() {
         linkedTaskIds={managingGoalLinkedTaskIds}
         onLink={(taskId) => onLinkTask(managingGoal.id, taskId)}
         onUnlink={(taskId) => onUnlinkTask(managingGoal.id, taskId)}
+        onDeleteTask={onDeleteTask}
       />
 
       {/* Drawer de Templates de Objetivos */}
@@ -482,7 +523,8 @@ export default function GoalsView() {
                   description: template.description,
                   color: template.color,
                   icon: template.icon,
-                  actions: template.actions
+                  actions: template.actions,
+                  category: template.category
                 });
                 setIsTemplatesDrawerOpen(false);
               };

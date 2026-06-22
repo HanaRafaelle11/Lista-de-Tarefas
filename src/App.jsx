@@ -1,5 +1,6 @@
 import React, { useEffect, lazy, Suspense } from 'react';
 import { AppProvider, useAppContext } from './contexts/AppContext';
+import { useNotifications } from './hooks/useNotifications';
 import { supabase } from './supabaseClient';
 import Auth from './components/Auth';
 import Navbar from './components/Navbar';
@@ -19,6 +20,8 @@ const EvolutionView = lazy(() => import('./components/EvolutionView'));
 const PerformanceView = lazy(() => import('./components/PerformanceView'));
 const ProfileView = lazy(() => import('./components/ProfileView'));
 const AdminDashboard = lazy(() => import('./components/AdminDashboard'));
+const RevenueDashboard = lazy(() => import('./pages/RevenueDashboard'));
+const Checkout = lazy(() => import('./pages/Checkout'));
 const SettingsView = lazy(() => import('./components/SettingsView'));
 const CoachView = lazy(() => import('./components/CoachView'));
 const DevToolsWidget = lazy(() => import('./components/DevToolsWidget'));
@@ -32,17 +35,17 @@ const getLegalRoute = (path, hash) => {
   const cleanHash = hash.toLowerCase().replace(/^#\/?/, '');
 
   if (
-    cleanPath === '/privacidade' || 
-    cleanPath === '/privacy' || 
-    cleanHash === 'privacidade' || 
+    cleanPath === '/privacidade' ||
+    cleanPath === '/privacy' ||
+    cleanHash === 'privacidade' ||
     cleanHash === 'privacy'
   ) {
     return 'privacy';
   }
   if (
-    cleanPath === '/termos' || 
-    cleanPath === '/terms' || 
-    cleanHash === 'termos' || 
+    cleanPath === '/termos' ||
+    cleanPath === '/terms' ||
+    cleanHash === 'termos' ||
     cleanHash === 'terms'
   ) {
     return 'terms';
@@ -73,6 +76,15 @@ function AppLayout() {
     triggerUndo,
     handleLogout
   } = useAppContext();
+
+  const notifications = useNotifications();
+
+  // Renew push notification registration on mount/refresh if enabled
+  useEffect(() => {
+    if (currentUser?.id && notifications.isEnabled) {
+      notifications.subscribeToPush(currentUser.id);
+    }
+  }, [currentUser?.id, notifications.isEnabled, notifications]);
 
   // Custom routing states
   const [currentPath, setCurrentPath] = React.useState(() => window.location.pathname);
@@ -180,6 +192,19 @@ function AppLayout() {
     );
   }
 
+  if (currentPath === '/checkout') {
+    return (
+      <Suspense fallback={
+        <div className="app-loading-container">
+          <div className="app-loading-spinner" />
+          <span className="app-loading-text">Carregando Checkout...</span>
+        </div>
+      }>
+        <Checkout />
+      </Suspense>
+    );
+  }
+
   // Tela de erro caso falte configuração do Supabase (Bloco 2)
   if (supabaseConfigError) {
     return (
@@ -221,6 +246,39 @@ function AppLayout() {
           <button className="demo-banner-btn" onClick={handleLogout}>Criar Conta</button>
         </div>
       )}
+      {!isPro && (
+        <div className="pro-upgrade-banner" style={{
+          backgroundColor: 'rgba(16, 185, 129, 0.15)',
+          borderBottom: '1px solid rgba(16, 185, 129, 0.25)',
+          padding: '10px',
+          textAlign: 'center',
+          fontSize: '13px',
+          color: '#10b981',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          gap: '10px'
+        }}>
+          <span>Desbloqueie o MyFlowDay Pro para ter acesso a relatórios e análises completas!</span>
+          <button 
+            onClick={() => {
+              window.history.pushState(null, '', '/checkout');
+              window.dispatchEvent(new Event('popstate'));
+            }}
+            style={{
+              backgroundColor: '#10b981',
+              color: '#ffffff',
+              border: 'none',
+              borderRadius: '4px',
+              padding: '4px 12px',
+              fontWeight: '600',
+              cursor: 'pointer'
+            }}
+          >
+            Quero ser Pro ⚡
+          </button>
+        </div>
+      )}
       <SyncStatusBanner />
       <Navbar />
 
@@ -232,16 +290,17 @@ function AppLayout() {
               <span className="app-loading-text">Carregando...</span>
             </div>
           }>
-            {activeTab === 'home'        && <HomeView />}
-            {activeTab === 'goals'       && <GoalsView />}
-            {activeTab === 'tasks'       && <TodoView />}
-            {activeTab === 'focus'       && <FocusView />}
-            {activeTab === 'coach'       && <CoachView />}
-            {activeTab === 'analytics'   && <EvolutionView />}
+            {activeTab === 'home' && <HomeView />}
+            {activeTab === 'goals' && <GoalsView />}
+            {activeTab === 'tasks' && <TodoView />}
+            {activeTab === 'focus' && <FocusView />}
+            {activeTab === 'coach' && <CoachView />}
+            {activeTab === 'analytics' && <EvolutionView />}
             {activeTab === 'performance' && <PerformanceView />}
-            {activeTab === 'profile'     && <ProfileView />}
-            {activeTab === 'admin'       && <AdminDashboard />}
-            {activeTab === 'settings'    && <SettingsView />}
+            {activeTab === 'profile' && <ProfileView />}
+            {activeTab === 'admin' && <AdminDashboard />}
+            {activeTab === 'revenue' && <RevenueDashboard />}
+            {activeTab === 'settings' && <SettingsView />}
           </Suspense>
         </div>
       </main>
@@ -249,10 +308,10 @@ function AppLayout() {
       {undoAction && (
         <div className="undo-toast animate-scale-up">
           <span className="undo-toast-text">
-            {undoAction.type === 'task' 
-              ? 'Tarefa removida' 
-              : undoAction.type === 'bulk_task' 
-                ? 'Tarefas removidas' 
+            {undoAction.type === 'task'
+              ? 'Tarefa removida'
+              : undoAction.type === 'bulk_task'
+                ? 'Tarefas removidas'
                 : undoAction.type === 'bulk_goal'
                   ? 'Objetivos removidos'
                   : 'Objetivo removido'}

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Calendar, Trash2, Edit2, AlertCircle, CalendarPlus, Check, Repeat } from 'lucide-react';
+import { Calendar, Trash2, Edit2, AlertCircle, CalendarPlus, Check, Repeat, Unlink, Copy } from 'lucide-react';
 import { parseTaskMetadata, formatDescriptionWithoutMetadata, useAppContext } from '../contexts/AppContext';
 import CategoryIcon from './CategoryIcon';
 
@@ -16,7 +16,7 @@ function exportTaskToCalendar(task) {
 }
 
 
-export default function TodoItem({ item, onToggleComplete, onDelete, onEdit }) {
+export default function TodoItem({ item, onToggleComplete, onDelete, onEdit, goalId, onUnlinkGoal, onDuplicate }) {
   const [calExported, setCalExported] = useState(false);
   const { isPro, openPaywall } = useAppContext();
 
@@ -139,6 +139,32 @@ export default function TodoItem({ item, onToggleComplete, onDelete, onEdit }) {
         >
           {calExported ? <Check size={15} /> : <CalendarPlus size={15} />}
         </button>
+
+        {goalId && onUnlinkGoal && (
+          <button 
+            onClick={() => {
+              if (window.confirm("Deseja realmente desvincular esta tarefa do objetivo? Ela voltará para a lista de tarefas gerais.")) {
+                onUnlinkGoal(goalId, item.id);
+              }
+            }}
+            className="todo-item-action-btn unlink-btn"
+            title="Desvincular do objetivo"
+            aria-label="Desvincular do objetivo"
+            style={{ color: 'var(--text-light)' }}
+          >
+            <Unlink size={15} />
+          </button>
+        )}
+
+        {onDuplicate && (
+          <button 
+            onClick={() => onDuplicate(item.id)}
+            className="todo-item-action-btn duplicate-btn"
+            title="Duplicar tarefa"
+          >
+            <Copy size={14} />
+          </button>
+        )}
 
         {!item.completed && (
           <button 

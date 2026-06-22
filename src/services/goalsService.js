@@ -10,6 +10,7 @@ const mapGoal = (g) => {
   if (!g) return null;
   let start_time = g.start_time || null;
   let end_time = g.end_time || null;
+  let attachments = [];
   let cleanDescription = g.description || '';
 
   if (g.description && g.description.includes('--flowday-meta--')) {
@@ -19,6 +20,7 @@ const mapGoal = (g) => {
       const meta = JSON.parse(parts[1].trim());
       if (meta.start_time !== undefined) start_time = meta.start_time;
       if (meta.end_time !== undefined) end_time = meta.end_time;
+      if (meta.attachments !== undefined) attachments = meta.attachments;
     } catch (e) {
       console.warn('[goalsService.mapGoal] Falha ao analisar metadados:', e.message);
     }
@@ -28,8 +30,19 @@ const mapGoal = (g) => {
     description: cleanDescription,
     start_time,
     end_time,
+    attachments,
     deletedAt: g.deleted_at || null
   };
+};
+
+const buildEnrichedDescription = (description, start_time, end_time, attachments = []) => {
+  const cleanDesc = (description || '').split('--flowday-meta--')[0].trim();
+  const serializedMeta = {
+    start_time: start_time || null,
+    end_time: end_time || null,
+    attachments: attachments || []
+  };
+  return `${cleanDesc}\n\n--flowday-meta--\n${JSON.stringify(serializedMeta)}`;
 };
 
 export const goalsService = {
@@ -96,16 +109,25 @@ export const goalsService = {
     const clientId = goalData.id || generateId();
     const nowIso = new Date().toISOString();
 
+    const cleanDesc = (goalData.description || '').split('--flowday-meta--')[0].trim();
+    const enrichedDescription = buildEnrichedDescription(
+      goalData.description,
+      goalData.start_time,
+      goalData.end_time,
+      goalData.attachments
+    );
+
     const optimistic = {
       id:          clientId,
       user_id:     userId,
       title:       goalData.title,
-      description: goalData.description || '',
+      description: cleanDesc,
       color:       goalData.color || '#4A654E',
       icon:        goalData.icon || '🎯',
       target_date: goalData.target_date || null,
       start_time:  goalData.start_time || null,
       end_time:    goalData.end_time || null,
+      attachments: goalData.attachments || [],
       status:      'active',
       created_at:  nowIso,
       updated_at:  nowIso,
@@ -127,7 +149,7 @@ export const goalsService = {
           id:          clientId,
           user_id:     userId,
           title:       goalData.title,
-          description: goalData.description || '',
+          description: enrichedDescription,
           color:       goalData.color || '#4A654E',
           icon:        goalData.icon || '🎯',
           target_date: goalData.target_date || null,
@@ -142,13 +164,6 @@ export const goalsService = {
         // Se falhar por coluna inexistente, usar o fallback de serialização na descrição
         if (error.code === 'PGRST204' || (error.message && error.message.includes("end_time"))) {
           console.warn('[goalsService.create] Colunas de horário não encontradas. Usando fallback de descrição...');
-          const serializedMeta = {
-            start_time: goalData.start_time || null,
-            end_time: goalData.end_time || null
-          };
-          const cleanDesc = (goalData.description || '').split('\n\n--flowday-meta--')[0].trim();
-          const enrichedDescription = `${cleanDesc}\n\n--flowday-meta--\n${JSON.stringify(serializedMeta)}`;
-
           const { data: fallbackData, error: fallbackError } = await supabase
             .from('goals')
             .insert([{
@@ -185,9 +200,10 @@ export const goalsService = {
     requireUser(userId);
     const nowIso = new Date().toISOString();
 
+    let existing = null;
     // 1. Salva no cache do localDB imediatamente
     try {
-      const existing = await localDB.get('goals', id);
+      existing = await localDB.get('goals', id);
       if (existing) {
         const updated = {
           ...existing,
@@ -201,11 +217,24 @@ export const goalsService = {
     }
 
     try {
+      const existingStart = existing?.start_time || null;
+      const existingEnd = existing?.end_time || null;
+      const existingAttachments = existing?.attachments || [];
+      const existingDesc = existing?.description || '';
+
+      const nextStart = updates.start_time !== undefined ? updates.start_time : existingStart;
+      const nextEnd = updates.end_time !== undefined ? updates.end_time : existingEnd;
+      const nextAttachments = updates.attachments !== undefined ? updates.attachments : existingAttachments;
+      const nextDesc = updates.description !== undefined ? updates.description : existingDesc;
+
+      const enrichedDescription = buildEnrichedDescription(nextDesc, nextStart, nextEnd, nextAttachments);
+
       const payload = {};
-      ['title', 'description', 'color', 'icon', 'status', 'start_time', 'end_time'].forEach((k) => {
+      ['title', 'color', 'icon', 'status', 'start_time', 'end_time'].forEach((k) => {
         if (updates[k] !== undefined) payload[k] = updates[k];
       });
       if (updates.target_date !== undefined) payload.target_date = updates.target_date || null;
+      payload.description = enrichedDescription;
 
       // 1. Tentar atualizar diretamente com colunas nativas
       const { data, error } = await supabase
@@ -221,40 +250,6 @@ export const goalsService = {
         if (error.code === 'PGRST204' || (error.message && error.message.includes("end_time"))) {
           console.warn('[goalsService.update] Colunas de horário não encontradas. Usando fallback de descrição...');
           
-          // Buscar objetivo atual para recuperar metadados existentes
-          const { data: currentGoal, error: fetchErr } = await supabase
-            .from('goals')
-            .select('description')
-            .eq('id', id)
-            .eq('user_id', userId)
-            .single();
-
-          if (fetchErr) throw fetchErr;
-
-          let currentStart = null;
-          let currentEnd = null;
-          let currentDescClean = currentGoal.description || '';
-
-          if (currentGoal.description && currentGoal.description.includes('--flowday-meta--')) {
-            const parts = currentGoal.description.split('--flowday-meta--');
-            currentDescClean = parts[0].trim();
-            try {
-              const meta = JSON.parse(parts[1].trim());
-              currentStart = meta.start_time || null;
-              currentEnd = meta.end_time || null;
-            } catch (e) {}
-          }
-
-          const updatedDescClean = updates.description !== undefined ? (updates.description || '') : currentDescClean;
-          const nextStart = updates.start_time !== undefined ? updates.start_time : currentStart;
-          const nextEnd = updates.end_time !== undefined ? updates.end_time : currentEnd;
-
-          const serializedMeta = {
-            start_time: nextStart,
-            end_time: nextEnd
-          };
-          const enrichedDescription = `${updatedDescClean}\n\n--flowday-meta--\n${JSON.stringify(serializedMeta)}`;
-
           const fallbackPayload = {};
           if (updates.title !== undefined) fallbackPayload.title = updates.title;
           fallbackPayload.description = enrichedDescription;
@@ -463,6 +458,51 @@ export const goalsService = {
       return { error: null };
     } catch (error) {
       console.error('[goalsService.unlinkTask]', error);
+      return { error };
+    }
+  },
+
+  /**
+   * Faz upload de um anexo de objetivo para o Supabase Storage.
+   */
+  uploadAttachment: async (userId, file) => {
+    requireUser(userId);
+
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    if (file.size > maxSize) {
+      throw new Error('O tamanho máximo do arquivo é de 5MB.');
+    }
+
+    try {
+      const sanitizedName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+      const uniqueId = generateId();
+      const filePath = `${userId}/objectives/${uniqueId}_${sanitizedName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: true
+        });
+
+      if (uploadError) throw uploadError;
+
+      const { data } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(filePath);
+
+      const publicUrl = data.publicUrl;
+
+      return {
+        name: file.name,
+        url: publicUrl,
+        type: file.type,
+        size: file.size,
+        path: filePath,
+        error: null
+      };
+    } catch (error) {
+      console.warn('[goalsService.uploadAttachment] Falha no upload:', error.message);
       return { error };
     }
   },

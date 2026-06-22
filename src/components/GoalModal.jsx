@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import * as LucideIcons from 'lucide-react';
 import { X, Plus, Trash2, Smile, Calendar, Clock, Target, Edit2 } from 'lucide-react';
 import EmojiPicker from 'emoji-picker-react';
+import { useAppContext } from '../contexts/AppContext';
 
 const COLORS = [
   { value: 'hsl(243, 75%, 59%)', label: 'Foco & Trabalho (Índigo)' },
@@ -64,6 +65,7 @@ function GoalIcon({ name, size = 18, className = '' }) {
 }
 
 export default function GoalModal({ isOpen, onClose, onSave, onDelete, editingGoal }) {
+  const { currentUser } = useAppContext();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [color, setColor] = useState('hsl(243, 75%, 59%)');
@@ -75,6 +77,40 @@ export default function GoalModal({ isOpen, onClose, onSave, onDelete, editingGo
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const emojiPickerRef = useRef(null);
 
+  const [attachments, setAttachments] = useState([]);
+  const [uploading, setUploading] = useState(false);
+
+  const handleFileChange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setUploading(true);
+    try {
+      const { goalsService } = await import('../services/goalsService');
+      const result = await goalsService.uploadAttachment(currentUser.id, file);
+      if (result.error) {
+        alert('Erro ao fazer upload do arquivo: ' + result.error.message);
+      } else {
+        setAttachments(prev => [...prev, {
+          name: result.name,
+          url: result.url,
+          type: result.type,
+          size: result.size,
+          path: result.path
+        }]);
+      }
+    } catch (err) {
+      alert('Erro inesperado: ' + err.message);
+    } finally {
+      setUploading(false);
+      e.target.value = '';
+    }
+  };
+
+  const handleRemoveAttachment = (idx) => {
+    setAttachments(prev => prev.filter((_, i) => i !== idx));
+  };
+
   // Preenche o formulário ao editar
   useEffect(() => {
     if (editingGoal) {
@@ -85,6 +121,7 @@ export default function GoalModal({ isOpen, onClose, onSave, onDelete, editingGo
       setTargetDate(editingGoal.target_date || '');
       setStartTime(editingGoal.start_time || '');
       setEndTime(editingGoal.end_time || '');
+      setAttachments(editingGoal.attachments || []);
     } else {
       setTitle('');
       setDescription('');
@@ -94,6 +131,7 @@ export default function GoalModal({ isOpen, onClose, onSave, onDelete, editingGo
       setStartTime('');
       setEndTime('');
       setActions([]);
+      setAttachments([]);
     }
   }, [editingGoal, isOpen]);
 
@@ -138,6 +176,7 @@ export default function GoalModal({ isOpen, onClose, onSave, onDelete, editingGo
       start_time: startTime || null,
       end_time: endTime || null,
       actions: actions.filter(a => a.trim() !== ''),
+      attachments,
     });
   };
 
@@ -211,6 +250,87 @@ export default function GoalModal({ isOpen, onClose, onSave, onDelete, editingGo
               onChange={e => setDescription(e.target.value)}
               className="todo-modal-textarea"
             />
+          </div>
+
+          {/* Anexos */}
+          <div className="todo-form-group" style={{ marginBottom: '16px' }}>
+            <label className="todo-form-label" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <LucideIcons.Paperclip size={14} />
+              <span>Anexos (imagens ou arquivos)</span>
+            </label>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <input 
+                type="file" 
+                onChange={handleFileChange} 
+                disabled={uploading} 
+                style={{ display: 'none' }} 
+                id="goal-file-upload" 
+              />
+              <label 
+                htmlFor="goal-file-upload" 
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '8px 12px',
+                  borderRadius: 'var(--radius-sm)',
+                  border: '1px dashed var(--border-medium)',
+                  backgroundColor: 'var(--bg-app)',
+                  cursor: uploading ? 'not-allowed' : 'pointer',
+                  fontSize: '13px',
+                  color: 'var(--text-light)',
+                  textAlign: 'center',
+                  justifyContent: 'center',
+                  transition: 'border-color 0.2s'
+                }}
+              >
+                {uploading ? 'Fazendo upload...' : '📎 Escolher arquivo / imagem (Max 5MB)'}
+              </label>
+
+              {attachments.length > 0 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '4px' }}>
+                  {attachments.map((file, idx) => (
+                    <div 
+                      key={idx} 
+                      style={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        justifyContent: 'space-between', 
+                        padding: '6px 10px', 
+                        borderRadius: 'var(--radius-sm)', 
+                        backgroundColor: 'var(--primary-glow)', 
+                        border: '1px solid var(--border-light)' 
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', overflow: 'hidden' }}>
+                        <LucideIcons.FileText size={14} style={{ color: 'var(--primary)' }} />
+                        <span style={{ fontSize: '12px', color: 'var(--text-main)', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', maxWidth: '240px' }}>
+                          {file.name}
+                        </span>
+                        <span style={{ fontSize: '10px', color: 'var(--text-light)' }}>
+                          ({(file.size / 1024).toFixed(1)} KB)
+                        </span>
+                      </div>
+                      <button 
+                        type="button" 
+                        onClick={() => handleRemoveAttachment(idx)} 
+                        style={{ 
+                          background: 'none', 
+                          border: 'none', 
+                          color: 'var(--danger)', 
+                          cursor: 'pointer', 
+                          fontSize: '11px',
+                          display: 'flex',
+                          alignItems: 'center'
+                        }}
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Seleção de Ícone — Lucide Grid + Emoji Picker Fallback */}

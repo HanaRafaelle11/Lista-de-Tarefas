@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import * as LucideIcons from 'lucide-react';
-import { X, Search, Check, Link2, Unlink, Tag, AlertCircle, Calendar, Inbox } from 'lucide-react';
+import { X, Search, Check, Link2, Unlink, Tag, AlertCircle, Calendar, Inbox, Trash2 } from 'lucide-react';
 
 function GoalIcon({ name, size = 18, className = '' }) {
   if (!name) return null;
@@ -41,7 +41,7 @@ function formatDate(dateStr) {
 
 const priorityColors = { Alta: '#ef4444', Média: '#f59e0b', Baixa: '#10b981' };
 
-export default function GoalTasksModal({ isOpen, onClose, goal, tasks, linkedTaskIds, onLink, onUnlink }) {
+export default function GoalTasksModal({ isOpen, onClose, goal, tasks, linkedTaskIds, onLink, onUnlink, onDeleteTask }) {
   const [search, setSearch] = useState('');
 
   const pendingTasks = useMemo(
@@ -143,17 +143,49 @@ export default function GoalTasksModal({ isOpen, onClose, goal, tasks, linkedTas
                       </div>
                     </div>
 
-                    {/* Ação */}
-                    <button
-                      className={`goal-task-action-btn ${isLinked ? 'unlink' : 'link'}`}
-                      onClick={e => {
-                        e.stopPropagation();
-                        isLinked ? onUnlink(task.id) : onLink(task.id);
-                      }}
-                      title={isLinked ? 'Desvincular' : 'Vincular'}
-                    >
-                      {isLinked ? <Unlink size={14} /> : <Link2 size={14} />}
-                    </button>
+                    {/* Ações */}
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                      <button
+                        className={`goal-task-action-btn ${isLinked ? 'unlink' : 'link'}`}
+                        onClick={e => {
+                          e.stopPropagation();
+                          isLinked ? onUnlink(task.id) : onLink(task.id);
+                        }}
+                        title={isLinked ? 'Desvincular' : 'Vincular'}
+                        style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+                      >
+                        {isLinked ? <Unlink size={14} /> : <Link2 size={14} />}
+                      </button>
+
+                      {isLinked && onDeleteTask && (
+                        <button
+                          className="goal-task-action-btn delete"
+                          onClick={e => {
+                            e.stopPropagation();
+                            if (window.confirm("Deseja realmente apagar esta tarefa por completo? Ela será removida de toda a lista de tarefas.")) {
+                              onDeleteTask(task.id);
+                            }
+                          }}
+                          title="Excluir tarefa por completo"
+                          style={{
+                            background: 'transparent',
+                            border: 'none',
+                            cursor: 'pointer',
+                            color: '#ef4444',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            padding: '4px',
+                            borderRadius: '4px',
+                            transition: 'background-color 0.2s'
+                          }}
+                          onMouseEnter={e => e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.08)'}
+                          onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      )}
+                    </div>
                   </div>
                 );
               })

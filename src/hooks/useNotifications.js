@@ -1,21 +1,26 @@
 import { useState, useEffect, useCallback } from 'react';
+import { supabase } from '../supabaseClient';
 
 const STORAGE_KEY = 'notifications_enabled';
 
+// Helper to convert base64 VAPID public key to Uint8Array for PushManager
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding)
+    .replace(/-/g, '+')
+    .replace(/_/g, '/');
+
+  const rawData = window.atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+
+  for (let i = 0; i < rawData.length; ++i) {
+    outputArray[i] = rawData.charCodeAt(i);
+  }
+  return outputArray;
+}
+
 /**
- * useNotifications — Hook para gerenciar browser notifications (foreground) opt-in
- * 
- * Usa a Notification API nativa do browser.
- * Persiste a preferência do usuário no localStorage.
- * 
- * Retorna:
- *   isSupported   — boolean: browser suporta Notification API
- *   permission    — 'default' | 'granted' | 'denied'
- *   isEnabled     — boolean: usuário ativou notificações
- *   requestPermission — async fn: solicita permissão e ativa
- *   disableNotifications — fn: desativa (sem revogar permissão do browser)
- *   sendNotification — fn(title, options): envia uma notificação
- *   type          - 'foreground'
+ * useNotifications — Hook para gerenciar browser notifications (foreground) e Web Push (background)
  */
 export function useNotifications() {
   const isSupported = typeof window !== 'undefined' && 'Notification' in window;
@@ -39,7 +44,6 @@ export function useNotifications() {
       localStorage.setItem(STORAGE_KEY, 'false');
     }
 
-    // M2 — Detecta revogação de permissão em tempo real (browsers modernos)
     let permissionStatus = null;
     if (navigator.permissions?.query) {
       navigator.permissions.query({ name: 'notifications' }).then((status) => {
@@ -61,8 +65,72 @@ export function useNotifications() {
     };
   }, [isSupported]);
 
+  /**
+   * Subscribes the current user to Web Push notifications.
+   */
+  const subscribeToPush = useCallback(async (userId) => {
+    if (!isSupported || !('serviceWorker' in navigator) || !('PushManager' in window) || !userId) {
+      return null;
+    }
 
-  const requestPermission = useCallback(async () => {
+    try {
+      const registration = await navigator.serviceWorker.ready;
+      if (!registration.pushManager) {
+        console.warn('[Push] PushManager is not supported by the Service Worker.');
+        return null;
+      }
+
+      const publicVapidKey = import.meta.env.VITE_PUBLIC_VAPID_KEY;
+      if (!publicVapidKey) {
+        console.warn('[Push] VITE_PUBLIC_VAPID_KEY not defined in environment');
+        return null;
+      }
+
+      let subscription = await registration.pushManager.getSubscription();
+
+      if (!subscription) {
+        subscription = await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(publicVapidKey)
+        });
+      }
+
+      const subJson = subscription.toJSON();
+      const p256dh = subJson.keys?.p256dh;
+      const auth = subJson.keys?.auth;
+      const endpoint = subJson.endpoint;
+
+      if (endpoint && p256dh && auth) {
+        const { error } = await supabase
+          .from('push_subscriptions')
+          .upsert({
+            user_id: userId,
+            endpoint,
+            p256dh,
+            auth,
+            created_at: new Date().toISOString()
+          }, {
+            onConflict: 'endpoint'
+          });
+
+        if (error) {
+          console.error('[Push] Error saving subscription in database:', error.message);
+        } else {
+          console.log('[Push] Subscription synchronized successfully.');
+        }
+      }
+
+      return subscription;
+    } catch (err) {
+      console.error('[Push] Error in Web Push subscription flow:', err);
+      return null;
+    }
+  }, [isSupported]);
+
+  /**
+   * Requests permission and subscribes to push notifications if granted.
+   */
+  const requestPermission = useCallback(async (userId) => {
     if (!isSupported) return false;
     try {
       const result = await Notification.requestPermission();
@@ -70,6 +138,9 @@ export function useNotifications() {
       if (result === 'granted') {
         setIsEnabled(true);
         localStorage.setItem(STORAGE_KEY, 'true');
+        if (userId) {
+          await subscribeToPush(userId);
+        }
         return true;
       }
       setIsEnabled(false);
@@ -79,11 +150,31 @@ export function useNotifications() {
       console.error('[useNotifications] Erro ao solicitar permissão:', e);
       return false;
     }
-  }, [isSupported]);
+  }, [isSupported, subscribeToPush]);
 
-  const disableNotifications = useCallback(() => {
+  /**
+   * Disables notifications and cleans up subscriptions on the device and server.
+   */
+  const disableNotifications = useCallback(async (userId) => {
     setIsEnabled(false);
     localStorage.setItem(STORAGE_KEY, 'false');
+
+    if (userId && 'serviceWorker' in navigator) {
+      try {
+        const registration = await navigator.serviceWorker.ready;
+        const subscription = await registration.pushManager.getSubscription();
+        if (subscription) {
+          await subscription.unsubscribe();
+          await supabase
+            .from('push_subscriptions')
+            .delete()
+            .eq('endpoint', subscription.endpoint);
+          console.log('[Push] Unsubscribed and deleted from database.');
+        }
+      } catch (err) {
+        console.warn('[Push] Error during unsubscription cleanup:', err);
+      }
+    }
   }, []);
 
   const sendNotification = useCallback(async (title, options = {}) => {
@@ -116,8 +207,8 @@ export function useNotifications() {
     isEnabled,
     requestPermission,
     disableNotifications,
+    subscribeToPush,
     sendNotification,
-    type: 'foreground',
+    type: 'push'
   };
 }
-

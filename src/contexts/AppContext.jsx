@@ -14,7 +14,7 @@ import { habitsService }        from '../services/habitsService';
 import { achievementsService }  from '../services/achievementsService';
 import { eventsService }        from '../services/eventsService';
 import { profilesService }      from '../services/profilesService';
-import { ACHIEVEMENTS, calcStats } from '../hooks/useAchievements';
+import { ACHIEVEMENTS, calcStats, calcStreak } from '../hooks/useAchievements';
 import { subscribe as subscribeSync, initSyncQueue, generateId } from '../services/syncQueue';
 import { initEventBatcher } from '../services/eventBatcher';
 import { generateInsights } from '../intelligence/productIntelligence';
@@ -106,6 +106,131 @@ export function AppProvider({ children }) {
 
   // ── Navegação ────────────────────────────────────────────────────────────────
   const [activeTab, setActiveTab] = useState('home');
+  const [settingsTab, setSettingsTab] = useState('general'); // 'general' | 'trash'
+
+  // ── Som Ambiente Global ──
+  const [ambientSoundFile, setAmbientSoundFile] = useState(() => localStorage.getItem('flowday_ambient_sound_file') || 'none');
+  const [ambientSoundVolume, setAmbientSoundVolume] = useState(() => {
+    const vol = localStorage.getItem('flowday_ambient_sound_volume');
+    return vol !== null ? Number(vol) : 0.5;
+  });
+  const [isAmbientPlaying, setIsAmbientPlaying] = useState(() => localStorage.getItem('flowday_ambient_is_playing') === 'true');
+  const [audioBlocked, setAudioBlocked] = useState(false);
+
+  const ambientAudioRef = useRef(null);
+  const fadeIntervalRef = useRef(null);
+
+  // Inicializa o elemento Audio e configura loops
+  useEffect(() => {
+    const audio = new Audio();
+    audio.loop = true;
+    audio.onerror = (e) => {
+      console.warn('[Audio] Erro ao reproduzir som ambiente:', e);
+    };
+    ambientAudioRef.current = audio;
+
+    return () => {
+      if (ambientAudioRef.current) {
+        ambientAudioRef.current.pause();
+        ambientAudioRef.current = null;
+      }
+      if (fadeIntervalRef.current) {
+        clearInterval(fadeIntervalRef.current);
+      }
+    };
+  }, []);
+
+  // Controla reprodução do som ambiente com fades suaves
+  useEffect(() => {
+    const audio = ambientAudioRef.current;
+    if (!audio) return;
+
+    if (ambientSoundFile === 'none') {
+      audio.pause();
+      audio.src = '';
+      setIsAmbientPlaying(false);
+      setAudioBlocked(false);
+      localStorage.setItem('flowday_ambient_is_playing', 'false');
+      localStorage.setItem('flowday_ambient_sound_file', 'none');
+      return;
+    }
+
+    const targetSrc = `${window.location.origin}/assets/audio/${ambientSoundFile}`;
+    if (audio.src !== targetSrc) {
+      audio.src = targetSrc;
+      audio.load();
+    }
+
+    localStorage.setItem('flowday_ambient_sound_file', ambientSoundFile);
+    localStorage.setItem('flowday_ambient_sound_volume', String(ambientSoundVolume));
+    localStorage.setItem('flowday_ambient_is_playing', String(isAmbientPlaying));
+
+    if (fadeIntervalRef.current) {
+      clearInterval(fadeIntervalRef.current);
+      fadeIntervalRef.current = null;
+    }
+
+    if (isAmbientPlaying) {
+      audio.volume = 0;
+      audio.play()
+        .then(() => {
+          setAudioBlocked(false);
+          const step = 0.05;
+          const intervalMs = 50;
+          fadeIntervalRef.current = setInterval(() => {
+            if (!ambientAudioRef.current) return;
+            const nextVol = audio.volume + step;
+            if (nextVol >= ambientSoundVolume) {
+              audio.volume = ambientSoundVolume;
+              clearInterval(fadeIntervalRef.current);
+              fadeIntervalRef.current = null;
+            } else {
+              audio.volume = nextVol;
+            }
+          }, intervalMs);
+        })
+        .catch(e => {
+          if (e.name === 'NotAllowedError') {
+            setAudioBlocked(true);
+            setIsAmbientPlaying(false);
+            console.info('[Audio] Autoplay bloqueado pelo navegador.');
+          } else {
+            console.error('[Audio] Erro ao tocar som ambiente:', e);
+          }
+        });
+    } else {
+      const step = 0.05;
+      const intervalMs = 50;
+      const startVol = audio.volume;
+      if (startVol > 0 && !audio.paused) {
+        fadeIntervalRef.current = setInterval(() => {
+          if (!ambientAudioRef.current) return;
+          const nextVol = audio.volume - step;
+          if (nextVol <= 0) {
+            audio.volume = 0;
+            audio.pause();
+            clearInterval(fadeIntervalRef.current);
+            fadeIntervalRef.current = null;
+          } else {
+            audio.volume = nextVol;
+          }
+        }, intervalMs);
+      } else {
+        audio.pause();
+        audio.volume = 0;
+      }
+    }
+  }, [ambientSoundFile, isAmbientPlaying]);
+
+  // Sincroniza volume ao arrastar slider se não estiver no meio do fade
+  useEffect(() => {
+    const audio = ambientAudioRef.current;
+    if (!audio || ambientSoundFile === 'none') return;
+    if (!fadeIntervalRef.current) {
+      audio.volume = ambientSoundVolume;
+    }
+    localStorage.setItem('flowday_ambient_sound_volume', String(ambientSoundVolume));
+  }, [ambientSoundVolume, ambientSoundFile]);
   const [shouldOpenGoalModal, setShouldOpenGoalModal] = useState(false);
 
   // ── Tema ─────────────────────────────────────────────────────────────────────
@@ -175,8 +300,10 @@ export function AppProvider({ children }) {
   const [isPro, setIsPro] = useState(false);
   const [isPaywallOpen, setIsPaywallOpen] = useState(false);
   const [paywallSource, setPaywallSource] = useState('');
-  const [subscriptionStatus, setSubscriptionStatus] = useState('free'); // 'active', 'canceled', 'free'
+  const [subscriptionStatus, setSubscriptionStatus] = useState('free'); // 'ACTIVE', 'CANCELED', 'PAST_DUE', 'TRIALING'
   const [subscriptionPlan, setSubscriptionPlan] = useState('free'); // 'pro', 'free'
+  const [churnScore, setChurnScore] = useState(0);
+  const [churnRisk, setChurnRisk] = useState('low');
 
   // Determina se usuário logado é administrador
   const isAdmin = useMemo(() => {
@@ -186,34 +313,7 @@ export function AppProvider({ children }) {
   }, [currentUser]);
 
   const loadSubscription = useCallback(async (userId) => {
-    if (!userId) {
-      setIsPro(false);
-      setSubscriptionStatus('free');
-      setSubscriptionPlan('free');
-      return;
-    }
-    try {
-      const { data, error } = await supabase
-        .from('subscriptions')
-        .select('status, plan')
-        .eq('user_id', userId)
-        .maybeSingle();
-      if (!error && data) {
-        const active = data.status === 'active';
-        setIsPro(active);
-        setSubscriptionStatus(data.status);
-        setSubscriptionPlan(data.plan || 'pro');
-      } else {
-        setIsPro(false);
-        setSubscriptionStatus('free');
-        setSubscriptionPlan('free');
-      }
-    } catch (err) {
-      console.warn('[AppContext] Erro ao carregar assinatura:', err.message);
-      setIsPro(false);
-      setSubscriptionStatus('free');
-      setSubscriptionPlan('free');
-    }
+    // A assinatura agora é derivada do userProfile carregado por loadProfile e atualizado em tempo real.
   }, []);
 
   // ── Categorias Customizadas (SaaS) ──────────────────────────────────────────
@@ -748,6 +848,40 @@ export function AppProvider({ children }) {
     };
   }, [runSilentHealthCheck]);
 
+  // ── Verificação centralizada server-side do plano (Zero Trust) ──
+  const checkServerAccess = useCallback(async (userId) => {
+    if (!userId) {
+      setIsPro(false);
+      setSubscriptionStatus('free');
+      setSubscriptionPlan('free');
+      setChurnScore(0);
+      setChurnRisk('low');
+      return false;
+    }
+    try {
+      const response = await fetch(`/api/access/check?userId=${userId}`);
+      if (response.ok) {
+        const data = await response.json();
+        const active = !!data.isPro;
+        
+        // Só atualiza se realmente mudar, prevenindo loops de re-render
+        setIsPro(prev => prev !== active ? active : prev);
+        setSubscriptionStatus(prev => prev !== (data.status || 'free').toUpperCase() ? (data.status || 'free').toUpperCase() : prev);
+        setSubscriptionPlan(prev => prev !== (data.plano || 'free') ? (data.plano || 'free') : prev);
+        
+        if (data.churn) {
+          setChurnScore(prev => prev !== data.churn.score ? data.churn.score : prev);
+          setChurnRisk(prev => prev !== data.churn.risk ? data.churn.risk : prev);
+        }
+
+        return active;
+      }
+    } catch (err) {
+      console.warn('[AppContext] Erro ao verificar acesso no servidor:', err.message);
+    }
+    return false;
+  }, []);
+
   // 2. Efeito central de carga de dados baseado em currentUser?.id
   useEffect(() => {
     if (!currentUser?.id) {
@@ -789,6 +923,7 @@ export function AppProvider({ children }) {
           loadNotifications(userId),
           rehydrateUserState(userId),
           purgeTrash(userId),
+          checkServerAccess(userId), // Validação Zero-Trust na carga inicial
         ]);
       } catch (err) {
         console.error('[AppContext] Erro ao carregar dados do usuário:', err);
@@ -800,7 +935,103 @@ export function AppProvider({ children }) {
     return () => {
       active = false;
     };
-  }, [currentUser?.id, loadTasks, loadGoals, loadAchievements, loadHabits, loadProfile, loadSubscription, loadNotifications, rehydrateUserState, purgeTrash]);
+  }, [currentUser?.id, loadTasks, loadGoals, loadAchievements, loadHabits, loadProfile, loadSubscription, loadNotifications, rehydrateUserState, purgeTrash, checkServerAccess]);
+
+  // ── Projeção do Estado de Assinatura a partir do Perfil do Usuário ──
+  useEffect(() => {
+    if (userProfile) {
+      const plano = userProfile.plano || 'free';
+      const status = userProfile.assinatura_status || 'free';
+      const expiresAt = userProfile.assinatura_expira_em;
+      
+      // Valida se o plano é premium, status ativo e não expirou
+      const active = plano === 'premium' && 
+                     status === 'active' && 
+                     (!expiresAt || new Date(expiresAt) > new Date());
+      
+      // Só atualiza os estados locais se eles realmente mudarem de valor para evitar renders/loops desnecessários
+      setIsPro(prev => prev !== active ? active : prev);
+      setSubscriptionStatus(prev => prev !== status ? status : prev);
+      setSubscriptionPlan(prev => prev !== plano ? plano : prev);
+    } else {
+      setIsPro(prev => prev !== false ? false : prev);
+      setSubscriptionStatus(prev => prev !== 'free' ? 'free' : prev);
+      setSubscriptionPlan(prev => prev !== 'free' ? 'free' : prev);
+    }
+  }, [userProfile]);
+
+  // ── Temporizador de Expiração em Background para Revalidação Automática (Validade Real) ──
+  useEffect(() => {
+    if (!isPro || !userProfile?.assinatura_expira_em) return;
+
+    const checkExpiration = () => {
+      const expiresAt = new Date(userProfile.assinatura_expira_em);
+      if (expiresAt <= new Date()) {
+        console.log('[BillingEngine] Assinatura expirou em background. Invalidando acesso.');
+        setIsPro(false);
+        setSubscriptionStatus('CANCELED'); // Máquina de Estados
+        setSubscriptionPlan('free');
+      }
+    };
+
+    // Executa a cada 60 segundos
+    const intervalId = setInterval(checkExpiration, 60000);
+    
+    // Executa imediatamente na inicialização/mudança
+    checkExpiration();
+
+    return () => clearInterval(intervalId);
+  }, [isPro, userProfile?.assinatura_expira_em]);
+
+  // ── Escuta em tempo real (Supabase Realtime) para atualizações de faturamento no Perfil ──
+  useEffect(() => {
+    if (!currentUser?.id || currentUser.isDemo) return;
+
+    console.log(`[Realtime] Iniciando canal de escuta para perfil do usuário ${currentUser.id}`);
+    const channel = supabase
+      .channel(`profile-realtime-${currentUser.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'profiles',
+          filter: `id=eq.${currentUser.id}`
+        },
+        (payload) => {
+          console.log('[Realtime] Perfil do usuário atualizado remotamente:', payload.new);
+          
+          setUserProfile(prevProfile => {
+            if (!prevProfile) return payload.new;
+            
+            // Só atualiza o estado do perfil se houver mudanças estruturais ou de cobrança
+            const planoChanged = prevProfile.plano !== payload.new.plano;
+            const statusChanged = prevProfile.assinatura_status !== payload.new.assinatura_status;
+            const expiraChanged = prevProfile.assinatura_expira_em !== payload.new.assinatura_expira_em;
+            const infoChanged = prevProfile.name !== payload.new.name || 
+                                prevProfile.nickname !== payload.new.nickname ||
+                                prevProfile.avatar_url !== payload.new.avatar_url ||
+                                prevProfile.bio !== payload.new.bio ||
+                                prevProfile.profession !== payload.new.profession;
+            
+            if (planoChanged || statusChanged || expiraChanged || infoChanged) {
+              return payload.new;
+            }
+            
+            return prevProfile; // Previne re-render se o registro for idêntico
+          });
+
+          // Revalida a assinatura com o servidor para obter a decisão final oficial (Zero Trust!)
+          checkServerAccess(currentUser.id);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      console.log(`[Realtime] Removendo canal de escuta para perfil do usuário ${currentUser.id}`);
+      supabase.removeChannel(channel);
+    };
+  }, [currentUser?.id, currentUser?.isDemo, checkServerAccess]);
 
   // ═══════════════════════════════════════════════════════════════════════════
   // CONQUISTAS — detecção automática (PROTEGIDA contra false positives)
@@ -1398,12 +1629,182 @@ export function AppProvider({ children }) {
     }
   }, [currentUser?.id, logEvent]);
 
+  // Duplicar Objetivos e Tarefas
+  const handleDuplicateGoal = useCallback(async (goalId) => {
+    if (!currentUser?.id) return;
+    const origin = goals.find(g => g.id === goalId);
+    if (!origin) return;
+
+    const duplicatePayload = {
+      title: `${origin.title} (Cópia)`,
+      description: origin.description || '',
+      color: origin.color || '#4A654E',
+      icon: origin.icon || '🎯',
+      target_date: origin.target_date || null,
+      start_time: origin.start_time || null,
+      end_time: origin.end_time || null,
+      attachments: origin.attachments || [],
+      status: 'active'
+    };
+
+    if (currentUser.isDemo) {
+      const demoGoalId = 'dg_' + Date.now();
+      const newGoal = {
+        id: demoGoalId,
+        user_id: currentUser.id,
+        title: duplicatePayload.title,
+        description: duplicatePayload.description,
+        color: duplicatePayload.color,
+        icon: duplicatePayload.icon,
+        target_date: duplicatePayload.target_date,
+        start_time: duplicatePayload.start_time,
+        end_time: duplicatePayload.end_time,
+        attachments: duplicatePayload.attachments,
+        status: 'active',
+        deletedAt: null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+      const updatedGoals = [newGoal, ...goals];
+      setGoals(updatedGoals);
+      localStorage.setItem(`flowday_demo_goals_${currentUser.id}`, JSON.stringify({ goals: updatedGoals, goalTasks }));
+      logEvent('goal_created', { title: duplicatePayload.title, duplicated_from: goalId });
+      addNotification('goal', 'Objetivo duplicado', duplicatePayload.title);
+      return;
+    }
+
+    const tempGoalId = 'temp_goal_' + Date.now();
+    const optimisticGoal = {
+      id: tempGoalId,
+      user_id: currentUser.id,
+      title: duplicatePayload.title,
+      description: duplicatePayload.description,
+      color: duplicatePayload.color,
+      icon: duplicatePayload.icon,
+      target_date: duplicatePayload.target_date,
+      start_time: duplicatePayload.start_time,
+      end_time: duplicatePayload.end_time,
+      attachments: duplicatePayload.attachments,
+      status: 'active',
+      deletedAt: null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+
+    setGoals((prev) => [optimisticGoal, ...prev]);
+
+    try {
+      const { data } = await goalsService.create(currentUser.id, duplicatePayload);
+      if (data) {
+        setGoals((prev) => prev.map(g => g.id === tempGoalId ? data : g));
+        logEvent('goal_created', { title: duplicatePayload.title, duplicated_from: goalId });
+        addNotification('goal', 'Objetivo duplicado', duplicatePayload.title);
+      } else {
+        setGoals((prev) => prev.filter(g => g.id !== tempGoalId));
+      }
+    } catch (err) {
+      setGoals((prev) => prev.filter(g => g.id !== tempGoalId));
+    }
+  }, [currentUser, goals, goalTasks, logEvent, addNotification]);
+
+  const handleDuplicateTask = useCallback(async (taskId) => {
+    if (!currentUser?.id) return;
+    const origin = tasks.find(t => t.id === taskId);
+    if (!origin) return;
+
+    const linkedGoal = goalTasks.find(gt => gt.task_id === taskId);
+    const goal_id = linkedGoal ? linkedGoal.goal_id : null;
+
+    const duplicatePayload = {
+      title: `${origin.title} (Cópia)`,
+      description: origin.description || '',
+      category: origin.category || 'Pessoal',
+      priority: origin.priority || 'Média',
+      dueDate: origin.dueDate || '',
+      completed: false
+    };
+
+    if (currentUser.isDemo) {
+      const demoId = 'dt_' + Date.now();
+      const newTask = {
+        id: demoId,
+        user_id: currentUser.id,
+        title: duplicatePayload.title,
+        description: duplicatePayload.description,
+        category: duplicatePayload.category,
+        priority: duplicatePayload.priority,
+        dueDate: duplicatePayload.dueDate,
+        completed: false,
+        createdAt: new Date().toISOString(),
+        completedAt: null,
+        updatedAt: new Date().toISOString(),
+        deletedAt: null
+      };
+      const updated = [newTask, ...tasks];
+      setTasks(updated);
+      localStorage.setItem(`flowday_demo_tasks_${currentUser.id}`, JSON.stringify(updated));
+      logEvent('task_created', { taskId: demoId, title: duplicatePayload.title, duplicated_from: taskId });
+      
+      if (goal_id) {
+        const updatedGT = [...goalTasks, { goal_id, task_id: demoId }];
+        setGoalTasks(updatedGT);
+        localStorage.setItem(`flowday_demo_goals_${currentUser.id}`, JSON.stringify({ goals, goalTasks: updatedGT }));
+      }
+      addNotification('task', 'Tarefa duplicada', duplicatePayload.title);
+      return;
+    }
+
+    const tempId = 'temp_task_' + Date.now();
+    const optimisticTask = {
+      id: tempId,
+      user_id: currentUser.id,
+      title: duplicatePayload.title,
+      description: duplicatePayload.description,
+      category: duplicatePayload.category,
+      priority: duplicatePayload.priority,
+      dueDate: duplicatePayload.dueDate,
+      completed: false,
+      createdAt: new Date().toISOString(),
+      completedAt: null,
+      updatedAt: new Date().toISOString(),
+      deletedAt: null
+    };
+
+    setTasks((prev) => [optimisticTask, ...prev]);
+    if (goal_id) {
+      setGoalTasks((prev) => [...prev, { goal_id, task_id: tempId }]);
+    }
+
+    try {
+      const { data } = await tasksService.create(currentUser.id, duplicatePayload);
+      if (data) {
+        setTasks((prev) => prev.map(t => t.id === tempId ? data : t));
+        logEvent('task_created', { taskId: data.id, title: duplicatePayload.title, duplicated_from: taskId });
+        if (goal_id) {
+          await goalsService.linkTask(goal_id, data.id);
+          setGoalTasks((prev) => prev.map(gt => gt.task_id === tempId ? { goal_id, task_id: data.id } : gt));
+        }
+        addNotification('task', 'Tarefa duplicada', duplicatePayload.title);
+      } else {
+        setTasks((prev) => prev.filter(t => t.id !== tempId));
+        if (goal_id) {
+          setGoalTasks((prev) => prev.filter(gt => gt.task_id !== tempId));
+        }
+      }
+    } catch (err) {
+      setTasks((prev) => prev.filter(t => t.id !== tempId));
+      if (goal_id) {
+        setGoalTasks((prev) => prev.filter(gt => gt.task_id !== tempId));
+      }
+    }
+  }, [currentUser, tasks, goals, goalTasks, logEvent, addNotification]);
+
   // ═══════════════════════════════════════════════════════════════════════════
   // GOALS CRUD
   // ═══════════════════════════════════════════════════════════════════════════
   const handleAddGoal = useCallback(async (goalData) => {
     if (!currentUser?.id) return;
-    const { actions, ...goalPayload } = goalData;
+    const { actions, category, ...goalPayload } = goalData;
     
     if (currentUser.isDemo) {
       const demoGoalId = 'dg_' + Date.now();
@@ -1436,7 +1837,7 @@ export function AppProvider({ children }) {
             user_id: currentUser.id,
             title: actionTitle,
             description: '',
-            category: 'Trabalho',
+            category: category || 'Trabalho',
             priority: 'Média',
             dueDate: null,
             completed: false,
@@ -1485,7 +1886,7 @@ export function AppProvider({ children }) {
             user_id: currentUser.id,
             title: actionTitle,
             description: '',
-            category: 'Trabalho',
+            category: category || 'Trabalho',
             priority: 'Média',
             dueDate: null,
             completed: false,
@@ -1515,7 +1916,7 @@ export function AppProvider({ children }) {
             const taskData = {
               title: ta.task.title,
               description: '',
-              category: 'Trabalho',
+              category: category || 'Trabalho',
               priority: 'Média',
               dueDate: null,
             };
@@ -1844,73 +2245,24 @@ export function AppProvider({ children }) {
   }, []);
 
   const handleUpgradeSuccess = useCallback(async (simulationType) => {
-    if (!currentUser?.id) return;
-    try {
-      logEvent('upgrade_clicked', { method: simulationType });
-      logEvent('upgrade_started', { method: simulationType });
-      
-      const { error } = await supabase
-        .from('subscriptions')
-        .upsert({
-          user_id: currentUser.id,
-          status: 'active',
-          plan: 'pro',
-          price: 14.90,
-          updated_at: new Date().toISOString()
-        }, { onConflict: 'user_id' });
-        
-      if (error) throw error;
-      
-      setIsPro(true);
-      setSubscriptionStatus('active');
-      setSubscriptionPlan('pro');
-      
-      logEvent('upgrade_completed', { method: simulationType });
-      logEvent('subscription_started', { method: simulationType });
-    } catch (e) {
-      console.error('Erro ao ativar assinatura Pro:', e);
-      throw e;
-    }
-  }, [currentUser, logEvent]);
+    console.warn('[AppContext] O upgrade direto pelo frontend foi desativado. Apenas o webhook do Mercado Pago pode atualizar o plano.');
+  }, []);
 
   const handleCancelSubscription = useCallback(async () => {
     if (!currentUser?.id) return;
     try {
       logEvent('downgrade_clicked');
-      logEvent('downgrade_started');
-      
-      const { error } = await supabase
-        .from('subscriptions')
-        .upsert({
-          user_id: currentUser.id,
-          status: 'canceled',
-          plan: 'free',
-          price: 0.00,
-          updated_at: new Date().toISOString()
-        }, { onConflict: 'user_id' });
-        
-      if (error) throw error;
-      
-      setIsPro(false);
-      setSubscriptionStatus('canceled');
-      setSubscriptionPlan('free');
-      
-      logEvent('downgrade_completed');
-      logEvent('subscription_cancelled');
+      // Apenas exibe instruções de cancelamento
+      alert('Para gerenciar ou cancelar sua assinatura, acesse sua conta do Mercado Pago e gerencie seus pagamentos autorizados.');
     } catch (e) {
-      console.error('Erro ao cancelar assinatura:', e);
-      throw e;
+      console.error('Erro ao registrar clique de downgrade:', e);
     }
   }, [currentUser, logEvent]);
 
   const handleSimulateUpgrade = useCallback(async () => {
     if (!currentUser?.id) return;
-    if (isPro) {
-      await handleCancelSubscription();
-    } else {
-      openPaywall('admin_simulation');
-    }
-  }, [currentUser, isPro, handleCancelSubscription, openPaywall]);
+    openPaywall('admin_simulation');
+  }, [currentUser, openPaywall]);
 
   // ═══════════════════════════════════════════════════════════════════════════
   // HABITS — interface compatível com useHabits anterior
@@ -2395,6 +2747,9 @@ export function AppProvider({ children }) {
     closePaywall,
     handleUpgradeSuccess,
     handleCancelSubscription,
+    checkServerAccess,
+    churnScore,
+    churnRisk,
 
     // Profiles additions
     userProfile,
@@ -2405,6 +2760,24 @@ export function AppProvider({ children }) {
     // Sync / Resiliência
     syncStatus,
     syncWarnings,
+
+    // Settings state
+    settingsTab,
+    setSettingsTab,
+
+    // Audio global states
+    ambientSoundFile,
+    setAmbientSoundFile,
+    ambientSoundVolume,
+    setAmbientSoundVolume,
+    isAmbientPlaying,
+    setIsAmbientPlaying,
+    audioBlocked,
+    setAudioBlocked,
+
+    // Duplications
+    handleDuplicateGoal,
+    handleDuplicateTask,
 
     // Growth & Intelligence
     userState,

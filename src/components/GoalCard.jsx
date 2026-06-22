@@ -1,6 +1,6 @@
 import React from 'react';
 import * as LucideIcons from 'lucide-react';
-import { Calendar, MoreVertical, Trash2, Archive, CheckCircle, RotateCcw, Link2, Edit2, Award, Clock } from 'lucide-react';
+import { Calendar, MoreVertical, Trash2, Archive, CheckCircle, RotateCcw, Link2, Edit2, Award, Clock, Copy, FileText, Paperclip } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 
 // Componente para renderizar ícone do objetivo (Lucide ou Emoji)
@@ -44,7 +44,7 @@ function formatDate(dateStr) {
 }
 
 // Menu de ações suspenso
-function GoalMenu({ goal, onEdit, onComplete, onArchive, onRestore, onDelete }) {
+function GoalMenu({ goal, onEdit, onComplete, onArchive, onRestore, onDelete, onDuplicate }) {
   const [open, setOpen] = useState(false);
   const menuRef = useRef(null);
 
@@ -74,6 +74,11 @@ function GoalMenu({ goal, onEdit, onComplete, onArchive, onRestore, onDelete }) 
               <button className="goal-menu-item" onClick={() => { onEdit(goal); setOpen(false); }} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <Edit2 size={13} /> Editar
               </button>
+              {onDuplicate && (
+                <button className="goal-menu-item" onClick={() => { onDuplicate(goal.id); setOpen(false); }} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <Copy size={13} /> Duplicar
+                </button>
+              )}
               <button className="goal-menu-item" onClick={() => { onComplete(goal.id); setOpen(false); }}>
                 <CheckCircle size={14} /> Concluir objetivo
               </button>
@@ -106,6 +111,7 @@ export default function GoalCard({
   onRestore,
   onDelete,
   onManageTasks,
+  onDuplicate,
 }) {
   const totalTasks = linkedTasks.length;
   const completedTasks = linkedTasks.filter(t => t.completed).length;
@@ -138,6 +144,46 @@ export default function GoalCard({
             {goal.description && (
               <p className="goal-card-description">{goal.description}</p>
             )}
+            {goal.attachments && goal.attachments.length > 0 && (
+              <div className="goal-card-attachments" style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '8px' }}>
+                {goal.attachments.map((file, idx) => {
+                  const isImage = file.type && file.type.startsWith('image/');
+                  return (
+                    <a
+                      key={idx}
+                      href={file.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="goal-attachment-chip"
+                      onClick={(e) => e.stopPropagation()}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        fontSize: '11px',
+                        padding: '4px 8px',
+                        borderRadius: '12px',
+                        backgroundColor: 'var(--primary-glow)',
+                        color: 'var(--primary)',
+                        border: '1px solid var(--border-light)',
+                        textDecoration: 'none',
+                        transition: 'all 0.2s ease',
+                      }}
+                      title={`${file.name} (${(file.size / 1024).toFixed(1)} KB)`}
+                    >
+                      {isImage ? (
+                        <div style={{ width: '16px', height: '16px', borderRadius: '2px', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                          <img src={file.url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        </div>
+                      ) : (
+                        <FileText size={12} />
+                      )}
+                      <span style={{ maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{file.name}</span>
+                    </a>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
 
@@ -156,6 +202,7 @@ export default function GoalCard({
             onArchive={onArchive}
             onRestore={onRestore}
             onDelete={onDelete}
+            onDuplicate={onDuplicate}
           />
         </div>
       </div>

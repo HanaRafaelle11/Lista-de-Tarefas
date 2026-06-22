@@ -3,7 +3,21 @@ import { Play, Pause, RotateCcw, CheckCircle2, Moon, Sun, Volume2, Settings, Vol
 import { useAppContext, parseTaskMetadata } from '../contexts/AppContext';
 
 export default function FocusView() {
-  const { tasks, handleToggleComplete, logEvent, isPro, openPaywall } = useAppContext();
+  const {
+    tasks,
+    handleToggleComplete,
+    logEvent,
+    isPro,
+    openPaywall,
+    ambientSoundFile,
+    setAmbientSoundFile,
+    ambientSoundVolume,
+    setAmbientSoundVolume,
+    isAmbientPlaying,
+    setIsAmbientPlaying,
+    audioBlocked,
+    setAudioBlocked
+  } = useAppContext();
   const pendingTasks = tasks.filter(t => !t.completed);
 
   // Estados do Timer
@@ -37,71 +51,6 @@ export default function FocusView() {
   // Estados temporários do painel de configuração
   const [tempFocus, setTempFocus] = useState(focusTime);
   const [tempBreak, setTempBreak] = useState(breakTime);
-
-  // Estados do Áudio Ambiente
-  const [ambientSoundFile, setAmbientSoundFile] = useState(() => localStorage.getItem('flowday_ambient_sound_file') || 'none');
-  const [ambientSoundVolume, setAmbientSoundVolume] = useState(() => Number(localStorage.getItem('flowday_ambient_sound_volume')) || 0.5);
-  const [isAmbientPlaying, setIsAmbientPlaying] = useState(() => localStorage.getItem('flowday_ambient_is_playing') === 'true');
-  const [audioBlocked, setAudioBlocked] = useState(false); // Rastreia bloqueio de autoplay do navegador
-  const audioRef = useRef(null);
-
-  // Efeito para controle do áudio ambiente
-  useEffect(() => {
-    if (!audioRef.current) return;
-
-    if (ambientSoundFile === 'none') {
-      audioRef.current.pause();
-      audioRef.current.src = '';
-      setIsAmbientPlaying(false);
-      setAudioBlocked(false);
-      localStorage.setItem('flowday_ambient_is_playing', 'false');
-      localStorage.setItem('flowday_ambient_sound_file', 'none');
-      return;
-    }
-
-    const currentSrc = audioRef.current.src;
-    const newSrc = `/assets/audio/${ambientSoundFile}`;
-    
-    if (!currentSrc.includes(newSrc)) {
-      audioRef.current.src = newSrc;
-      audioRef.current.load();
-      if (isAmbientPlaying) {
-        audioRef.current.play()
-          .then(() => setAudioBlocked(false))
-          .catch(e => {
-            if (e.name === 'NotAllowedError') {
-              // Bloqueio de autoplay do navegador — requer interação do usuário
-              setAudioBlocked(true);
-              setIsAmbientPlaying(false);
-              console.info('[Audio] Autoplay bloqueado pelo navegador. Aguardando interação do usuário.');
-            } else {
-              console.error('[Audio] Erro ao tocar áudio ambiente:', e);
-            }
-          });
-      }
-    } else if (isAmbientPlaying) {
-      audioRef.current.play()
-        .then(() => setAudioBlocked(false))
-        .catch(e => {
-          if (e.name === 'NotAllowedError') {
-            setAudioBlocked(true);
-            setIsAmbientPlaying(false);
-          } else {
-            console.error('[Audio] Erro ao tocar áudio ambiente:', e);
-          }
-        });
-    } else {
-      audioRef.current.pause();
-    }
-
-    audioRef.current.volume = ambientSoundVolume;
-    audioRef.current.loop = true;
-
-    localStorage.setItem('flowday_ambient_sound_file', ambientSoundFile);
-    localStorage.setItem('flowday_ambient_sound_volume', ambientSoundVolume);
-    localStorage.setItem('flowday_ambient_is_playing', String(isAmbientPlaying));
-
-  }, [ambientSoundFile, ambientSoundVolume, isAmbientPlaying]);
 
   useEffect(() => {
     if (showConfig) {
@@ -316,17 +265,7 @@ export default function FocusView() {
 
   return (
     <div className="focus-view-container animate-fade-in">
-      {/* Elemento de áudio ambiente (oculto) — erros são tratados com feedback visual */}
-      <audio
-        ref={audioRef}
-        onError={() => {
-          if (ambientSoundFile !== 'none') {
-            setAudioBlocked(true);
-            setIsAmbientPlaying(false);
-            console.warn(`[Audio] Arquivo não encontrado: /assets/audio/${ambientSoundFile}. Coloque o arquivo em public/assets/audio/`);
-          }
-        }}
-      />
+      {/* O áudio ambiente global é controlado de forma persistente através do AppContext */}
 
 
       <div className="tasks-page-header" style={{ marginBottom: '24px' }}>
@@ -482,17 +421,7 @@ export default function FocusView() {
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <button 
                   onClick={() => {
-                    const newPlaying = !isAmbientPlaying;
-                    setIsAmbientPlaying(newPlaying);
-                    // Tenta tocar imediatamente ao clicar (resolve bloqueio de autoplay)
-                    if (newPlaying && audioRef.current && ambientSoundFile !== 'none') {
-                      audioRef.current.play()
-                        .then(() => setAudioBlocked(false))
-                        .catch(e => console.warn('[Audio] Play manual falhou:', e));
-                    } else if (!newPlaying && audioRef.current) {
-                      audioRef.current.pause();
-                      setAudioBlocked(false);
-                    }
+                    setIsAmbientPlaying(!isAmbientPlaying);
                   }}
                   disabled={ambientSoundFile === 'none'}
                   style={{ 

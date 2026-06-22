@@ -89,7 +89,7 @@ const formatarDataBR = (str) => {
 
 
 // Categorizar tarefas
-function categorizeTasks(tasks) {
+function categorizeTasks(tasks, goals = [], goalTasks = []) {
   const today = todayStr();
   const tomorrow = tomorrowStr();
   const endOfWeek = endOfWeekStr();
@@ -123,7 +123,18 @@ function categorizeTasks(tasks) {
     }
 
     if (!task.dueDate) {
-      sections.noDueDate.push(task);
+      // Se não tiver prazo e estiver vinculada a um objetivo ativo, agrupa sob o título do objetivo
+      const link = goalTasks.find(gt => gt.task_id === task.id);
+      const goal = link ? goals.find(g => g.id === link.goal_id && !g.deletedAt) : null;
+      if (goal) {
+        const groupName = goal.title;
+        if (!sections.templateGroups[groupName]) {
+          sections.templateGroups[groupName] = [];
+        }
+        sections.templateGroups[groupName].push(task);
+      } else {
+        sections.noDueDate.push(task);
+      }
       return;
     }
     if (task.dueDate < today) {
@@ -146,8 +157,9 @@ const priorityOrder = { 'Alta': 0, 'Média': 1, 'Baixa': 2 };
 const sortByPriority = (tasks) =>
   [...tasks].sort((a, b) => (priorityOrder[a.priority] ?? 2) - (priorityOrder[b.priority] ?? 2));
 
-function TaskSection({ title, tasks, icon, accent, onEdit, onDelete, onToggle, defaultOpen = true, isOverdue = false }) {
+function TaskSection({ title, tasks, icon, accent, onEdit, onDelete, onToggle, defaultOpen = true, isOverdue = false, goalId, onUnlinkGoal }) {
   const [open, setOpen] = useState(defaultOpen);
+  const { handleDuplicateTask } = useAppContext();
 
   if (tasks.length === 0) return null;
 
@@ -177,6 +189,9 @@ function TaskSection({ title, tasks, icon, accent, onEdit, onDelete, onToggle, d
               onToggleComplete={onToggle}
               onDelete={onDelete}
               onEdit={onEdit}
+              goalId={goalId}
+              onUnlinkGoal={onUnlinkGoal}
+              onDuplicate={handleDuplicateTask}
             />
           ))}
         </div>
@@ -255,9 +270,15 @@ export default function TodoView() {
     habitsManager,
     logEvent,
     goals,
+    goalTasks,
+    handleUnlinkTask,
     isPro,
     openPaywall,
-    hiddenTasksCount
+    hiddenTasksCount,
+    deletedTasks,
+    setActiveTab,
+    setSettingsTab,
+    handleDuplicateTask: onDuplicateTask
   } = useAppContext();
 
   // Estados locais
@@ -604,7 +625,7 @@ export default function TodoView() {
     });
   }, [tasks, filter, searchQuery, categoryFilter]);
 
-  const sections = useMemo(() => categorizeTasks(baseFiltered), [baseFiltered]);
+  const sections = useMemo(() => categorizeTasks(baseFiltered, goals, goalTasks), [baseFiltered, goals, goalTasks]);
 
   // Estatísticas rápidas
   const total = tasks.length;
@@ -721,7 +742,34 @@ export default function TodoView() {
       {/* ── Header da página ──────────────────────────────── */}
       <div className="tasks-page-header" style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
         <div className="tasks-page-title-block">
-          <h1 className="tasks-page-title">Tarefas</h1>
+          <h1 className="tasks-page-title" style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+            <span>Tarefas</span>
+            <button
+              onClick={() => {
+                setSettingsTab('trash');
+                setActiveTab('settings');
+              }}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px',
+                fontSize: '11px',
+                fontWeight: '500',
+                padding: '4px 8px',
+                borderRadius: '12px',
+                backgroundColor: 'rgba(239, 68, 68, 0.08)',
+                color: 'var(--prio-alta-text)',
+                border: '1px solid rgba(239, 68, 68, 0.15)',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                verticalAlign: 'middle'
+              }}
+              title="Ver tarefas excluídas na lixeira"
+            >
+              <Trash2 size={12} />
+              <span>Lixeira ({deletedTasks?.length || 0})</span>
+            </button>
+          </h1>
           <p className="tasks-page-subtitle">
             {active > 0
               ? `${active} pendente${active > 1 ? 's' : ''} · ${rate}% concluído`
@@ -1101,18 +1149,23 @@ export default function TodoView() {
                 onToggle={handleToggleCompleteWithAchievement} // Usar a função com lógica de conquista
                 defaultOpen={false}
               />
-              {Object.entries(sections.templateGroups || {}).map(([templateName, templateTasks]) => (
-                <TaskSection
-                  key={templateName}
-                  title={templateName}
-                  icon={<Sparkles size={15} style={{ color: 'var(--primary)' }} />}
-                  tasks={templateTasks}
-                  onEdit={openEditTaskModal}
-                  onDelete={onDeleteTask}
-                  onToggle={handleToggleCompleteWithAchievement}
-                  defaultOpen={true}
-                />
-              ))}
+              {Object.entries(sections.templateGroups || {}).map(([templateName, templateTasks]) => {
+                const goal = goals.find(g => g.title === templateName && !g.deletedAt);
+                return (
+                  <TaskSection
+                    key={templateName}
+                    title={templateName}
+                    icon={goal ? <span style={{ fontSize: '14px' }}>{getGoalIconEmoji(goal.icon)}</span> : <Sparkles size={15} style={{ color: 'var(--primary)' }} />}
+                    tasks={templateTasks}
+                    onEdit={openEditTaskModal}
+                    onDelete={onDeleteTask}
+                    onToggle={handleToggleCompleteWithAchievement}
+                    defaultOpen={true}
+                    goalId={goal?.id}
+                    onUnlinkGoal={handleUnlinkTask}
+                  />
+                );
+              })}
               <TaskSection
                 title="Concluídas"
                 icon={<CheckCircle size={15} style={{ color: '#22c55e' }} />}
@@ -1173,6 +1226,7 @@ export default function TodoView() {
                             Fazer ➔
                           </button>
                           <div style={{ display: 'flex', gap: '4px' }}>
+                            <button onClick={() => onDuplicateTask(task.id)} className="todo-item-action-btn duplicate-btn" title="Duplicar"><Copy size={13} /></button>
                             <button onClick={() => openEditTaskModal(task)} className="todo-item-action-btn edit-btn"><Edit2 size={13} /></button>
                             <button onClick={() => onDeleteTask(task.id)} className="todo-item-action-btn delete-btn"><Trash2 size={13} /></button>
                           </div>
@@ -1223,6 +1277,7 @@ export default function TodoView() {
                             </button>
                           </div>
                           <div style={{ display: 'flex', gap: '4px' }}>
+                            <button onClick={() => onDuplicateTask(task.id)} className="todo-item-action-btn duplicate-btn" title="Duplicar"><Copy size={13} /></button>
                             <button onClick={() => openEditTaskModal(task)} className="todo-item-action-btn edit-btn"><Edit2 size={13} /></button>
                             <button onClick={() => onDeleteTask(task.id)} className="todo-item-action-btn delete-btn"><Trash2 size={13} /></button>
                           </div>
@@ -1279,7 +1334,10 @@ export default function TodoView() {
                             <button onClick={() => handleMoveKanban(task, 'in_progress')} className="todo-item-action-btn edit-btn" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', padding: '4px 8px' }}>
                               <RotateCcw size={12} /> Reabrir
                             </button>
-                            <button onClick={() => onDeleteTask(task.id)} className="todo-item-action-btn delete-btn"><Trash2 size={13} /></button>
+                            <div style={{ display: 'flex', gap: '4px' }}>
+                              <button onClick={() => onDuplicateTask(task.id)} className="todo-item-action-btn duplicate-btn" title="Duplicar"><Copy size={13} /></button>
+                              <button onClick={() => onDeleteTask(task.id)} className="todo-item-action-btn delete-btn"><Trash2 size={13} /></button>
+                            </div>
                           </div>
                         </div>
                       );

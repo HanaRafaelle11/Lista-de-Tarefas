@@ -87,6 +87,7 @@ export const GOAL_TEMPLATES = [
   {
     id: 'pet_parent',
     title: 'Tutor de Pet Perfeito',
+    category: 'Pets',
     description: 'Criar uma rotina consistente de cuidados, saúde e bem-estar para o seu animal de estimação.',
     icon: '🐾',
     color: '#B5A296',
@@ -100,6 +101,7 @@ export const GOAL_TEMPLATES = [
   {
     id: 'finances',
     title: 'Organizar Finanças Pessoais',
+    category: 'Pessoal',
     description: 'Alcançar controle total sobre receitas, despesas e poupar para investimentos.',
     icon: '💰',
     color: '#10b981',
@@ -113,6 +115,7 @@ export const GOAL_TEMPLATES = [
   {
     id: 'career',
     title: 'Transição de Carreira',
+    category: 'Trabalho',
     description: 'Migrar para uma nova área profissional definindo plano de estudos e networking.',
     icon: '🚀',
     color: '#6366f1',
@@ -126,6 +129,7 @@ export const GOAL_TEMPLATES = [
   {
     id: 'baby_routine_goal',
     title: 'Rotina de Cuidados com o Bebê',
+    category: 'Pessoal',
     description: 'Criar uma rotina saudável e organizada de cuidados com o recém-nascido ou lactente.',
     icon: '👶',
     color: '#F472B6',
@@ -139,6 +143,7 @@ export const GOAL_TEMPLATES = [
   {
     id: 'healthy_life_goal',
     title: 'Vida Saudável e Treinos',
+    category: 'Pessoal',
     description: 'Estabelecer hábitos consistentes de exercícios físicos, alimentação balanceada e hidratação.',
     icon: '💪',
     color: '#F97316',
@@ -152,6 +157,7 @@ export const GOAL_TEMPLATES = [
   {
     id: 'academic_excellence_goal',
     title: 'Excelência Acadêmica',
+    category: 'Estudos',
     description: 'Desenvolver uma rotina eficiente de estudos para provas, trabalhos e projetos acadêmicos.',
     icon: '📚',
     color: '#3B82F6',
@@ -165,6 +171,7 @@ export const GOAL_TEMPLATES = [
   {
     id: 'concurso_approval_goal',
     title: 'Aprovação em Concurso Público',
+    category: 'Estudos',
     description: 'Dedicar-se de forma sistemática à preparação para o cargo dos sonhos com ciclos estruturados.',
     icon: '⚖️',
     color: '#EAB308',

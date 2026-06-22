@@ -1,10 +1,18 @@
 {
   "tables": {
-    "profiles": ["id", "name", "nickname", "profession", "bio", "avatar_url"],
+    "profiles": ["id", "name", "nickname", "profession", "bio", "avatar_url", "plano", "assinatura_status", "assinatura_inicio", "assinatura_expira_em", "mercadopago_customer_id"],
+    "billing_events": ["id", "payment_id", "user_id", "status", "created_at"],
     "events": ["id", "user_id", "event_type", "metadata", "created_at"],
     "tasks": ["id", "user_id", "title", "completed", "completed_at"],
     "schema_migrations": ["id", "version", "applied_at", "checksum"],
-    "subscriptions": ["id", "user_id", "status", "plan", "price", "updated_at", "created_at"]
+    "subscriptions": ["id", "user_id", "status", "plan", "price", "updated_at", "created_at"],
+    "feedback": ["id", "message", "user_id", "user_email", "created_at"],
+    "push_subscriptions": ["id", "user_id", "endpoint", "p256dh", "auth", "created_at"],
+    "vw_mrr_metrics": ["date", "mrr", "arr", "churn_adjusted_mrr"],
+    "vw_churn_metrics": ["month", "churned_users", "churn_rate", "revenue_churn"],
+    "vw_arpu_metrics": ["date", "total_revenue", "active_users", "arpu"],
+    "vw_cohort_retention": ["cohort_month", "period", "active_users", "total_users", "retention_rate"],
+    "vw_growth_metrics": ["month", "new_subscriptions", "reactivations"]
   },
   "storage": {
     "avatars": true

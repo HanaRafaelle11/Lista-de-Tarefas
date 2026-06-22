@@ -28,6 +28,7 @@ export default function Navbar() {
 
   if (isAdmin) {
     navItems.push({ key: 'admin', icon: 'profile', label: 'Admin' });
+    navItems.push({ key: 'revenue', icon: 'performance', label: 'Finanças' });
   }
 
   return (

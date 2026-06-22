@@ -28,13 +28,15 @@ export default function SettingsView() {
     handleRestoreGoal,
     handleDeleteGoalPermanent,
     openPaywall,
-    handleCancelSubscription
+    handleCancelSubscription,
+    logEvent,
+    settingsTab,
+    setSettingsTab
   } = useAppContext();
   const [loading, setLoading] = useState(false);
   const [feedbackText, setFeedbackText] = useState('');
   const [feedbackStatus, setFeedbackStatus] = useState('idle'); // idle, sending, sent, error
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
-  const [settingsTab, setSettingsTab] = useState('general'); // 'general' | 'trash'
   const [isSyncModalOpen, setIsSyncModalOpen] = useState(false);
   const notifications = useNotifications();
 
@@ -480,11 +482,22 @@ export default function SettingsView() {
   };
 
   const handleSendFeedback = async () => {
-    if (!feedbackText.trim()) {
+    const trimmed = feedbackText.trim();
+    if (!trimmed) {
       alert('Por favor, escreva seu feedback antes de enviar.');
       return;
     }
+    if (trimmed.length < 5) {
+      alert('Por favor, digite um feedback com pelo menos 5 caracteres para nos ajudar a entender.');
+      return;
+    }
+    if (trimmed.length > 2000) {
+      alert('O feedback é longo demais (máximo 2000 caracteres).');
+      return;
+    }
+
     setFeedbackStatus('sending');
+    let dbPersisted = false;
     let emailSent = false;
 
     // 1. Tenta inserir na tabela 'feedback' do Supabase
@@ -492,16 +505,34 @@ export default function SettingsView() {
       const { error: dbError } = await supabase
         .from('feedback')
         .insert({
-          message: feedbackText.trim(),
+          message: trimmed,
           user_id: currentUser?.id || null,
           user_email: currentUser?.email || null,
           created_at: new Date().toISOString(),
         });
-      if (dbError) {
-        console.warn('[Feedback] Tabela não encontrada ou falha ao inserir no banco:', dbError.message);
+      if (!dbError) {
+        dbPersisted = true;
+        console.log('[Feedback] Salvo com sucesso na tabela feedback.');
+      } else {
+        console.warn('[Feedback] Falha ao salvar na tabela feedback. Usando fallback de logEvent...', dbError.message);
+        // Fallback: Inserir na tabela de eventos via logEvent do batcher offline-resiliente
+        await logEvent('feedback_submitted', {
+          message: trimmed,
+          user_email: currentUser?.email || null
+        });
+        dbPersisted = true;
       }
     } catch (e) {
       console.warn('[Feedback] Falha ao tentar gravar no banco de dados:', e.message);
+      try {
+        await logEvent('feedback_submitted', {
+          message: trimmed,
+          user_email: currentUser?.email || null
+        });
+        dbPersisted = true;
+      } catch (logErr) {
+        console.warn('[Feedback] Falha ao registrar logEvent:', logErr.message);
+      }
     }
 
     // 2. Tenta disparar a Edge Function do Supabase
@@ -509,7 +540,7 @@ export default function SettingsView() {
       try {
         const { error: funcError } = await supabase.functions.invoke('send-feedback-email', {
           body: {
-            message: feedbackText.trim(),
+            message: trimmed,
             userId: currentUser?.id || null,
             userEmail: currentUser?.email || null,
           }
@@ -530,7 +561,6 @@ export default function SettingsView() {
       try {
         const adminEmails = ['admin@flowday.app', 'rafaelle@flowday.app', 'rafox@flowday.app'];
         const userEmail = currentUser?.email || '';
-        // Envia para o próprio e-mail do admin logado se for teste, ou para o admin principal
         const recipientEmail = adminEmails.includes(userEmail) ? userEmail : 'rafaelle@flowday.app';
         
         console.log(`[Feedback] Enviando e-mail de feedback via FormSubmit para: ${recipientEmail}`);
@@ -543,7 +573,7 @@ export default function SettingsView() {
           body: JSON.stringify({
             name: currentUser?.name || 'Usuário Flowday',
             email: userEmail || 'no-reply@flowday.app',
-            message: feedbackText.trim(),
+            message: trimmed,
             _subject: `Novo Feedback do Flowday - ${userEmail || 'Anônimo'}`,
           })
         });
@@ -565,18 +595,18 @@ export default function SettingsView() {
     }
 
     // 4. Conclusão do envio
-    if (emailSent) {
+    if (dbPersisted || emailSent) {
       setFeedbackText('');
       setFeedbackStatus('sent');
       setTimeout(() => setFeedbackStatus('idle'), 4000);
     } else {
-      // Se ambos falharam (ex: sem internet), salva em localStorage como fallback de emergência
+      // Se todos falharam, salva em localStorage como fallback de emergência
       console.warn('[Feedback] Salvando localmente devido a falhas em todos os canais de envio.');
       try {
         const localFeedbackKey = 'flowday_local_feedback';
         const existing = JSON.parse(localStorage.getItem(localFeedbackKey) || '[]');
         existing.push({
-          message: feedbackText.trim(),
+          message: trimmed,
           user_id: currentUser?.id || 'demo-user',
           user_email: currentUser?.email || 'demo@flowday.app',
           created_at: new Date().toISOString(),
@@ -585,7 +615,7 @@ export default function SettingsView() {
         localStorage.setItem(localFeedbackKey, JSON.stringify(existing));
         
         setFeedbackText('');
-        setFeedbackStatus('sent'); // Exibe "sent" para o usuário indicando gravação (offline)
+        setFeedbackStatus('sent');
         setTimeout(() => setFeedbackStatus('idle'), 4000);
       } catch (localErr) {
         console.error('[Feedback] Erro fatal ao salvar feedback localmente:', localErr);
@@ -909,7 +939,7 @@ export default function SettingsView() {
                 border: isPro ? '1px solid var(--prio-alta-border)' : 'none'
               }}
             >
-              {isPro ? 'Cancelar Assinatura Pro (Simulado)' : 'Ativar Flowday Pro ⚡'}
+              {isPro ? 'Cancelar Assinatura Pro' : 'Assinar Flowday Pro ⚡'}
             </button>
           </div>
         </div>
@@ -1030,13 +1060,12 @@ export default function SettingsView() {
                 </button>
                 <button
                   onClick={async () => {
-                    await handleCancelSubscription();
                     setIsCancelModalOpen(false);
-                    alert("Sua assinatura Pro foi cancelada. Você retornou ao plano gratuito.");
+                    await handleCancelSubscription();
                   }}
                   style={{ width: '100%', padding: '12px', borderRadius: '6px', border: '1px solid var(--border-medium)', backgroundColor: 'transparent', color: '#c06c6c', fontWeight: '600', fontSize: '13px', cursor: 'pointer' }}
                 >
-                  Confirmar Cancelamento (Simulado)
+                  Como Cancelar Assinatura
                 </button>
               </div>
             </div>
