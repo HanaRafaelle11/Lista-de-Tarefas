@@ -2,7 +2,11 @@
 
 import { supabaseAdmin } from '../../lib/supabase.js';
 
-const MERCADOPAGO_ACCESS_TOKEN = process.env.MERCADOPAGO_ACCESS_TOKEN || "TEST-5944910093081420-062100-95d82fd469dc4b7a4f53d7bd44d33269-2394045165";
+const MERCADOPAGO_ACCESS_TOKEN = process.env.MERCADOPAGO_ACCESS_TOKEN;
+
+if (!MERCADOPAGO_ACCESS_TOKEN) {
+  throw new Error("MERCADOPAGO_ACCESS_TOKEN não configurado");
+}
 
 export default async function handler(req, res) {
   // CORS configuration

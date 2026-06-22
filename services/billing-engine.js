@@ -1,189 +1,246 @@
 import { supabaseAdmin } from '../lib/supabase.js';
 import { sendPushNotification } from './push-notification-service.js';
+import { SubscriptionStateMachine } from './subscription-state-machine.js';
+import { DistributedLock } from './distributed-lock.js';
+import { BillingTracer, BillingLogger } from './billing-tracer.js';
 
 /**
- * Billing Engine (Core Logic - Production Consistent)
+ * Billing Engine (Core Logic - Production Hardened)
  * 
  * Camada centralizada única responsável por atualizar o Supabase,
  * gerenciar a máquina de estados de assinaturas e garantir persistência baseada em eventos.
  */
-
 export const BillingEngine = {
   /**
    * Ativa o plano premium para o usuário (Upgrades).
    * Emite obrigatoriamente: user_upgraded.
    */
-  async setUserPremium(userId, customerId, expiresAt) {
+  async setUserPremium(userId, customerId, expiresAt, paymentId = null) {
     if (!userId) throw new Error('[BillingEngine.setUserPremium] userId é obrigatório');
 
-    const now = new Date();
-    const defaultExpiry = new Date();
-    defaultExpiry.setDate(now.getDate() + 30);
+    return await DistributedLock.withLock(`subscription:${userId}`, async () => {
+      const now = new Date();
+      const defaultExpiry = new Date();
+      defaultExpiry.setDate(now.getDate() + 30);
+      const expirationDate = expiresAt ? new Date(expiresAt) : defaultExpiry;
 
-    const expirationDate = expiresAt ? new Date(expiresAt) : defaultExpiry;
+      const { data: currentSub } = await supabaseAdmin
+        .from('subscriptions')
+        .select('status')
+        .eq('user_id', userId)
+        .maybeSingle();
 
-    console.log(`[BillingEngine] [user_upgraded] Ativando Premium (ACTIVE) para o usuário ${userId}. Expira em: ${expirationDate.toISOString()}`);
+      const currentStatus = currentSub?.status || null;
+      const nextStatus = SubscriptionStateMachine.transition(currentStatus, 'active');
 
-    // 1. Atualizar profiles no Supabase (Fonte Única de Verdade)
-    const { data, error } = await supabaseAdmin
-      .from('profiles')
-      .update({
-        plano: 'premium',
-        assinatura_status: 'active',
-        assinatura_inicio: now.toISOString(),
-        assinatura_expira_em: expirationDate.toISOString(),
-        mercadopago_customer_id: customerId || null,
-        updated_at: now.toISOString()
-      })
-      .eq('id', userId)
-      .select()
-      .single();
+      BillingLogger.info('user_upgraded_attempt', paymentId, null, {
+        userId,
+        currentStatus,
+        nextStatus,
+        expiresAt: expirationDate.toISOString()
+      });
 
-    if (error) {
-      console.error('[BillingEngine.setUserPremium] Erro ao atualizar perfil:', error);
-      throw error;
-    }
-
-    // Update subscriptions table (Analytical Source of Truth)
-    const { error: subError } = await supabaseAdmin
-      .from('subscriptions')
-      .upsert({
-        user_id: userId,
-        status: 'active',
-        plan: 'premium',
-        price: 14.90,
-        updated_at: now.toISOString(),
-        created_at: now.toISOString()
-      }, { onConflict: 'user_id' });
-
-    if (subError) {
-      console.error('[BillingEngine.setUserPremium] Erro ao atualizar subscriptions:', subError);
-    }
-
-    // 2. Garantir faturamento orientado a eventos: gerar entrada em billing_events se for atualização direta
-    const syntheticId = `upg_${userId}_${Date.now()}`;
-    const { error: billingEventError } = await supabaseAdmin
-      .from('billing_events')
-      .insert([{
-        user_id: userId,
-        type: 'payment_success',
-        status: 'approved',
-        amount: 14.90,
-        currency: 'BRL',
-        provider: 'system',
-        metadata: {
-          payment_id: syntheticId
-        },
-        created_at: now.toISOString()
-      }]);
-    
-    if (billingEventError) {
-      console.warn('[BillingEngine.setUserPremium] Erro não-bloqueante ao registrar billing_events sintético:', billingEventError.message);
-    }
-
-    // 3. Gravar evento analítico obrigatório: user_upgraded
-    const { error: eventError } = await supabaseAdmin
-      .from('events')
-      .insert([{
-        user_id: userId,
-        event_type: 'user_upgraded',
-        metadata: {
+      // 1. Atualizar profiles no Supabase (Fonte Única de Verdade)
+      const { data, error } = await supabaseAdmin
+        .from('profiles')
+        .update({
           plano: 'premium',
-          status: 'active',
-          customer_id: customerId,
-          expires_at: expirationDate.toISOString()
-        }
-      }]);
+          assinatura_status: nextStatus,
+          assinatura_inicio: now.toISOString(),
+          assinatura_expira_em: expirationDate.toISOString(),
+          mercadopago_customer_id: customerId || null,
+          updated_at: now.toISOString()
+        })
+        .eq('id', userId)
+        .select()
+        .single();
 
-    if (eventError) {
-      console.warn('[BillingEngine.setUserPremium] Erro ao gravar evento analítico:', eventError.message);
-    }
+      if (error) {
+        BillingLogger.error('profile_update_failed', paymentId, null, error, { userId });
+        throw error;
+      }
 
-    return data;
+      // Update subscriptions table (Analytical Source of Truth)
+      const { error: subError } = await supabaseAdmin
+        .from('subscriptions')
+        .upsert({
+          user_id: userId,
+          status: nextStatus,
+          plan: 'premium',
+          price: 14.90,
+          current_period_start: now.toISOString(),
+          current_period_end: expirationDate.toISOString(),
+          last_payment_id: paymentId || null,
+          provider: 'mercado_pago',
+          updated_at: now.toISOString()
+        }, { onConflict: 'user_id' });
+
+      if (subError) {
+        BillingLogger.error('subscription_upsert_failed', paymentId, null, subError, { userId });
+      }
+
+      // 2. Garantir faturamento orientado a eventos: gerar entrada em billing_events se for atualização direta
+      const syntheticId = `upg_${userId}_${Date.now()}`;
+      const { error: billingEventError } = await supabaseAdmin
+        .from('billing_events')
+        .insert([{
+          user_id: userId,
+          type: 'payment_success',
+          status: 'approved',
+          amount: 14.90,
+          currency: 'BRL',
+          provider: 'system',
+          metadata: {
+            payment_id: syntheticId
+          },
+          created_at: now.toISOString()
+        }]);
+      
+      if (billingEventError) {
+        BillingLogger.warn('billing_event_insert_failed', paymentId, null, { message: billingEventError.message });
+      }
+
+      // 3. Gravar evento analítico obrigatório: user_upgraded
+      const { error: eventError } = await supabaseAdmin
+        .from('events')
+        .insert([{
+          user_id: userId,
+          event_type: 'user_upgraded',
+          metadata: {
+            plano: 'premium',
+            status: 'active',
+            customer_id: customerId,
+            expires_at: expirationDate.toISOString()
+          }
+        }]);
+
+      if (eventError) {
+        BillingLogger.warn('event_log_insert_failed', paymentId, null, { message: eventError.message });
+      }
+
+      // Trace record
+      await BillingTracer.recordTrace({
+        paymentId,
+        userId,
+        eventType: 'user_upgraded',
+        stateBefore: currentStatus,
+        stateAfter: nextStatus,
+        source: 'billing_engine',
+        metadata: { expiresAt: expirationDate.toISOString() }
+      });
+
+      return data;
+    });
   },
 
   /**
    * Retorna o usuário para o plano gratuito (Free / Downgrades / Expired).
    * Emite obrigatoriamente: user_downgraded.
    */
-  async setUserFree(userId) {
+  async setUserFree(userId, targetStatus = 'canceled') {
     if (!userId) throw new Error('[BillingEngine.setUserFree] userId é obrigatório');
 
-    console.log(`[BillingEngine] [user_downgraded] Removendo Premium do usuário ${userId} (Status: EXPIRED)`);
+    return await DistributedLock.withLock(`subscription:${userId}`, async () => {
+      const normalizedTarget = targetStatus.toLowerCase();
+      const { data: currentSub } = await supabaseAdmin
+        .from('subscriptions')
+        .select('status')
+        .eq('user_id', userId)
+        .maybeSingle();
 
-    // 1. Atualizar profiles no Supabase (status unificado EXPIRED e plano free)
-    const { data, error } = await supabaseAdmin
-      .from('profiles')
-      .update({
-        plano: 'free',
-        assinatura_status: 'canceled',
-        assinatura_inicio: null,
-        assinatura_expira_em: null,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', userId)
-      .select()
-      .single();
+      const currentStatus = currentSub?.status || null;
+      const nextStatus = SubscriptionStateMachine.transition(currentStatus, normalizedTarget);
 
-    if (error) {
-      console.error('[BillingEngine.setUserFree] Erro ao atualizar perfil para free:', error);
-      throw error;
-    }
+      BillingLogger.info('user_downgraded_attempt', null, null, {
+        userId,
+        currentStatus,
+        nextStatus
+      });
 
-    // Update subscriptions table (Analytical Source of Truth)
-    const { error: subError } = await supabaseAdmin
-      .from('subscriptions')
-      .upsert({
-        user_id: userId,
-        status: 'canceled',
-        plan: 'premium',
-        price: 14.90,
-        updated_at: new Date().toISOString(),
-        created_at: new Date().toISOString()
-      }, { onConflict: 'user_id' });
-
-    if (subError) {
-      console.error('[BillingEngine.setUserFree] Erro ao atualizar subscriptions:', subError);
-    }
-
-    // 2. Garantir faturamento orientado a eventos: gerar entrada em billing_events
-    const syntheticId = `down_${userId}_${Date.now()}`;
-    const { error: billingEventError } = await supabaseAdmin
-      .from('billing_events')
-      .insert([{
-        user_id: userId,
-        type: 'subscription_canceled',
-        status: 'refunded',
-        amount: 14.90,
-        currency: 'BRL',
-        provider: 'system',
-        metadata: {
-          payment_id: syntheticId
-        },
-        created_at: new Date().toISOString()
-      }]);
-
-    if (billingEventError) {
-      console.warn('[BillingEngine.setUserFree] Erro ao gravar billing_events sintético:', billingEventError.message);
-    }
-
-    // 3. Gravar evento analítico de cancelamento/expiração: user_downgraded
-    const { error: eventError } = await supabaseAdmin
-      .from('events')
-      .insert([{
-        user_id: userId,
-        event_type: 'user_downgraded',
-        metadata: {
+      // 1. Atualizar profiles no Supabase
+      const { data, error } = await supabaseAdmin
+        .from('profiles')
+        .update({
           plano: 'free',
-          status: 'canceled'
-        }
-      }]);
+          assinatura_status: nextStatus,
+          assinatura_inicio: null,
+          assinatura_expira_em: null,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', userId)
+        .select()
+        .single();
 
-    if (eventError) {
-      console.warn('[BillingEngine.setUserFree] Erro ao gravar evento analítico:', eventError.message);
-    }
+      if (error) {
+        BillingLogger.error('profile_downgrade_failed', null, null, error, { userId });
+        throw error;
+      }
 
-    return data;
+      // Update subscriptions table (Analytical Source of Truth)
+      const { error: subError } = await supabaseAdmin
+        .from('subscriptions')
+        .upsert({
+          user_id: userId,
+          status: nextStatus,
+          plan: 'premium',
+          price: 14.90,
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'user_id' });
+
+      if (subError) {
+        BillingLogger.error('subscription_downgrade_upsert_failed', null, null, subError, { userId });
+      }
+
+      // 2. Garantir faturamento orientado a eventos: gerar entrada em billing_events
+      const syntheticId = `down_${userId}_${Date.now()}`;
+      const { error: billingEventError } = await supabaseAdmin
+        .from('billing_events')
+        .insert([{
+          user_id: userId,
+          type: 'subscription_cancelled',
+          status: 'refunded',
+          amount: 14.90,
+          currency: 'BRL',
+          provider: 'system',
+          metadata: {
+            payment_id: syntheticId
+          },
+          created_at: new Date().toISOString()
+        }]);
+
+      if (billingEventError) {
+        BillingLogger.warn('billing_event_downgrade_insert_failed', null, null, { message: billingEventError.message });
+      }
+
+      // 3. Gravar evento analítico de cancelamento/expiração: user_downgraded
+      const { error: eventError } = await supabaseAdmin
+        .from('events')
+        .insert([{
+          user_id: userId,
+          event_type: 'user_downgraded',
+          metadata: {
+            plano: 'free',
+            status: nextStatus
+          }
+        }]);
+
+      if (eventError) {
+        BillingLogger.warn('event_log_downgrade_insert_failed', null, null, { message: eventError.message });
+      }
+
+      // Trace record
+      await BillingTracer.recordTrace({
+        paymentId: null,
+        userId,
+        eventType: 'user_downgraded',
+        stateBefore: currentStatus,
+        stateAfter: nextStatus,
+        source: 'billing_engine',
+        metadata: { targetStatus: nextStatus }
+      });
+
+      return data;
+    });
   },
 
   /**
@@ -193,60 +250,43 @@ export const BillingEngine = {
     if (!userId) throw new Error('[BillingEngine.handlePaymentApproved] userId é obrigatório');
     if (!paymentId) throw new Error('[BillingEngine.handlePaymentApproved] paymentId é obrigatório');
 
-    const paymentStr = String(paymentId);
-    console.log(`[BillingEngine] Recebido processamento de pagamento aprovado. ID: ${paymentStr}, Usuário: ${userId}`);
-
-    // Emite obrigatoriamente: payment_received
-    await supabaseAdmin.from('events').insert([{
-      user_id: userId,
-      event_type: 'payment_received',
-      metadata: { payment_id: paymentStr, status: 'approved' }
-    }]);
-
-    try {
-      // 1. Verificação de Idempotência: Checar se o pagamento já existe na tabela billing_events
-      const { data: existingEvent, error: searchError } = await supabaseAdmin
-        .from('billing_events')
-        .select('id, status')
-        .eq('metadata->>payment_id', paymentStr)
+    return await DistributedLock.withLock(`subscription:${userId}`, async () => {
+      const { data: currentProfile } = await supabaseAdmin
+        .from('profiles')
+        .select('plano, assinatura_status')
+        .eq('id', userId)
         .maybeSingle();
 
-      if (searchError) {
-        console.error('[BillingEngine] Erro ao verificar idempotência:', searchError);
-        throw searchError;
+      if (currentProfile?.plano === 'premium' && currentProfile?.assinatura_status === 'active') {
+        BillingLogger.info('payment_approved_already_premium', paymentId, null, { userId });
+        return { success: true, duplicated: false, alreadyPremium: true };
       }
 
-      if (existingEvent) {
-        console.log(`[BillingEngine] [payment_ignored_duplicate] Pagamento ${paymentStr} duplicado. Ignorando.`);
-        // Emite obrigatoriamente: payment_ignored_duplicate
-        await supabaseAdmin.from('events').insert([{
-          user_id: userId,
-          event_type: 'payment_ignored_duplicate',
-          metadata: { payment_id: paymentStr }
-        }]);
-        return { success: true, duplicated: true };
-      }
+      const paymentStr = String(paymentId);
+      BillingLogger.info('payment_approved_processing', paymentStr, null, { userId });
 
-      // 2. Registrar o pagamento aprovado na tabela billing_events
-      const { error: insertEventError } = await supabaseAdmin
-        .from('billing_events')
-        .insert([{
-          user_id: userId,
-          type: 'payment_success',
-          status: 'approved',
-          amount: paymentData.transaction_amount || 14.90,
-          currency: 'BRL',
-          provider: 'mercadopago',
-          metadata: {
-            payment_id: paymentStr,
-            date_approved: paymentData.date_approved || new Date().toISOString()
-          },
-          created_at: new Date().toISOString()
-        }]);
+      // Emite obrigatoriamente: payment_received
+      await supabaseAdmin.from('events').insert([{
+        user_id: userId,
+        event_type: 'payment_received',
+        metadata: { payment_id: paymentStr, status: 'approved' }
+      }]);
 
-      if (insertEventError) {
-        if (insertEventError.code === '23505') {
-          console.log(`[BillingEngine] [payment_ignored_duplicate] Concorrência detectada. Ignorando.`);
+      try {
+        // 1. Verificação de Idempotência: Checar se o pagamento já existe na tabela billing_events
+        const { data: existingEvent, error: searchError } = await supabaseAdmin
+          .from('billing_events')
+          .select('id, status')
+          .eq('metadata->>payment_id', paymentStr)
+          .maybeSingle();
+
+        if (searchError) {
+          BillingLogger.error('idempotency_check_failed', paymentStr, null, searchError, { userId });
+          throw searchError;
+        }
+
+        if (existingEvent) {
+          BillingLogger.info('payment_ignored_duplicate', paymentStr, null, { userId });
           await supabaseAdmin.from('events').insert([{
             user_id: userId,
             event_type: 'payment_ignored_duplicate',
@@ -254,54 +294,94 @@ export const BillingEngine = {
           }]);
           return { success: true, duplicated: true };
         }
-        throw insertEventError;
-      }
 
-      // Emite obrigatoriamente: payment_approved
-      await supabaseAdmin.from('events').insert([{
-        user_id: userId,
-        event_type: 'payment_approved',
-        metadata: {
-          payment_id: paymentStr,
-          amount: paymentData.transaction_amount || 14.90,
-          date_approved: paymentData.date_approved || new Date().toISOString()
+        // 2. Registrar o pagamento aprovado na tabela billing_events
+        const { error: insertEventError } = await supabaseAdmin
+          .from('billing_events')
+          .insert([{
+            user_id: userId,
+            type: 'payment_success',
+            status: 'approved',
+            amount: paymentData.transaction_amount || 14.90,
+            currency: 'BRL',
+            provider: 'mercadopago',
+            metadata: {
+              payment_id: paymentStr,
+              date_approved: paymentData.date_approved || new Date().toISOString()
+            },
+            created_at: new Date().toISOString()
+          }]);
+
+        if (insertEventError) {
+          if (insertEventError.code === '23505') {
+            BillingLogger.info('payment_ignored_duplicate_race', paymentStr, null, { userId });
+            await supabaseAdmin.from('events').insert([{
+              user_id: userId,
+              event_type: 'payment_ignored_duplicate',
+              metadata: { payment_id: paymentStr }
+            }]);
+            return { success: true, duplicated: true };
+          }
+          throw insertEventError;
         }
-      }]);
 
-      // 3. Checar se o usuário estava anteriormente CANCELED/EXPIRED para aplicar reativação
-      const { data: profile } = await supabaseAdmin
-        .from('profiles')
-        .select('assinatura_status')
-        .eq('id', userId)
-        .maybeSingle();
+        // Emite obrigatoriamente: payment_approved
+        await supabaseAdmin.from('events').insert([{
+          user_id: userId,
+          event_type: 'payment_approved',
+          metadata: {
+            payment_id: paymentStr,
+            amount: paymentData.transaction_amount || 14.90,
+            date_approved: paymentData.date_approved || new Date().toISOString()
+          }
+        }]);
 
-      const wasCanceled = profile?.assinatura_status === 'canceled';
+        // 3. Checar se o usuário estava anteriormente CANCELED/EXPIRED para aplicar reativação
+        const { data: profile } = await supabaseAdmin
+          .from('profiles')
+          .select('assinatura_status')
+          .eq('id', userId)
+          .maybeSingle();
 
-      // 4. Calcular data de expiração
-      let expiresAt = null;
-      if (paymentData.date_of_expiration) {
-        expiresAt = paymentData.date_of_expiration;
-      } else {
-        const d = new Date();
-        d.setDate(d.getDate() + 30);
-        expiresAt = d.toISOString();
+        const wasCanceled = profile?.assinatura_status === 'canceled';
+
+        // 4. Calcular data de expiração
+        let expiresAt = null;
+        if (paymentData.date_of_expiration) {
+          expiresAt = paymentData.date_of_expiration;
+        } else {
+          const d = new Date();
+          d.setDate(d.getDate() + 30);
+          expiresAt = d.toISOString();
+        }
+
+        // 5. Executar ativação do Premium
+        const updatedProfile = await this.setUserPremium(userId, customerId, expiresAt, paymentStr);
+
+        // 6. Loop de reativação (Recovery & Reactivation Loop)
+        if (wasCanceled) {
+          await this.handleUserReactivated(userId, paymentStr);
+        } else {
+          await sendPushNotification(userId, "Pagamento confirmado", "Sua assinatura MyFlowDay Premium foi confirmada com sucesso! ⚡");
+        }
+
+        // Trace Record
+        await BillingTracer.recordTrace({
+          paymentId: paymentStr,
+          userId,
+          eventType: 'payment_approved',
+          stateBefore: profile?.assinatura_status || 'free',
+          stateAfter: 'active',
+          source: 'billing_engine',
+          metadata: { amount: paymentData.transaction_amount || 14.90 }
+        });
+
+        return { success: true, duplicated: false, profile: updatedProfile };
+      } catch (err) {
+        BillingLogger.error('payment_approved_processing_failed', paymentStr, null, err, { userId });
+        throw err;
       }
-
-      // 5. Executar ativação do Premium
-      const updatedProfile = await this.setUserPremium(userId, customerId, expiresAt);
-
-      // 6. Loop de reativação (Recovery & Reactivation Loop)
-      if (wasCanceled) {
-        await this.handleUserReactivated(userId, paymentStr);
-      } else {
-        await sendPushNotification(userId, "Pagamento confirmado", "Sua assinatura MyFlowDay Premium foi confirmada com sucesso! ⚡");
-      }
-
-      return { success: true, duplicated: false, profile: updatedProfile };
-    } catch (err) {
-      console.error(`[BillingEngine] Erro ao processar pagamento aprovado ${paymentStr}:`, err.message);
-      throw err;
-    }
+    });
   },
 
   /**
@@ -309,18 +389,39 @@ export const BillingEngine = {
    * Emite obrigatoriamente: payment_failed.
    */
   async handlePaymentCanceled(userId) {
-    console.log(`[BillingEngine] Pagamento cancelado ou devolvido para usuário ${userId}`);
-    
-    // Emite obrigatoriamente: payment_failed
-    await supabaseAdmin.from('events').insert([{
-      user_id: userId,
-      event_type: 'payment_failed',
-      metadata: { reason: 'payment_canceled' }
-    }]);
+    if (!userId) throw new Error('[BillingEngine.handlePaymentCanceled] userId é obrigatório');
 
-    const updatedProfile = await this.setUserFree(userId);
-    await sendPushNotification(userId, "Assinatura cancelada", "Sua assinatura foi cancelada. Seu plano premium foi encerrado.");
-    return { success: true, profile: updatedProfile };
+    return await DistributedLock.withLock(`subscription:${userId}`, async () => {
+      BillingLogger.info('payment_canceled_processing', null, null, { userId });
+      
+      const { data: currentSub } = await supabaseAdmin
+        .from('subscriptions')
+        .select('status')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      // Emite obrigatoriamente: payment_failed
+      await supabaseAdmin.from('events').insert([{
+        user_id: userId,
+        event_type: 'payment_failed',
+        metadata: { reason: 'payment_canceled' }
+      }]);
+
+      const updatedProfile = await this.setUserFree(userId, 'canceled');
+      await sendPushNotification(userId, "Assinatura cancelada", "Sua assinatura foi cancelada. Seu plano premium foi encerrado.");
+
+      // Trace Record
+      await BillingTracer.recordTrace({
+        paymentId: null,
+        userId,
+        eventType: 'payment_canceled',
+        stateBefore: currentSub?.status || 'free',
+        stateAfter: 'canceled',
+        source: 'billing_engine'
+      });
+
+      return { success: true, profile: updatedProfile };
+    });
   },
 
   /**
@@ -330,79 +431,99 @@ export const BillingEngine = {
   async handlePaymentPastDue(userId) {
     if (!userId) throw new Error('[BillingEngine.handlePaymentPastDue] userId é obrigatório');
 
-    console.log(`[BillingEngine] Assinatura em atraso (past_due) para o usuário ${userId}. Status: PAST_DUE.`);
+    return await DistributedLock.withLock(`subscription:${userId}`, async () => {
+      const { data: currentSub } = await supabaseAdmin
+        .from('subscriptions')
+        .select('status')
+        .eq('user_id', userId)
+        .maybeSingle();
 
-    // Emite obrigatoriamente: payment_failed
-    await supabaseAdmin.from('events').insert([{
-      user_id: userId,
-      event_type: 'payment_failed',
-      metadata: { reason: 'past_due' }
-    }]);
+      const currentStatus = currentSub?.status || null;
+      const nextStatus = SubscriptionStateMachine.transition(currentStatus, 'past_due');
 
-    // 1. Atualizar profiles no Supabase (status PAST_DUE, plano free)
-    const { data, error } = await supabaseAdmin
-      .from('profiles')
-      .update({
-        plano: 'free',
-        assinatura_status: 'past_due',
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', userId)
-      .select()
-      .single();
+      BillingLogger.info('payment_past_due_processing', null, null, { userId, currentStatus, nextStatus });
 
-    if (error) {
-      console.error('[BillingEngine.handlePaymentPastDue] Erro ao atualizar perfil:', error);
-      throw error;
-    }
-
-    // Update subscriptions table (Analytical Source of Truth)
-    const { error: subError } = await supabaseAdmin
-      .from('subscriptions')
-      .upsert({
+      // Emite obrigatoriamente: payment_failed
+      await supabaseAdmin.from('events').insert([{
         user_id: userId,
-        status: 'past_due',
-        plan: 'premium',
-        price: 14.90,
-        updated_at: new Date().toISOString(),
-        created_at: new Date().toISOString()
-      }, { onConflict: 'user_id' });
-
-    if (subError) {
-      console.error('[BillingEngine.handlePaymentPastDue] Erro ao atualizar subscriptions:', subError);
-    }
-
-    // 2. Garantir faturamento orientado a eventos: gerar entrada em billing_events
-    const syntheticId = `pastdue_${userId}_${Date.now()}`;
-    await supabaseAdmin
-      .from('billing_events')
-      .insert([{
-        user_id: userId,
-        type: 'payment_failed',
-        status: 'past_due',
-        amount: 14.90,
-        currency: 'BRL',
-        provider: 'system',
-        metadata: {
-          payment_id: syntheticId,
-          reason: 'past_due'
-        },
-        created_at: new Date().toISOString()
+        event_type: 'payment_failed',
+        metadata: { reason: 'past_due' }
       }]);
 
-    // 3. Gravar evento analítico de downgrade: user_downgraded
-    await supabaseAdmin
-      .from('events')
-      .insert([{
-        user_id: userId,
-        event_type: 'user_downgraded',
-        metadata: {
+      // 1. Atualizar profiles no Supabase (status PAST_DUE, plano free)
+      const { data, error } = await supabaseAdmin
+        .from('profiles')
+        .update({
           plano: 'free',
-          status: 'past_due'
-        }
-      }]);
+          assinatura_status: nextStatus,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', userId)
+        .select()
+        .single();
 
-    return { success: true, profile: data };
+      if (error) {
+        BillingLogger.error('profile_past_due_update_failed', null, null, error, { userId });
+        throw error;
+      }
+
+      // Update subscriptions table (Analytical Source of Truth)
+      const { error: subError } = await supabaseAdmin
+        .from('subscriptions')
+        .upsert({
+          user_id: userId,
+          status: nextStatus,
+          plan: 'premium',
+          price: 14.90,
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'user_id' });
+
+      if (subError) {
+        BillingLogger.error('subscription_past_due_upsert_failed', null, null, subError, { userId });
+      }
+
+      // 2. Garantir faturamento orientado a eventos: gerar entrada em billing_events
+      const syntheticId = `pastdue_${userId}_${Date.now()}`;
+      await supabaseAdmin
+        .from('billing_events')
+        .insert([{
+          user_id: userId,
+          type: 'payment_failed',
+          status: 'past_due',
+          amount: 14.90,
+          currency: 'BRL',
+          provider: 'system',
+          metadata: {
+            payment_id: syntheticId,
+            reason: 'past_due'
+          },
+          created_at: new Date().toISOString()
+        }]);
+
+      // 3. Gravar evento analítico de downgrade: user_downgraded
+      await supabaseAdmin
+        .from('events')
+        .insert([{
+          user_id: userId,
+          event_type: 'user_downgraded',
+          metadata: {
+            plano: 'free',
+            status: 'past_due'
+          }
+        }]);
+
+      // Trace Record
+      await BillingTracer.recordTrace({
+        paymentId: null,
+        userId,
+        eventType: 'payment_past_due',
+        stateBefore: currentStatus,
+        stateAfter: nextStatus,
+        source: 'billing_engine'
+      });
+
+      return { success: true, profile: data };
+    });
   },
 
   /**
@@ -412,93 +533,117 @@ export const BillingEngine = {
   async handleReconciliationFix(userId, targetPlan, targetStatus, customerId, expiresAt, reason) {
     if (!userId) throw new Error('[BillingEngine.handleReconciliationFix] userId é obrigatório');
 
-    const normalizedStatus = targetStatus.toLowerCase();
-    console.log(`[BillingEngine] [reconciliation_fix_applied] Corrigindo drift para user ${userId}. Motivo: ${reason}.`);
+    return await DistributedLock.withLock(`subscription:${userId}`, async () => {
+      const normalizedStatus = targetStatus.toLowerCase();
+      BillingLogger.info('reconciliation_fix_attempt', null, null, { userId, targetPlan, targetStatus, reason });
 
-    // 1. Garantir faturamento orientado a eventos: gerar entrada em billing_events
-    const syntheticId = `rec_${userId}_${Date.now()}`;
-    await supabaseAdmin
-      .from('billing_events')
-      .insert([{
-        user_id: userId,
-        type: normalizedStatus === 'active' ? 'payment_success' : 'subscription_canceled',
-        status: normalizedStatus === 'active' ? 'approved' : 'reconciled_downgrade',
-        amount: 14.90,
-        currency: 'BRL',
-        provider: 'system',
-        metadata: {
-          payment_id: syntheticId,
-          reason
-        },
-        created_at: new Date().toISOString()
-      }]);
-
-    let data;
-    if (targetPlan === 'premium' && normalizedStatus === 'active') {
-      data = await this.setUserPremium(userId, customerId, expiresAt);
-    } else {
-      // Correção para free/cancelado
-      const { data: updated, error } = await supabaseAdmin
-        .from('profiles')
-        .update({
-          plano: targetPlan,
-          assinatura_status: normalizedStatus,
-          assinatura_expira_em: expiresAt ? new Date(expiresAt).toISOString() : null,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', userId)
-        .select()
-        .single();
-
-      if (error) throw error;
-      data = updated;
-
-      // Update subscriptions table (Analytical Source of Truth)
-      const { error: subError } = await supabaseAdmin
+      const { data: currentSub } = await supabaseAdmin
         .from('subscriptions')
-        .upsert({
-          user_id: userId,
-          status: normalizedStatus === 'active' ? 'active' : 'canceled',
-          plan: 'premium',
-          price: 14.90,
-          updated_at: new Date().toISOString(),
-          created_at: new Date().toISOString()
-        }, { onConflict: 'user_id' });
+        .select('status')
+        .eq('user_id', userId)
+        .maybeSingle();
 
-      if (subError) {
-        console.error('[BillingEngine.handleReconciliationFix] Erro ao atualizar subscriptions:', subError);
+      const currentStatus = currentSub?.status || null;
+
+      // 1. Garantir faturamento orientado a eventos: gerar entrada em billing_events
+      const syntheticId = `rec_${userId}_${Date.now()}`;
+      await supabaseAdmin
+        .from('billing_events')
+        .insert([{
+          user_id: userId,
+          type: normalizedStatus === 'active' ? 'payment_success' : 'subscription_canceled',
+          status: normalizedStatus === 'active' ? 'approved' : 'reconciled_downgrade',
+          amount: 14.90,
+          currency: 'BRL',
+          provider: 'system',
+          metadata: {
+            payment_id: syntheticId,
+            reason
+          },
+          created_at: new Date().toISOString()
+        }]);
+
+      let data;
+      if (targetPlan === 'premium' && normalizedStatus === 'active') {
+        data = await this.setUserPremium(userId, customerId, expiresAt);
+      } else {
+        // Correção para free/cancelado
+        const { data: updated, error } = await supabaseAdmin
+          .from('profiles')
+          .update({
+            plano: targetPlan,
+            assinatura_status: normalizedStatus,
+            assinatura_expira_em: expiresAt ? new Date(expiresAt).toISOString() : null,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', userId)
+          .select()
+          .single();
+
+        if (error) {
+          BillingLogger.error('reconciliation_profile_update_failed', null, null, error, { userId });
+          throw error;
+        }
+        data = updated;
+
+        const nextStatus = SubscriptionStateMachine.transition(currentStatus, normalizedStatus);
+
+        // Update subscriptions table (Analytical Source of Truth)
+        const { error: subError } = await supabaseAdmin
+          .from('subscriptions')
+          .upsert({
+            user_id: userId,
+            status: nextStatus,
+            plan: 'premium',
+            price: 14.90,
+            updated_at: new Date().toISOString()
+          }, { onConflict: 'user_id' });
+
+        if (subError) {
+          BillingLogger.error('reconciliation_sub_upsert_failed', null, null, subError, { userId });
+        }
+
+        // Gravar evento de downgrade por reconciliação: user_downgraded
+        await supabaseAdmin.from('events').insert([{
+          user_id: userId,
+          event_type: 'user_downgraded',
+          metadata: { plano: targetPlan, status: normalizedStatus, reason }
+        }]);
       }
 
-      // Gravar evento de downgrade por reconciliação: user_downgraded
+      // 2. Gravar o log obrigatório de correção de faturamento: reconciliation_fix_applied (drift_resolved)
       await supabaseAdmin.from('events').insert([{
         user_id: userId,
-        event_type: 'user_downgraded',
-        metadata: { plano: targetPlan, status: normalizedStatus, reason }
+        event_type: 'reconciliation_fix_applied',
+        metadata: {
+          target_plan: targetPlan,
+          target_status: normalizedStatus,
+          reason
+        }
       }]);
-    }
 
-    // 2. Gravar o log obrigatório de correção de faturamento: reconciliation_fix_applied (drift_resolved)
-    await supabaseAdmin.from('events').insert([{
-      user_id: userId,
-      event_type: 'reconciliation_fix_applied',
-      metadata: {
-        target_plan: targetPlan,
-        target_status: normalizedStatus,
-        reason
-      }
-    }]);
+      // Trace Record
+      await BillingTracer.recordTrace({
+        paymentId: null,
+        userId,
+        eventType: 'reconciliation_fix',
+        stateBefore: currentStatus,
+        stateAfter: targetStatus,
+        source: 'reconciliation',
+        metadata: { reason }
+      });
 
-    return data;
+      return data;
+    });
   },
 
   /**
    * Integração Churn Engine: Trata a detecção de risco de churn no usuário.
-   * Não altera o estado do faturamento, apenas sugere risco.
    */
   async handleChurnRiskDetected(userId, riskLevel, churnScore) {
     if (!userId) throw new Error('[BillingEngine.handleChurnRiskDetected] userId é obrigatório');
 
-    console.log(`[BillingEngine] Risco de Churn avaliado para user ${userId}. Nível: ${riskLevel}, Score: ${churnScore}`);
+    BillingLogger.info('churn_risk_detected', null, null, { userId, riskLevel, churnScore });
 
     let retentionAction = 'none';
     if (riskLevel === 'high') {
@@ -507,7 +652,6 @@ export const BillingEngine = {
       retentionAction = 'retention_push_notification';
     }
 
-    // Registrar ação de retenção sugerida no banco
     const { error } = await supabaseAdmin
       .from('events')
       .insert([{
@@ -522,7 +666,7 @@ export const BillingEngine = {
       }]);
 
     if (error) {
-      console.warn('[BillingEngine] Erro ao registrar ação de retenção:', error.message);
+      BillingLogger.warn('retention_event_log_failed', null, null, { message: error.message });
     }
 
     return { riskLevel, churnScore, retentionAction };
@@ -535,7 +679,7 @@ export const BillingEngine = {
   async handleUserReactivated(userId, paymentId) {
     if (!userId) throw new Error('[BillingEngine.handleUserReactivated] userId é obrigatório');
 
-    console.log(`[BillingEngine] [user_reactivated] Usuário ${userId} reativado com sucesso.`);
+    BillingLogger.info('user_reactivation_loop', paymentId, null, { userId });
 
     // Gravar logs analíticos de reativação e recuperação
     await supabaseAdmin.from('events').insert([{

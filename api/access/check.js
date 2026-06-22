@@ -35,26 +35,21 @@ export default async function handler(req, res) {
   }
 
   try {
-    // 1. Buscar perfil do usuário no Supabase
-    const { data: profile, error } = await supabaseAdmin
-      .from('profiles')
-      .select('plano, assinatura_status, assinatura_expira_em')
-      .eq('id', userId)
+    // 1. Buscar assinatura do usuário no Supabase
+    const { data: subscription, error } = await supabaseAdmin
+      .from('subscriptions')
+      .select('status, current_period_end, plan')
+      .eq('user_id', userId)
       .maybeSingle();
 
     if (error) {
       console.error(`[API Access Check] Erro ao consultar Supabase para user ${userId}:`, error.message);
-      res.status(200).json({ isPro: false, reason: 'INVALID', error: 'Erro ao carregar dados do perfil.' });
-      return;
-    }
-
-    if (!profile) {
-      res.status(200).json({ isPro: false, reason: 'INVALID', message: 'Perfil não encontrado.' });
+      res.status(200).json({ isPro: false, reason: 'INVALID', error: 'Erro ao carregar dados da assinatura.' });
       return;
     }
 
     // 2. Determinar o veredito via AccessDecisionEngine (Fonte Absoluta de Verdade)
-    const decision = AccessDecisionEngine.evaluateAccess(profile);
+    const decision = AccessDecisionEngine.evaluateAccess(subscription);
 
     // 3. Registrar logs estruturados de auditoria (Observabilidade)
     // Evento Geral de Avaliação
@@ -64,9 +59,9 @@ export default async function handler(req, res) {
       metadata: {
         isPro: decision.isPro,
         reason: decision.reason,
-        plano: profile.plano,
-        status: profile.assinatura_status,
-        expiresAt: profile.assinatura_expira_em,
+        plano: subscription?.plan || 'free',
+        status: subscription?.status || 'free',
+        expiresAt: subscription?.current_period_end || null,
         timestamp: new Date().toISOString()
       }
     }]);
@@ -95,9 +90,9 @@ export default async function handler(req, res) {
 
     res.status(200).json({ 
       isPro: decision.isPro,
-      plano: profile.plano,
+      plano: subscription?.plan || 'free',
       status: decision.reason,
-      expiresAt: profile.assinatura_expira_em,
+      expiresAt: subscription?.current_period_end || null,
       churn: churnData ? {
         score: churnData.score,
         risk: churnData.risk

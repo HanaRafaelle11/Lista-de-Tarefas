@@ -2,7 +2,37 @@ import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { initMercadoPago, Payment } from '@mercadopago/sdk-react';
 import { useAppContext } from '../contexts/AppContext';
 
-initMercadoPago('APP_USR-0e956167-6396-46c8-be7e-adb93cc9ae11');
+const MP_PUBLIC_KEY = import.meta.env.VITE_MP_PUBLIC_KEY;
+
+if (MP_PUBLIC_KEY) {
+  initMercadoPago(MP_PUBLIC_KEY);
+}
+
+function validateCpf(cpf) {
+  if (!cpf) return false;
+  const cleanCpf = cpf.replace(/\D/g, '');
+  if (cleanCpf.length !== 11) return false;
+  
+  if (/^(\d)\1{10}$/.test(cleanCpf)) return false;
+  
+  let sum = 0;
+  for (let i = 0; i < 9; i++) {
+    sum += parseInt(cleanCpf.charAt(i)) * (10 - i);
+  }
+  let rev = 11 - (sum % 11);
+  if (rev === 10 || rev === 11) rev = 0;
+  if (rev !== parseInt(cleanCpf.charAt(9))) return false;
+  
+  sum = 0;
+  for (let i = 0; i < 10; i++) {
+    sum += parseInt(cleanCpf.charAt(i)) * (11 - i);
+  }
+  rev = 11 - (sum % 11);
+  if (rev === 10 || rev === 11) rev = 0;
+  if (rev !== parseInt(cleanCpf.charAt(10))) return false;
+  
+  return true;
+}
 
 // Memoized payment component to prevent re-rendering when parent state changes
 const MemoizedPayment = React.memo(({ initialization, customization, onSubmit, onError, onReady }) => {
@@ -24,7 +54,7 @@ export default function Checkout() {
   const [error, setError] = useState(null);
   const [pixData, setPixData] = useState(null);
   const [userCpf, setUserCpf] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState('other');
+  const [isPix, setIsPix] = useState(false);
 
   // Sync ref to avoid onSubmit dependency invalidation
   const userCpfRef = useRef(userCpf);
@@ -37,14 +67,39 @@ export default function Checkout() {
       setError(null);
       setStatus('processando');
       const paymentData = param.formData || param;
+      
+      const isPixPayment = paymentData.payment_method_id === 'pix';
+      setIsPix(isPixPayment);
+
       const cleanCpf = userCpfRef.current.replace(/\D/g, '');
-      if (paymentData.payment_method_id === 'pix') {
+
+      if (isPixPayment) {
         if (!cleanCpf) {
-          throw new Error('O CPF é obrigatório para prosseguir com o pagamento via Pix.');
+          throw new Error('O CPF é obrigatório para prosseguir com o pagamento via Pix. Por favor, digite seu CPF no campo abaixo.');
         }
-        if (cleanCpf.length !== 11 && cleanCpf.length !== 14) {
+        if (cleanCpf.length !== 11) {
+          throw new Error('O CPF deve ter exatamente 11 dígitos.');
+        }
+        if (!validateCpf(cleanCpf)) {
           throw new Error('Por favor, informe um CPF válido.');
         }
+      } else {
+        // For card, retrieve natively collected document number or userCpfRef fallback
+        const brickCpf = paymentData.payer?.identification?.number || userCpfRef.current;
+        const cleanBrickCpf = brickCpf ? brickCpf.replace(/\D/g, '') : '';
+        if (!cleanBrickCpf) {
+          throw new Error('O CPF é obrigatório para prosseguir com o pagamento.');
+        }
+        if (cleanBrickCpf.length !== 11) {
+          throw new Error('O CPF deve ter exatamente 11 dígitos.');
+        }
+        if (!validateCpf(cleanBrickCpf)) {
+          throw new Error('Por favor, informe um CPF válido.');
+        }
+      }
+
+      if (!currentUser?.email) {
+        throw new Error('Email obrigatório.');
       }
 
       const payload = {
@@ -54,12 +109,11 @@ export default function Checkout() {
         userId: currentUser?.id,
         payer: {
           ...paymentData.payer,
-          ...(paymentData.payment_method_id === 'pix' ? {
-            identification: {
-              type: 'CPF',
-              number: cleanCpf
-            }
-          } : {})
+          email: currentUser?.email,
+          identification: {
+            type: 'CPF',
+            number: isPixPayment ? cleanCpf : (paymentData.payer?.identification?.number?.replace(/\D/g, '') || cleanCpf)
+          }
         }
       };
 
@@ -84,6 +138,8 @@ export default function Checkout() {
           qr_code_base64: resData.qr_code_base64
         });
         setStatus('pix_pending');
+      } else if (resData.status === 'in_process') {
+        setStatus('in_process');
       } else {
         setStatus('success');
       }
@@ -91,8 +147,9 @@ export default function Checkout() {
       console.error('Checkout error:', err);
       setError(err.message);
       setStatus('error');
+      throw err;
     }
-  }, [currentUser?.id]);
+  }, [currentUser?.id, currentUser?.email]);
 
   const handleError = useCallback((err) => {
     console.error('Mercado Pago Brick Error:', err);
@@ -126,73 +183,32 @@ export default function Checkout() {
     }
   }), []);
 
-  // Helper to detect payment method in the container using multiple fallback strategies
-  const detectPaymentMethod = useCallback(() => {
-    const container = document.getElementById('payment-brick-container');
-    if (!container) return;
-
-    let selectedMethod = 'other';
-
-    // 1. Check for standard aria-label="Pix" element selection with class containing "checked"
-    const pixInput = container.querySelector('input[aria-label="Pix"], [aria-label*="Pix"], [aria-label*="pix"]');
-    if (pixInput && pixInput.className.toLowerCase().includes('checked')) {
-      selectedMethod = 'pix';
-    }
-
-    // 2. Check by innerText containing Pix-specific form descriptions (100% foolproof visual fallback)
-    if (selectedMethod !== 'pix') {
-      const text = container.innerText || '';
-      if (
-        text.includes('Insira o e-mail para receber o código Pix') ||
-        text.includes('receber o código Pix') ||
-        text.includes('concluir o seu pagamento')
-      ) {
-        selectedMethod = 'pix';
-      }
-    }
-
-    // 3. Fallback: Check standard checked radios
-    if (selectedMethod !== 'pix') {
-      const radioSelected = container.querySelector('input[type="radio"]:checked');
-      if (radioSelected) {
-        const labelText = radioSelected.closest('label')?.innerText || '';
-        const value = radioSelected.value || '';
-        const id = radioSelected.id || '';
-        if (
-          labelText.toLowerCase().includes('pix') || 
-          value.toLowerCase().includes('pix') || 
-          id.toLowerCase().includes('pix')
-        ) {
-          selectedMethod = 'pix';
-        }
-      }
-    }
-
-    setPaymentMethod(selectedMethod);
+  const handleReady = useCallback(() => {
+    // Brick Ready
   }, []);
 
-  const handleReady = useCallback(() => {
-    // Settle time for internal DOM to render before initial detection
-    setTimeout(detectPaymentMethod, 200);
-  }, [detectPaymentMethod]);
-
-  // MutationObserver to detect payment method changes dynamically
-  useEffect(() => {
-    const container = document.getElementById('payment-brick-container');
-    if (!container) return;
-
-    detectPaymentMethod();
-
-    const observer = new MutationObserver(detectPaymentMethod);
-    observer.observe(container, {
-      childList: true,
-      subtree: true,
-      attributes: true,
-      attributeFilter: ['class', 'checked', 'aria-checked']
-    });
-
-    return () => observer.disconnect();
-  }, [detectPaymentMethod]);
+  if (!MP_PUBLIC_KEY) {
+    return (
+      <div style={{
+        maxWidth: '440px',
+        margin: '60px auto',
+        padding: '30px',
+        backgroundColor: 'rgba(30, 30, 38, 0.95)',
+        borderRadius: '16px',
+        border: '1px solid rgba(255, 255, 255, 0.08)',
+        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5)',
+        color: '#ffffff',
+        fontFamily: 'sans-serif',
+        textAlign: 'center'
+      }}>
+        <span style={{ fontSize: '48px' }}>⚠️</span>
+        <h3 style={{ color: '#ef4444', margin: '16px 0 8px' }}>Erro de Configuração</h3>
+        <p style={{ fontSize: '14px', color: 'rgba(255, 255, 255, 0.7)', lineHeight: '1.5' }}>
+          A chave pública do Mercado Pago (VITE_MP_PUBLIC_KEY) não está configurada no ambiente. A inicialização foi abortada.
+        </p>
+      </div>
+    );
+  }
 
   const renderCpfInput = () => {
     return (
@@ -303,7 +319,7 @@ export default function Checkout() {
           <span style={{ fontSize: '48px' }}>⚡</span>
           <h3 style={{ color: '#10b981', margin: '16px 0 8px' }}>Assinatura Premium Ativa</h3>
           <p style={{ fontSize: '14px', color: 'rgba(255, 255, 255, 0.7)', lineHeight: '1.5' }}>
-            Você já possui uma assinatura Premium activa. Aproveite todos os recursos Pro!
+            Você já possui uma assinatura Premium ativa. Aproveite todos os recursos Pro!
           </p>
           <button
             onClick={() => window.location.href = '/?app=1'}
@@ -334,6 +350,30 @@ export default function Checkout() {
             style={{
               marginTop: '20px',
               backgroundColor: '#10b981',
+              color: '#ffffff',
+              border: 'none',
+              borderRadius: '8px',
+              padding: '12px 24px',
+              fontWeight: '600',
+              cursor: 'pointer',
+              width: '100%'
+            }}
+          >
+            Ir para o App
+          </button>
+        </div>
+      ) : status === 'in_process' ? (
+        <div style={{ textAlign: 'center', padding: '20px 0' }}>
+          <span style={{ fontSize: '48px' }}>⏳</span>
+          <h3 style={{ color: '#f59e0b', margin: '16px 0 8px' }}>Pagamento em Análise</h3>
+          <p style={{ fontSize: '14px', color: 'rgba(255, 255, 255, 0.7)', lineHeight: '1.5' }}>
+            Seu pagamento está sendo analisado pelo Mercado Pago. O acesso premium será liberado automaticamente assim que for aprovado.
+          </p>
+          <button
+            onClick={() => window.location.href = '/?app=1'}
+            style={{
+              marginTop: '20px',
+              backgroundColor: '#f59e0b',
               color: '#ffffff',
               border: 'none',
               borderRadius: '8px',
@@ -424,8 +464,8 @@ export default function Checkout() {
             />
           </div>
 
-          {/* Simple React conditional flow rendering below container */}
-          {paymentMethod === 'pix' && renderCpfInput()}
+          {/* CPF field renders conditionally when isPix is true */}
+          {isPix && renderCpfInput()}
           
           {status === 'processando' && (
             <div style={{ textAlign: 'center', marginTop: '16px', fontSize: '13px', color: 'rgba(255, 255, 255, 0.5)' }}>

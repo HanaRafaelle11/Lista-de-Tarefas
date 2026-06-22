@@ -27,14 +27,20 @@ process.env.SUPABASE_URL = supabaseUrl;
 process.env.SUPABASE_SERVICE_ROLE_KEY = supabaseServiceKey;
 process.env.VITE_SUPABASE_URL = supabaseUrl;
 process.env.VITE_SUPABASE_ANON_KEY = parseEnv('VITE_SUPABASE_ANON_KEY') || 'mock-anon-key';
-process.env.MERCADOPAGO_ACCESS_TOKEN = parseEnv('MERCADOPAGO_ACCESS_TOKEN') || 'TEST-5944910093081420-062100-95d82fd469dc4b7a4f53d7bd44d33269-2394045165';
+process.env.MERCADOPAGO_ACCESS_TOKEN = parseEnv('MERCADOPAGO_ACCESS_TOKEN') || 'dummy-access-token-for-testing';
 process.env.CRON_SECRET = parseEnv('CRON_SECRET') || 'flowday-cron-secret-1234';
 
 // 2. Banco de dados em memória para simulação de queries PostgREST
 const mockDatabase = {
   profiles: {},
   billing_events: [],
-  events: []
+  payment_events: [],
+  payment_ledger: [],
+  events: [],
+  subscriptions: {},
+  billing_idempotency: {},
+  billing_locks: {},
+  billing_traces: []
 };
 
 // 3. Mockar chamadas de fetch externas (tanto para Mercado Pago quanto para o Supabase)
@@ -56,16 +62,19 @@ globalThis.fetch = async (url, options) => {
 
     // Extrair filtros comuns de query
     let idEq = null;
-    if (query.includes('id=eq.')) {
-      idEq = decodeURIComponent(query.split('id=eq.')[1].split('&')[0]);
+    const idMatch = query.match(/(?:^|&)id=eq\.([^&]+)/);
+    if (idMatch) {
+      idEq = decodeURIComponent(idMatch[1]);
     }
     let paymentIdEq = null;
-    if (query.includes('payment_id=eq.')) {
-      paymentIdEq = decodeURIComponent(query.split('payment_id=eq.')[1].split('&')[0]);
+    const paymentIdMatch = query.match(/(?:^|&)(?:payment_id|metadata(?:-%3E%3E|->>)payment_id)=eq\.([^&]+)/);
+    if (paymentIdMatch) {
+      paymentIdEq = decodeURIComponent(paymentIdMatch[1]);
     }
     let userIdEq = null;
-    if (query.includes('user_id=eq.')) {
-      userIdEq = decodeURIComponent(query.split('user_id=eq.')[1].split('&')[0]);
+    const userIdMatch = query.match(/(?:^|&)user_id=eq\.([^&]+)/);
+    if (userIdMatch) {
+      userIdEq = decodeURIComponent(userIdMatch[1]);
     }
 
     let responseData = [];
@@ -148,6 +157,87 @@ globalThis.fetch = async (url, options) => {
         }
         responseData = [];
       }
+    } else if (path === 'payment_events') {
+      if (method === 'GET') {
+        let results = mockDatabase.payment_events;
+        if (paymentIdEq) {
+          results = results.filter(e => e.payment_id === paymentIdEq);
+        }
+        if (userIdEq) {
+          results = results.filter(e => e.user_id === userIdEq);
+        }
+        responseData = results;
+      } else if (method === 'POST') {
+        const records = Array.isArray(body) ? body : [body];
+        records.forEach(r => {
+          if (r.payment_id) {
+            const idx = mockDatabase.payment_events.findIndex(e => e.payment_id === r.payment_id);
+            if (idx !== -1) {
+              Object.assign(mockDatabase.payment_events[idx], r, {
+                processed_at: r.processed_at || new Date().toISOString()
+              });
+            } else {
+              mockDatabase.payment_events.push({ 
+                id: r.id || 'pe_mock_' + Math.random().toString(36).substr(2, 9),
+                processed_at: r.processed_at || new Date().toISOString(),
+                ...r 
+              });
+            }
+          }
+        });
+        responseData = records;
+        responseStatus = 201;
+      } else if (method === 'PATCH') {
+        if (paymentIdEq) {
+          const event = mockDatabase.payment_events.find(e => e.payment_id === paymentIdEq);
+          if (event) {
+            Object.assign(event, body, {
+              processed_at: new Date().toISOString()
+            });
+            responseData = [event];
+          } else {
+            responseData = [];
+          }
+        } else {
+          responseData = [];
+        }
+      } else if (method === 'DELETE') {
+        if (userIdEq) {
+          mockDatabase.payment_events = mockDatabase.payment_events.filter(e => e.user_id !== userIdEq);
+        }
+        responseData = [];
+      }
+    } else if (path === 'payment_ledger') {
+      if (method === 'GET') {
+        let results = mockDatabase.payment_ledger;
+        if (paymentIdEq) {
+          results = results.filter(e => e.payment_id === paymentIdEq);
+        }
+        if (userIdEq) {
+          results = results.filter(e => e.user_id === userIdEq);
+        }
+        responseData = results;
+      } else if (method === 'POST') {
+        const records = Array.isArray(body) ? body : [body];
+        records.forEach(r => {
+          mockDatabase.payment_ledger.push({
+            id: r.id || 'ledger_mock_' + Math.random().toString(36).substr(2, 9),
+            created_at: r.created_at || new Date().toISOString(),
+            ...r
+          });
+        });
+        responseData = records;
+        responseStatus = 201;
+      } else if (method === 'DELETE' || method === 'PATCH') {
+        return {
+          ok: false,
+          status: 405,
+          statusText: 'Method Not Allowed',
+          headers: new Headers({ 'content-type': 'application/json' }),
+          json: async () => ({ error: 'method_not_allowed', message: 'payment_ledger is append-only' }),
+          text: async () => JSON.stringify({ error: 'method_not_allowed', message: 'payment_ledger is append-only' })
+        };
+      }
     } else if (path === 'events') {
       if (method === 'GET') {
         let results = mockDatabase.events;
@@ -171,6 +261,156 @@ globalThis.fetch = async (url, options) => {
           mockDatabase.events = mockDatabase.events.filter(e => e.user_id !== userIdEq);
         }
         responseData = [];
+      }
+    } else if (path === 'subscriptions') {
+      if (method === 'GET') {
+        let results = Object.values(mockDatabase.subscriptions);
+        if (userIdEq) {
+          results = results.filter(s => s.user_id === userIdEq);
+        }
+        if (idEq) {
+          results = results.filter(s => s.id === idEq);
+        }
+        responseData = results;
+      } else if (method === 'POST') {
+        const records = Array.isArray(body) ? body : [body];
+        records.forEach(r => {
+          mockDatabase.subscriptions[r.user_id] = {
+            id: r.id || 'sub_mock_' + Math.random().toString(36).substr(2, 9),
+            created_at: r.created_at || new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            ...r
+          };
+        });
+        responseData = records;
+        responseStatus = 201;
+      } else if (method === 'PATCH') {
+        let sub = null;
+        if (userIdEq) {
+          sub = mockDatabase.subscriptions[userIdEq];
+        } else if (idEq) {
+          sub = Object.values(mockDatabase.subscriptions).find(s => s.id === idEq);
+        }
+        if (sub) {
+          Object.assign(sub, body, { updated_at: new Date().toISOString() });
+          responseData = [sub];
+        } else {
+          responseData = [];
+        }
+      } else if (method === 'DELETE') {
+        if (userIdEq) {
+          delete mockDatabase.subscriptions[userIdEq];
+        }
+        responseData = [];
+      }
+    } else if (path === 'billing_idempotency') {
+      console.log(`[MOCK DB] billing_idempotency: method=${method}, query=${query}, body=`, JSON.stringify(body));
+      if (method === 'GET') {
+        let results = Object.values(mockDatabase.billing_idempotency);
+        const keyMatch = query.match(/(?:^|&)key=eq\.([^&]+)/);
+        if (keyMatch) {
+          const keyEq = decodeURIComponent(keyMatch[1]);
+          results = results.filter(r => r.key === keyEq);
+        }
+        responseData = results;
+      } else if (method === 'POST' || method === 'PUT') {
+        const records = Array.isArray(body) ? body : [body];
+        records.forEach(r => {
+          const existing = mockDatabase.billing_idempotency[r.key] || {};
+          mockDatabase.billing_idempotency[r.key] = {
+            ...existing,
+            ...r,
+            created_at: existing.created_at || new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          };
+        });
+        responseData = records;
+        responseStatus = 201;
+      } else if (method === 'PATCH') {
+        const keyMatch = query.match(/(?:^|&)key=eq\.([^&]+)/);
+        if (keyMatch) {
+          const keyEq = decodeURIComponent(keyMatch[1]);
+          const existing = mockDatabase.billing_idempotency[keyEq];
+          if (existing) {
+            Object.assign(existing, body, { updated_at: new Date().toISOString() });
+            responseData = [existing];
+          } else {
+            responseData = [];
+          }
+        } else {
+          responseData = [];
+        }
+      }
+    } else if (path === 'billing_locks') {
+      if (method === 'DELETE') {
+        const keyMatch = query.match(/(?:^|&)key=eq\.([^&]+)/);
+        const ownerMatch = query.match(/(?:^|&)owner=eq\.([^&]+)/);
+        const expiresAtLtMatch = query.match(/(?:^|&)expires_at=lt\.([^&]+)/);
+
+        let deletedCount = 0;
+        if (keyMatch) {
+          const keyEq = decodeURIComponent(keyMatch[1]);
+          const existing = mockDatabase.billing_locks[keyEq];
+          
+          if (existing) {
+            let matches = true;
+            if (ownerMatch) {
+              const ownerEq = decodeURIComponent(ownerMatch[1]);
+              if (existing.owner !== ownerEq) matches = false;
+            }
+            if (expiresAtLtMatch) {
+              const expiresAtLt = new Date(decodeURIComponent(expiresAtLtMatch[1]));
+              const lockExpiry = new Date(existing.expires_at);
+              if (lockExpiry >= expiresAtLt) matches = false;
+            }
+            
+            if (matches) {
+              delete mockDatabase.billing_locks[keyEq];
+              deletedCount = 1;
+            }
+          }
+        }
+        responseData = deletedCount > 0 ? [{}] : [];
+      } else if (method === 'POST') {
+        const records = Array.isArray(body) ? body : [body];
+        let duplicate = false;
+        for (const r of records) {
+          if (mockDatabase.billing_locks[r.key]) {
+            duplicate = true;
+            break;
+          }
+        }
+        if (duplicate) {
+          return {
+            ok: false,
+            status: 409,
+            statusText: 'Conflict',
+            headers: new Headers({ 'content-type': 'application/json' }),
+            json: async () => ({ code: '23505', message: 'duplicate key value violates unique constraint' }),
+            text: async () => JSON.stringify({ code: '23505', message: 'duplicate key' })
+          };
+        }
+        records.forEach(r => {
+          mockDatabase.billing_locks[r.key] = {
+            ...r,
+            created_at: r.created_at || new Date().toISOString()
+          };
+        });
+        responseData = records;
+        responseStatus = 201;
+      }
+    } else if (path === 'billing_traces') {
+      if (method === 'POST') {
+        const records = Array.isArray(body) ? body : [body];
+        records.forEach(r => {
+          mockDatabase.billing_traces.push({
+            trace_id: r.trace_id || crypto.randomUUID(),
+            timestamp: r.timestamp || new Date().toISOString(),
+            ...r
+          });
+        });
+        responseData = records;
+        responseStatus = 201;
       }
     }
 
@@ -261,6 +501,7 @@ const legacyCheckAccessHandler = (await import('../api/auth/check-access.js')).d
 const checkAccessHandler = (await import('../api/access/check.js')).default;
 const revenueHandler = (await import('../api/analytics/revenue.js')).default;
 const userTimelineHandler = (await import('../api/analytics/user-timeline.js')).default;
+const revenueIntegrityHandler = (await import('../api/analytics/revenue-integrity.js')).default;
 
 // UUID exclusivo para testes
 const testUserId = '00000000-0000-0000-0000-000000000009';
@@ -294,11 +535,17 @@ function mockReqRes(options = {}) {
       resolved(this);
       return this;
     },
+    send(body) {
+      this.body = body;
+      resolved(this);
+      return this;
+    },
     setHeader(name, value) {
       this.headers[name] = value;
       return this;
     },
-    end() {
+    end(body) {
+      if (body) this.body = body;
       resolved(this);
       return this;
     }
@@ -313,6 +560,7 @@ function setupTestUser() {
   mockDatabase.profiles = {};
   mockDatabase.billing_events = [];
   mockDatabase.events = [];
+  mockDatabase.subscriptions = {};
 
   mockDatabase.profiles[testUserId] = {
     id: testUserId,
@@ -590,6 +838,12 @@ async function runTests() {
       mockDatabase.profiles[testUserId].plano = 'premium';
       mockDatabase.profiles[testUserId].assinatura_status = 'active';
       mockDatabase.profiles[testUserId].assinatura_expira_em = null;
+      mockDatabase.subscriptions[testUserId] = {
+        user_id: testUserId,
+        status: 'active',
+        plan: 'premium',
+        current_period_end: null
+      };
       mockDatabase.events = [];
 
       // Validar novo endpoint
@@ -624,6 +878,12 @@ async function runTests() {
       mockDatabase.profiles[testUserId].plano = 'free';
       mockDatabase.profiles[testUserId].assinatura_status = 'free';
       mockDatabase.profiles[testUserId].assinatura_expira_em = null;
+      mockDatabase.subscriptions[testUserId] = {
+        user_id: testUserId,
+        status: 'free',
+        plan: 'free',
+        current_period_end: null
+      };
       mockDatabase.events = [];
 
       const { req: reqB, res: resB, promise: promiseB } = mockReqRes({
@@ -645,6 +905,12 @@ async function runTests() {
       mockDatabase.profiles[testUserId].plano = 'premium';
       mockDatabase.profiles[testUserId].assinatura_status = 'canceled';
       mockDatabase.profiles[testUserId].assinatura_expira_em = futureDate.toISOString();
+      mockDatabase.subscriptions[testUserId] = {
+        user_id: testUserId,
+        status: 'canceled',
+        plan: 'premium',
+        current_period_end: futureDate.toISOString()
+      };
 
       const { req: reqC, res: resC, promise: promiseC } = mockReqRes({
         method: 'GET',
@@ -662,6 +928,12 @@ async function runTests() {
       mockDatabase.profiles[testUserId].plano = 'premium';
       mockDatabase.profiles[testUserId].assinatura_status = 'canceled';
       mockDatabase.profiles[testUserId].assinatura_expira_em = pastDate.toISOString();
+      mockDatabase.subscriptions[testUserId] = {
+        user_id: testUserId,
+        status: 'canceled',
+        plan: 'premium',
+        current_period_end: pastDate.toISOString()
+      };
       mockDatabase.events = [];
 
       const { req: reqD, res: resD, promise: promiseD } = mockReqRes({
@@ -754,6 +1026,678 @@ async function runTests() {
       if (originalGetUserById) {
         supabaseAdmin.auth.admin.getUserById = originalGetUserById;
       }
+    });
+
+    // --- TESTE 9: Hardening V2 — Reprocessamento Idempotente do Webhook ---
+    await runTest('Hardening V2 - Webhook Duplicate Reprocessing', async () => {
+      mockDatabase.payment_events = [];
+      mockDatabase.billing_events = [];
+      mockDatabase.events = [];
+      mockDatabase.profiles[testUserId].plano = 'free';
+      mockDatabase.profiles[testUserId].assinatura_status = 'free';
+
+      const paymentId = 'pay_h2_dup_' + Date.now();
+      mockFetchPayments[paymentId] = {
+        id: paymentId,
+        status: 'approved',
+        transaction_amount: 14.90,
+        metadata: { user_id: testUserId },
+        payer: { id: 'cust_test_123' },
+        date_approved: new Date().toISOString()
+      };
+
+      // Primeiro envio (Aprovação)
+      const { req: req1, res: res1, promise: promise1 } = mockReqRes({
+        method: 'POST',
+        body: { type: 'payment', data: { id: paymentId } }
+      });
+      webhookHandler(req1, res1);
+      const result1 = await promise1;
+      assert.strictEqual(result1.statusCode, 200);
+
+      // Segundo envio (Duplicado)
+      const { req: req2, res: res2, promise: promise2 } = mockReqRes({
+        method: 'POST',
+        body: { type: 'payment', data: { id: paymentId } }
+      });
+      webhookHandler(req2, res2);
+      const result2 = await promise2;
+
+      // Deve responder 200 com billingResult indicando duplicado
+      assert.strictEqual(result2.statusCode, 200);
+      assert.ok(result2.body && result2.body.billingResult && result2.body.billingResult.duplicated === true, 'Deve indicar duplicado no billingResult');
+    });
+
+    // --- TESTE 10: Hardening V2 — Status Pending Não Libera Premium ---
+    await runTest('Hardening V2 - Webhook Pending Does Not Grant Premium', async () => {
+      mockDatabase.payment_events = [];
+      mockDatabase.billing_events = [];
+      mockDatabase.profiles[testUserId].plano = 'free';
+      mockDatabase.profiles[testUserId].assinatura_status = 'free';
+
+      const paymentId = 'pay_h2_pend_' + Date.now();
+      mockFetchPayments[paymentId] = {
+        id: paymentId,
+        status: 'pending',
+        transaction_amount: 14.90,
+        metadata: { user_id: testUserId },
+        payer: { id: 'cust_test_123' }
+      };
+
+      const { req, res, promise } = mockReqRes({
+        method: 'POST',
+        body: { type: 'payment', data: { id: paymentId } }
+      });
+      webhookHandler(req, res);
+      const result = await promise;
+
+      assert.strictEqual(result.statusCode, 200);
+      assert.strictEqual(mockDatabase.profiles[testUserId].plano, 'free', 'O plano deve continuar como free');
+      assert.strictEqual(mockDatabase.profiles[testUserId].assinatura_status, 'free', 'Status da assinatura deve continuar free');
+    });
+
+    // --- TESTE 11: Hardening V2 — CPF Inválido Bloqueia Criação de Pagamento ---
+    await runTest('Hardening V2 - Invalid CPF Blocks Payment Creation', async () => {
+      const { req, res, promise } = mockReqRes({
+        method: 'POST',
+        body: {
+          token: 'card_token_123',
+          payment_method_id: 'master',
+          amount: 14.90,
+          userId: testUserId,
+          payer: {
+            email: 'valid_user@flowday.app',
+            identification: {
+              type: 'CPF',
+              number: '123.456.789-00' // CPF inválido matemático
+            }
+          }
+        }
+      });
+
+      const paymentsCreateHandler = (await import('../api/payments/create.js')).default;
+      paymentsCreateHandler(req, res);
+      const result = await promise;
+      assert.strictEqual(result.statusCode, 400, 'Deve retornar erro 400');
+      assert.strictEqual(result.body.error, 'CPF inválido.', 'Deve acusar CPF inválido');
+    });
+
+    // --- TESTE 12: Hardening V2 — Email Inválido ou Teste Bloqueia Criação de Pagamento ---
+    await runTest('Hardening V2 - Invalid Email Blocks Payment Creation', async () => {
+      const { req, res, promise } = mockReqRes({
+        method: 'POST',
+        body: {
+          token: 'card_token_123',
+          payment_method_id: 'master',
+          amount: 14.90,
+          userId: testUserId,
+          payer: {
+            email: 'test_user@test.com', // Rejeitado
+            identification: {
+              type: 'CPF',
+              number: '29009941019' // CPF válido matemático
+            }
+          }
+        }
+      });
+
+      const paymentsCreateHandler = (await import('../api/payments/create.js')).default;
+      paymentsCreateHandler(req, res);
+      const result = await promise;
+      assert.strictEqual(result.statusCode, 400, 'Deve retornar erro 400');
+      assert.strictEqual(result.body.error, 'Email obrigatório.', 'Deve acusar Email obrigatório para test_user@test.com');
+    });
+
+    // --- TESTE 13: Hardening V3 — Webhook Replay & Ledger Idempotency ---
+    await runTest('Hardening V3 - Webhook Replay & Ledger Idempotency', async () => {
+      mockDatabase.payment_events = [];
+      mockDatabase.payment_ledger = [];
+      mockDatabase.profiles[testUserId].plano = 'free';
+      mockDatabase.profiles[testUserId].assinatura_status = 'free';
+
+      const paymentId = 'pay_h3_replay_' + Date.now();
+      mockFetchPayments[paymentId] = {
+        id: paymentId,
+        status: 'approved',
+        transaction_amount: 14.90,
+        metadata: { user_id: testUserId },
+        payer: { id: 'cust_test_123' },
+        date_approved: new Date().toISOString()
+      };
+
+      // Primeiro webhook (deve transicionar status e criar registros no ledger)
+      const { req: req1, res: res1, promise: promise1 } = mockReqRes({
+        method: 'POST',
+        body: { type: 'payment', data: { id: paymentId } }
+      });
+      await webhookHandler(req1, res1);
+      const result1 = await promise1;
+      assert.strictEqual(result1.statusCode, 200);
+
+      // Segundo webhook (replay - deve ser ignorado sem reprocessar premium)
+      const { req: req2, res: res2, promise: promise2 } = mockReqRes({
+        method: 'POST',
+        body: { type: 'payment', data: { id: paymentId } }
+      });
+      await webhookHandler(req2, res2);
+      const result2 = await promise2;
+      assert.strictEqual(result2.statusCode, 200);
+      assert.strictEqual(result2.body.billingResult.duplicated, true);
+
+      // Validar ledger (deve conter webhook_received, payment_created, status_updated para o primeiro, e webhook_received, webhook_ignored para o segundo)
+      const ledgerEvents = mockDatabase.payment_ledger.filter(e => e.payment_id === paymentId);
+      assert.ok(ledgerEvents.length >= 4, 'Ledger deve conter múltiplos registros do ciclo de vida');
+
+      const eventTypes = ledgerEvents.map(e => e.event_type);
+      assert.ok(eventTypes.includes('webhook_received'));
+      assert.ok(eventTypes.includes('payment_created'));
+      assert.ok(eventTypes.includes('status_updated'));
+      assert.ok(eventTypes.includes('webhook_ignored'), 'Deve ter registrado webhook_ignored para o replay');
+    });
+
+    // --- TESTE 14: Hardening V3 — Reconciliation Correcting Divergent States ---
+    await runTest('Hardening V3 - Reconciliation Correcting Divergent States', async () => {
+      // Caso 1: MP = approved, DB = pending -> deve se tornar reconciled e liberar premium
+      mockDatabase.payment_events = [];
+      mockDatabase.payment_ledger = [];
+      mockFetchPayments = {};
+      mockFetchPreapprovals = [];
+      mockDatabase.profiles[testUserId].plano = 'free';
+      mockDatabase.profiles[testUserId].assinatura_status = 'free';
+
+      const paymentId1 = 'pay_h3_recon_app_' + Date.now();
+      
+      // Inserir estado inicial como 'pending' no banco local
+      mockDatabase.payment_events.push({
+        payment_id: paymentId1,
+        status: 'pending',
+        user_id: testUserId,
+        plan: 'premium',
+        processed_at: new Date().toISOString()
+      });
+
+      // Configurar retorno de Mercado Pago como 'approved'
+      mockFetchPayments[paymentId1] = {
+        id: paymentId1,
+        status: 'approved',
+        transaction_amount: 14.90,
+        metadata: { user_id: testUserId },
+        payer: { id: 'cust_test_123' },
+        date_approved: new Date().toISOString()
+      };
+
+      const { req: req1, res: res1, promise: promise1 } = mockReqRes({
+        method: 'GET',
+        headers: { authorization: `Bearer ${process.env.CRON_SECRET}` }
+      });
+
+      await reconcileHandler(req1, res1);
+      const result1 = await promise1;
+
+      assert.strictEqual(result1.statusCode, 200);
+      assert.strictEqual(result1.body.discrepanciesFixed, 1, 'Deve fixar 1 inconsistência');
+
+      // Perfil local deve estar premium e ativo
+      assert.strictEqual(mockDatabase.profiles[testUserId].plano, 'premium');
+      assert.strictEqual(mockDatabase.profiles[testUserId].assinatura_status, 'active');
+
+      // Tabela de status local deve estar 'reconciled'
+      const statusEvent1 = mockDatabase.payment_events.find(e => e.payment_id === paymentId1);
+      assert.strictEqual(statusEvent1.status, 'reconciled', 'Estado final na tabela de status deve ser reconciled');
+
+      // Caso 2: MP = rejected, DB = pending -> deve se tornar rejected e remover premium (se tivesse)
+      mockDatabase.payment_events = [];
+      mockFetchPayments = {};
+      mockFetchPreapprovals = [];
+      mockDatabase.profiles[testUserId].plano = 'free';
+      mockDatabase.profiles[testUserId].assinatura_status = 'free';
+
+      const paymentId2 = 'pay_h3_recon_rej_' + Date.now();
+      mockDatabase.payment_events.push({
+        payment_id: paymentId2,
+        status: 'pending',
+        user_id: testUserId,
+        plan: 'premium',
+        processed_at: new Date().toISOString()
+      });
+
+      mockFetchPayments[paymentId2] = {
+        id: paymentId2,
+        status: 'rejected',
+        transaction_amount: 14.90,
+        metadata: { user_id: testUserId },
+        payer: { id: 'cust_test_123' }
+      };
+
+      const { req: req2, res: res2, promise: promise2 } = mockReqRes({
+        method: 'GET',
+        headers: { authorization: `Bearer ${process.env.CRON_SECRET}` }
+      });
+
+      await reconcileHandler(req2, res2);
+      const result2 = await promise2;
+
+      assert.strictEqual(result2.statusCode, 200);
+      assert.strictEqual(result2.body.discrepanciesFixed, 1);
+
+      const statusEvent2 = mockDatabase.payment_events.find(e => e.payment_id === paymentId2);
+      assert.strictEqual(statusEvent2.status, 'rejected', 'Deve ter transicionado local para rejected');
+    });
+
+    // --- TESTE 15: Hardening V3 — State Machine Transition Blocks ---
+    await runTest('Hardening V3 - State Machine Transition Blocks', async () => {
+      const { PaymentStateMachine } = await import('../services/payment-state-machine.js');
+
+      // approved para pending deve ser bloqueado
+      assert.strictEqual(PaymentStateMachine.isValidTransition('approved', 'pending'), false);
+
+      // rejected ou cancelled são terminais e devem bloquear qualquer transição
+      assert.strictEqual(PaymentStateMachine.isValidTransition('rejected', 'approved'), false);
+      assert.strictEqual(PaymentStateMachine.isValidTransition('cancelled', 'reconciled'), false);
+
+      // reconciled só pode ocorrer após approved ou pending
+      assert.strictEqual(PaymentStateMachine.isValidTransition('approved', 'reconciled'), true);
+      assert.strictEqual(PaymentStateMachine.isValidTransition('pending', 'reconciled'), true);
+      assert.strictEqual(PaymentStateMachine.isValidTransition('in_process', 'reconciled'), false);
+      assert.strictEqual(PaymentStateMachine.isValidTransition('created', 'reconciled'), false);
+    });
+
+    // --- TESTE 16: Hardening V3 — Ledger is Append-Only ---
+    await runTest('Hardening V3 - Ledger is Append-Only', async () => {
+      // Simular chamada de PATCH para o Supabase (PostgREST) na rota payment_ledger
+      const patchUrl = `${supabaseUrl}/rest/v1/payment_ledger?id=eq.any_id`;
+      const response = await fetch(patchUrl, {
+        method: 'PATCH',
+        body: JSON.stringify({ status_normalized: 'hacked' })
+      });
+
+      assert.strictEqual(response.status, 405, 'PATCH deve ser bloqueado com 405 Method Not Allowed');
+
+      const deleteUrl = `${supabaseUrl}/rest/v1/payment_ledger?id=eq.any_id`;
+      const deleteResponse = await fetch(deleteUrl, {
+        method: 'DELETE'
+      });
+
+      assert.strictEqual(deleteResponse.status, 405, 'DELETE deve ser bloqueado com 405 Method Not Allowed');
+    });
+
+    // --- TESTE 17: Subscription Expiration Removes Premium ---
+    await runTest('Subscription Expiration Removes Premium', async () => {
+      mockDatabase.subscriptions[testUserId] = {
+        id: 'sub_test_exp_123',
+        user_id: testUserId,
+        status: 'active',
+        plan: 'premium',
+        price: 14.90,
+        current_period_start: new Date().toISOString(),
+        current_period_end: new Date(Date.now() - 3600000).toISOString(), // expired 1 hour ago
+        provider: 'mercado_pago'
+      };
+
+      const { req, res, promise } = mockReqRes({
+        method: 'GET',
+        query: { userId: testUserId }
+      });
+      await checkAccessHandler(req, res);
+      const result = await promise;
+
+      assert.strictEqual(result.statusCode, 200);
+      assert.strictEqual(result.body.isPro, false, 'Expired subscription must deny Pro access');
+      assert.strictEqual(result.body.status, 'EXPIRED', 'Reason must be EXPIRED');
+    });
+
+    // --- TESTE 18: Failed Payment webhook sets Past_Due ---
+    await runTest('Failed Payment webhook sets Past_Due', async () => {
+      mockDatabase.subscriptions[testUserId] = {
+        id: 'sub_test_fail_123',
+        user_id: testUserId,
+        status: 'active',
+        plan: 'premium',
+        price: 14.90,
+        current_period_start: new Date().toISOString(),
+        current_period_end: new Date(Date.now() + 86400000 * 30).toISOString(),
+        provider: 'mercado_pago'
+      };
+      mockDatabase.payment_events = [];
+      mockDatabase.payment_ledger = [];
+
+      const paymentId = 'pay_failed_webhook_' + Date.now();
+      mockFetchPayments[paymentId] = {
+        id: paymentId,
+        status: 'rejected',
+        transaction_amount: 14.90,
+        metadata: { user_id: testUserId },
+        payer: { id: 'cust_fail_123' }
+      };
+
+      const { req, res, promise } = mockReqRes({
+        method: 'POST',
+        body: { type: 'payment', data: { id: paymentId } }
+      });
+      await webhookHandler(req, res);
+      const result = await promise;
+
+      assert.strictEqual(result.statusCode, 200);
+      assert.strictEqual(mockDatabase.subscriptions[testUserId].status, 'past_due', 'Webhook for failed payment must transition status to past_due');
+    });
+
+    // --- TESTE 19: Past_Due has No Premium Access ---
+    await runTest('Past_Due has No Premium Access', async () => {
+      mockDatabase.subscriptions[testUserId] = {
+        id: 'sub_test_past_due_123',
+        user_id: testUserId,
+        status: 'past_due',
+        plan: 'premium',
+        price: 14.90,
+        current_period_start: new Date().toISOString(),
+        current_period_end: new Date(Date.now() + 86400000 * 30).toISOString(),
+        provider: 'mercado_pago'
+      };
+
+      const { req, res, promise } = mockReqRes({
+        method: 'GET',
+        query: { userId: testUserId }
+      });
+      await checkAccessHandler(req, res);
+      const result = await promise;
+
+      assert.strictEqual(result.statusCode, 200);
+      assert.strictEqual(result.body.isPro, false, 'Past due subscription must deny Pro access');
+      assert.strictEqual(result.body.status, 'PAST_DUE', 'Reason must be PAST_DUE');
+    });
+
+    // --- TESTE 20: Successful Retry Restores Access ---
+    await runTest('Successful Retry Restores Access', async () => {
+      mockDatabase.subscriptions[testUserId] = {
+        id: 'sub_test_dunning_123',
+        user_id: testUserId,
+        status: 'past_due',
+        plan: 'premium',
+        price: 14.90,
+        current_period_start: new Date().toISOString(),
+        current_period_end: new Date(Date.now() + 86400000 * 30).toISOString(),
+        provider: 'mercado_pago',
+        metadata: {
+          retry_attempts: 1,
+          simulate_dunning_failure: false
+        }
+      };
+
+      const { runDunning } = await import('../jobs/subscription-dunning.js');
+      const dunningResult = await runDunning();
+
+      assert.ok(dunningResult.success);
+      assert.strictEqual(dunningResult.recovered, 1, 'Should recover 1 subscription');
+      assert.strictEqual(mockDatabase.subscriptions[testUserId].status, 'active', 'Should transition subscription to active');
+    });
+
+    // --- TESTE 21: Billing Cycle Generates Charge ---
+    await runTest('Billing Cycle Generates Charge', async () => {
+      mockDatabase.subscriptions[testUserId] = {
+        id: 'sub_test_billing_cycle_123',
+        user_id: testUserId,
+        status: 'active',
+        plan: 'premium',
+        price: 14.90,
+        current_period_start: new Date(Date.now() - 86400000 * 35).toISOString(),
+        current_period_end: new Date(Date.now() - 86400000 * 5).toISOString(), // expired 5 days ago
+        provider: 'mercado_pago',
+        metadata: {
+          email: testUserEmail,
+          simulate_failure: false
+        }
+      };
+
+      const { runBillingCycle } = await import('../jobs/subscription-billing-cycle.js');
+      const cycleResult = await runBillingCycle();
+
+      assert.ok(cycleResult.success);
+      assert.strictEqual(cycleResult.successes, 1, 'Should charge and renew subscription');
+      assert.strictEqual(mockDatabase.subscriptions[testUserId].status, 'active');
+      
+      const newExpiry = new Date(mockDatabase.subscriptions[testUserId].current_period_end);
+      assert.ok(newExpiry > new Date(), 'Period end should be pushed to the future');
+    });
+
+    // --- TESTE 22: Webhook Does Not Directly Grant Access ---
+    await runTest('Webhook Does Not Directly Grant Access', async () => {
+      delete mockDatabase.subscriptions[testUserId];
+      mockDatabase.profiles[testUserId].plano = 'free';
+      mockDatabase.profiles[testUserId].assinatura_status = 'free';
+      mockDatabase.payment_events = [];
+      mockDatabase.payment_ledger = [];
+
+      const paymentId = 'pay_webhook_indirect_' + Date.now();
+      mockFetchPayments[paymentId] = {
+        id: paymentId,
+        status: 'approved',
+        transaction_amount: 14.90,
+        metadata: { user_id: testUserId },
+        payer: { id: 'cust_webhook_ind_123' },
+        date_approved: new Date().toISOString()
+      };
+
+      const { req: req1, res: res1, promise: promise1 } = mockReqRes({
+        method: 'POST',
+        body: { type: 'payment', data: { id: paymentId } }
+      });
+      await webhookHandler(req1, res1);
+      await promise1;
+
+      const { req: req2, res: res2, promise: promise2 } = mockReqRes({
+        method: 'GET',
+        query: { userId: testUserId }
+      });
+      await checkAccessHandler(req2, res2);
+      const accessResult = await promise2;
+
+      assert.strictEqual(accessResult.body.isPro, true, 'Access must be granted after webhook processing');
+      assert.strictEqual(accessResult.body.status, 'ACTIVE', 'Access reason must be ACTIVE');
+      
+      const ledgerEvents = mockDatabase.payment_ledger.filter(e => e.payment_id === paymentId);
+      assert.ok(ledgerEvents.length >= 2, 'Webhook should update status and record in ledger first');
+    });
+
+    // --- TESTE 23: Revenue Integrity Endpoint ---
+    await runTest('Revenue Integrity Endpoint', async () => {
+      const { supabaseAdmin } = await import('../lib/supabase.js');
+      const originalGetUserById = supabaseAdmin.auth?.admin?.getUserById;
+      
+      if (!supabaseAdmin.auth) {
+        supabaseAdmin.auth = {};
+      }
+      if (!supabaseAdmin.auth.admin) {
+        supabaseAdmin.auth.admin = {};
+      }
+
+      supabaseAdmin.auth.admin.getUserById = async (uid) => {
+        return {
+          data: {
+            user: {
+              id: uid,
+              email: 'admin@flowday.app',
+              user_metadata: { is_admin: true }
+            }
+          },
+          error: null
+        };
+      };
+
+      const { req, res, promise } = mockReqRes({
+        method: 'GET',
+        query: { userId: testUserId }
+      });
+      await revenueIntegrityHandler(req, res);
+      const result = await promise;
+
+      assert.strictEqual(result.statusCode, 200);
+      assert.ok(result.body.success);
+      assert.ok(result.body.metrics.mrr >= 0);
+
+      // Restore mock
+      if (originalGetUserById) {
+        supabaseAdmin.auth.admin.getUserById = originalGetUserById;
+      }
+    });
+
+    // --- TESTE 24: Webhook Concurrent Duplicate Processing ---
+    await runTest('Production Hardening - Concurrent Webhook Duplicates', async () => {
+      mockDatabase.payment_events = [];
+      mockDatabase.payment_ledger = [];
+      mockDatabase.billing_idempotency = {};
+      mockDatabase.billing_locks = {};
+
+      const paymentId = 'pay_concurrent_dup_' + Date.now();
+      mockFetchPayments[paymentId] = {
+        id: paymentId,
+        status: 'approved',
+        transaction_amount: 14.90,
+        metadata: { user_id: testUserId },
+        payer: { id: 'cust_concurrent_123' },
+        date_approved: new Date().toISOString()
+      };
+
+      const req1 = mockReqRes({
+        method: 'POST',
+        body: { type: 'payment', data: { id: paymentId } }
+      });
+      const req2 = mockReqRes({
+        method: 'POST',
+        body: { type: 'payment', data: { id: paymentId } }
+      });
+
+      const [res1, res2] = await Promise.all([
+        (async () => {
+          await webhookHandler(req1.req, req1.res);
+          return await req1.promise;
+        })(),
+        (async () => {
+          await webhookHandler(req2.req, req2.res);
+          return await req2.promise;
+        })()
+      ]);
+
+      assert.strictEqual(res1.statusCode, 200);
+      assert.strictEqual(res2.statusCode, 200);
+
+      const duplicateDetected = 
+        (res1.body?.billingResult?.duplicated === true) || 
+        (res2.body?.billingResult?.duplicated === true);
+      assert.ok(duplicateDetected, 'Uma das requisições simultâneas deve ser identificada como duplicada');
+    });
+
+    // --- TESTE 25: Webhook Out-of-Order Events ---
+    await runTest('Production Hardening - Out-of-Order Webhook Prevention', async () => {
+      mockDatabase.billing_idempotency = {};
+      mockDatabase.billing_locks = {};
+      
+      const futureDate = new Date();
+      futureDate.setMinutes(futureDate.getMinutes() + 10);
+      
+      mockDatabase.subscriptions[testUserId] = {
+        id: 'sub_order_123',
+        user_id: testUserId,
+        status: 'active',
+        plan: 'premium',
+        price: 14.90,
+        current_period_start: new Date().toISOString(),
+        current_period_end: futureDate.toISOString(),
+        provider: 'mercado_pago',
+        updated_at: futureDate.toISOString()
+      };
+
+      const pastDate = new Date();
+      pastDate.setMinutes(pastDate.getMinutes() - 10);
+
+      const paymentId = 'pay_old_event_' + Date.now();
+      mockFetchPayments[paymentId] = {
+        id: paymentId,
+        status: 'rejected',
+        transaction_amount: 14.90,
+        metadata: { user_id: testUserId },
+        payer: { id: 'cust_old_123' },
+        date_approved: pastDate.toISOString(),
+        date_last_updated: pastDate.toISOString()
+      };
+
+      const { req, res, promise } = mockReqRes({
+        method: 'POST',
+        body: { type: 'payment', data: { id: paymentId } }
+      });
+      await webhookHandler(req, res);
+      const result = await promise;
+
+      assert.strictEqual(result.statusCode, 200);
+      assert.ok(result.body.ignored || (result.body.billingResult && result.body.billingResult.ignored) || result.body.status === 'active', 'O evento antigo deve ser ignorado ou manter status active');
+      assert.strictEqual(mockDatabase.subscriptions[testUserId].status, 'active', 'A assinatura mais recente não deve sofrer regressão');
+    });
+
+    // --- TESTE 26: Chaos Engine DB failure and Retry recovery ---
+    await runTest('Production Hardening - Database Failure Simulation and Retry', async () => {
+      const { ChaosEngine } = await import('../services/chaos-engine.js');
+      mockDatabase.billing_idempotency = {};
+      mockDatabase.billing_locks = {};
+      mockDatabase.payment_events = [];
+
+      const paymentId = 'pay_chaos_retry_' + Date.now();
+      mockFetchPayments[paymentId] = {
+        id: paymentId,
+        status: 'approved',
+        transaction_amount: 14.90,
+        metadata: { user_id: testUserId },
+        payer: { id: 'cust_chaos_123' },
+        date_approved: new Date().toISOString()
+      };
+
+      ChaosEngine.enableBehavior('db_write_failure');
+
+      setTimeout(() => {
+        ChaosEngine.disableBehavior('db_write_failure');
+      }, 80);
+
+      const { req, res, promise } = mockReqRes({
+        method: 'POST',
+        body: { type: 'payment', data: { id: paymentId } }
+      });
+      await webhookHandler(req, res);
+      const result = await promise;
+
+      assert.strictEqual(result.statusCode, 200);
+      assert.strictEqual(mockDatabase.subscriptions[testUserId].status, 'active', 'Devem ser aplicados os dados após retentativas com sucesso');
+    });
+
+    // --- TESTE 27: Concurrency lock behavior under crash (Lock Timeout) ---
+    await runTest('Production Hardening - Lock Cleanup on Crash (Timeout)', async () => {
+      mockDatabase.billing_locks = {};
+      mockDatabase.billing_idempotency = {};
+
+      const expiredDate = new Date(Date.now() - 10000);
+      mockDatabase.billing_locks[`subscription:${testUserId}`] = {
+        key: `subscription:${testUserId}`,
+        owner: 'orphan-owner-id',
+        expires_at: expiredDate.toISOString(),
+        created_at: expiredDate.toISOString()
+      };
+
+      const paymentId = 'pay_lock_timeout_' + Date.now();
+      mockFetchPayments[paymentId] = {
+        id: paymentId,
+        status: 'approved',
+        transaction_amount: 14.90,
+        metadata: { user_id: testUserId },
+        payer: { id: 'cust_timeout_123' },
+        date_approved: new Date().toISOString()
+      };
+
+      const { req, res, promise } = mockReqRes({
+        method: 'POST',
+        body: { type: 'payment', data: { id: paymentId } }
+      });
+      await webhookHandler(req, res);
+      const result = await promise;
+
+      assert.strictEqual(result.statusCode, 200);
+      assert.strictEqual(mockDatabase.subscriptions[testUserId].status, 'active', 'Deve conseguir limpar o lock expirado e processar');
     });
 
   } finally {

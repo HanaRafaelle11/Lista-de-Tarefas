@@ -35,20 +35,20 @@ export default async function handler(req, res) {
   }
 
   try {
-    // 1. Buscar perfil
-    const { data: profile, error } = await supabaseAdmin
-      .from('profiles')
-      .select('plano, assinatura_status, assinatura_expira_em')
-      .eq('id', userId)
+    // 1. Buscar assinatura
+    const { data: subscription, error } = await supabaseAdmin
+      .from('subscriptions')
+      .select('status, current_period_end, plan')
+      .eq('user_id', userId)
       .maybeSingle();
 
-    if (error || !profile) {
-      res.status(200).json({ isPro: false, reason: 'INVALID', error: 'Perfil não encontrado.' });
+    if (error) {
+      res.status(200).json({ isPro: false, reason: 'INVALID', error: 'Assinatura não encontrada.' });
       return;
     }
 
     // 2. Delegar ao AccessDecisionEngine
-    const decision = AccessDecisionEngine.evaluateAccess(profile);
+    const decision = AccessDecisionEngine.evaluateAccess(subscription);
 
     // 3. Registrar logs estruturados
     await supabaseAdmin.from('events').insert([{
@@ -57,9 +57,9 @@ export default async function handler(req, res) {
       metadata: {
         isPro: decision.isPro,
         reason: decision.reason,
-        plano: profile.plano,
-        status: profile.assinatura_status,
-        expiresAt: profile.assinatura_expira_em,
+        plano: subscription?.plan || 'free',
+        status: subscription?.status || 'free',
+        expiresAt: subscription?.current_period_end || null,
         timestamp: new Date().toISOString()
       }
     }]);
@@ -82,9 +82,9 @@ export default async function handler(req, res) {
 
     res.status(200).json({ 
       isPro: decision.isPro,
-      plano: profile.plano,
+      plano: subscription?.plan || 'free',
       status: decision.reason,
-      expiresAt: profile.assinatura_expira_em,
+      expiresAt: subscription?.current_period_end || null,
       churn: churnData ? {
         score: churnData.score,
         risk: churnData.risk

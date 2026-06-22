@@ -56,12 +56,12 @@ export const RevenueAnalyticsService = {
     // Para upgrades/churns diários, calculamos em memória a partir de subscriptions
     const dailyEvents = {};
     subscriptions.forEach(s => {
-      const createdDate = s.created_at.split('T')[0];
+      const createdDate = (s.created_at || new Date().toISOString()).split('T')[0];
       if (!dailyEvents[createdDate]) dailyEvents[createdDate] = { upgrades: 0, churns: 0 };
       dailyEvents[createdDate].upgrades++;
 
       if (s.status === 'canceled' && s.updated_at) {
-        const canceledDate = s.updated_at.split('T')[0];
+        const canceledDate = (s.updated_at || new Date().toISOString()).split('T')[0];
         if (!dailyEvents[canceledDate]) dailyEvents[canceledDate] = { upgrades: 0, churns: 0 };
         dailyEvents[canceledDate].churns++;
       }
