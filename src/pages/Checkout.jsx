@@ -23,7 +23,7 @@ export default function Checkout() {
         payer: paymentData.payer
       };
 
-      // Rota que processa o token do Brick
+      // Rota API que processa a criação e o token do Brick do Mercado Pago
       const response = await fetch('/api/payments/create', {
         method: 'POST',
         headers: {
