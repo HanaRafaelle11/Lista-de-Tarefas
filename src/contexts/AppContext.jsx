@@ -2246,10 +2246,6 @@ export function AppProvider({ children }) {
     setIsPaywallOpen(false);
   }, []);
 
-  const handleUpgradeSuccess = useCallback(async (simulationType) => {
-    console.warn('[AppContext] O upgrade direto pelo frontend foi desativado. Apenas o webhook do Mercado Pago pode atualizar o plano.');
-  }, []);
-
   const handleCancelSubscription = useCallback(async () => {
     if (!currentUser?.id) return;
     try {
@@ -2260,11 +2256,6 @@ export function AppProvider({ children }) {
       console.error('Erro ao registrar clique de downgrade:', e);
     }
   }, [currentUser, logEvent]);
-
-  const handleSimulateUpgrade = useCallback(async () => {
-    if (!currentUser?.id) return;
-    openPaywall('admin_simulation');
-  }, [currentUser, openPaywall]);
 
   // ═══════════════════════════════════════════════════════════════════════════
   // HABITS — interface compatível com useHabits anterior
@@ -2727,7 +2718,6 @@ export function AppProvider({ children }) {
     // SaaS additions
     isPro,
     isAdmin,
-    handleSimulateUpgrade,
     categories,
     handleAddCategory,
     handleUpdateCategory,
@@ -2747,7 +2737,6 @@ export function AppProvider({ children }) {
     hiddenGoalsCount,
     openPaywall,
     closePaywall,
-    handleUpgradeSuccess,
     handleCancelSubscription,
     checkServerAccess,
     churnScore,

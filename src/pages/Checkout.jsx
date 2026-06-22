@@ -45,31 +45,6 @@ export default function Checkout() {
     }
   };
 
-  const handleSimulate = async () => {
-    try {
-      setError(null);
-      setStatus('processando');
-
-      const response = await fetch('/api/dev/simulate-payment', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ userId: currentUser?.id })
-      });
-
-      if (!response.ok) {
-        const errJson = await response.json().catch(() => ({}));
-        throw new Error(errJson.error || 'Erro ao simular pagamento.');
-      }
-
-      setStatus('success');
-    } catch (err) {
-      console.error('Simulation error:', err);
-      setError(err.message);
-      setStatus('error');
-    }
-  };
 
   return (
     <div style={{
@@ -163,31 +138,7 @@ export default function Checkout() {
             }}
             onSubmit={onSubmit}
           />
-          
-          <div style={{ display: 'flex', alignItems: 'center', margin: '20px 0', gap: '10px' }}>
-            <hr style={{ flex: 1, border: 'none', borderTop: '1px solid rgba(255, 255, 255, 0.08)' }} />
-            <span style={{ fontSize: '11px', color: 'rgba(255, 255, 255, 0.3)', textTransform: 'uppercase' }}>ou para testar</span>
-            <hr style={{ flex: 1, border: 'none', borderTop: '1px solid rgba(255, 255, 255, 0.08)' }} />
-          </div>
 
-          <button
-            onClick={handleSimulate}
-            style={{
-              backgroundColor: 'rgba(255, 255, 255, 0.04)',
-              color: '#10b981',
-              border: '1px dashed rgba(16, 185, 129, 0.4)',
-              borderRadius: '8px',
-              padding: '12px 24px',
-              fontWeight: '600',
-              cursor: 'pointer',
-              width: '100%',
-              transition: 'background-color 0.2s'
-            }}
-            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(16, 185, 129, 0.08)'}
-            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.04)'}
-          >
-            Simular Pagamento Aprovado ⚡
-          </button>
           
           {status === 'processando' && (
             <div style={{ textAlign: 'center', marginTop: '16px', fontSize: '13px', color: 'rgba(255, 255, 255, 0.5)' }}>

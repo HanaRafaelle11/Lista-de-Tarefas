@@ -53,7 +53,6 @@ export default function SettingsView() {
     currentUser,
     handleLogout,
     isPro,
-    handleSimulateUpgrade,
     tasks,
     allTasks,
     allGoals,
