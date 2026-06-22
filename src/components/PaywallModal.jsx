@@ -50,7 +50,7 @@ export default function PaywallModal() {
     setErrorMessage('');
 
     try {
-      const endpoint = isReactivation ? '/api/billing/reactivate' : '/api/checkout';
+      const endpoint = isReactivation ? '/api/billing/reactivate' : '/api/checkout.js';
       console.log(`[Paywall] Chamando API de checkout (${endpoint}) para:`, currentUser.email);
       
       const response = await fetch(endpoint, {
@@ -274,29 +274,29 @@ export default function PaywallModal() {
         <div style={{ display: 'inline-flex', padding: '14px', borderRadius: '50%', backgroundColor: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', marginBottom: '8px' }}>
           <AlertTriangle size={48} />
         </div>
-        <h2 style={{ fontSize: '20px', fontWeight: '800', color: 'var(--text-main)', margin: 0, fontFamily: 'var(--font-display)' }}>
+        <h2 style={{ fontSize: '20px', fontWeight: '800', color: '#ffffff', margin: 0, fontFamily: 'var(--font-display)' }}>
           Erro ao Processar Checkout
         </h2>
         
-        <p style={{ fontSize: '13.5px', color: 'var(--text-muted)', lineHeight: '1.6', maxWidth: '420px', margin: 0 }}>
+        <p style={{ fontSize: '13.5px', color: '#f3f4f6', lineHeight: '1.6', maxWidth: '420px', margin: 0 }}>
           {errorMessage || 'Não foi possível confirmar seu pagamento. Verifique os dados informados ou tente novamente.'}
         </p>
 
-        <div style={{ display: 'flex', gap: '12px', width: '100%', marginTop: '12px', paddingTop: '20px', borderTop: '1px solid var(--border-light)' }}>
+        <div style={{ display: 'flex', gap: '12px', width: '100%', marginTop: '12px', paddingTop: '20px', borderTop: '1px solid rgba(255, 255, 255, 0.1)' }}>
           <button
             type="button"
             onClick={() => {
               setCheckoutStatus('checkout');
               setErrorMessage('');
             }}
-            style={{ flex: 1, padding: '12px', borderRadius: '8px', border: 'none', backgroundColor: 'var(--primary)', color: 'white', fontWeight: '700', fontSize: '13px', cursor: 'pointer' }}
+            style={{ flex: 1, padding: '12px', borderRadius: '8px', border: 'none', backgroundColor: 'var(--primary)', color: '#ffffff', fontWeight: '700', fontSize: '13px', cursor: 'pointer' }}
           >
             Tentar Novamente
           </button>
           <button
             type="button"
             onClick={closePaywall}
-            style={{ flex: 1, padding: '12px', borderRadius: '8px', border: '1px solid var(--border-medium)', backgroundColor: 'transparent', color: 'var(--text-muted)', fontWeight: '700', fontSize: '13px', cursor: 'pointer' }}
+            style={{ flex: 1, padding: '12px', borderRadius: '8px', border: '1px solid rgba(255, 255, 255, 0.25)', backgroundColor: 'transparent', color: '#f3f4f6', fontWeight: '700', fontSize: '13px', cursor: 'pointer' }}
           >
             Voltar
           </button>
@@ -334,9 +334,9 @@ export default function PaywallModal() {
           maxWidth: '580px',
           maxHeight: '90vh',
           overflowY: 'auto',
-          backgroundColor: theme === 'dark' ? 'rgba(15, 23, 42, 0.85)' : 'rgba(255, 255, 255, 0.95)',
+          backgroundColor: checkoutStatus === 'error' ? '#1e1e26' : (theme === 'dark' ? 'rgba(15, 23, 42, 0.85)' : 'rgba(255, 255, 255, 0.95)'),
           backdropFilter: 'blur(20px)',
-          border: '1px solid rgba(255, 255, 255, 0.08)',
+          border: checkoutStatus === 'error' ? '1px solid rgba(255, 255, 255, 0.15)' : '1px solid rgba(255, 255, 255, 0.08)',
           borderRadius: 'var(--radius-lg)',
           boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
           padding: '28px',
@@ -354,7 +354,7 @@ export default function PaywallModal() {
               right: '20px', 
               background: 'none', 
               border: 'none', 
-              color: 'var(--text-light)', 
+              color: checkoutStatus === 'error' ? '#f3f4f6' : 'var(--text-light)', 
               cursor: 'pointer', 
               padding: '6px',
               borderRadius: '50%',

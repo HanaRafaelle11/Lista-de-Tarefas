@@ -21,7 +21,9 @@ const apiDevServerPlugin = () => ({
         
         // Remove trailing slash if any, and handle potential index file or direct .js resolution
         let relativePath = `.${pathname}`;
-        let absolutePath = path.resolve(process.cwd(), relativePath + '.js');
+        let absolutePath = pathname.endsWith('.js')
+          ? path.resolve(process.cwd(), relativePath)
+          : path.resolve(process.cwd(), relativePath + '.js');
         
         if (!fs.existsSync(absolutePath)) {
           // Try /index.js if it's a directory
