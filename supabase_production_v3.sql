@@ -624,16 +624,110 @@ ALTER TABLE public.goals ADD COLUMN IF NOT EXISTS start_time TIME;
 ALTER TABLE public.goals ADD COLUMN IF NOT EXISTS end_time TIME;
 
 -- 10. Security Hardening for Analytics views & Materialized views
+REVOKE SELECT ON public.mv_active_users_daily FROM anon, authenticated, public;
+REVOKE SELECT ON public.mv_active_users_weekly FROM anon, authenticated, public;
+REVOKE SELECT ON public.mv_active_users_monthly FROM anon, authenticated, public;
 REVOKE SELECT ON public.mv_retention_metrics FROM anon, authenticated, public;
+REVOKE SELECT ON public.mv_monetization_metrics FROM anon, authenticated, public;
 REVOKE SELECT ON public.vw_mrr_metrics FROM anon, authenticated, public;
 REVOKE SELECT ON public.vw_churn_metrics FROM anon, authenticated, public;
 REVOKE SELECT ON public.vw_arpu_metrics FROM anon, authenticated, public;
 REVOKE SELECT ON public.vw_cohort_retention FROM anon, authenticated, public;
 REVOKE SELECT ON public.vw_growth_metrics FROM anon, authenticated, public;
 
+GRANT SELECT ON public.mv_active_users_daily TO service_role;
+GRANT SELECT ON public.mv_active_users_weekly TO service_role;
+GRANT SELECT ON public.mv_active_users_monthly TO service_role;
 GRANT SELECT ON public.mv_retention_metrics TO service_role;
+GRANT SELECT ON public.mv_monetization_metrics TO service_role;
 GRANT SELECT ON public.vw_mrr_metrics TO service_role;
 GRANT SELECT ON public.vw_churn_metrics TO service_role;
 GRANT SELECT ON public.vw_arpu_metrics TO service_role;
 GRANT SELECT ON public.vw_cohort_retention TO service_role;
 GRANT SELECT ON public.vw_growth_metrics TO service_role;
+
+-- 11. Security Hardening for Functions (Linter warnings)
+ALTER FUNCTION public.get_admin_dashboard_metrics() SET search_path = public;
+ALTER FUNCTION public.get_user_detail_metrics(uuid) SET search_path = public;
+ALTER FUNCTION public.get_admin_users_list() SET search_path = public;
+ALTER FUNCTION public.refresh_analytics_materialized_views() SET search_path = public;
+
+REVOKE EXECUTE ON FUNCTION public.get_admin_dashboard_metrics() FROM public, anon;
+REVOKE EXECUTE ON FUNCTION public.get_user_detail_metrics(uuid) FROM public, anon;
+REVOKE EXECUTE ON FUNCTION public.get_admin_users_list() FROM public, anon;
+REVOKE EXECUTE ON FUNCTION public.refresh_analytics_materialized_views() FROM public, anon;
+
+GRANT EXECUTE ON FUNCTION public.get_admin_dashboard_metrics() TO authenticated;
+GRANT EXECUTE ON FUNCTION public.get_user_detail_metrics(uuid) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.get_admin_users_list() TO authenticated;
+
+-- Conditional hardening for other functions if they exist in the DB
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_proc JOIN pg_namespace ON pg_proc.pronamespace = pg_namespace.oid WHERE proname = 'set_updated_at' AND nspname = 'public') THEN
+    ALTER FUNCTION public.set_updated_at() SET search_path = public;
+    REVOKE EXECUTE ON FUNCTION public.set_updated_at() FROM public, anon;
+    GRANT EXECUTE ON FUNCTION public.set_updated_at() TO authenticated;
+  END IF;
+
+  IF EXISTS (SELECT 1 FROM pg_proc JOIN pg_namespace ON pg_proc.pronamespace = pg_namespace.oid WHERE proname = 'handle_new_user' AND nspname = 'public') THEN
+    ALTER FUNCTION public.handle_new_user() SET search_path = public;
+    REVOKE EXECUTE ON FUNCTION public.handle_new_user() FROM public, anon;
+  END IF;
+END $$;
+
+-- 12. Security Hardening for RLS on billing_events and user_activity_logs
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname = 'public' AND tablename = 'billing_events') THEN
+    ALTER TABLE public.billing_events ENABLE ROW LEVEL SECURITY;
+    
+    DROP POLICY IF EXISTS "Allow users to read own billing events" ON public.billing_events;
+    CREATE POLICY "Allow users to read own billing events" 
+      ON public.billing_events FOR SELECT 
+      TO authenticated 
+      USING (auth.uid() = user_id);
+
+    DROP POLICY IF EXISTS "Allow admins to read all billing events" ON public.billing_events;
+    CREATE POLICY "Allow admins to read all billing events" 
+      ON public.billing_events FOR SELECT 
+      TO authenticated 
+      USING (
+        (auth.jwt()->>'email' = 'admin@flowday.app') OR 
+        (auth.jwt()->>'email' = 'rafaelle@flowday.app') OR 
+        (auth.jwt()->>'email' = 'rafox@flowday.app')
+      );
+
+    DROP POLICY IF EXISTS "Allow authenticated users to insert own billing events" ON public.billing_events;
+    CREATE POLICY "Allow authenticated users to insert own billing events" 
+      ON public.billing_events FOR INSERT 
+      TO authenticated 
+      WITH CHECK (auth.uid() = user_id);
+  END IF;
+
+  IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname = 'public' AND tablename = 'user_activity_logs') THEN
+    ALTER TABLE public.user_activity_logs ENABLE ROW LEVEL SECURITY;
+    
+    DROP POLICY IF EXISTS "Allow users to read own activity logs" ON public.user_activity_logs;
+    CREATE POLICY "Allow users to read own activity logs" 
+      ON public.user_activity_logs FOR SELECT 
+      TO authenticated 
+      USING (auth.uid() = user_id);
+      
+    DROP POLICY IF EXISTS "Allow admins to read all activity logs" ON public.user_activity_logs;
+    CREATE POLICY "Allow admins to read all activity logs" 
+      ON public.user_activity_logs FOR SELECT 
+      TO authenticated 
+      USING (
+        (auth.jwt()->>'email' = 'admin@flowday.app') OR 
+        (auth.jwt()->>'email' = 'rafaelle@flowday.app') OR 
+        (auth.jwt()->>'email' = 'rafox@flowday.app')
+      );
+      
+    CREATE POLICY "Allow authenticated users to insert own activity logs" 
+      ON public.user_activity_logs FOR INSERT 
+      TO authenticated 
+      WITH CHECK (auth.uid() = user_id);
+  END IF;
+END $$;
+
