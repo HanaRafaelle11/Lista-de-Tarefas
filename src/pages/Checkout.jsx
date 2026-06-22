@@ -9,19 +9,37 @@ export default function Checkout() {
   const [status, setStatus] = useState(null);
   const [error, setError] = useState(null);
   const [pixData, setPixData] = useState(null);
+  const [userCpf, setUserCpf] = useState('');
 
   const onSubmit = async (param) => {
     try {
       setError(null);
       setStatus('processando');
       const paymentData = param.formData || param;
-      
+      const cleanCpf = userCpf.replace(/\D/g, '');
+      if (paymentData.payment_method_id === 'pix') {
+        if (!cleanCpf) {
+          throw new Error('O CPF é obrigatório para prosseguir com o pagamento via Pix.');
+        }
+        if (cleanCpf.length !== 11 && cleanCpf.length !== 14) {
+          throw new Error('Por favor, informe um CPF válido.');
+        }
+      }
+
       const payload = {
         token: paymentData.token,
         payment_method_id: paymentData.payment_method_id,
         amount: 14.90,
         userId: currentUser?.id,
-        payer: paymentData.payer
+        payer: {
+          ...paymentData.payer,
+          ...(paymentData.payment_method_id === 'pix' ? {
+            identification: {
+              type: 'CPF',
+              number: cleanCpf
+            }
+          } : {})
+        }
       };
 
       // Rota API que processa a criação e o token do Brick do Mercado Pago
@@ -232,11 +250,28 @@ export default function Checkout() {
         </div>
       ) : (
         <>
+          <div className="mb-4">
+            <label className="block text-sm font-semibold text-gray-300 mb-2">
+              CPF do Pagador (Obrigatório para Pix)
+            </label>
+            <input
+              type="text"
+              value={userCpf}
+              onChange={(e) => setUserCpf(e.target.value)}
+              placeholder="000.000.000-00"
+              className="w-full p-3 bg-white/5 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-emerald-500 transition-colors"
+            />
+          </div>
+
           <Payment
             initialization={{
               amount: 14.90,
               payer: {
-                email: currentUser?.email || ''
+                email: currentUser?.email || '',
+                identification: {
+                  type: 'CPF',
+                  number: userCpf.replace(/\D/g, '')
+                }
               }
             }}
             customization={{
