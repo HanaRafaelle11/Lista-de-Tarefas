@@ -94,7 +94,7 @@ export default async function handler(req, res) {
     return;
   }
 
-  const { token, payment_method_id, amount, userId, cpf, installments } = req.body || {};
+  const { token, payment_method_id, amount, userId, payer, cpf, installments } = req.body || {};
 
   if (!userId) {
     res.status(400).json({ error: 'userId é obrigatório.' });
@@ -112,19 +112,21 @@ export default async function handler(req, res) {
     return;
   }
 
-  // Retrieve email from Auth admin service
-  const { data: authData, error: authError } = await supabaseAdmin.auth.admin.getUserById(userId);
-  if (authError || !authData?.user) {
-    res.status(400).json({ error: 'Usuário não autenticado ou inválido.' });
-    return;
+  // Retrieve email: always from Auth admin service
+  let email = null;
+  try {
+    const { data: authData } = await supabaseAdmin.auth.admin.getUserById(userId);
+    email = authData?.user?.email;
+  } catch (err) {
+    console.warn('[API Create] Failed fetching email from Auth:', err.message);
   }
-  const email = authData.user.email;
+
   if (!email || email.trim() === '' || email === 'test_user@test.com' || email.toLowerCase() === 'null' || email.toLowerCase() === 'undefined') {
     res.status(400).json({ error: 'Email obrigatório.' });
     return;
   }
 
-  // Retrieve CPF
+  // Retrieve CPF: always from body.cpf
   const cpfValue = cpf;
   if (!cpfValue) {
     res.status(400).json({ error: 'CPF é obrigatório.' });
@@ -146,20 +148,24 @@ export default async function handler(req, res) {
     const idempotencyKey = crypto.randomUUID();
 
     // Fetch profile to get name/nickname for parsing first/last name
-    const { data: profile } = await supabaseAdmin
-      .from('profiles')
-      .select('name, nickname')
-      .eq('id', userId)
-      .maybeSingle();
-
     let first_name = '';
     let last_name = '';
 
-    const fullName = profile?.name || profile?.nickname;
-    if (fullName) {
-      const parts = fullName.trim().split(/\s+/);
-      first_name = parts[0] || '';
-      last_name = parts.slice(1).join(' ') || '';
+    try {
+      const { data: profile } = await supabaseAdmin
+        .from('profiles')
+        .select('name, nickname')
+        .eq('id', userId)
+        .maybeSingle();
+
+      const fullName = profile?.name || profile?.nickname;
+      if (fullName) {
+        const parts = fullName.trim().split(/\s+/);
+        first_name = parts[0] || '';
+        last_name = parts.slice(1).join(' ') || '';
+      }
+    } catch (err) {
+      console.warn('Profile fetch failed in payments create:', err.message);
     }
 
     // Validação estrita de nome - proibir campos genéricos e vazios

@@ -69,7 +69,7 @@ export default async function handler(req, res) {
     return;
   }
 
-  // Retrieve email from Auth
+  // Retrieve email: always from Auth admin service
   let email = null;
   try {
     const { data: authData } = await supabaseAdmin.auth.admin.getUserById(userId);
@@ -80,6 +80,24 @@ export default async function handler(req, res) {
 
   if (!email || email.trim() === '' || email === 'test_user@test.com' || email.toLowerCase() === 'null' || email.toLowerCase() === 'undefined') {
     res.status(400).json({ error: 'Email inválido ou não informado.' });
+    return;
+  }
+
+  // Retrieve CPF: always from body.cpf
+  const cpfValue = cpf;
+  if (!cpfValue) {
+    res.status(400).json({ error: 'CPF é obrigatório.' });
+    return;
+  }
+
+  const cleanCpf = cpfValue.replace(/\D/g, '');
+  if (cleanCpf.length !== 11) {
+    res.status(400).json({ error: 'CPF deve conter exatamente 11 dígitos.' });
+    return;
+  }
+
+  if (!validateCpf(cleanCpf)) {
+    res.status(400).json({ error: 'CPF inválido.' });
     return;
   }
 
@@ -95,42 +113,30 @@ export default async function handler(req, res) {
     console.log(`[API Checkout] Criando preferência no Mercado Pago para user ${userId} (${email}). Origin: ${origin}`);
 
     // Obter dados de nome/nickname do perfil do usuário para consistência (Single Source of Truth)
-    const { data: profile } = await supabaseAdmin
-      .from('profiles')
-      .select('name, nickname')
-      .eq('id', userId)
-      .maybeSingle();
-
     let first_name = '';
     let last_name = '';
 
-    const fullName = profile?.name || profile?.nickname;
-    if (fullName) {
-      const parts = fullName.trim().split(/\s+/);
-      first_name = parts[0] || '';
-      last_name = parts.slice(1).join(' ') || '';
+    try {
+      const { data: profile } = await supabaseAdmin
+        .from('profiles')
+        .select('name, nickname')
+        .eq('id', userId)
+        .maybeSingle();
+
+      const fullName = profile?.name || profile?.nickname;
+      if (fullName) {
+        const parts = fullName.trim().split(/\s+/);
+        first_name = parts[0] || '';
+        last_name = parts.slice(1).join(' ') || '';
+      }
+    } catch (err) {
+      console.warn('[API Checkout] Profile fetch failed:', err.message);
     }
 
     // Validação estrita de nome - proibir campos genéricos e vazios
     if (!first_name || !last_name || isGenericName(first_name) || isGenericName(last_name)) {
       res.status(400).json({ error: 'Nome e sobrenome válidos são obrigatórios para prosseguir.' });
       return;
-    }
-
-    const cpfValue = cpf;
-    let identification = null;
-    if (cpfValue) {
-      const cleanCpf = cpfValue.replace(/\D/g, '');
-      if (cleanCpf) {
-        if (cleanCpf.length !== 11 || !validateCpf(cleanCpf)) {
-          res.status(400).json({ error: 'CPF inválido.' });
-          return;
-        }
-        identification = {
-          type: 'CPF',
-          number: cleanCpf
-        };
-      }
     }
 
     const payload = {
@@ -150,13 +156,16 @@ export default async function handler(req, res) {
         last_name: last_name.trim(),
         entity_type: "individual",
         type: "customer",
-        ...(identification ? { identification } : {})
+        identification: {
+          type: "CPF",
+          number: cleanCpf
+        }
       },
       external_reference: userId,
       statement_descriptor: "MYFLOWDAY",
       metadata: {
         user_id: userId,
-        cpf: cpfValue ? cpfValue.replace(/\D/g, '') : null,
+        cpf: cleanCpf,
         email: email.trim()
       },
       back_urls: {

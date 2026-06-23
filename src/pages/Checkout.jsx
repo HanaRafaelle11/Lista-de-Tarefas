@@ -162,7 +162,7 @@ export default function Checkout() {
         installments = 1;
       }
 
-      // Compile exact same payload, but without payer structure (resolved on backend)
+      // Compile exact same payload, containing only raw parameters and CPF
       const payload = {
         token: paymentData.token,
         payment_method_id: paymentData.payment_method_id,

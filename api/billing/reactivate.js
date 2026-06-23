@@ -68,7 +68,7 @@ export default async function handler(req, res) {
     return;
   }
 
-  // Retrieve email from Auth
+  // Retrieve email: always from Auth admin service
   let email = null;
   try {
     const { data: authData } = await supabaseAdmin.auth.admin.getUserById(userId);
@@ -79,6 +79,24 @@ export default async function handler(req, res) {
 
   if (!email || email.trim() === '' || email === 'test_user@test.com' || email.toLowerCase() === 'null' || email.toLowerCase() === 'undefined') {
     res.status(400).json({ error: 'Email inválido ou não informado.' });
+    return;
+  }
+
+  // Retrieve CPF: always from body.cpf
+  const cpfValue = cpf;
+  if (!cpfValue) {
+    res.status(400).json({ error: 'CPF é obrigatório.' });
+    return;
+  }
+
+  const cleanCpf = cpfValue.replace(/\D/g, '');
+  if (cleanCpf.length !== 11) {
+    res.status(400).json({ error: 'CPF deve conter exatamente 11 dígitos.' });
+    return;
+  }
+
+  if (!validateCpf(cleanCpf)) {
+    res.status(400).json({ error: 'CPF inválido.' });
     return;
   }
 
@@ -122,21 +140,6 @@ export default async function handler(req, res) {
       return;
     }
 
-    let identification = null;
-    if (cpf) {
-      const cleanCpf = cpf.replace(/\D/g, '');
-      if (cleanCpf) {
-        if (cleanCpf.length !== 11 || !validateCpf(cleanCpf)) {
-          res.status(400).json({ error: 'CPF inválido.' });
-          return;
-        }
-        identification = {
-          type: 'CPF',
-          number: cleanCpf
-        };
-      }
-    }
-
     // 2. Determinar dinamicamente a URL base (localhost ou produção Vercel)
     const host = req.headers.host || 'localhost:5173';
     const protocol = req.headers['x-forwarded-proto'] || (host.includes('localhost') ? 'http' : 'https');
@@ -164,14 +167,17 @@ export default async function handler(req, res) {
         last_name: last_name.trim(),
         entity_type: "individual",
         type: "customer",
-        ...(identification ? { identification } : {})
+        identification: {
+          type: "CPF",
+          number: cleanCpf
+        }
       },
       external_reference: userId,
       statement_descriptor: "MYFLOWDAY",
       metadata: {
         user_id: userId,
         offer_type: 'reactivation_discount',
-        cpf: cpf ? cpf.replace(/\D/g, '') : null,
+        cpf: cleanCpf,
         email: email.trim()
       },
       back_urls: {
