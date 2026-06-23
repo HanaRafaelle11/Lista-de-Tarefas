@@ -62,14 +62,22 @@ export default async function handler(req, res) {
     return;
   }
 
-  const { userId, email: reqEmail, notificationUrl, payer } = req.body || {};
+  const { userId, cpf, notificationUrl } = req.body || {};
 
   if (!userId) {
     res.status(400).json({ error: 'O campo userId é obrigatório.' });
     return;
   }
 
-  const email = reqEmail || payer?.email;
+  // Retrieve email from Auth
+  let email = null;
+  try {
+    const { data: authData } = await supabaseAdmin.auth.admin.getUserById(userId);
+    email = authData?.user?.email;
+  } catch (err) {
+    console.warn('[API Checkout] Failed fetching email from Auth:', err.message);
+  }
+
   if (!email || email.trim() === '' || email === 'test_user@test.com' || email.toLowerCase() === 'null' || email.toLowerCase() === 'undefined') {
     res.status(400).json({ error: 'Email inválido ou não informado.' });
     return;
@@ -86,8 +94,22 @@ export default async function handler(req, res) {
 
     console.log(`[API Checkout] Criando preferência no Mercado Pago para user ${userId} (${email}). Origin: ${origin}`);
 
-    const first_name = payer?.first_name;
-    const last_name = payer?.last_name;
+    // Obter dados de nome/nickname do perfil do usuário para consistência (Single Source of Truth)
+    const { data: profile } = await supabaseAdmin
+      .from('profiles')
+      .select('name, nickname')
+      .eq('id', userId)
+      .maybeSingle();
+
+    let first_name = '';
+    let last_name = '';
+
+    const fullName = profile?.name || profile?.nickname;
+    if (fullName) {
+      const parts = fullName.trim().split(/\s+/);
+      first_name = parts[0] || '';
+      last_name = parts.slice(1).join(' ') || '';
+    }
 
     // Validação estrita de nome - proibir campos genéricos e vazios
     if (!first_name || !last_name || isGenericName(first_name) || isGenericName(last_name)) {
@@ -95,7 +117,7 @@ export default async function handler(req, res) {
       return;
     }
 
-    const cpfValue = payer?.identification?.number;
+    const cpfValue = cpf;
     let identification = null;
     if (cpfValue) {
       const cleanCpf = cpfValue.replace(/\D/g, '');

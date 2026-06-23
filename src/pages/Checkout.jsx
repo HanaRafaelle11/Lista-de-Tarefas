@@ -162,24 +162,14 @@ export default function Checkout() {
         installments = 1;
       }
 
-      // Compile exact same payer payload as expected by Mercado Pago
+      // Compile exact same payload, but without payer structure (resolved on backend)
       const payload = {
         token: paymentData.token,
         payment_method_id: paymentData.payment_method_id,
         amount: 14.90,
         installments,
         userId: currentUser?.id,
-        payer: {
-          email: emailRef.current.trim(),
-          first_name: firstNameRef.current.trim(),
-          last_name: lastNameRef.current.trim(),
-          entity_type: "individual",
-          type: "customer",
-          identification: {
-            type: "CPF",
-            number: cleanCpf
-          }
-        }
+        cpf: cleanCpf
       };
 
       const response = await fetch('/api/payments/create', {
@@ -238,17 +228,7 @@ export default function Checkout() {
         payment_method_id: 'pix',
         amount: 14.90,
         userId: currentUser?.id,
-        payer: {
-          email: email.trim(),
-          first_name: firstName.trim(),
-          last_name: lastName.trim(),
-          entity_type: "individual",
-          type: "customer",
-          identification: {
-            type: "CPF",
-            number: cleanCpf
-          }
-        }
+        cpf: cleanCpf
       };
 
       const response = await fetch('/api/payments/create', {

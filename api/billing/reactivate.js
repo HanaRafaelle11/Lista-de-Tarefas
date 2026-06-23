@@ -61,11 +61,20 @@ export default async function handler(req, res) {
     return;
   }
 
-  const { userId, email, payer } = req.body || {};
+  const { userId, cpf } = req.body || {};
 
   if (!userId) {
     res.status(400).json({ error: 'O campo userId é obrigatório.' });
     return;
+  }
+
+  // Retrieve email from Auth
+  let email = null;
+  try {
+    const { data: authData } = await supabaseAdmin.auth.admin.getUserById(userId);
+    email = authData?.user?.email;
+  } catch (err) {
+    console.warn('[API Reactivate] Failed fetching email from Auth:', err.message);
   }
 
   if (!email || email.trim() === '' || email === 'test_user@test.com' || email.toLowerCase() === 'null' || email.toLowerCase() === 'undefined') {
@@ -97,16 +106,14 @@ export default async function handler(req, res) {
     }
 
     // Obter dados de nome/nickname do perfil do usuário para consistência (Single Source of Truth)
-    let first_name = payer?.first_name || '';
-    let last_name = payer?.last_name || '';
+    let first_name = '';
+    let last_name = '';
 
-    if (!first_name || !last_name) {
-      const fullName = profile?.name || profile?.nickname;
-      if (fullName) {
-        const parts = fullName.trim().split(/\s+/);
-        first_name = first_name || parts[0] || '';
-        last_name = last_name || parts.slice(1).join(' ') || '';
-      }
+    const fullName = profile?.name || profile?.nickname;
+    if (fullName) {
+      const parts = fullName.trim().split(/\s+/);
+      first_name = parts[0] || '';
+      last_name = parts.slice(1).join(' ') || '';
     }
 
     // Validação estrita de nome - proibir campos genéricos e vazios
@@ -116,8 +123,8 @@ export default async function handler(req, res) {
     }
 
     let identification = null;
-    if (payer?.identification?.number) {
-      const cleanCpf = payer.identification.number.replace(/\D/g, '');
+    if (cpf) {
+      const cleanCpf = cpf.replace(/\D/g, '');
       if (cleanCpf) {
         if (cleanCpf.length !== 11 || !validateCpf(cleanCpf)) {
           res.status(400).json({ error: 'CPF inválido.' });
