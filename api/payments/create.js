@@ -35,6 +35,12 @@ function validateCpf(cpf) {
   return true;
 }
 
+function isGenericName(name) {
+  if (!name) return true;
+  const lower = name.toLowerCase().trim();
+  return lower === 'usuario' || lower === 'flowday' || lower === 'usuario flowday' || lower === 'usuarioflowday' || lower === '';
+}
+
 function maskCpf(cpf) {
   if (!cpf) return '';
   return '***.***.***-**';
@@ -143,10 +149,18 @@ export default async function handler(req, res) {
     let last_name = payer?.last_name || '';
 
     if (!first_name || !last_name) {
-      const fullName = profile?.name || profile?.nickname || 'Usuario';
-      const parts = fullName.trim().split(/\s+/);
-      first_name = parts[0] || 'Usuario';
-      last_name = parts.slice(1).join(' ') || 'FlowDay';
+      const fullName = profile?.name || profile?.nickname;
+      if (fullName) {
+        const parts = fullName.trim().split(/\s+/);
+        first_name = first_name || parts[0] || '';
+        last_name = last_name || parts.slice(1).join(' ') || '';
+      }
+    }
+
+    // Validação estrita de nome - proibir campos genéricos e vazios
+    if (!first_name || !last_name || isGenericName(first_name) || isGenericName(last_name)) {
+      res.status(400).json({ error: 'Nome e sobrenome válidos são obrigatórios para prosseguir.' });
+      return;
     }
 
     const payload = {
@@ -154,9 +168,11 @@ export default async function handler(req, res) {
       payment_method_id,
       description: "MyFlowDay Premium",
       payer: {
-        email,
-        first_name,
-        last_name,
+        email: email.trim(),
+        first_name: first_name.trim(),
+        last_name: last_name.trim(),
+        entity_type: "individual",
+        type: "customer",
         identification: {
           type: "CPF",
           number: cleanCpf

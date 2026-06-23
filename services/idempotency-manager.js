@@ -9,7 +9,7 @@ export const IdempotencyManager = {
    * - { success: false, duplicate: true, response: ... }: Already processed.
    * - { success: false, processing: true }: Under processing right now.
    */
-  async startProcessing(paymentId, eventType) {
+  async startProcessing(paymentId, eventType, id = null) {
     if (!paymentId || !eventType) {
       throw new Error('[IdempotencyManager] paymentId and eventType are required');
     }
@@ -54,6 +54,7 @@ export const IdempotencyManager = {
         .from('billing_idempotency')
         .upsert({
           key,
+          id,
           status: 'processing',
           response: {},
           updated_at: now

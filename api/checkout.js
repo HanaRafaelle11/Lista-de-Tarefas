@@ -1,9 +1,43 @@
 // Vercel Serverless Function: /api/checkout.js
 
+import { supabaseAdmin } from '../lib/supabase.js';
+
 const MERCADOPAGO_ACCESS_TOKEN = process.env.MERCADOPAGO_ACCESS_TOKEN;
 
 if (!MERCADOPAGO_ACCESS_TOKEN) {
   throw new Error("MERCADOPAGO_ACCESS_TOKEN não configurado");
+}
+
+function validateCpf(cpf) {
+  if (!cpf) return false;
+  const cleanCpf = cpf.replace(/\D/g, '');
+  if (cleanCpf.length !== 11) return false;
+  
+  if (/^(\d)\1{10}$/.test(cleanCpf)) return false;
+  
+  let sum = 0;
+  for (let i = 0; i < 9; i++) {
+    sum += parseInt(cleanCpf.charAt(i)) * (10 - i);
+  }
+  let rev = 11 - (sum % 11);
+  if (rev === 10 || rev === 11) rev = 0;
+  if (rev !== parseInt(cleanCpf.charAt(9))) return false;
+  
+  sum = 0;
+  for (let i = 0; i < 10; i++) {
+    sum += parseInt(cleanCpf.charAt(i)) * (11 - i);
+  }
+  rev = 11 - (sum % 11);
+  if (rev === 10 || rev === 11) rev = 0;
+  if (rev !== parseInt(cleanCpf.charAt(10))) return false;
+  
+  return true;
+}
+
+function isGenericName(name) {
+  if (!name) return true;
+  const lower = name.toLowerCase().trim();
+  return lower === 'usuario' || lower === 'flowday' || lower === 'usuario flowday' || lower === 'usuarioflowday' || lower === '';
 }
 
 export default async function handler(req, res) {
@@ -28,10 +62,15 @@ export default async function handler(req, res) {
     return;
   }
 
-  const { userId, email, notificationUrl } = req.body || {};
+  const { userId, email, notificationUrl, payer } = req.body || {};
 
-  if (!userId || !email) {
-    res.status(400).json({ error: 'Os campos userId e email são obrigatórios no corpo da requisição.' });
+  if (!userId) {
+    res.status(400).json({ error: 'O campo userId é obrigatório.' });
+    return;
+  }
+
+  if (!email || email.trim() === '' || email === 'test_user@test.com') {
+    res.status(400).json({ error: 'Email inválido ou não informado.' });
     return;
   }
 
@@ -46,6 +85,46 @@ export default async function handler(req, res) {
 
     console.log(`[API Checkout] Criando preferência no Mercado Pago para user ${userId} (${email}). Origin: ${origin}`);
 
+    // Obter dados de nome/nickname do perfil do usuário para consistência (Single Source of Truth)
+    const { data: profile } = await supabaseAdmin
+      .from('profiles')
+      .select('name, nickname')
+      .eq('id', userId)
+      .maybeSingle();
+
+    let first_name = payer?.first_name || '';
+    let last_name = payer?.last_name || '';
+
+    if (!first_name || !last_name) {
+      const fullName = profile?.name || profile?.nickname;
+      if (fullName) {
+        const parts = fullName.trim().split(/\s+/);
+        first_name = first_name || parts[0] || '';
+        last_name = last_name || parts.slice(1).join(' ') || '';
+      }
+    }
+
+    // Validação estrita de nome - proibir campos genéricos e vazios
+    if (!first_name || !last_name || isGenericName(first_name) || isGenericName(last_name)) {
+      res.status(400).json({ error: 'Nome e sobrenome válidos são obrigatórios para prosseguir.' });
+      return;
+    }
+
+    let identification = null;
+    if (payer?.identification?.number) {
+      const cleanCpf = payer.identification.number.replace(/\D/g, '');
+      if (cleanCpf) {
+        if (cleanCpf.length !== 11 || !validateCpf(cleanCpf)) {
+          res.status(400).json({ error: 'CPF inválido.' });
+          return;
+        }
+        identification = {
+          type: 'CPF',
+          number: cleanCpf
+        };
+      }
+    }
+
     const payload = {
       items: [
         {
@@ -58,7 +137,12 @@ export default async function handler(req, res) {
         }
       ],
       payer: {
-        email: email
+        email: email.trim(),
+        first_name: first_name.trim(),
+        last_name: last_name.trim(),
+        entity_type: "individual",
+        type: "customer",
+        ...(identification ? { identification } : {})
       },
       metadata: {
         user_id: userId
@@ -111,3 +195,4 @@ export default async function handler(req, res) {
     });
   }
 }
+

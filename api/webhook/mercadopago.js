@@ -71,6 +71,7 @@ export default async function handler(req, res) {
 
   // Generate trace context
   const requestTraceId = req.headers['x-trace-id'] || crypto.randomUUID();
+  const idempotencyKey = req.headers['x-idempotency-key'] || req.headers['X-Idempotency-Key'] || null;
 
   return await BillingTracer.runWithTrace(requestTraceId, async () => {
     // Sanitizing body before logging raw payload
@@ -109,7 +110,7 @@ export default async function handler(req, res) {
 
     // Se não for um evento de pagamento, respondemos 200 OK
     if (topic !== 'payment' || !paymentId) {
-      BillingLogger.info('webhook_ignored_non_payment_topic', null, null, { topic });
+      BillingLogger.info('webhook_ignored_non_payment_topic', null, null, { topic, idempotencyKey });
       res.status(200).json({ message: 'Evento recebido, mas não processado (tópico não suportado).' });
       return;
     }
@@ -122,7 +123,7 @@ export default async function handler(req, res) {
     // 2. Global Idempotency layer check
     let idemRes;
     try {
-      idemRes = await IdempotencyManager.startProcessing(paymentIdStr, 'webhook_received');
+      idemRes = await IdempotencyManager.startProcessing(paymentIdStr, 'webhook_received', idempotencyKey);
     } catch (idemErr) {
       // If idempotency query fails, return 500 or fallback to check without registry (to keep robustness)
       BillingLogger.error('webhook_idempotency_failed', paymentIdStr, null, idemErr);
@@ -342,7 +343,10 @@ export default async function handler(req, res) {
               status_raw: rawStatus,
               status_normalized: normalizedStatus,
               user_id: userId,
-              payload: paymentDetails
+              payload: {
+                ...paymentDetails,
+                idempotency_key: idempotencyKey
+              }
             }]);
 
             if (!currentStatus) {
@@ -352,7 +356,10 @@ export default async function handler(req, res) {
                 status_raw: 'created',
                 status_normalized: 'created',
                 user_id: userId,
-                payload: paymentDetails
+                payload: {
+                  ...paymentDetails,
+                  idempotency_key: idempotencyKey
+                }
               }]);
 
               await supabaseAdmin.from('payment_events').insert([{
@@ -361,7 +368,10 @@ export default async function handler(req, res) {
                 user_id: userId,
                 plan: 'premium',
                 processed_at: new Date().toISOString(),
-                raw_payload: paymentDetails
+                raw_payload: {
+                  ...paymentDetails,
+                  idempotency_key: idempotencyKey
+                }
               }]);
             }
 
@@ -417,7 +427,10 @@ export default async function handler(req, res) {
               status_raw: rawStatus,
               status_normalized: normalizedStatus,
               user_id: userId,
-              payload: paymentDetails
+              payload: {
+                ...paymentDetails,
+                idempotency_key: idempotencyKey
+              }
             }]);
 
             // Execute action in Billing Engine
@@ -440,7 +453,7 @@ export default async function handler(req, res) {
               stateBefore,
               stateAfter: normalizedStatus,
               source: 'webhook',
-              metadata: { engineResult }
+              metadata: { engineResult, idempotencyKey }
             });
 
             return { success: true, duplicated: false, engineResult };
