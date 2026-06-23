@@ -152,8 +152,12 @@ export default async function handler(req, res) {
         type: "customer",
         ...(identification ? { identification } : {})
       },
+      external_reference: userId,
+      statement_descriptor: "MYFLOWDAY",
       metadata: {
-        user_id: userId
+        user_id: userId,
+        cpf: cpfValue ? cpfValue.replace(/\D/g, '') : null,
+        email: email.trim()
       },
       back_urls: {
         success: `${origin}/?payment=success`,

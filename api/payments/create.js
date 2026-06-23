@@ -172,6 +172,8 @@ export default async function handler(req, res) {
       transaction_amount: Number(amount) || 14.90,
       payment_method_id,
       description: "MyFlowDay Premium",
+      external_reference: userId,
+      statement_descriptor: "MYFLOWDAY",
       payer: {
         email: email.trim(),
         first_name: first_name.trim(),
@@ -185,6 +187,8 @@ export default async function handler(req, res) {
       },
       metadata: {
         user_id: userId,
+        cpf: cleanCpf,
+        email: email.trim(),
         plan: "premium"
       },
       notification_url: "https://myflowday.com.br/api/webhook/mercadopago"

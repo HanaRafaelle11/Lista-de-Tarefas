@@ -166,9 +166,13 @@ export default async function handler(req, res) {
         type: "customer",
         ...(identification ? { identification } : {})
       },
+      external_reference: userId,
+      statement_descriptor: "MYFLOWDAY",
       metadata: {
         user_id: userId,
-        offer_type: 'reactivation_discount'
+        offer_type: 'reactivation_discount',
+        cpf: cpf ? cpf.replace(/\D/g, '') : null,
+        email: email.trim()
       },
       back_urls: {
         success: `${origin}/?payment=reactivated`,
