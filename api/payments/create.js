@@ -223,11 +223,28 @@ export default async function handler(req, res) {
       loggedPayload.token = '***';
     }
 
-    const paymentData = payload;
-    console.log(
-      '[MP PAYLOAD]',
-      JSON.stringify(paymentData, null, 2)
-    );
+    const isDev = process.env.NODE_ENV === 'development' || !process.env.NODE_ENV || process.env.NODE_ENV === 'test';
+    if (isDev) {
+      console.log("📦 MP PAYLOAD FINAL:", JSON.stringify(payload, null, 2));
+    } else {
+      const securePayload = {
+        ...payload,
+        payer: payload.payer ? {
+          ...payload.payer,
+          email: maskEmail(payload.payer.email),
+          identification: payload.payer.identification ? {
+            ...payload.payer.identification,
+            number: maskCpf(payload.payer.identification.number)
+          } : undefined
+        } : undefined,
+        metadata: payload.metadata ? {
+          ...payload.metadata,
+          email: maskEmail(payload.metadata.email),
+          cpf: maskCpf(payload.metadata.cpf)
+        } : undefined
+      };
+      console.log("📦 MP PAYLOAD FINAL:", JSON.stringify(securePayload, null, 2));
+    }
 
     const mpResponse = await fetch('https://api.mercadopago.com/v1/payments', {
       method: 'POST',
@@ -243,11 +260,35 @@ export default async function handler(req, res) {
       const errData = await mpResponse.json().catch(() => ({}));
       console.error('[MP] Erro ao criar pagamento');
       console.error(JSON.stringify(errData, null, 2));
+      if (isDev) {
+        console.log("🚨 MP ERROR FULL:", JSON.stringify(errData, null, 2));
+      } else {
+        const secureErrData = JSON.parse(JSON.stringify(errData));
+        if (secureErrData.payer) {
+          if (secureErrData.payer.email) secureErrData.payer.email = maskEmail(secureErrData.payer.email);
+          if (secureErrData.payer.identification && secureErrData.payer.identification.number) {
+            secureErrData.payer.identification.number = maskCpf(secureErrData.payer.identification.number);
+          }
+        }
+        console.log("🚨 MP ERROR FULL:", JSON.stringify(secureErrData, null, 2));
+      }
       res.status(400).json({ error: 'Falha no processamento do pagamento no Mercado Pago.', details: errData });
       return;
     }
 
     const paymentResult = await mpResponse.json();
+    if (isDev) {
+      console.log("💥 MP RESPONSE FULL:", JSON.stringify(paymentResult, null, 2));
+    } else {
+      const secureResult = JSON.parse(JSON.stringify(paymentResult));
+      if (secureResult.payer) {
+        if (secureResult.payer.email) secureResult.payer.email = maskEmail(secureResult.payer.email);
+        if (secureResult.payer.identification && secureResult.payer.identification.number) {
+          secureResult.payer.identification.number = maskCpf(secureResult.payer.identification.number);
+        }
+      }
+      console.log("💥 MP RESPONSE FULL:", JSON.stringify(secureResult, null, 2));
+    }
     const maskedResponse = {
       ...paymentResult,
       payer: paymentResult.payer ? {
@@ -385,6 +426,25 @@ export default async function handler(req, res) {
     }
   } catch (error) {
     console.error('[MP] Erro crítico ao processar pagamento:', error);
+    const errObj = error?.response?.data || error;
+    const isDev = process.env.NODE_ENV === 'development' || !process.env.NODE_ENV || process.env.NODE_ENV === 'test';
+    if (isDev) {
+      console.log("🚨 MP ERROR FULL:", typeof errObj === 'object' ? JSON.stringify(errObj, null, 2) : errObj);
+    } else {
+      let secureErrObj = errObj;
+      try {
+        if (secureErrObj && typeof secureErrObj === 'object') {
+          secureErrObj = JSON.parse(JSON.stringify(errObj));
+          if (secureErrObj.payer) {
+            if (secureErrObj.payer.email) secureErrObj.payer.email = maskEmail(secureErrObj.payer.email);
+            if (secureErrObj.payer.identification && secureErrObj.payer.identification.number) {
+              secureErrObj.payer.identification.number = maskCpf(secureErrObj.payer.identification.number);
+            }
+          }
+        }
+      } catch (e) {}
+      console.log("🚨 MP ERROR FULL:", typeof secureErrObj === 'object' ? JSON.stringify(secureErrObj, null, 2) : secureErrObj);
+    }
     res.status(500).json({ error: 'Erro crítico interno ao processar pagamento.', message: error.message });
   }
 }
