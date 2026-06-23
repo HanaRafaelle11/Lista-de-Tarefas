@@ -646,7 +646,19 @@ async function runTests() {
       mockFetchPreferences = [];
       const { req, res, promise } = mockReqRes({
         method: 'POST',
-        body: { userId: testUserId, email: testUserEmail }
+        body: {
+          userId: testUserId,
+          email: testUserEmail,
+          payer: {
+            first_name: 'Test',
+            last_name: 'Runner',
+            email: testUserEmail,
+            identification: {
+              type: 'CPF',
+              number: '29009941019'
+            }
+          }
+        }
       });
 
       checkoutHandler(req, res);
@@ -667,7 +679,19 @@ async function runTests() {
       mockFetchPreferences = [];
       const { req, res, promise } = mockReqRes({
         method: 'POST',
-        body: { userId: testUserId, email: testUserEmail }
+        body: {
+          userId: testUserId,
+          email: testUserEmail,
+          payer: {
+            first_name: 'Test',
+            last_name: 'Runner',
+            email: testUserEmail,
+            identification: {
+              type: 'CPF',
+              number: '29009941019'
+            }
+          }
+        }
       });
 
       reactivateHandler(req, res);
@@ -682,12 +706,21 @@ async function runTests() {
 
     // --- TESTE 2.1: Checkout fails with generic name ---
     await runTest('Checkout Creation - Generic Name Fails', async () => {
-      mockDatabase.profiles[testUserId].name = 'Usuario';
-      mockDatabase.profiles[testUserId].nickname = 'FlowDay';
-
       const { req, res, promise } = mockReqRes({
         method: 'POST',
-        body: { userId: testUserId, email: testUserEmail }
+        body: {
+          userId: testUserId,
+          email: testUserEmail,
+          payer: {
+            first_name: 'Usuario',
+            last_name: 'FlowDay',
+            email: testUserEmail,
+            identification: {
+              type: 'CPF',
+              number: '29009941019'
+            }
+          }
+        }
       });
 
       checkoutHandler(req, res);
@@ -695,16 +728,11 @@ async function runTests() {
 
       assert.strictEqual(result.statusCode, 400, 'Status deve ser 400');
       assert.strictEqual(result.body.error, 'Nome e sobrenome válidos são obrigatórios para prosseguir.');
-
-      // Restore profile name
-      mockDatabase.profiles[testUserId].name = 'Test Runner Billing';
-      mockDatabase.profiles[testUserId].nickname = null;
     });
 
     // --- TESTE 2.2: Checkout succeeds if payer details are passed in body overriding generic profile ---
     await runTest('Checkout Creation - Payer in Body Overrides Generic Name', async () => {
       mockFetchPreferences = [];
-      mockDatabase.profiles[testUserId].name = 'Usuario';
 
       const { req, res, promise } = mockReqRes({
         method: 'POST',
@@ -713,7 +741,12 @@ async function runTests() {
           email: testUserEmail,
           payer: {
             first_name: 'John',
-            last_name: 'Doe'
+            last_name: 'Doe',
+            email: testUserEmail,
+            identification: {
+              type: 'CPF',
+              number: '29009941019'
+            }
           }
         }
       });
@@ -725,9 +758,6 @@ async function runTests() {
       assert.ok(result.body.preferenceId, 'Deve retornar um preferenceId');
       assert.strictEqual(mockFetchPreferences[0].body.payer.first_name, 'John');
       assert.strictEqual(mockFetchPreferences[0].body.payer.last_name, 'Doe');
-
-      // Restore profile name
-      mockDatabase.profiles[testUserId].name = 'Test Runner Billing';
     });
 
     // --- TESTE 3: Webhook de Pagamento Aprovado ---
@@ -1199,7 +1229,15 @@ async function runTests() {
           payment_method_id: 'master',
           amount: 14.90,
           userId: testUserId,
-          cpf: '123.456.789-00' // CPF inválido matemático
+          payer: {
+            first_name: 'Test',
+            last_name: 'Runner',
+            email: testUserEmail,
+            identification: {
+              type: 'CPF',
+              number: '123.456.789-00' // CPF inválido matemático
+            }
+          }
         }
       });
 
@@ -1212,20 +1250,22 @@ async function runTests() {
 
     // --- TESTE 12: Hardening V2 — Email Inválido ou Teste Bloqueia Criação de Pagamento ---
     await runTest('Hardening V2 - Invalid Email Blocks Payment Creation', async () => {
-      mockDatabase.profiles['invalid-email-user-id'] = {
-        id: 'invalid-email-user-id',
-        name: 'Valid User',
-        nickname: 'valid'
-      };
-
       const { req, res, promise } = mockReqRes({
         method: 'POST',
         body: {
           token: 'card_token_123',
           payment_method_id: 'master',
           amount: 14.90,
-          userId: 'invalid-email-user-id',
-          cpf: '29009941019' // CPF válido matemático
+          userId: testUserId,
+          payer: {
+            first_name: 'Valid',
+            last_name: 'User',
+            email: 'test_user@test.com', // test/invalid email
+            identification: {
+              type: 'CPF',
+              number: '29009941019' // CPF válido matemático
+            }
+          }
         }
       });
 
@@ -1234,15 +1274,10 @@ async function runTests() {
       const result = await promise;
       assert.strictEqual(result.statusCode, 400, 'Deve retornar erro 400');
       assert.strictEqual(result.body.error, 'Email obrigatório.', 'Deve acusar Email obrigatório para test_user@test.com');
-
-      delete mockDatabase.profiles['invalid-email-user-id'];
     });
 
     // --- TESTE 12.1: Payment Creation - Generic Name Fails ---
     await runTest('Hardening V2 - Generic Name Blocks Payment Creation', async () => {
-      mockDatabase.profiles[testUserId].name = 'Usuario';
-      mockDatabase.profiles[testUserId].nickname = 'FlowDay';
-
       const { req, res, promise } = mockReqRes({
         method: 'POST',
         body: {
@@ -1250,7 +1285,15 @@ async function runTests() {
           payment_method_id: 'master',
           amount: 14.90,
           userId: testUserId,
-          cpf: '29009941019' // CPF válido matemático
+          payer: {
+            first_name: 'Usuario',
+            last_name: 'FlowDay',
+            email: testUserEmail,
+            identification: {
+              type: 'CPF',
+              number: '29009941019' // CPF válido matemático
+            }
+          }
         }
       });
 
@@ -1260,10 +1303,6 @@ async function runTests() {
 
       assert.strictEqual(result.statusCode, 400, 'Deve retornar erro 400');
       assert.strictEqual(result.body.error, 'Nome e sobrenome válidos são obrigatórios para prosseguir.');
-
-      // Restore profile name
-      mockDatabase.profiles[testUserId].name = 'Test Runner Billing';
-      mockDatabase.profiles[testUserId].nickname = null;
     });
 
     // --- TESTE 13: Hardening V3 — Webhook Replay & Ledger Idempotency ---

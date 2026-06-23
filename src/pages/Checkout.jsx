@@ -82,15 +82,17 @@ export default function Checkout() {
   // Refs to avoid onSubmit dependency invalidation on every keystroke
   const firstNameRef = useRef(firstName);
   const lastNameRef = useRef(lastName);
+  const emailRef = useRef(email);
   const userCpfRef = useRef(userCpf);
 
   useEffect(() => { firstNameRef.current = firstName; }, [firstName]);
   useEffect(() => { lastNameRef.current = lastName; }, [lastName]);
+  useEffect(() => { emailRef.current = email; }, [email]);
   useEffect(() => { userCpfRef.current = userCpf; }, [userCpf]);
 
   // Sync user details on load, filtering out any generic or invalid names
   useEffect(() => {
-    if (currentUser?.email) {
+    if (currentUser?.email && !email) {
       setEmail(currentUser.email);
     }
   }, [currentUser?.email]);
@@ -133,7 +135,7 @@ export default function Checkout() {
       
       const cleanCpf = userCpfRef.current.replace(/\D/g, '');
 
-      if (!isValidName(firstNameRef.current) || !isValidName(lastNameRef.current)) {
+      if (!isValidName(firstNameRef.current) || !isValidName(lastNameRef.current) || !validateEmail(emailRef.current)) {
         throw new Error('Por favor, preencha todos os dados de identificação corretamente antes de prosseguir.');
       }
       if (!cleanCpf || cleanCpf.length !== 11 || !validateCpf(cleanCpf)) {
@@ -144,26 +146,40 @@ export default function Checkout() {
         throw new Error('Usuário não autenticado.');
       }
 
-      // Update name in profiles table first (single source of truth alignment)
+      // Update name in profiles table (optimistic sync)
       const fullName = `${firstNameRef.current.trim()} ${lastNameRef.current.trim()}`;
-      await profilesService.updateProfile(currentUser?.id, {
-        name: fullName,
-        nickname: firstNameRef.current.toLowerCase().trim()
-      });
+      try {
+        await profilesService.updateProfile(currentUser?.id, {
+          name: fullName,
+          nickname: firstNameRef.current.toLowerCase().trim()
+        });
+      } catch (profileErr) {
+        console.warn('Profile sync error ignored for payment checkout:', profileErr.message);
+      }
 
       let installments = paymentData.installments || 1;
       if (!installments || installments < 1) {
         installments = 1;
       }
 
-      // Keep payload minimal: only send token, payment_method_id, amount, userId, and cpf.
+      // Compile exact same payer payload as expected by Mercado Pago
       const payload = {
         token: paymentData.token,
         payment_method_id: paymentData.payment_method_id,
         amount: 14.90,
         installments,
         userId: currentUser?.id,
-        cpf: cleanCpf
+        payer: {
+          email: emailRef.current.trim(),
+          first_name: firstNameRef.current.trim(),
+          last_name: lastNameRef.current.trim(),
+          entity_type: "individual",
+          type: "customer",
+          identification: {
+            type: "CPF",
+            number: cleanCpf
+          }
+        }
       };
 
       const response = await fetch('/api/payments/create', {
@@ -207,18 +223,32 @@ export default function Checkout() {
       
       const cleanCpf = userCpf.replace(/\D/g, '');
 
-      // Update name in profiles table first (single source of truth alignment)
+      // Update name in profiles table (optimistic sync)
       const fullName = `${firstName.trim()} ${lastName.trim()}`;
-      await profilesService.updateProfile(currentUser?.id, {
-        name: fullName,
-        nickname: firstName.toLowerCase().trim()
-      });
+      try {
+        await profilesService.updateProfile(currentUser?.id, {
+          name: fullName,
+          nickname: firstName.toLowerCase().trim()
+        });
+      } catch (profileErr) {
+        console.warn('Profile sync error ignored for payment checkout:', profileErr.message);
+      }
       
       const payload = {
         payment_method_id: 'pix',
         amount: 14.90,
         userId: currentUser?.id,
-        cpf: cleanCpf
+        payer: {
+          email: email.trim(),
+          first_name: firstName.trim(),
+          last_name: lastName.trim(),
+          entity_type: "individual",
+          type: "customer",
+          identification: {
+            type: "CPF",
+            number: cleanCpf
+          }
+        }
       };
 
       const response = await fetch('/api/payments/create', {
@@ -616,23 +646,33 @@ export default function Checkout() {
                 <input
                   type="email"
                   value={email}
-                  disabled={true}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="seu@email.com"
                   style={{
                     width: '100%',
-                    padding: '10px 12px',
-                    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    padding: '10px 32px 10px 12px',
+                    backgroundColor: '#13131a',
+                    border: `1px solid ${email ? (validateEmail(email) ? 'rgba(16, 185, 129, 0.4)' : 'rgba(239, 68, 68, 0.4)') : 'rgba(255, 255, 255, 0.1)'}`,
                     borderRadius: '8px',
-                    color: 'rgba(255, 255, 255, 0.4)',
+                    color: '#ffffff',
                     fontSize: '14px',
                     outline: 'none',
-                    boxSizing: 'border-box',
-                    cursor: 'not-allowed'
+                    boxSizing: 'border-box'
                   }}
                 />
-                <span style={{ fontSize: '11px', color: 'rgba(255, 255, 255, 0.4)', marginTop: '4px', display: 'block' }}>
-                  E-mail associado à sua conta (não alterável)
-                </span>
+                {email && (
+                  <span style={{
+                    position: 'absolute',
+                    right: '10px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    color: validateEmail(email) ? '#10b981' : '#ef4444',
+                    fontSize: '14px',
+                    fontWeight: 'bold'
+                  }}>
+                    {validateEmail(email) ? '✓' : '✗'}
+                  </span>
+                )}
               </div>
             </div>
 
@@ -733,15 +773,34 @@ export default function Checkout() {
               {/* Active Payment Flow Details */}
               {activeTab === 'card' ? (
                 <div style={{ minHeight: '150px' }}>
-                  <div id="payment-brick-container">
-                    <MemoizedPayment
-                      initialization={initialization}
-                      customization={customization}
-                      onSubmit={handleSubmit}
-                      onError={handleError}
-                      onReady={handleReady}
-                    />
-                  </div>
+                  {/* Payment Brick rendered ONLY if form is valid */}
+                  {isFormValid ? (
+                    <div id="payment-brick-container">
+                      <MemoizedPayment
+                        initialization={initialization}
+                        customization={customization}
+                        onSubmit={handleSubmit}
+                        onError={handleError}
+                        onReady={handleReady}
+                      />
+                    </div>
+                  ) : (
+                    <div style={{
+                      backgroundColor: 'rgba(20, 20, 28, 0.75)',
+                      border: '1px dashed rgba(255, 255, 255, 0.12)',
+                      borderRadius: '12px',
+                      padding: '30px 20px',
+                      textAlign: 'center'
+                    }}>
+                      <span style={{ fontSize: '32px', display: 'block', marginBottom: '12px' }}>🔒</span>
+                      <h4 style={{ margin: '0 0 8px 0', fontSize: '15px', fontWeight: '700', color: '#ffffff' }}>
+                        Dados do Pagador Necessários
+                      </h4>
+                      <p style={{ margin: 0, fontSize: '13px', color: 'rgba(255, 255, 255, 0.6)', lineHeight: '1.5' }}>
+                        Por favor, preencha nome, sobrenome, e-mail e CPF válidos no formulário acima para liberar o formulário do cartão.
+                      </p>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div style={{
@@ -807,7 +866,7 @@ export default function Checkout() {
                   Opções de Pagamento Bloqueadas
                 </h4>
                 <p style={{ margin: 0, fontSize: '13px', color: 'rgba(255, 255, 255, 0.6)', lineHeight: '1.5' }}>
-                  Por favor, preencha nome, sobrenome e CPF válidos no formulário acima para liberar a escolha da forma de pagamento.
+                  Por favor, preencha nome, sobrenome, e-mail e CPF válidos no formulário acima para liberar a escolha da forma de pagamento.
                 </p>
               </div>
             )}

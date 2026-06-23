@@ -94,7 +94,7 @@ export default async function handler(req, res) {
     return;
   }
 
-  const { token, payment_method_id, amount, userId, cpf, installments } = req.body || {};
+  const { token, payment_method_id, amount, userId, payer, installments } = req.body || {};
 
   if (!userId) {
     res.status(400).json({ error: 'userId é obrigatório.' });
@@ -112,26 +112,26 @@ export default async function handler(req, res) {
     return;
   }
 
-  // Retrieve email from Auth admin service
-  const { data: authData, error: authError } = await supabaseAdmin.auth.admin.getUserById(userId);
-  if (authError || !authData?.user) {
-    res.status(400).json({ error: 'Usuário não autenticado ou inválido.' });
-    return;
-  }
-  const email = authData.user.email;
+  const email = payer?.email;
   if (!email || email.trim() === '' || email === 'test_user@test.com' || email.toLowerCase() === 'null' || email.toLowerCase() === 'undefined') {
     res.status(400).json({ error: 'Email obrigatório.' });
     return;
   }
 
-  // Retrieve CPF
-  const cpfValue = cpf;
-  if (!cpfValue) {
+  const first_name = payer?.first_name;
+  const last_name = payer?.last_name;
+  if (!first_name || !last_name || isGenericName(first_name) || isGenericName(last_name)) {
+    res.status(400).json({ error: 'Nome e sobrenome válidos são obrigatórios para prosseguir.' });
+    return;
+  }
+
+  const cpf = payer?.identification?.number;
+  if (!cpf) {
     res.status(400).json({ error: 'CPF é obrigatório.' });
     return;
   }
 
-  const cleanCpf = cpfValue.replace(/\D/g, '');
+  const cleanCpf = cpf.replace(/\D/g, '');
   if (cleanCpf.length !== 11) {
     res.status(400).json({ error: 'CPF deve conter exatamente 11 dígitos.' });
     return;
@@ -144,29 +144,6 @@ export default async function handler(req, res) {
 
   try {
     const idempotencyKey = crypto.randomUUID();
-    
-    // Fetch profile to get name/nickname for parsing first/last name
-    const { data: profile } = await supabaseAdmin
-      .from('profiles')
-      .select('name, nickname')
-      .eq('id', userId)
-      .maybeSingle();
-
-    let first_name = '';
-    let last_name = '';
-
-    const fullName = profile?.name || profile?.nickname;
-    if (fullName) {
-      const parts = fullName.trim().split(/\s+/);
-      first_name = parts[0] || '';
-      last_name = parts.slice(1).join(' ') || '';
-    }
-
-    // Validação estrita de nome - proibir campos genéricos e vazios
-    if (!first_name || !last_name || isGenericName(first_name) || isGenericName(last_name)) {
-      res.status(400).json({ error: 'Nome e sobrenome válidos são obrigatórios para prosseguir.' });
-      return;
-    }
 
     const payload = {
       transaction_amount: Number(amount) || 14.90,
