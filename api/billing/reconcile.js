@@ -42,10 +42,18 @@ export default async function handler(req, res) {
 
   // Gravar evento de observabilidade: consistency_check_run
   try {
-    await supabaseAdmin.from('events').insert([{
+    const event = {
       event_type: 'consistency_check_run',
       metadata: { timestamp: new Date().toISOString(), trigger: 'cron_job' }
-    }]);
+    };
+    console.log("[EVENT INSERT]", {
+      file: "api/billing/reconcile.js",
+      user_id: null,
+      auth_uid: null,
+      payload: event
+    });
+    const { error } = await supabaseAdmin.from('events').insert([event]);
+    if (error) console.error(error);
   } catch (logErr) {
     console.warn('[Reconcile Cron] Falha ao registrar log consistency_check_run:', logErr.message);
   }

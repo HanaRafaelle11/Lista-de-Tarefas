@@ -169,11 +169,19 @@ export default async function handler(req, res) {
 
         if (userId) {
           try {
-            await supabaseAdmin.from('events').insert([{
+            const event = {
               user_id: userId,
               event_type: 'payment_ignored_duplicate',
               metadata: { payment_id: paymentIdStr }
-            }]);
+            };
+            console.log("[EVENT INSERT]", {
+              file: "api/webhook/mercadopago.js",
+              user_id: event.user_id,
+              auth_uid: null,
+              payload: event
+            });
+            const { error } = await supabaseAdmin.from('events').insert([event]);
+            if (error) console.error(error);
           } catch (eventErr) {
             BillingLogger.error('webhook_duplicate_event_failed', paymentIdStr, null, eventErr);
           }
@@ -369,11 +377,23 @@ export default async function handler(req, res) {
                 payload: { reason: 'invalid transition or duplicate status', attemptedStatus: normalizedStatus }
               }]);
 
-              await supabaseAdmin.from('events').insert([{
+              const event = {
                 user_id: userId,
                 event_type: 'payment_ignored_duplicate',
                 metadata: { payment_id: paymentIdStr }
-              }]);
+              };
+              console.log("[EVENT INSERT]", {
+                file: "api/webhook/mercadopago.js",
+                user_id: event.user_id,
+                auth_uid: null,
+                payload: event
+              });
+              try {
+                const { error } = await supabaseAdmin.from('events').insert([event]);
+                if (error) console.error(error);
+              } catch (eventErr) {
+                console.error(eventErr);
+              }
 
               return { duplicated: true, status: stateBefore };
             }

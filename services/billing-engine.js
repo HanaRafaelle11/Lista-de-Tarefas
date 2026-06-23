@@ -4,6 +4,26 @@ import { SubscriptionStateMachine } from './subscription-state-machine.js';
 import { DistributedLock } from './distributed-lock.js';
 import { BillingTracer, BillingLogger } from './billing-tracer.js';
 
+async function insertEvent(userId, eventType, metadata = {}) {
+  const event = {
+    user_id: userId,
+    event_type: eventType,
+    metadata
+  };
+  console.log("[EVENT INSERT]", {
+    file: "services/billing-engine.js",
+    user_id: userId,
+    auth_uid: null,
+    payload: event
+  });
+  try {
+    const { error } = await supabaseAdmin.from('events').insert([event]);
+    if (error) console.error(error);
+  } catch (err) {
+    console.error(err);
+  }
+}
+
 /**
  * Billing Engine (Core Logic - Production Hardened)
  * 
@@ -266,11 +286,7 @@ export const BillingEngine = {
       BillingLogger.info('payment_approved_processing', paymentStr, null, { userId });
 
       // Emite obrigatoriamente: payment_received
-      await supabaseAdmin.from('events').insert([{
-        user_id: userId,
-        event_type: 'payment_received',
-        metadata: { payment_id: paymentStr, status: 'approved' }
-      }]);
+      await insertEvent(userId, 'payment_received', { payment_id: paymentStr, status: 'approved' });
 
       try {
         // 1. Verificação de Idempotência: Checar se o pagamento já existe na tabela billing_events
@@ -287,11 +303,7 @@ export const BillingEngine = {
 
         if (existingEvent) {
           BillingLogger.info('payment_ignored_duplicate', paymentStr, null, { userId });
-          await supabaseAdmin.from('events').insert([{
-            user_id: userId,
-            event_type: 'payment_ignored_duplicate',
-            metadata: { payment_id: paymentStr }
-          }]);
+          await insertEvent(userId, 'payment_ignored_duplicate', { payment_id: paymentStr });
           return { success: true, duplicated: true };
         }
 
@@ -315,26 +327,18 @@ export const BillingEngine = {
         if (insertEventError) {
           if (insertEventError.code === '23505') {
             BillingLogger.info('payment_ignored_duplicate_race', paymentStr, null, { userId });
-            await supabaseAdmin.from('events').insert([{
-              user_id: userId,
-              event_type: 'payment_ignored_duplicate',
-              metadata: { payment_id: paymentStr }
-            }]);
+            await insertEvent(userId, 'payment_ignored_duplicate', { payment_id: paymentStr });
             return { success: true, duplicated: true };
           }
           throw insertEventError;
         }
 
         // Emite obrigatoriamente: payment_approved
-        await supabaseAdmin.from('events').insert([{
-          user_id: userId,
-          event_type: 'payment_approved',
-          metadata: {
-            payment_id: paymentStr,
-            amount: paymentData.transaction_amount || 14.90,
-            date_approved: paymentData.date_approved || new Date().toISOString()
-          }
-        }]);
+        await insertEvent(userId, 'payment_approved', {
+          payment_id: paymentStr,
+          amount: paymentData.transaction_amount || 14.90,
+          date_approved: paymentData.date_approved || new Date().toISOString()
+        });
 
         // 3. Checar se o usuário estava anteriormente CANCELED/EXPIRED para aplicar reativação
         const { data: profile } = await supabaseAdmin
@@ -401,11 +405,7 @@ export const BillingEngine = {
         .maybeSingle();
 
       // Emite obrigatoriamente: payment_failed
-      await supabaseAdmin.from('events').insert([{
-        user_id: userId,
-        event_type: 'payment_failed',
-        metadata: { reason: 'payment_canceled' }
-      }]);
+      await insertEvent(userId, 'payment_failed', { reason: 'payment_canceled' });
 
       const updatedProfile = await this.setUserFree(userId, 'canceled');
       await sendPushNotification(userId, "Assinatura cancelada", "Sua assinatura foi cancelada. Seu plano premium foi encerrado.");
@@ -444,11 +444,7 @@ export const BillingEngine = {
       BillingLogger.info('payment_past_due_processing', null, null, { userId, currentStatus, nextStatus });
 
       // Emite obrigatoriamente: payment_failed
-      await supabaseAdmin.from('events').insert([{
-        user_id: userId,
-        event_type: 'payment_failed',
-        metadata: { reason: 'past_due' }
-      }]);
+      await insertEvent(userId, 'payment_failed', { reason: 'past_due' });
 
       // 1. Atualizar profiles no Supabase (status PAST_DUE, plano free)
       const { data, error } = await supabaseAdmin
@@ -604,23 +600,15 @@ export const BillingEngine = {
         }
 
         // Gravar evento de downgrade por reconciliação: user_downgraded
-        await supabaseAdmin.from('events').insert([{
-          user_id: userId,
-          event_type: 'user_downgraded',
-          metadata: { plano: targetPlan, status: normalizedStatus, reason }
-        }]);
+        await insertEvent(userId, 'user_downgraded', { plano: targetPlan, status: normalizedStatus, reason });
       }
 
       // 2. Gravar o log obrigatório de correção de faturamento: reconciliation_fix_applied (drift_resolved)
-      await supabaseAdmin.from('events').insert([{
-        user_id: userId,
-        event_type: 'reconciliation_fix_applied',
-        metadata: {
-          target_plan: targetPlan,
-          target_status: normalizedStatus,
-          reason
-        }
-      }]);
+      await insertEvent(userId, 'reconciliation_fix_applied', {
+        target_plan: targetPlan,
+        target_status: normalizedStatus,
+        reason
+      });
 
       // Trace Record
       await BillingTracer.recordTrace({
@@ -652,22 +640,12 @@ export const BillingEngine = {
       retentionAction = 'retention_push_notification';
     }
 
-    const { error } = await supabaseAdmin
-      .from('events')
-      .insert([{
-        user_id: userId,
-        event_type: 'retention_action_triggered',
-        metadata: {
-          risk_level: riskLevel,
-          churn_score: churnScore,
-          action: retentionAction,
-          timestamp: new Date().toISOString()
-        }
-      }]);
-
-    if (error) {
-      BillingLogger.warn('retention_event_log_failed', null, null, { message: error.message });
-    }
+    await insertEvent(userId, 'retention_action_triggered', {
+      risk_level: riskLevel,
+      churn_score: churnScore,
+      action: retentionAction,
+      timestamp: new Date().toISOString()
+    });
 
     return { riskLevel, churnScore, retentionAction };
   },
@@ -682,17 +660,8 @@ export const BillingEngine = {
     BillingLogger.info('user_reactivation_loop', paymentId, null, { userId });
 
     // Gravar logs analíticos de reativação e recuperação
-    await supabaseAdmin.from('events').insert([{
-      user_id: userId,
-      event_type: 'user_reactivated',
-      metadata: { payment_id: paymentId, recovered_at: new Date().toISOString() }
-    }]);
-
-    await supabaseAdmin.from('events').insert([{
-      user_id: userId,
-      event_type: 'subscription_recovered',
-      metadata: { payment_id: paymentId, recovered_at: new Date().toISOString() }
-    }]);
+    await insertEvent(userId, 'user_reactivated', { payment_id: paymentId, recovered_at: new Date().toISOString() });
+    await insertEvent(userId, 'subscription_recovered', { payment_id: paymentId, recovered_at: new Date().toISOString() });
 
     await sendPushNotification(userId, "Assinatura reativada", "Sua assinatura foi reativada com sucesso! Bem-vindo de volta! ⚡");
   }

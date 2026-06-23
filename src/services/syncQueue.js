@@ -510,6 +510,27 @@ async function trySend(item) {
   try {
     if (type === 'event') {
       const { userId, eventType, metadata } = payload;
+
+      if (!userId) {
+        console.warn("[EVENT SKIPPED] missing user");
+        return true;
+      }
+
+      try {
+        const authUserRes = await supabase.auth.getUser().catch(() => null);
+        console.log("[EVENT INSERT]", {
+          file: "src/services/syncQueue.js",
+          user_id: userId,
+          auth_uid: authUserRes?.data?.user?.id || null,
+          payload: {
+            id:         idempotency_key,
+            user_id:    userId,
+            event_type: eventType,
+            metadata:   metadata || {},
+          }
+        });
+      } catch (logErr) {}
+
       const { error } = await supabase
         .from('events')
         .insert([{
@@ -518,7 +539,9 @@ async function trySend(item) {
           event_type: eventType,
           metadata:   metadata || {},
         }]);
-      if (error && error.code !== '23505') throw error;
+      if (error && error.code !== '23505') {
+        console.error(error);
+      }
       return true;
     }
 

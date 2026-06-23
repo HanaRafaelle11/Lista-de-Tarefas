@@ -10,6 +10,26 @@ import { ChaosEngine } from '../services/chaos-engine.js';
 
 const MERCADOPAGO_ACCESS_TOKEN = process.env.MERCADOPAGO_ACCESS_TOKEN;
 
+async function insertEvent(userId, eventType, metadata = {}) {
+  const event = {
+    user_id: userId,
+    event_type: eventType,
+    metadata
+  };
+  console.log("[EVENT INSERT]", {
+    file: "jobs/payment-reconciliation.js",
+    user_id: userId,
+    auth_uid: null,
+    payload: event
+  });
+  try {
+    const { error } = await supabaseAdmin.from('events').insert([event]);
+    if (error) console.error(error);
+  } catch (err) {
+    console.error(err);
+  }
+}
+
 function normalizeStatus(mpStatus) {
   const mapping = {
     approved: 'approved',
@@ -163,16 +183,12 @@ export async function runReconciliation() {
           if (normalizedStatus !== currentLocalStatus) {
             if (normalizedStatus === 'approved') {
               if (PaymentStateMachine.isValidTransition(currentLocalStatus, 'approved')) {
-                await supabaseAdmin.from('events').insert([{
-                  user_id: userId,
-                  event_type: 'consistency_violation_detected',
-                  metadata: {
-                    drift_type: 'payment_approved_but_inactive',
-                    payment_id: paymentId,
-                    profile_status: currentLocalStatus || 'none',
-                    timestamp: new Date().toISOString()
-                  }
-                }]);
+                await insertEvent(userId, 'consistency_violation_detected', {
+                  drift_type: 'payment_approved_but_inactive',
+                  payment_id: paymentId,
+                  profile_status: currentLocalStatus || 'none',
+                  timestamp: new Date().toISOString()
+                });
 
                 if (!currentLocalStatus) {
                   await supabaseAdmin.from('payment_ledger').insert([{
@@ -228,15 +244,11 @@ export async function runReconciliation() {
                   payload: paymentDetails
                 }]);
 
-                await supabaseAdmin.from('events').insert([{
-                  user_id: userId,
-                  event_type: 'reconciliation_fix_applied',
-                  metadata: {
-                    drift_type: 'payment_approved_but_inactive',
-                    payment_id: paymentId,
-                    description: `Anti-Drift webhook recovery: Pagamento aprovado ${paymentId} não havia liberado acesso Pro.`
-                  }
-                }]);
+                await insertEvent(userId, 'reconciliation_fix_applied', {
+                  drift_type: 'payment_approved_but_inactive',
+                  payment_id: paymentId,
+                  description: `Anti-Drift webhook recovery: Pagamento aprovado ${paymentId} não havia liberado acesso Pro.`
+                });
 
                 await BillingTracer.recordTrace({
                   paymentId,
@@ -393,31 +405,23 @@ export async function runReconciliation() {
               if (!localSub || localSub.status !== 'active') {
                 BillingLogger.info('reconciliation_fixing_inactive_local_sub', null, subId, { userId });
 
-                await supabaseAdmin.from('events').insert([{
-                  user_id: userId,
-                  event_type: 'consistency_violation_detected',
-                  metadata: {
-                    drift_type: 'mp_subscription_active_but_local_inactive',
-                    subscription_id: subId,
-                    mp_status: remoteStatus,
-                    local_status: localSub?.status || 'none',
-                    timestamp: new Date().toISOString()
-                  }
-                }]);
+                await insertEvent(userId, 'consistency_violation_detected', {
+                  drift_type: 'mp_subscription_active_but_local_inactive',
+                  subscription_id: subId,
+                  mp_status: remoteStatus,
+                  local_status: localSub?.status || 'none',
+                  timestamp: new Date().toISOString()
+                });
 
                 const nextExpiry = new Date();
                 nextExpiry.setDate(nextExpiry.getDate() + 30);
                 await BillingEngine.setUserPremium(userId, customerId, nextExpiry.toISOString(), subId);
 
-                await supabaseAdmin.from('events').insert([{
-                  user_id: userId,
-                  event_type: 'reconciliation_fix_applied',
-                  metadata: {
-                    drift_type: 'mp_subscription_active_but_local_inactive',
-                    subscription_id: subId,
-                    description: `Reconciliado: Assinatura ativada localmente.`
-                  }
-                }]);
+                await insertEvent(userId, 'reconciliation_fix_applied', {
+                  drift_type: 'mp_subscription_active_but_local_inactive',
+                  subscription_id: subId,
+                  description: `Reconciliado: Assinatura ativada localmente.`
+                });
 
                 await BillingTracer.recordTrace({
                   paymentId: subId,
@@ -443,29 +447,21 @@ export async function runReconciliation() {
                   payload: sub
                 }]);
 
-                await supabaseAdmin.from('events').insert([{
-                  user_id: userId,
-                  event_type: 'consistency_violation_detected',
-                  metadata: {
-                    drift_type: 'mp_subscription_inactive_but_local_active',
-                    subscription_id: subId,
-                    mp_status: remoteStatus,
-                    local_status: localSub.status,
-                    timestamp: new Date().toISOString()
-                  }
-                }]);
+                await insertEvent(userId, 'consistency_violation_detected', {
+                  drift_type: 'mp_subscription_inactive_but_local_active',
+                  subscription_id: subId,
+                  mp_status: remoteStatus,
+                  local_status: localSub.status,
+                  timestamp: new Date().toISOString()
+                });
 
                 await BillingEngine.setUserFree(userId, 'canceled');
 
-                await supabaseAdmin.from('events').insert([{
-                  user_id: userId,
-                  event_type: 'reconciliation_fix_applied',
-                  metadata: {
-                    drift_type: 'mp_subscription_inactive_but_local_active',
-                    subscription_id: subId,
-                    description: `Reconciliado: Assinatura cancelada localmente.`
-                  }
-                }]);
+                await insertEvent(userId, 'reconciliation_fix_applied', {
+                  drift_type: 'mp_subscription_inactive_but_local_active',
+                  subscription_id: subId,
+                  description: `Reconciliado: Assinatura cancelada localmente.`
+                });
 
                 await BillingTracer.recordTrace({
                   paymentId: subId,
@@ -508,30 +504,22 @@ export async function runReconciliation() {
             if (!checkSub) {
               BillingLogger.info('reconciliation_fixing_payment_without_sub', payment.payment_id, null, { userId: payment.user_id });
 
-              await supabaseAdmin.from('events').insert([{
-                user_id: payment.user_id,
-                event_type: 'consistency_violation_detected',
-                metadata: {
-                  drift_type: 'payment_exists_but_no_subscription',
-                  payment_id: payment.payment_id,
-                  timestamp: new Date().toISOString()
-                }
-              }]);
+              await insertEvent(payment.user_id, 'consistency_violation_detected', {
+                drift_type: 'payment_exists_but_no_subscription',
+                payment_id: payment.payment_id,
+                timestamp: new Date().toISOString()
+              });
 
               const nextExpiry = new Date(payment.processed_at || new Date());
               nextExpiry.setDate(nextExpiry.getDate() + 30);
 
               await BillingEngine.setUserPremium(payment.user_id, null, nextExpiry.toISOString(), payment.payment_id);
 
-              await supabaseAdmin.from('events').insert([{
-                user_id: payment.user_id,
-                event_type: 'reconciliation_fix_applied',
-                metadata: {
-                  drift_type: 'payment_exists_but_no_subscription',
-                  payment_id: payment.payment_id,
-                  description: 'Assinatura criada com base em pagamento existente aprovado.'
-                }
-              }]);
+              await insertEvent(payment.user_id, 'reconciliation_fix_applied', {
+                drift_type: 'payment_exists_but_no_subscription',
+                payment_id: payment.payment_id,
+                description: 'Assinatura criada com base em pagamento existente aprovado.'
+              });
 
               await BillingTracer.recordTrace({
                 paymentId: payment.payment_id,
@@ -573,27 +561,19 @@ export async function runReconciliation() {
             if (!localSub || localSub.status !== 'active') {
               BillingLogger.info('reconciliation_fixing_premium_profile_inactive_sub', null, null, { userId: profile.id, subStatus: localSub?.status });
 
-              await supabaseAdmin.from('events').insert([{
-                user_id: profile.id,
-                event_type: 'consistency_violation_detected',
-                metadata: {
-                  drift_type: 'profile_premium_but_subscription_inactive',
-                  profile_status: profile.assinatura_status,
-                  subscription_status: localSub?.status || 'none',
-                  timestamp: new Date().toISOString()
-                }
-              }]);
+              await insertEvent(profile.id, 'consistency_violation_detected', {
+                drift_type: 'profile_premium_but_subscription_inactive',
+                profile_status: profile.assinatura_status,
+                subscription_status: localSub?.status || 'none',
+                timestamp: new Date().toISOString()
+              });
 
               await BillingEngine.setUserFree(profile.id, localSub?.status || 'expired');
 
-              await supabaseAdmin.from('events').insert([{
-                user_id: profile.id,
-                event_type: 'reconciliation_fix_applied',
-                metadata: {
-                  drift_type: 'profile_premium_but_subscription_inactive',
-                  description: 'Perfil removido de premium para corresponder ao status inativo na tabela subscriptions.'
-                }
-              }]);
+              await insertEvent(profile.id, 'reconciliation_fix_applied', {
+                drift_type: 'profile_premium_but_subscription_inactive',
+                description: 'Perfil removido de premium para corresponder ao status inativo na tabela subscriptions.'
+              });
 
               await BillingTracer.recordTrace({
                 paymentId: null,
@@ -635,25 +615,17 @@ export async function runReconciliation() {
             if (!payments || payments.length === 0) {
               BillingLogger.info('reconciliation_fixing_active_sub_without_payment', null, null, { userId: sub.user_id });
 
-              await supabaseAdmin.from('events').insert([{
-                user_id: sub.user_id,
-                event_type: 'consistency_violation_detected',
-                metadata: {
-                  drift_type: 'active_subscription_without_valid_payment',
-                  timestamp: new Date().toISOString()
-                }
-              }]);
+              await insertEvent(sub.user_id, 'consistency_violation_detected', {
+                drift_type: 'active_subscription_without_valid_payment',
+                timestamp: new Date().toISOString()
+              });
 
               await BillingEngine.handlePaymentPastDue(sub.user_id);
 
-              await supabaseAdmin.from('events').insert([{
-                user_id: sub.user_id,
-                event_type: 'reconciliation_fix_applied',
-                metadata: {
-                  drift_type: 'active_subscription_without_valid_payment',
-                  description: 'Assinatura ativa sem pagamentos válidos alterada para past_due.'
-                }
-              }]);
+              await insertEvent(sub.user_id, 'reconciliation_fix_applied', {
+                drift_type: 'active_subscription_without_valid_payment',
+                description: 'Assinatura ativa sem pagamentos válidos alterada para past_due.'
+              });
 
               await BillingTracer.recordTrace({
                 paymentId: null,

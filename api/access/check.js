@@ -53,7 +53,7 @@ export default async function handler(req, res) {
 
     // 3. Registrar logs estruturados de auditoria (Observabilidade)
     // Evento Geral de Avaliação
-    await supabaseAdmin.from('events').insert([{
+    const event1 = {
       user_id: userId,
       event_type: 'access_decision_evaluated',
       metadata: {
@@ -64,18 +64,42 @@ export default async function handler(req, res) {
         expiresAt: subscription?.current_period_end || null,
         timestamp: new Date().toISOString()
       }
-    }]);
+    };
+    console.log("[EVENT INSERT]", {
+      file: "api/access/check.js",
+      user_id: event1.user_id,
+      auth_uid: null,
+      payload: event1
+    });
+    try {
+      const { error: err1 } = await supabaseAdmin.from('events').insert([event1]);
+      if (err1) console.error(err1);
+    } catch (err) {
+      console.error(err);
+    }
 
     // Evento de Concedido vs Negado com motivo
     const auditEvent = decision.isPro ? 'access_granted' : 'access_denied_reason';
-    await supabaseAdmin.from('events').insert([{
+    const event2 = {
       user_id: userId,
       event_type: auditEvent,
       metadata: {
         reason: decision.reason,
         timestamp: new Date().toISOString()
       }
-    }]);
+    };
+    console.log("[EVENT INSERT]", {
+      file: "api/access/check.js",
+      user_id: event2.user_id,
+      auth_uid: null,
+      payload: event2
+    });
+    try {
+      const { error: err2 } = await supabaseAdmin.from('events').insert([event2]);
+      if (err2) console.error(err2);
+    } catch (err) {
+      console.error(err);
+    }
 
     // 4. Disparar a reavaliação de Churn em background (Churn Engine apenas sugere risco)
     let churnData = null;

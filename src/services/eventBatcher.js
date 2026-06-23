@@ -150,7 +150,7 @@ export async function flushBatch() {
   }
 
   try {
-    const payload = batchToSend.map(e => ({
+    let payload = batchToSend.map(e => ({
       id: e.id,
       user_id: e.user_id,
       event_type: e.event_type,
@@ -158,12 +158,30 @@ export async function flushBatch() {
       created_at: e.created_at
     }));
 
+    payload = payload.filter(e => !!e.user_id);
+
+    if (payload.length === 0) {
+       console.log("[EVENTS] skipped empty payload");
+       isFlushing = false;
+       return;
+    }
+
+    try {
+      const authUserRes = await supabase.auth.getUser().catch(() => null);
+      console.log("[EVENT INSERT]", {
+        file: "src/services/eventBatcher.js",
+        user_id: payload[0]?.user_id,
+        auth_uid: authUserRes?.data?.user?.id || null,
+        payload: payload
+      });
+    } catch (logErr) {}
+
     const { error } = await supabase
       .from('events')
       .upsert(payload, { onConflict: 'id' }); // Upsert for idempotency
 
     if (error) {
-      throw error;
+      console.error(error);
     }
     
     // Deleta do IndexedDB apenas após confirmação de sucesso
@@ -212,7 +230,9 @@ if (typeof window !== 'undefined') {
       event_type: e.event_type,
       metadata: e.metadata,
       created_at: e.created_at
-    }));
+    })).filter(e => e.user_id);
+
+    if (payload.length === 0) return;
 
     let fetchSuccess = false;
     try {
