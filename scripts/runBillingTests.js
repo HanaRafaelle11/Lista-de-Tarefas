@@ -503,6 +503,50 @@ const revenueHandler = (await import('../api/analytics/revenue.js')).default;
 const userTimelineHandler = (await import('../api/analytics/user-timeline.js')).default;
 const revenueIntegrityHandler = (await import('../api/analytics/revenue-integrity.js')).default;
 
+const { supabaseAdmin } = await import('../lib/supabase.js');
+if (!supabaseAdmin.auth) {
+  supabaseAdmin.auth = {};
+}
+if (!supabaseAdmin.auth.admin) {
+  supabaseAdmin.auth.admin = {};
+}
+supabaseAdmin.auth.admin.getUserById = async (uid) => {
+  if (uid === 'invalid-email-user-id') {
+    return {
+      data: {
+        user: {
+          id: uid,
+          email: 'test_user@test.com',
+          user_metadata: {}
+        }
+      },
+      error: null
+    };
+  }
+  if (uid === testUserId) {
+    return {
+      data: {
+        user: {
+          id: uid,
+          email: testUserEmail,
+          user_metadata: {}
+        }
+      },
+      error: null
+    };
+  }
+  return {
+    data: {
+      user: {
+        id: uid,
+        email: `${uid}@flowday.app`,
+        user_metadata: { is_admin: uid === 'admin-user-id' }
+      }
+    },
+    error: null
+  };
+};
+
 // UUID exclusivo para testes
 const testUserId = '00000000-0000-0000-0000-000000000009';
 const testUserEmail = 'billing_test_suite@flowday.app';
@@ -1155,13 +1199,7 @@ async function runTests() {
           payment_method_id: 'master',
           amount: 14.90,
           userId: testUserId,
-          payer: {
-            email: 'valid_user@flowday.app',
-            identification: {
-              type: 'CPF',
-              number: '123.456.789-00' // CPF inválido matemático
-            }
-          }
+          cpf: '123.456.789-00' // CPF inválido matemático
         }
       });
 
@@ -1174,20 +1212,20 @@ async function runTests() {
 
     // --- TESTE 12: Hardening V2 — Email Inválido ou Teste Bloqueia Criação de Pagamento ---
     await runTest('Hardening V2 - Invalid Email Blocks Payment Creation', async () => {
+      mockDatabase.profiles['invalid-email-user-id'] = {
+        id: 'invalid-email-user-id',
+        name: 'Valid User',
+        nickname: 'valid'
+      };
+
       const { req, res, promise } = mockReqRes({
         method: 'POST',
         body: {
           token: 'card_token_123',
           payment_method_id: 'master',
           amount: 14.90,
-          userId: testUserId,
-          payer: {
-            email: 'test_user@test.com', // Rejeitado
-            identification: {
-              type: 'CPF',
-              number: '29009941019' // CPF válido matemático
-            }
-          }
+          userId: 'invalid-email-user-id',
+          cpf: '29009941019' // CPF válido matemático
         }
       });
 
@@ -1196,6 +1234,8 @@ async function runTests() {
       const result = await promise;
       assert.strictEqual(result.statusCode, 400, 'Deve retornar erro 400');
       assert.strictEqual(result.body.error, 'Email obrigatório.', 'Deve acusar Email obrigatório para test_user@test.com');
+
+      delete mockDatabase.profiles['invalid-email-user-id'];
     });
 
     // --- TESTE 12.1: Payment Creation - Generic Name Fails ---
@@ -1210,13 +1250,7 @@ async function runTests() {
           payment_method_id: 'master',
           amount: 14.90,
           userId: testUserId,
-          payer: {
-            email: 'valid_user@flowday.app',
-            identification: {
-              type: 'CPF',
-              number: '29009941019' // CPF válido matemático
-            }
-          }
+          cpf: '29009941019' // CPF válido matemático
         }
       });
 

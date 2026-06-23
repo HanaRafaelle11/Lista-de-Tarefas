@@ -94,7 +94,7 @@ export default async function handler(req, res) {
     return;
   }
 
-  const { token, payment_method_id, amount, userId, payer, installments } = req.body || {};
+  const { token, payment_method_id, amount, userId, cpf, installments } = req.body || {};
 
   if (!userId) {
     res.status(400).json({ error: 'userId é obrigatório.' });
@@ -112,19 +112,26 @@ export default async function handler(req, res) {
     return;
   }
 
-  const email = payer?.email;
+  // Retrieve email from Auth admin service
+  const { data: authData, error: authError } = await supabaseAdmin.auth.admin.getUserById(userId);
+  if (authError || !authData?.user) {
+    res.status(400).json({ error: 'Usuário não autenticado ou inválido.' });
+    return;
+  }
+  const email = authData.user.email;
   if (!email || email.trim() === '' || email === 'test_user@test.com' || email.toLowerCase() === 'null' || email.toLowerCase() === 'undefined') {
     res.status(400).json({ error: 'Email obrigatório.' });
     return;
   }
 
-  const cpf = payer?.identification?.number;
-  if (!cpf) {
+  // Retrieve CPF
+  const cpfValue = cpf;
+  if (!cpfValue) {
     res.status(400).json({ error: 'CPF é obrigatório.' });
     return;
   }
 
-  const cleanCpf = cpf.replace(/\D/g, '');
+  const cleanCpf = cpfValue.replace(/\D/g, '');
   if (cleanCpf.length !== 11) {
     res.status(400).json({ error: 'CPF deve conter exatamente 11 dígitos.' });
     return;
@@ -145,16 +152,14 @@ export default async function handler(req, res) {
       .eq('id', userId)
       .maybeSingle();
 
-    let first_name = payer?.first_name || '';
-    let last_name = payer?.last_name || '';
+    let first_name = '';
+    let last_name = '';
 
-    if (!first_name || !last_name) {
-      const fullName = profile?.name || profile?.nickname;
-      if (fullName) {
-        const parts = fullName.trim().split(/\s+/);
-        first_name = first_name || parts[0] || '';
-        last_name = last_name || parts.slice(1).join(' ') || '';
-      }
+    const fullName = profile?.name || profile?.nickname;
+    if (fullName) {
+      const parts = fullName.trim().split(/\s+/);
+      first_name = parts[0] || '';
+      last_name = parts.slice(1).join(' ') || '';
     }
 
     // Validação estrita de nome - proibir campos genéricos e vazios
