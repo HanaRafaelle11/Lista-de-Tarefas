@@ -34,6 +34,24 @@ function validateCpf(cpf) {
   return true;
 }
 
+function isValidName(name) {
+  if (!name) return false;
+  const trimmed = name.trim().toLowerCase();
+  if (trimmed === '' || trimmed === 'usuario' || trimmed === 'flowday' || trimmed === 'usuario flowday' || trimmed === 'usuarioflowday' || trimmed === 'null' || trimmed === 'undefined') {
+    return false;
+  }
+  return name.trim().length >= 2;
+}
+
+function validateEmail(email) {
+  if (!email) return false;
+  const trimmed = email.trim().toLowerCase();
+  if (trimmed === '' || trimmed === 'test_user@test.com' || trimmed === 'null' || trimmed === 'undefined') {
+    return false;
+  }
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed);
+}
+
 // Memoized payment component to prevent re-rendering when parent state changes
 const MemoizedPayment = React.memo(({ initialization, customization, onSubmit, onError, onReady }) => {
   return (
@@ -53,53 +71,81 @@ export default function Checkout() {
   const [status, setStatus] = useState(null);
   const [error, setError] = useState(null);
   const [pixData, setPixData] = useState(null);
+  const [activeTab, setActiveTab] = useState('card'); // 'card' | 'pix'
+
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [email, setEmail] = useState('');
   const [userCpf, setUserCpf] = useState('');
-  const [isPix, setIsPix] = useState(false);
 
-  // Sync ref to avoid onSubmit dependency invalidation
+  // Refs to avoid onSubmit dependency invalidation on every keystroke
+  const firstNameRef = useRef(firstName);
+  const lastNameRef = useRef(lastName);
+  const emailRef = useRef(email);
   const userCpfRef = useRef(userCpf);
-  useEffect(() => {
-    userCpfRef.current = userCpf;
-  }, [userCpf]);
 
+  useEffect(() => { firstNameRef.current = firstName; }, [firstName]);
+  useEffect(() => { lastNameRef.current = lastName; }, [lastName]);
+  useEffect(() => { emailRef.current = email; }, [email]);
+  useEffect(() => { userCpfRef.current = userCpf; }, [userCpf]);
+
+  // Sync user details on load, filtering out any generic or invalid names
+  useEffect(() => {
+    if (currentUser?.email && !email) {
+      const emailVal = currentUser.email;
+      if (validateEmail(emailVal)) {
+        setEmail(emailVal);
+      }
+    }
+  }, [currentUser?.email]);
+
+  useEffect(() => {
+    if (userProfile && !firstName && !lastName) {
+      const fullName = userProfile.name || userProfile.nickname || '';
+      if (fullName) {
+        const parts = fullName.trim().split(/\s+/);
+        const first = parts[0] || '';
+        const last = parts.slice(1).join(' ') || '';
+        if (isValidName(first)) {
+          setFirstName(first);
+        }
+        if (isValidName(last)) {
+          setLastName(last);
+        }
+      }
+    }
+  }, [userProfile]);
+
+  // Form validity check (real-time)
+  const isFormValid = useMemo(() => {
+    const cleanCpf = userCpf.replace(/\D/g, '');
+    return (
+      isValidName(firstName) &&
+      isValidName(lastName) &&
+      validateEmail(email) &&
+      cleanCpf.length === 11 &&
+      validateCpf(cleanCpf)
+    );
+  }, [firstName, lastName, email, userCpf]);
+
+  // Submit payment for Card tab via the Mercado Pago payment brick
   const handleSubmit = useCallback(async (param) => {
     try {
       setError(null);
       setStatus('processando');
       const paymentData = param.formData || param;
       
-      const isPixPayment = paymentData.payment_method_id === 'pix';
-      setIsPix(isPixPayment);
-
       const cleanCpf = userCpfRef.current.replace(/\D/g, '');
 
-      if (isPixPayment) {
-        if (!cleanCpf) {
-          throw new Error('O CPF é obrigatório para prosseguir com o pagamento via Pix. Por favor, digite seu CPF no campo abaixo.');
-        }
-        if (cleanCpf.length !== 11) {
-          throw new Error('O CPF deve ter exatamente 11 dígitos.');
-        }
-        if (!validateCpf(cleanCpf)) {
-          throw new Error('Por favor, informe um CPF válido.');
-        }
-      } else {
-        // For card, retrieve natively collected document number or userCpfRef fallback
-        const brickCpf = paymentData.payer?.identification?.number || userCpfRef.current;
-        const cleanBrickCpf = brickCpf ? brickCpf.replace(/\D/g, '') : '';
-        if (!cleanBrickCpf) {
-          throw new Error('O CPF é obrigatório para prosseguir com o pagamento.');
-        }
-        if (cleanBrickCpf.length !== 11) {
-          throw new Error('O CPF deve ter exatamente 11 dígitos.');
-        }
-        if (!validateCpf(cleanBrickCpf)) {
-          throw new Error('Por favor, informe um CPF válido.');
-        }
+      if (!isValidName(firstNameRef.current) || !isValidName(lastNameRef.current) || !validateEmail(emailRef.current)) {
+        throw new Error('Por favor, preencha todos os dados de identificação corretamente antes de prosseguir.');
+      }
+      if (!cleanCpf || cleanCpf.length !== 11 || !validateCpf(cleanCpf)) {
+        throw new Error('Por favor, informe um CPF válido.');
       }
 
       if (!currentUser?.email) {
-        throw new Error('Email obrigatório.');
+        throw new Error('E-mail do usuário não identificado.');
       }
 
       let installments = paymentData.installments || 1;
@@ -115,15 +161,16 @@ export default function Checkout() {
         userId: currentUser?.id,
         payer: {
           ...paymentData.payer,
-          email: currentUser?.email,
+          email: emailRef.current.trim(),
+          first_name: firstNameRef.current.trim(),
+          last_name: lastNameRef.current.trim(),
           identification: {
             type: 'CPF',
-            number: isPixPayment ? cleanCpf : (paymentData.payer?.identification?.number?.replace(/\D/g, '') || cleanCpf)
+            number: cleanCpf
           }
         }
       };
 
-      // Rota API que processa a criação e o token do Brick do Mercado Pago
       const response = await fetch('/api/payments/create', {
         method: 'POST',
         headers: {
@@ -135,6 +182,62 @@ export default function Checkout() {
       if (!response.ok) {
         const errJson = await response.json().catch(() => ({}));
         throw new Error(errJson.error || 'Erro ao processar pagamento.');
+      }
+
+      const resData = await response.json();
+      if (resData.status === 'in_process') {
+        setStatus('in_process');
+      } else {
+        setStatus('success');
+      }
+    } catch (err) {
+      console.error('Card Checkout error:', err);
+      setError(err.message);
+      setStatus('error');
+      throw err;
+    }
+  }, [currentUser?.id]);
+
+  // Submit payment for Pix tab (direct API call)
+  const handlePixSubmit = async (e) => {
+    if (e) e.preventDefault();
+    if (!isFormValid) {
+      setError('Por favor, preencha e valide todos os dados do pagador.');
+      return;
+    }
+    
+    try {
+      setError(null);
+      setStatus('processando');
+      
+      const cleanCpf = userCpf.replace(/\D/g, '');
+      
+      const payload = {
+        payment_method_id: 'pix',
+        amount: 14.90,
+        userId: currentUser?.id,
+        payer: {
+          email: email.trim(),
+          first_name: firstName.trim(),
+          last_name: lastName.trim(),
+          identification: {
+            type: 'CPF',
+            number: cleanCpf
+          }
+        }
+      };
+
+      const response = await fetch('/api/payments/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (!response.ok) {
+        const errJson = await response.json().catch(() => ({}));
+        throw new Error(errJson.error || 'Erro ao processar pagamento via Pix.');
       }
 
       const resData = await response.json();
@@ -150,12 +253,11 @@ export default function Checkout() {
         setStatus('success');
       }
     } catch (err) {
-      console.error('Checkout error:', err);
+      console.error('Pix Checkout error:', err);
       setError(err.message);
       setStatus('error');
-      throw err;
     }
-  }, [currentUser?.id, currentUser?.email]);
+  };
 
   const handleError = useCallback((err) => {
     console.error('Mercado Pago Brick Error:', err);
@@ -165,6 +267,7 @@ export default function Checkout() {
     setStatus('error');
   }, []);
 
+  // We keep dependencies static to prevent the Brick from reloading as the user types
   const initialization = useMemo(() => ({
     amount: 14.90,
     payer: {
@@ -176,7 +279,7 @@ export default function Checkout() {
     paymentMethods: {
       creditCard: "all",
       debitCard: "all",
-      bankTransfer: ["pix"]
+      bankTransfer: [] // disable PIX in the card brick
     },
     visual: {
       style: {
@@ -215,50 +318,6 @@ export default function Checkout() {
       </div>
     );
   }
-
-  const renderCpfInput = () => {
-    return (
-      <div style={{ marginTop: '16px', marginBottom: '16px' }}>
-        <label style={{
-          display: 'block',
-          fontSize: '13px',
-          fontWeight: '600',
-          color: 'rgba(255, 255, 255, 0.6)',
-          marginBottom: '8px',
-          fontFamily: 'sans-serif'
-        }}>
-          CPF do Pagador (Obrigatório para Pix)
-        </label>
-        <input
-          type="text"
-          value={userCpf}
-          onChange={(e) => setUserCpf(e.target.value)}
-          placeholder="000.000.000-00"
-          style={{
-            width: '100%',
-            padding: '12px 16px',
-            backgroundColor: '#13131a',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
-            borderRadius: '8px',
-            color: '#ffffff',
-            fontSize: '14px',
-            outline: 'none',
-            boxSizing: 'border-box',
-            transition: 'border-color 0.2s, box-shadow 0.2s',
-            fontFamily: 'sans-serif'
-          }}
-          onFocus={(e) => {
-            e.target.style.borderColor = '#10b981';
-            e.target.style.boxShadow = '0 0 0 2px rgba(16, 185, 129, 0.2)';
-          }}
-          onBlur={(e) => {
-            e.target.style.borderColor = 'rgba(255, 255, 255, 0.1)';
-            e.target.style.boxShadow = 'none';
-          }}
-        />
-      </div>
-    );
-  };
 
   return (
     <div style={{
@@ -460,18 +519,307 @@ export default function Checkout() {
         </div>
       ) : (
         <>
-          <div id="payment-brick-container">
-            <MemoizedPayment
-              initialization={initialization}
-              customization={customization}
-              onSubmit={handleSubmit}
-              onError={handleError}
-              onReady={handleReady}
-            />
+          {/* Identificação do Pagador Form */}
+          <div style={{
+            backgroundColor: 'rgba(255, 255, 255, 0.02)',
+            border: '1px solid rgba(255, 255, 255, 0.06)',
+            borderRadius: '12px',
+            padding: '20px',
+            marginBottom: '24px'
+          }}>
+            <h3 style={{
+              fontSize: '15px',
+              fontWeight: '700',
+              marginTop: 0,
+              marginBottom: '16px',
+              color: '#10b981',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
+            }}>
+              👤 Identificação do Pagador
+            </h3>
+            
+            {/* Row for Name / Last Name */}
+            <div style={{ display: 'flex', gap: '12px', marginBottom: '14px' }}>
+              <div style={{ flex: 1 }}>
+                <label style={{ display: 'block', fontSize: '12px', color: 'rgba(255, 255, 255, 0.6)', marginBottom: '6px' }}>Nome</label>
+                <div style={{ position: 'relative' }}>
+                  <input
+                    type="text"
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    placeholder="Ex: João"
+                    style={{
+                      width: '100%',
+                      padding: '10px 32px 10px 12px',
+                      backgroundColor: '#13131a',
+                      border: `1px solid ${firstName ? (isValidName(firstName) ? 'rgba(16, 185, 129, 0.4)' : 'rgba(239, 68, 68, 0.4)') : 'rgba(255, 255, 255, 0.1)'}`,
+                      borderRadius: '8px',
+                      color: '#ffffff',
+                      fontSize: '14px',
+                      outline: 'none',
+                      boxSizing: 'border-box'
+                    }}
+                  />
+                  {firstName && (
+                    <span style={{
+                      position: 'absolute',
+                      right: '10px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      color: isValidName(firstName) ? '#10b981' : '#ef4444',
+                      fontSize: '14px',
+                      fontWeight: 'bold'
+                    }}>
+                      {isValidName(firstName) ? '✓' : '✗'}
+                    </span>
+                  )}
+                </div>
+              </div>
+              
+              <div style={{ flex: 1 }}>
+                <label style={{ display: 'block', fontSize: '12px', color: 'rgba(255, 255, 255, 0.6)', marginBottom: '6px' }}>Sobrenome</label>
+                <div style={{ position: 'relative' }}>
+                  <input
+                    type="text"
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                    placeholder="Ex: Silva"
+                    style={{
+                      width: '100%',
+                      padding: '10px 32px 10px 12px',
+                      backgroundColor: '#13131a',
+                      border: `1px solid ${lastName ? (isValidName(lastName) ? 'rgba(16, 185, 129, 0.4)' : 'rgba(239, 68, 68, 0.4)') : 'rgba(255, 255, 255, 0.1)'}`,
+                      borderRadius: '8px',
+                      color: '#ffffff',
+                      fontSize: '14px',
+                      outline: 'none',
+                      boxSizing: 'border-box'
+                    }}
+                  />
+                  {lastName && (
+                    <span style={{
+                      position: 'absolute',
+                      right: '10px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      color: isValidName(lastName) ? '#10b981' : '#ef4444',
+                      fontSize: '14px',
+                      fontWeight: 'bold'
+                    }}>
+                      {isValidName(lastName) ? '✓' : '✗'}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* E-mail */}
+            <div style={{ marginBottom: '14px' }}>
+              <label style={{ display: 'block', fontSize: '12px', color: 'rgba(255, 255, 255, 0.6)', marginBottom: '6px' }}>E-mail</label>
+              <div style={{ position: 'relative' }}>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="seu@email.com"
+                  style={{
+                    width: '100%',
+                    padding: '10px 32px 10px 12px',
+                    backgroundColor: '#13131a',
+                    border: `1px solid ${email ? (validateEmail(email) ? 'rgba(16, 185, 129, 0.4)' : 'rgba(239, 68, 68, 0.4)') : 'rgba(255, 255, 255, 0.1)'}`,
+                    borderRadius: '8px',
+                    color: '#ffffff',
+                    fontSize: '14px',
+                    outline: 'none',
+                    boxSizing: 'border-box'
+                  }}
+                />
+                {email && (
+                  <span style={{
+                    position: 'absolute',
+                    right: '10px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    color: validateEmail(email) ? '#10b981' : '#ef4444',
+                    fontSize: '14px',
+                    fontWeight: 'bold'
+                  }}>
+                    {validateEmail(email) ? '✓' : '✗'}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* CPF */}
+            <div>
+              <label style={{ display: 'block', fontSize: '12px', color: 'rgba(255, 255, 255, 0.6)', marginBottom: '6px' }}>CPF (Somente números)</label>
+              <div style={{ position: 'relative' }}>
+                <input
+                  type="text"
+                  value={userCpf}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/\D/g, '').slice(0, 11);
+                    setUserCpf(val);
+                  }}
+                  placeholder="00000000000"
+                  style={{
+                    width: '100%',
+                    padding: '10px 32px 10px 12px',
+                    backgroundColor: '#13131a',
+                    border: `1px solid ${userCpf ? (validateCpf(userCpf) ? 'rgba(16, 185, 129, 0.4)' : 'rgba(239, 68, 68, 0.4)') : 'rgba(255, 255, 255, 0.1)'}`,
+                    borderRadius: '8px',
+                    color: '#ffffff',
+                    fontSize: '14px',
+                    outline: 'none',
+                    boxSizing: 'border-box'
+                  }}
+                />
+                {userCpf && (
+                  <span style={{
+                    position: 'absolute',
+                    right: '10px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    color: validateCpf(userCpf) ? '#10b981' : '#ef4444',
+                    fontSize: '14px',
+                    fontWeight: 'bold'
+                  }}>
+                    {validateCpf(userCpf) ? '✓' : '✗'}
+                  </span>
+                )}
+              </div>
+            </div>
           </div>
 
-          {/* CPF field renders conditionally when isPix is true */}
-          {isPix && renderCpfInput()}
+          {/* Payment Method Selector Tabs */}
+          <div style={{
+            display: 'flex',
+            gap: '8px',
+            marginBottom: '20px',
+            backgroundColor: 'rgba(255, 255, 255, 0.03)',
+            padding: '4px',
+            borderRadius: '10px',
+            border: '1px solid rgba(255, 255, 255, 0.05)'
+          }}>
+            <button
+              onClick={() => setActiveTab('card')}
+              style={{
+                flex: 1,
+                padding: '12px 10px',
+                borderRadius: '8px',
+                border: 'none',
+                backgroundColor: activeTab === 'card' ? '#10b981' : 'transparent',
+                color: '#ffffff',
+                fontSize: '14px',
+                fontWeight: '600',
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+                boxShadow: activeTab === 'card' ? '0 4px 12px rgba(16, 185, 129, 0.2)' : 'none'
+              }}
+            >
+              💳 Cartão de Crédito
+            </button>
+            <button
+              onClick={() => setActiveTab('pix')}
+              style={{
+                flex: 1,
+                padding: '12px 10px',
+                borderRadius: '8px',
+                border: 'none',
+                backgroundColor: activeTab === 'pix' ? '#10b981' : 'transparent',
+                color: '#ffffff',
+                fontSize: '14px',
+                fontWeight: '600',
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+                boxShadow: activeTab === 'pix' ? '0 4px 12px rgba(16, 185, 129, 0.2)' : 'none'
+              }}
+            >
+              ⚡ Pix Instantâneo
+            </button>
+          </div>
+
+          {/* Active Payment Flow Details */}
+          {activeTab === 'card' ? (
+            <div style={{ position: 'relative', minHeight: '150px' }}>
+              <div id="payment-brick-container" style={{ opacity: isFormValid ? 1 : 0.15, transition: 'opacity 0.3s ease' }}>
+                <MemoizedPayment
+                  initialization={initialization}
+                  customization={customization}
+                  onSubmit={handleSubmit}
+                  onError={handleError}
+                  onReady={handleReady}
+                />
+              </div>
+
+              {!isFormValid && (
+                <div style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  backgroundColor: 'rgba(20, 20, 28, 0.75)',
+                  backdropFilter: 'blur(6px)',
+                  borderRadius: '12px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  textAlign: 'center',
+                  padding: '24px',
+                  zIndex: 10,
+                  border: '1px dashed rgba(255, 255, 255, 0.12)'
+                }}>
+                  <span style={{ fontSize: '32px', marginBottom: '12px' }}>🔒</span>
+                  <h4 style={{ margin: '0 0 8px 0', fontSize: '15px', fontWeight: '700', color: '#ffffff' }}>
+                    Dados do Pagador Necessários
+                  </h4>
+                  <p style={{ margin: 0, fontSize: '13px', color: 'rgba(255, 255, 255, 0.6)', lineHeight: '1.5' }}>
+                    Por favor, preencha nome, sobrenome, e-mail e CPF válidos no formulário acima para liberar o formulário do cartão.
+                  </p>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div style={{
+              backgroundColor: 'rgba(255, 255, 255, 0.02)',
+              border: '1px solid rgba(255, 255, 255, 0.06)',
+              borderRadius: '12px',
+              padding: '24px',
+              textAlign: 'center'
+            }}>
+              <span style={{ fontSize: '36px', display: 'block', marginBottom: '12px' }}>⚡</span>
+              <h4 style={{ margin: '0 0 8px 0', fontSize: '16px', fontWeight: '700', color: '#ffffff' }}>
+                Pagamento via Pix
+              </h4>
+              <p style={{ margin: '0 0 24px 0', fontSize: '13px', color: 'rgba(255, 255, 255, 0.5)', lineHeight: '1.5' }}>
+                O Pix é processado instantaneamente e sua assinatura é liberada na hora. Garanta que seus dados de pagador estejam corretos.
+              </p>
+              
+              <button
+                onClick={handlePixSubmit}
+                disabled={!isFormValid || status === 'processando'}
+                style={{
+                  width: '100%',
+                  padding: '14px',
+                  borderRadius: '8px',
+                  border: 'none',
+                  background: isFormValid ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)' : 'rgba(255, 255, 255, 0.08)',
+                  color: isFormValid ? '#ffffff' : 'rgba(255, 255, 255, 0.3)',
+                  fontWeight: '700',
+                  fontSize: '15px',
+                  cursor: isFormValid ? 'pointer' : 'not-allowed',
+                  transition: 'all 0.2s',
+                  boxShadow: isFormValid ? '0 4px 14px rgba(16, 185, 129, 0.3)' : 'none'
+                }}
+              >
+                {status === 'processando' ? 'Gerando Código Pix...' : 'Pagar via Pix ⚡'}
+              </button>
+            </div>
+          )}
           
           {status === 'processando' && (
             <div style={{ textAlign: 'center', marginTop: '16px', fontSize: '13px', color: 'rgba(255, 255, 255, 0.5)' }}>

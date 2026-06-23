@@ -37,7 +37,7 @@ function validateCpf(cpf) {
 function isGenericName(name) {
   if (!name) return true;
   const lower = name.toLowerCase().trim();
-  return lower === 'usuario' || lower === 'flowday' || lower === 'usuario flowday' || lower === 'usuarioflowday' || lower === '';
+  return lower === 'usuario' || lower === 'flowday' || lower === 'usuario flowday' || lower === 'usuarioflowday' || lower === '' || lower === 'null' || lower === 'undefined';
 }
 
 export default async function handler(req, res) {
@@ -68,7 +68,7 @@ export default async function handler(req, res) {
     return;
   }
 
-  if (!email || email.trim() === '' || email === 'test_user@test.com') {
+  if (!email || email.trim() === '' || email === 'test_user@test.com' || email.toLowerCase() === 'null' || email.toLowerCase() === 'undefined') {
     res.status(400).json({ error: 'Email inválido ou não informado.' });
     return;
   }
