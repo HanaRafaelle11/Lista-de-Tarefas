@@ -198,9 +198,11 @@ export default async function handler(req, res) {
       loggedPayload.token = '***';
     }
 
-    console.log(`[API Payment] Iniciando pagamento com o Mercado Pago (${payment_method_id}) para o usuário ${userId}...`);
-    console.log("[MP] notification_url", payload.notification_url);
-    console.log("[MP] Payload", JSON.stringify(loggedPayload, null, 2));
+    const paymentData = payload;
+    console.log(
+      '[MP PAYLOAD]',
+      JSON.stringify(paymentData, null, 2)
+    );
 
     const mpResponse = await fetch('https://api.mercadopago.com/v1/payments', {
       method: 'POST',
