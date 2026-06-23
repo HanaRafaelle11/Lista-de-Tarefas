@@ -223,8 +223,8 @@ export default async function handler(req, res) {
       loggedPayload.token = '***';
     }
 
-    const isDev = process.env.NODE_ENV === 'development' || !process.env.NODE_ENV || process.env.NODE_ENV === 'test';
-    if (isDev) {
+    const isProd = process.env.NODE_ENV === 'production';
+    if (!isProd) {
       console.log("📦 MP PAYLOAD FINAL:", JSON.stringify(payload, null, 2));
     } else {
       const securePayload = {
@@ -260,8 +260,13 @@ export default async function handler(req, res) {
       const errData = await mpResponse.json().catch(() => ({}));
       console.error('[MP] Erro ao criar pagamento');
       console.error(JSON.stringify(errData, null, 2));
-      if (isDev) {
-        console.log("🚨 MP ERROR FULL:", JSON.stringify(errData, null, 2));
+      const statusCode = mpResponse.status;
+      if (!isProd) {
+        console.log("🚨 MP ERROR COMPLETO:", JSON.stringify({
+          data: errData,
+          message: "Falha na resposta do Mercado Pago",
+          statusCode
+        }, null, 2));
       } else {
         const secureErrData = JSON.parse(JSON.stringify(errData));
         if (secureErrData.payer) {
@@ -270,15 +275,19 @@ export default async function handler(req, res) {
             secureErrData.payer.identification.number = maskCpf(secureErrData.payer.identification.number);
           }
         }
-        console.log("🚨 MP ERROR FULL:", JSON.stringify(secureErrData, null, 2));
+        console.log("🚨 MP ERROR COMPLETO:", JSON.stringify({
+          data: secureErrData,
+          message: "Falha na resposta do Mercado Pago",
+          statusCode
+        }, null, 2));
       }
       res.status(400).json({ error: 'Falha no processamento do pagamento no Mercado Pago.', details: errData });
       return;
     }
 
     const paymentResult = await mpResponse.json();
-    if (isDev) {
-      console.log("💥 MP RESPONSE FULL:", JSON.stringify(paymentResult, null, 2));
+    if (!isProd) {
+      console.log("💥 MP RESPONSE COMPLETO:", JSON.stringify(paymentResult, null, 2));
     } else {
       const secureResult = JSON.parse(JSON.stringify(paymentResult));
       if (secureResult.payer) {
@@ -287,7 +296,7 @@ export default async function handler(req, res) {
           secureResult.payer.identification.number = maskCpf(secureResult.payer.identification.number);
         }
       }
-      console.log("💥 MP RESPONSE FULL:", JSON.stringify(secureResult, null, 2));
+      console.log("💥 MP RESPONSE COMPLETO:", JSON.stringify(secureResult, null, 2));
     }
     const maskedResponse = {
       ...paymentResult,
@@ -426,10 +435,17 @@ export default async function handler(req, res) {
     }
   } catch (error) {
     console.error('[MP] Erro crítico ao processar pagamento:', error);
-    const errObj = error?.response?.data || error;
-    const isDev = process.env.NODE_ENV === 'development' || !process.env.NODE_ENV || process.env.NODE_ENV === 'test';
-    if (isDev) {
-      console.log("🚨 MP ERROR FULL:", typeof errObj === 'object' ? JSON.stringify(errObj, null, 2) : errObj);
+    const errObj = error?.response?.data || null;
+    const errMessage = error?.message || null;
+    const statusCode = error?.response?.status || error?.status || 500;
+    const isProd = process.env.NODE_ENV === 'production';
+    
+    if (!isProd) {
+      console.log("🚨 MP ERROR COMPLETO:", JSON.stringify({
+        data: errObj,
+        message: errMessage,
+        statusCode
+      }, null, 2));
     } else {
       let secureErrObj = errObj;
       try {
@@ -443,7 +459,11 @@ export default async function handler(req, res) {
           }
         }
       } catch (e) {}
-      console.log("🚨 MP ERROR FULL:", typeof secureErrObj === 'object' ? JSON.stringify(secureErrObj, null, 2) : secureErrObj);
+      console.log("🚨 MP ERROR COMPLETO:", JSON.stringify({
+        data: secureErrObj,
+        message: errMessage,
+        statusCode
+      }, null, 2));
     }
     res.status(500).json({ error: 'Erro crítico interno ao processar pagamento.', message: error.message });
   }
