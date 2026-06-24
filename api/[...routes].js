@@ -311,7 +311,7 @@ export default async function handler(req, res) {
         return res.status(200).end();
     }
 
-    const route = req.query.routes ? req.query.routes.join('/') : '';
+    const route = Array.isArray(req.query.routes) ? req.query.routes.join('/') : (req.query.routes || '');
 
     try {
         if (route === 'payments/create') {
