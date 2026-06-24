@@ -107,6 +107,7 @@ export default function Checkout() {
     }
   }, [userProfile, firstName, lastName]);
 
+  // 🛡️ SEGURANÇA ANTIFRAUDE: O formulário só valida se os dados estiverem preenchidos E o Device ID do Meli já existir no escopo global
   const isFormValid = useMemo(() => {
     const cleanCpf = userCpf.replace(/\D/g, '');
     return (
@@ -114,7 +115,8 @@ export default function Checkout() {
       isValidName(lastName) &&
       validateEmail(email) &&
       cleanCpf.length === 11 &&
-      validateCpf(cleanCpf)
+      validateCpf(cleanCpf) &&
+      typeof window !== 'undefined' && !!window.MP_DEVICE_SESSION_ID
     );
   }, [firstName, lastName, email, userCpf]);
 
@@ -153,7 +155,6 @@ export default function Checkout() {
         installments,
         userId: currentUser?.id,
         cpf: cleanCpf,
-        // 🛡️ ADICIONADO PARA ANTIFRAUDE: Coleta o ID de sessão gerado pelo script do index.html
         deviceId: window.MP_DEVICE_SESSION_ID || ""
       };
 
@@ -210,7 +211,6 @@ export default function Checkout() {
         userId: currentUser?.id,
         email: email.trim(),
         cpf: cleanCpf,
-        // 🛡️ ADICIONADO PARA ANTIFRAUDE: Coleta o ID de sessão gerado pelo script do index.html
         deviceId: window.MP_DEVICE_SESSION_ID || ""
       };
 
@@ -254,7 +254,6 @@ export default function Checkout() {
     setStatus('error');
   }, []);
 
-  // 🛡️ CORRIGIDO: Propriedade entity_type mapeada corretamente para evitar travamentos na SDK
   const initialization = useMemo(() => ({
     amount: 14.90,
     payer: {
