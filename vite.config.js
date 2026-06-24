@@ -18,13 +18,13 @@ const apiDevServerPlugin = () => ({
       if (req.url && req.url.startsWith('/api/')) {
         const parsedUrl = new URL(req.url, 'http://localhost');
         const pathname = parsedUrl.pathname;
-        
+
         // Remove trailing slash if any, and handle potential index file or direct .js resolution
         let relativePath = `.${pathname}`;
         let absolutePath = pathname.endsWith('.js')
           ? path.resolve(process.cwd(), relativePath)
           : path.resolve(process.cwd(), relativePath + '.js');
-        
+
         if (!fs.existsSync(absolutePath)) {
           // Try /index.js if it's a directory
           const indexPath = path.resolve(process.cwd(), relativePath, 'index.js');
@@ -95,7 +95,7 @@ const apiDevServerPlugin = () => ({
           // Load the module dynamically
           const moduleUrl = pathToFileURL(absolutePath).href + `?t=${Date.now()}`;
           const module = await import(moduleUrl);
-          
+
           if (typeof module.default === 'function') {
             await module.default(req, res);
           } else {
@@ -127,6 +127,7 @@ export default defineConfig({
       srcDir: 'src',
       filename: 'sw.js',
       registerType: 'autoUpdate',
+      injectRegister: 'inline', // 🛡️ Evita quebras de injeção de script no front
       includeAssets: ['favicon.ico', 'favicon.svg', 'icon.svg'],
       manifest: {
         name: 'MyFlowDay',
@@ -158,6 +159,11 @@ export default defineConfig({
             type: 'image/png'
           }
         ]
+      },
+      injectManifest: {
+        // 🛡️ SOLUÇÃO DO BUG: Força o empacotamento inline do runtime do Workbox,
+        // eliminando o uso de 'importScripts()' dentro do escopo do Worker global.
+        inlineWorkboxRuntime: true
       },
       workbox: {
         maximumFileSizeToCacheInBytes: 5000000,
