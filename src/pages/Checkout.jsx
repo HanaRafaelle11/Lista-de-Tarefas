@@ -147,16 +147,40 @@ export default function Checkout() {
       }
 
       let installments = paymentData.installments || 1;
+      const uniqueTimestamp = new Date().getTime();
+
       const payload = {
         token: paymentData.token,
         payment_method_id: paymentData.payment_method_id,
-        amount: 14.90,
+        transaction_amount: 14.90,
         installments,
         userId: currentUser?.id,
-        cpf: cleanCpf,
-        firstName: firstNameRef.current.trim(),
-        lastName: lastNameRef.current.trim(),
-        email: emailRef.current.trim(),
+        external_reference: `order_${currentUser?.id}_${uniqueTimestamp}`, // 1) Reference dinâmica única
+        metadata: {                                                        // 2) Limpeza de PII do metadata
+          user_id: currentUser?.id,
+          plan: "premium"
+        },
+        additional_info: {                                                 // 3) Remoção do tracking_id:none suscetível
+          items: [
+            {
+              category_id: "services",
+              description: "Acesso completo às ferramentas do MyFlowDay",
+              id: "premium-monthly",
+              quantity: 1,
+              title: "Assinatura MyFlowDay Premium",
+              unit_price: 14.90
+            }
+          ]
+        },
+        payer: {
+          email: emailRef.current.trim(),
+          first_name: firstNameRef.current.trim(),
+          last_name: lastNameRef.current.trim(),
+          identification: {
+            type: 'CPF',
+            number: cleanCpf
+          }
+        },
         deviceId: window.MP_DEVICE_SESSION_ID || ""
       };
 
@@ -207,14 +231,38 @@ export default function Checkout() {
         console.warn('Profile sync error ignored for payment checkout:', profileErr.message);
       }
 
+      const uniqueTimestamp = new Date().getTime();
+
       const payload = {
         payment_method_id: 'pix',
-        amount: 14.90,
+        transaction_amount: 14.90,
         userId: currentUser?.id,
-        email: email.trim(),
-        cpf: cleanCpf,
-        firstName: firstName.trim(),
-        lastName: lastName.trim(),
+        external_reference: `order_${currentUser?.id}_${uniqueTimestamp}`, // 1) Reference dinâmica única
+        metadata: {                                                        // 2) Limpeza de PII do metadata
+          user_id: currentUser?.id,
+          plan: "premium"
+        },
+        additional_info: {                                                 // 3) Remoção do tracking_id:none suscetível
+          items: [
+            {
+              category_id: "services",
+              description: "Acesso completo às ferramentas do MyFlowDay",
+              id: "premium-monthly",
+              quantity: 1,
+              title: "Assinatura MyFlowDay Premium",
+              unit_price: 14.90
+            }
+          ]
+        },
+        payer: {
+          email: email.trim(),
+          first_name: firstName.trim(),
+          last_name: lastName.trim(),
+          identification: {
+            type: 'CPF',
+            number: cleanCpf
+          }
+        },
         deviceId: window.MP_DEVICE_SESSION_ID || ""
       };
 
