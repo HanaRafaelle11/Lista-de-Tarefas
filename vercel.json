@@ -1,6 +1,13 @@
 {
   "rewrites": [
-    { "source": "/((?!api|static|.*\\..*).*)", "destination": "/index.html" }
+    {
+      "source": "/api/(.*)",
+      "destination": "/api/[...routes].js?routes=$1"
+    },
+    {
+      "source": "/((?!api|static|.*\\..*).*)",
+      "destination": "/index.html"
+    }
   ],
   "headers": [
     {
