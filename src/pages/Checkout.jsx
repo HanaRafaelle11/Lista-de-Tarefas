@@ -13,9 +13,9 @@ function validateCpf(cpf) {
   if (!cpf) return false;
   const cleanCpf = cpf.replace(/\D/g, '');
   if (cleanCpf.length !== 11) return false;
-  
+
   if (/^(\d)\1{10}$/.test(cleanCpf)) return false;
-  
+
   let sum = 0;
   for (let i = 0; i < 9; i++) {
     sum += parseInt(cleanCpf.charAt(i)) * (10 - i);
@@ -23,7 +23,7 @@ function validateCpf(cpf) {
   let rev = 11 - (sum % 11);
   if (rev === 10 || rev === 11) rev = 0;
   if (rev !== parseInt(cleanCpf.charAt(9))) return false;
-  
+
   sum = 0;
   for (let i = 0; i < 10; i++) {
     sum += parseInt(cleanCpf.charAt(i)) * (11 - i);
@@ -31,7 +31,7 @@ function validateCpf(cpf) {
   rev = 11 - (sum % 11);
   if (rev === 10 || rev === 11) rev = 0;
   if (rev !== parseInt(cleanCpf.charAt(10))) return false;
-  
+
   return true;
 }
 
@@ -132,7 +132,7 @@ export default function Checkout() {
       setError(null);
       setStatus('processando');
       const paymentData = param.formData || param;
-      
+
       const cleanCpf = userCpfRef.current.replace(/\D/g, '');
 
       if (!isValidName(firstNameRef.current) || !isValidName(lastNameRef.current) || !validateEmail(emailRef.current)) {
@@ -202,17 +202,17 @@ export default function Checkout() {
   // Submit payment for Pix tab (direct API call)
   const handlePixSubmit = async (e) => {
     if (e) e.preventDefault();
-    
+
     const cleanCpf = userCpf.replace(/\D/g, '');
     if (!firstName.trim() || !lastName.trim() || !validateEmail(email) || cleanCpf.length !== 11) {
       setError('Por favor, preencha e valide todos os dados do pagador.');
       return;
     }
-    
+
     try {
       setError(null);
       setStatus('processando');
-      
+
       // Update name in profiles table (optimistic sync)
       const fullName = `${firstName.trim()} ${lastName.trim()}`;
       try {
@@ -223,7 +223,7 @@ export default function Checkout() {
       } catch (profileErr) {
         console.warn('Profile sync error ignored for payment checkout:', profileErr.message);
       }
-      
+
       const payload = {
         payment_method_id: 'pix',
         amount: 14.90,
@@ -246,6 +246,7 @@ export default function Checkout() {
       }
 
       const resData = await response.json();
+      console.log("RESPOSTA REAL DA API NO PIX:", resData);
       if (resData.status === 'pending' || resData.status === 'created') {
         setPixData({
           qr_code: resData.qr_code,
@@ -463,7 +464,7 @@ export default function Checkout() {
           <p style={{ fontSize: '14px', color: 'rgba(255, 255, 255, 0.7)', lineHeight: '1.5', marginBottom: '20px' }}>
             Escaneie o código QR abaixo com o app do seu banco ou copie o código Copia e Cola para pagar. O acesso Pro é liberado imediatamente após o pagamento.
           </p>
-          
+
           {pixData.qr_code_base64 && (
             <div style={{
               backgroundColor: '#ffffff',
@@ -473,9 +474,9 @@ export default function Checkout() {
               marginBottom: '20px',
               boxShadow: '0 4px 12px rgba(0,0,0,0.3)'
             }}>
-              <img 
-                src={`data:image/jpeg;base64,${pixData.qr_code_base64}`} 
-                alt="QR Code Pix" 
+              <img
+                src={`data:image/jpeg;base64,${pixData.qr_code_base64}`}
+                alt="QR Code Pix"
                 style={{ width: '200px', height: '200px', display: 'block' }}
               />
             </div>
@@ -544,7 +545,7 @@ export default function Checkout() {
             }}>
               👤 Identificação do Pagador
             </h3>
-            
+
             {/* Row for Name / Last Name */}
             <div style={{ display: 'flex', gap: '12px', marginBottom: '14px' }}>
               <div style={{ flex: 1 }}>
@@ -582,7 +583,7 @@ export default function Checkout() {
                   )}
                 </div>
               </div>
-              
+
               <div style={{ flex: 1 }}>
                 <label style={{ display: 'block', fontSize: '12px', color: 'rgba(255, 255, 255, 0.6)', marginBottom: '6px' }}>Sobrenome</label>
                 <div style={{ position: 'relative' }}>
@@ -702,7 +703,7 @@ export default function Checkout() {
           <div style={{ position: 'relative' }}>
             {/* Tabs Selector & Payment container */}
             <div style={{ opacity: isFormValid ? 1 : 0.15, filter: isFormValid ? 'none' : 'blur(4px)', transition: 'all 0.3s ease' }}>
-              
+
               {/* Payment Method Selector Tabs */}
               <div style={{
                 display: 'flex',
@@ -797,7 +798,7 @@ export default function Checkout() {
                   <p style={{ margin: '0 0 24px 0', fontSize: '13px', color: 'rgba(255, 255, 255, 0.5)', lineHeight: '1.5' }}>
                     O Pix é processado instantaneamente e sua assinatura é liberada na hora. Garanta que seus dados de pagador estejam corretos.
                   </p>
-                  
+
                   <button
                     onClick={handlePixSubmit}
                     disabled={!isFormValid || status === 'processando'}
@@ -851,7 +852,7 @@ export default function Checkout() {
               </div>
             )}
           </div>
-          
+
           {status === 'processando' && (
             <div style={{ textAlign: 'center', marginTop: '16px', fontSize: '13px', color: 'rgba(255, 255, 255, 0.5)' }}>
               Processando faturamento...
