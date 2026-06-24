@@ -14,6 +14,7 @@
     "test:billing": "node scripts/runBillingTests.js"
   },
   "dependencies": {
+    "@google/genai": "^2.10.0",
     "@mercadopago/sdk-react": "^1.0.7",
     "@supabase/supabase-js": "^2.108.2",
     "dotenv": "^17.4.2",
