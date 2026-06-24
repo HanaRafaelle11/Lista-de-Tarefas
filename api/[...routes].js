@@ -90,7 +90,7 @@ async function handlePaymentsCreate(req, res, routePath) {
             return res.status(400).json({ error: 'Nome e sobrenome válidos são obrigatórios para prosseguir.' });
         }
 
-        // Payload limpo para Mercado Pago Bricks (sem as propriedades inválidas no Pix)
+        // Payload limpo para Mercado Pago Bricks
         const payload = {
             transaction_amount: Number(amount) || 14.90,
             payment_method_id,
@@ -154,7 +154,17 @@ async function handlePaymentsCreate(req, res, routePath) {
 
         const paymentIdStr = String(paymentResult.id);
         const paymentStatusRaw = paymentResult.status;
-        const paymentStatusNormalized = normalizeStatus(paymentStatusRaw);
+        let paymentStatusNormalized = normalizeStatus(paymentStatusRaw);
+
+        // 🛡️ BLINDAGEM ANTI-SANDBOX (O Segredo do QR Code) 🛡️
+        // Força o sistema a não aprovar o Pix instantaneamente na criação,
+        // garantindo que o Webhook seja a única forma de liberar a assinatura.
+        let isForcedPending = false;
+        if (payment_method_id === 'pix' && paymentStatusNormalized === 'approved') {
+            console.warn(`[Anti-Bug Pix] Mercado Pago aprovou instantaneamente. Forçando pendência para o Webhook atuar.`);
+            paymentStatusNormalized = 'pending';
+            isForcedPending = true;
+        }
 
         const { data: existingPayment } = await supabaseAdmin
             .from('payment_events')
@@ -209,7 +219,8 @@ async function handlePaymentsCreate(req, res, routePath) {
 
                 currentStatus = paymentStatusNormalized;
 
-                if (paymentStatusNormalized === 'approved') {
+                // Só ativa o BillingEngine se for aprovado E não for um Pix forçado para pending
+                if (paymentStatusNormalized === 'approved' && !isForcedPending) {
                     const customerId = paymentResult.payer?.id || null;
                     await BillingEngine.handlePaymentApproved(userId, customerId, paymentIdStr, paymentResult);
                 }
@@ -221,10 +232,18 @@ async function handlePaymentsCreate(req, res, routePath) {
         const transactionData = paymentResult.point_of_interaction?.transaction_data || {};
 
         if (payment_method_id === 'pix') {
+            // Trava final: Se não houver QR Code, dispara um erro em vez de seguir
+            if (!transactionData.qr_code && !transactionData.qr_code_base64) {
+                return res.status(400).json({
+                    status: 'rejected',
+                    error: 'Mercado Pago não retornou os dados do QR Code. Tente com outro CPF.'
+                });
+            }
+
             return res.status(200).json({
                 success: true,
                 paymentMethod: 'pix',
-                status: paymentStatusNormalized,
+                status: paymentStatusNormalized, // Sempre será 'pending' agora
                 qr_code: transactionData.qr_code || transactionData.ticket_url || null,
                 qr_code_base64: transactionData.qr_code_base64 || null,
                 id: paymentResult.id,
