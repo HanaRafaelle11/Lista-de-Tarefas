@@ -153,7 +153,7 @@ export default function Checkout() {
         installments,
         userId: currentUser?.id,
         cpf: cleanCpf,
-        // 🛡️ ADICIONADO PARA ANTIFRAUDE: Envia o ID do dispositivo capturado pelo script global
+        // 🛡️ ADICIONADO PARA ANTIFRAUDE: Coleta o ID de sessão gerado pelo script do index.html
         deviceId: window.MP_DEVICE_SESSION_ID || ""
       };
 
@@ -210,7 +210,7 @@ export default function Checkout() {
         userId: currentUser?.id,
         email: email.trim(),
         cpf: cleanCpf,
-        // 🛡️ ADICIONADO PARA ANTIFRAUDE: Envia o ID do dispositivo capturado pelo script global
+        // 🛡️ ADICIONADO PARA ANTIFRAUDE: Coleta o ID de sessão gerado pelo script do index.html
         deviceId: window.MP_DEVICE_SESSION_ID || ""
       };
 
@@ -254,11 +254,12 @@ export default function Checkout() {
     setStatus('error');
   }, []);
 
+  // 🛡️ CORRIGIDO: Propriedade entity_type mapeada corretamente para evitar travamentos na SDK
   const initialization = useMemo(() => ({
     amount: 14.90,
     payer: {
       email: currentUser?.email || '',
-      entityType: 'individual' // 🛡️ ADICIONADO: Corrige o erro estrito de validação do Bricks
+      entity_type: 'individual'
     }
   }), [currentUser?.email]);
 
@@ -376,7 +377,7 @@ export default function Checkout() {
               </div>
             </div>
             <div>
-              <label style={{ display: 'block', fontSize: '12px', color: 'rgba(255, 255, 255, 0.6)', marginBottom: '6px' }}>CPF (Somente numbers)</label>
+              <label style={{ display: 'block', fontSize: '12px', color: 'rgba(255, 255, 255, 0.6)', marginBottom: '6px' }}>CPF (Somente números)</label>
               <div style={{ position: 'relative' }}>
                 <input type="text" value={userCpf} onChange={(e) => { const val = e.target.value.replace(/\D/g, '').slice(0, 11); setUserCpf(val); }} placeholder="00000000000" style={{ width: '100%', padding: '10px 32px 10px 12px', backgroundColor: '#13131a', border: `1px solid ${userCpf ? (validateCpf(userCpf) ? 'rgba(16, 185, 129, 0.4)' : 'rgba(239, 68, 68, 0.4)') : 'rgba(255, 255, 255, 0.1)'}`, borderRadius: '8px', color: '#ffffff', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }} />
                 {userCpf && <span style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', color: validateCpf(userCpf) ? '#10b981' : '#ef4444', fontSize: '14px', fontWeight: 'bold' }}>{validateCpf(userCpf) ? '✓' : '✗'}</span>}
