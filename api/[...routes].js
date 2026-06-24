@@ -115,7 +115,8 @@ async function handlePaymentsCreate(req, res, routePath) {
             return res.status(405).json({ error: 'Método não permitido. Utilize POST.' });
         }
 
-        const { userId, email, amount, payment_method_id, token, installments, cpf } = req.body || {};
+        // 🛡️ ADICIONADO: deviceId capturado do corpo da requisição enviada pelo frontend
+        const { userId, email, amount, payment_method_id, token, installments, cpf, deviceId } = req.body || {};
         const idempotencyKey = req.headers['x-idempotency-key'] || crypto.randomUUID();
 
         if (!userId || !email || !payment_method_id) {
@@ -146,10 +147,13 @@ async function handlePaymentsCreate(req, res, routePath) {
             return res.status(400).json({ error: 'Nome e sobrenome válidos são obrigatórios para prosseguir.' });
         }
 
+        const finalAmount = Number(amount) || 14.90;
+
+        // 🛡️ CORRIGIDO: Estrutura expandida contendo additional_info.items para passar no antifraude do ML
         const payload = {
-            transaction_amount: Number(amount) || 14.90,
+            transaction_amount: finalAmount,
             payment_method_id,
-            description: "MyFlowDay Premium",
+            description: "Plano MyFlowDay Premium",
             external_reference: userId,
             statement_descriptor: "MYFLOWDAY",
             payer: {
@@ -160,6 +164,18 @@ async function handlePaymentsCreate(req, res, routePath) {
                     type: "CPF",
                     number: cleanCpf
                 }
+            },
+            additional_info: {
+                items: [
+                    {
+                        id: "premium-monthly",
+                        title: "Assinatura MyFlowDay Premium",
+                        description: "Acesso completo às ferramentas do MyFlowDay",
+                        category_id: "services",
+                        quantity: 1,
+                        unit_price: finalAmount
+                    }
+                ]
             },
             metadata: {
                 user_id: userId,
@@ -179,21 +195,26 @@ async function handlePaymentsCreate(req, res, routePath) {
             payload.installments = resolvedInstallments;
         }
 
+        // 🛡️ CORRIGIDO: Injeção dinâmica do X-Melicookie se o deviceId estiver disponível
+        const headers = {
+            'Authorization': `Bearer ${process.env.MERCADOPAGO_ACCESS_TOKEN}`,
+            'Content-Type': 'application/json',
+            'X-Idempotency-Key': idempotencyKey,
+            'X-Developer-Id': '5944910093081420'
+        };
+
+        if (deviceId) {
+            headers['X-Melicookie'] = deviceId;
+        }
+
         const mpResponse = await fetch('https://api.mercadopago.com/v1/payments', {
             method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${process.env.MERCADOPAGO_ACCESS_TOKEN}`,
-                'Content-Type': 'application/json',
-                'X-Idempotency-Key': idempotencyKey,
-                // 🛡️ ADICIONADO PARA HOMOLOGAÇÃO: Identifica a aplicação no validador de qualidade
-                'X-Developer-Id': '5944910093081420'
-            },
+            headers,
             body: JSON.stringify(payload)
         });
 
         if (!mpResponse.ok) {
             const errData = await mpResponse.json().catch(() => ({}));
-            // 🛡️ ADICIONADO PARA HOMOLOGAÇÃO: Melhora o tratamento detalhado de erros exigido pelo relatório
             console.error('[Mercado Pago API Error Details]:', JSON.stringify(errData));
             return res.status(400).json({
                 error: 'Falha no processamento no Mercado Pago.',
