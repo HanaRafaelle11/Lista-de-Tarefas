@@ -201,7 +201,9 @@ export default function Checkout() {
 
       if (!response.ok) {
         const errJson = await response.json().catch(() => ({}));
-        throw new Error(errJson.error || 'Erro ao processar pagamento.');
+        const errorMsg = errJson.error || errJson.message || 'Erro ao processar pagamento.';
+        const detail = errJson.status_detail ? ` (${errJson.status_detail})` : '';
+        throw new Error(errorMsg + detail);
       }
 
       const resData = await response.json();
@@ -290,7 +292,9 @@ export default function Checkout() {
       console.log("RESPOSTA REAL DA API NO PIX:", resData);
 
       if (!response.ok) {
-        throw new Error(resData.error || 'Erro ao processar pagamento via Pix.');
+        const errorMsg = resData.error || resData.message || 'Erro ao processar pagamento via Pix.';
+        const detail = resData.status_detail ? ` (${resData.status_detail})` : '';
+        throw new Error(errorMsg + detail);
       }
 
       if (resData.status === 'pending' || resData.status === 'created') {

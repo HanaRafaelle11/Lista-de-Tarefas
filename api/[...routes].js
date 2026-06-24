@@ -163,12 +163,13 @@ async function handlePaymentsCreate(req, res, routePath) {
         // 🛡️ CORRIGIDO: Payload dinâmico que respeita a referência única e o mapeamento de cartão
         const payload = {
             transaction_amount: finalAmount,
-            payment_method_id: payment_method_id, // Recebe dinamicamente a bandeira do cartão ou 'pix'
+            payment_method_id: payment_method_id,
             description: "Plano MyFlowDay Premium",
-            external_reference: external_reference || `order_${userId}_${uniqueTimestamp}`, // Único por tentativa
+            external_reference: external_reference || `order_${userId}_${uniqueTimestamp}`,
             statement_descriptor: "MYFLOWDAY",
             payer: {
                 email: email.trim(),
+                entity_type: 'individual',    // ✅ OBRIGATÓRIO para Pix no Brasil
                 first_name: first_name.trim(),
                 last_name: last_name.trim(),
                 identification: {
@@ -186,11 +187,15 @@ async function handlePaymentsCreate(req, res, routePath) {
                         quantity: 1,
                         unit_price: finalAmount
                     }
-                ]
+                ],
+                payer: {                          // ✅ Enriquece antifraude
+                    first_name: first_name.trim(),
+                    last_name: last_name.trim()
+                }
             },
             metadata: metadata || {
                 user_id: userId,
-                plan: "premium" // Removido dados PII duplicados por segurança
+                plan: "premium"
             },
             notification_url: process.env.MERCADOPAGO_WEBHOOK_URL || "https://myflowday.com.br/api/webhook/mercadopago"
         };
@@ -205,16 +210,15 @@ async function handlePaymentsCreate(req, res, routePath) {
             payload.installments = resolvedInstallments;
         }
 
-        // 🛡️ CORRIGIDO: Mapeamento oficial com o header X-Meli-Session-Id exigido pelo antifraude
+        // ✅ Headers oficiais do Mercado Pago (X-Developer-Id removido — não existe na API)
         const headers = {
             'Authorization': `Bearer ${process.env.MERCADOPAGO_ACCESS_TOKEN}`,
             'Content-Type': 'application/json',
-            'X-Idempotency-Key': idempotencyKey,
-            'X-Developer-Id': '5944910093081420'
+            'X-Idempotency-Key': idempotencyKey
         };
 
         if (deviceId) {
-            headers['X-Meli-Session-Id'] = deviceId; // Nome padrão oficial do Mercado Pago corrigido
+            headers['X-Meli-Session-Id'] = deviceId; // Anti-fraude: device fingerprint do comprador
         }
 
         const mpResponse = await fetch('https://api.mercadopago.com/v1/payments', {
@@ -227,8 +231,9 @@ async function handlePaymentsCreate(req, res, routePath) {
             const errData = await mpResponse.json().catch(() => ({}));
             console.error('[Mercado Pago API Error Details]:', JSON.stringify(errData));
             return res.status(400).json({
-                error: 'Falha no processamento no Mercado Pago.',
-                details: errData?.cause || errData?.message || errData
+                error: errData?.message || 'Falha no processamento no Mercado Pago.',
+                status_detail: errData?.status_detail || null,
+                details: errData?.cause || errData
             });
         }
 
