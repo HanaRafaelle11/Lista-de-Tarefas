@@ -72,11 +72,32 @@ export default function Checkout() {
   const [error, setError] = useState(null);
   const [pixData, setPixData] = useState(null);
   const [activeTab, setActiveTab] = useState('card');
+  const [deviceSessionId, setDeviceSessionId] = useState('');
 
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [userCpf, setUserCpf] = useState('');
+
+  // ✅ Aguarda o script security.js do MP gerar o MP_DEVICE_SESSION_ID
+  useEffect(() => {
+    if (window.MP_DEVICE_SESSION_ID) {
+      setDeviceSessionId(window.MP_DEVICE_SESSION_ID);
+      return;
+    }
+    // Polling por até 5s — script assíncrono pode demorar
+    let attempts = 0;
+    const interval = setInterval(() => {
+      if (window.MP_DEVICE_SESSION_ID) {
+        setDeviceSessionId(window.MP_DEVICE_SESSION_ID);
+        clearInterval(interval);
+      } else if (++attempts >= 50) { // 50 × 100ms = 5s
+        clearInterval(interval);
+        console.warn('[Checkout] MP_DEVICE_SESSION_ID não disponível após 5s. Antifraude pode ser afetado.');
+      }
+    }, 100);
+    return () => clearInterval(interval);
+  }, []);
 
   const firstNameRef = useRef(firstName);
   const lastNameRef = useRef(lastName);
@@ -189,10 +210,8 @@ export default function Checkout() {
             number: cleanCpf
           }
         },
-        deviceId: window.MP_DEVICE_SESSION_ID || ""
+        deviceId: deviceSessionId || window.MP_DEVICE_SESSION_ID || ""
       };
-
-      console.log("PAYLOAD ADAPTADO QUE VAI PARA A API /CREATE (CARTÃO):", payload);
 
       const response = await fetch('/api/payments/create', {
         method: 'POST',
@@ -279,7 +298,7 @@ export default function Checkout() {
             number: cleanCpf
           }
         },
-        deviceId: window.MP_DEVICE_SESSION_ID || ""
+        deviceId: deviceSessionId || window.MP_DEVICE_SESSION_ID || ""
       };
 
       console.log("PAYLOAD ADAPTADO QUE VAI PARA A API /CREATE (PIX):", payload);
