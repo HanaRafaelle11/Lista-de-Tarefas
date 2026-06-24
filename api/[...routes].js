@@ -116,31 +116,41 @@ async function handlePaymentsCreate(req, res, routePath) {
         }
 
         // 🛡️ CAPTURADO: Dados limpos vindo do payload unificado do frontend
-        const { userId, email, amount, payment_method_id, token, installments, cpf, deviceId, external_reference, metadata } = req.body || {};
+        const { userId, email: emailRoot, amount, payment_method_id, token, installments, cpf: cpfRoot, deviceId, external_reference, metadata, payer } = req.body || {};
         const idempotencyKey = req.headers['x-idempotency-key'] || crypto.randomUUID();
 
+        // 🔧 CORRIGIDO: Lê email e cpf da raiz OU de dentro do objeto payer (compatibilidade com frontend)
+        const email = emailRoot || payer?.email || '';
+        const cpf = cpfRoot || payer?.identification?.number || '';
+        const payerFirstName = payer?.first_name || '';
+        const payerLastName = payer?.last_name || '';
+
         if (!userId || !email || !payment_method_id) {
-            return res.status(400).json({ error: 'Campos obrigatórios em falta.' });
+            return res.status(400).json({ error: 'Campos obrigatórios em falta: userId, email ou payment_method_id.' });
         }
 
         const cleanCpf = cpf ? cpf.replace(/\D/g, '') : '';
-        let first_name = '', last_name = '';
+        let first_name = payerFirstName;
+        let last_name = payerLastName;
 
-        try {
-            const { data: profile } = await supabaseAdmin
-                .from('profiles')
-                .select('name, nickname')
-                .eq('id', userId)
-                .maybeSingle();
+        // Busca perfil no Supabase apenas se os nomes não vieram no payload
+        if (!first_name || !last_name) {
+            try {
+                const { data: profile } = await supabaseAdmin
+                    .from('profiles')
+                    .select('name, nickname')
+                    .eq('id', userId)
+                    .maybeSingle();
 
-            const fullName = profile?.name || profile?.nickname;
-            if (fullName) {
-                const parts = fullName.trim().split(/\s+/);
-                first_name = parts[0] || '';
-                last_name = parts.slice(1).join(' ') || '';
+                const fullName = profile?.name || profile?.nickname;
+                if (fullName) {
+                    const parts = fullName.trim().split(/\s+/);
+                    first_name = first_name || parts[0] || '';
+                    last_name = last_name || parts.slice(1).join(' ') || '';
+                }
+            } catch (err) {
+                console.warn(`[Unified API] Falha ao procurar perfil:`, err.message);
             }
-        } catch (err) {
-            console.warn(`[Unified API] Falha ao procurar perfil:`, err.message);
         }
 
         if (!first_name || !last_name || isGenericName(first_name) || isGenericName(last_name)) {

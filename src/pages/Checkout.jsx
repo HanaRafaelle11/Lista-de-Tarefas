@@ -156,10 +156,12 @@ export default function Checkout() {
       // Monta o payload de CARTÃO dinâmico baseado no que o Brick gerou
       const payload = {
         token: paymentData.token,
-        payment_method_id: paymentData.payment_method_id, // Ex: "visa", "mastercard" (NÃO fica mais travado como pix)
+        payment_method_id: paymentData.payment_method_id,
         transaction_amount: 14.90,
         installments: installments,
         userId: currentUser?.id,
+        email: email.trim(),            // raiz: esperado pela API
+        cpf: cleanCpf,                  // raiz: esperado pela API
         external_reference: `order_${currentUser?.id}_${uniqueTimestamp}`,
         metadata: {
           user_id: currentUser?.id,
@@ -242,9 +244,11 @@ export default function Checkout() {
       const uniqueTimestamp = new Date().getTime();
 
       const payload = {
-        payment_method_id: 'pix', // Mantido estrito como pix
+        payment_method_id: 'pix',
         transaction_amount: 14.90,
         userId: currentUser?.id,
+        email: email.trim(),            // raiz: esperado pela API
+        cpf: cleanCpf,                  // raiz: esperado pela API
         external_reference: `order_${currentUser?.id}_${uniqueTimestamp}`,
         metadata: {
           user_id: currentUser?.id,
