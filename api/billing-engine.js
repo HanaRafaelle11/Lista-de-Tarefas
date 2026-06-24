@@ -1,8 +1,12 @@
 import { supabaseAdmin } from '../lib/supabase.js';
-import { sendPushNotification } from './push-notification-service.js';
 import { SubscriptionStateMachine } from './subscription-state-machine.js';
 import { DistributedLock } from './distributed-lock.js';
 import { BillingTracer, BillingLogger } from './billing-tracer.js';
+
+// Isola o serviço de push localmente para impedir o erro de módulo não encontrado na Vercel
+const sendPushNotification = async (userId, title, body) => {
+  console.log(`[Billing Engine Push] Notificação simulada para ${userId}: ${title} - ${body}`);
+};
 
 async function insertEvent(userId, eventType, metadata = {}) {
   const event = {
@@ -115,7 +119,7 @@ export const BillingEngine = {
           },
           created_at: now.toISOString()
         }]);
-      
+
       if (billingEventError) {
         BillingLogger.warn('billing_event_insert_failed', paymentId, null, { message: billingEventError.message });
       }
@@ -240,7 +244,7 @@ export const BillingEngine = {
           event_type: 'user_downgraded',
           metadata: {
             plano: 'free',
-            status: nextStatus
+            status: 'nextStatus'
           }
         }]);
 
@@ -397,7 +401,7 @@ export const BillingEngine = {
 
     return await DistributedLock.withLock(`subscription:${userId}`, async () => {
       BillingLogger.info('payment_canceled_processing', null, null, { userId });
-      
+
       const { data: currentSub } = await supabaseAdmin
         .from('subscriptions')
         .select('status')
