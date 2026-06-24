@@ -1,12 +1,12 @@
 import crypto from 'crypto';
 import fetch from 'node-fetch';
 
-// Importação corrigida apontando para o seu arquivo de configuração real do Supabase
+// Importação segura do cliente Supabase local
 import { supabaseAdmin } from '../lib/supabase.js';
 import { PaymentStateMachine } from './payment-state-machine.js';
 import { BillingEngine } from './billing-engine.js';
 
-// Dublês (Stubs) de telemetria para evitar erros de variáveis não definidas
+// Dublês (Stubs) de monitorização e resiliência para compatibilidade
 const BillingTracer = {
     runWithTrace: async (id, fn) => await fn(),
     recordTrace: async () => { }
@@ -17,7 +17,7 @@ const BillingLogger = {
     error: (msg, id, extra, err, obj) => console.error(`[BillingError: ${msg}]`, err, obj || '')
 };
 
-// Funções auxiliares de segurança mantidas da sua arquitetura original
+// Funções auxiliares de segurança e mascaramento
 const maskEmail = (email) => {
     if (!email) return '';
     const [user, domain] = email.split('@');
@@ -50,7 +50,7 @@ const normalizeStatus = (status) => {
 };
 
 // =========================================================
-// HANDLERS INDIVIDUAIS CONSOLIDADOS
+// HANDLERS DE ROTA CONSOLIDADOS
 // =========================================================
 
 async function handlePaymentsCreate(req, res, routePath) {
@@ -63,7 +63,7 @@ async function handlePaymentsCreate(req, res, routePath) {
         const idempotencyKey = req.headers['x-idempotency-key'] || crypto.randomUUID();
 
         if (!userId || !email || !payment_method_id) {
-            return res.status(400).json({ error: 'Campos obrigatórios ausentes.' });
+            return res.status(400).json({ error: 'Campos obrigatórios em falta.' });
         }
 
         const cleanCpf = cpf ? cpf.replace(/\D/g, '') : '';
@@ -83,13 +83,14 @@ async function handlePaymentsCreate(req, res, routePath) {
                 last_name = parts.slice(1).join(' ') || '';
             }
         } catch (err) {
-            console.warn(`[Unified API: ${routePath}] Falha ao buscar perfil em payments create:`, err.message);
+            console.warn(`[Unified API: ${routePath}] Falha ao procurar perfil em payments create:`, err.message);
         }
 
         if (!first_name || !last_name || isGenericName(first_name) || isGenericName(last_name)) {
             return res.status(400).json({ error: 'Nome e sobrenome válidos são obrigatórios para prosseguir.' });
         }
 
+        // Payload limpo para Mercado Pago Bricks (sem as propriedades inválidas no Pix)
         const payload = {
             transaction_amount: Number(amount) || 14.90,
             payment_method_id,
@@ -135,7 +136,7 @@ async function handlePaymentsCreate(req, res, routePath) {
 
         if (!mpResponse.ok) {
             const errData = await mpResponse.json().catch(() => ({}));
-            return res.status(400).json({ error: 'Falha no faturamento no Mercado Pago.', details: errData });
+            return res.status(400).json({ error: 'Falha no processamento no Mercado Pago.', details: errData });
         }
 
         const paymentResult = await mpResponse.json();
@@ -233,7 +234,7 @@ async function handlePaymentsCreate(req, res, routePath) {
 
         return res.status(200).json({ success: true, id: paymentResult.id, status: paymentStatusNormalized });
     } catch (error) {
-        console.error(`[Unified API: ${routePath}] Erro crítico ao processar faturamento:`, error);
+        console.error(`[Unified API: ${routePath}] Erro crítico ao processar pagamento:`, error);
         return res.status(500).json({ error: 'Erro crítico interno ao processar pagamento.', message: error.message });
     }
 }
@@ -292,11 +293,12 @@ async function handleWebhookMercadoPago(req, res, routePath) {
     });
 }
 
-// Stubs para compatibilidade de caminhos legados do frontend
-async function handleAccessCheck(req, res) { res.status(200).json({ status: "free", isPro: false }); }
+async function handleAccessCheck(req, res) {
+    res.status(200).json({ status: "free", isPro: false });
+}
 
 // =========================================================
-// PONTO DE ENTRADA CENTRAL DA VERCEL
+// PONTO DE ENTRADA CENTRAL (VERCEL ROUTER)
 // =========================================================
 export default async function handler(req, res) {
     const origin = req.headers.origin || '*';
