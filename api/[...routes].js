@@ -160,23 +160,35 @@ async function handlePaymentsCreate(req, res, routePath) {
         const finalAmount = Number(amount) || 14.90;
         const uniqueTimestamp = new Date().getTime();
 
-        // 🛡️ CORRIGIDO: Payload dinâmico que respeita a referência única e o mapeamento de cartão
+        // 🟡 Para PIX: payer simplificado (sem nome para evitar rejeição por divergência com Receita Federal)
+        // 🟢 Para Cartão: payer completo com nome necessário para antifraude
+        const payerForPix = {
+            email: email.trim(),
+            entity_type: 'individual',
+            identification: {
+                type: "CPF",
+                number: cleanCpf
+            }
+        };
+
+        const payerForCard = {
+            email: email.trim(),
+            entity_type: 'individual',
+            first_name: first_name.trim(),
+            last_name: last_name.trim(),
+            identification: {
+                type: "CPF",
+                number: cleanCpf
+            }
+        };
+
         const payload = {
             transaction_amount: finalAmount,
             payment_method_id: payment_method_id,
             description: "Plano MyFlowDay Premium",
             external_reference: external_reference || `order_${userId}_${uniqueTimestamp}`,
             statement_descriptor: "MYFLOWDAY",
-            payer: {
-                email: email.trim(),
-                entity_type: 'individual',    // ✅ OBRIGATÓRIO para Pix no Brasil
-                first_name: first_name.trim(),
-                last_name: last_name.trim(),
-                identification: {
-                    type: "CPF",
-                    number: cleanCpf
-                }
-            },
+            payer: payment_method_id === 'pix' ? payerForPix : payerForCard,
             additional_info: {
                 items: [
                     {
@@ -188,7 +200,7 @@ async function handlePaymentsCreate(req, res, routePath) {
                         unit_price: finalAmount
                     }
                 ],
-                payer: {                          // ✅ Enriquece antifraude
+                payer: {
                     first_name: first_name.trim(),
                     last_name: last_name.trim()
                 }
@@ -326,11 +338,24 @@ async function handlePaymentsCreate(req, res, routePath) {
         const transactionData = paymentResult.point_of_interaction?.transaction_data || {};
 
         if (payment_method_id === 'pix') {
+            const statusDetail = paymentResult.status_detail || 'sem_detalhe';
+            console.error(`[Pix Rejected] status=${paymentStatusNormalized} status_detail=${statusDetail} payment_id=${paymentIdStr}`);
+
             if (paymentStatusNormalized === 'rejected' || paymentStatusNormalized === 'cancelled') {
+                // Mensagem inteligente baseada no status_detail real do MP
+                let userMessage = 'O Mercado Pago recusou a transação Pix.';
+                if (statusDetail.includes('identification') || statusDetail.includes('cpf')) {
+                    userMessage = 'CPF inválido ou não encontrado no Mercado Pago. Verifique o CPF informado.';
+                } else if (statusDetail.includes('high_risk') || statusDetail.includes('risk')) {
+                    userMessage = 'Transação recusada por segurança. Tente novamente após alguns minutos.';
+                } else if (statusDetail.includes('duplicated')) {
+                    userMessage = 'Pagamento duplicado detectado. Aguarde alguns minutos antes de tentar novamente.';
+                }
                 return res.status(400).json({
                     success: false,
                     status: paymentStatusNormalized,
-                    error: 'O Mercado Pago recusou a transação. Verifique se os dados de identificação e o sobrenome estão preenchidos de forma simples.'
+                    status_detail: statusDetail,
+                    error: userMessage
                 });
             }
 
