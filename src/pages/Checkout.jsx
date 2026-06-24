@@ -256,7 +256,10 @@ export default function Checkout() {
 
   const initialization = useMemo(() => ({
     amount: 14.90,
-    payer: { email: currentUser?.email || '' }
+    payer: {
+      email: currentUser?.email || '',
+      entityType: 'individual' // 🛡️ ADICIONADO: Corrige o erro estrito de validação do Bricks
+    }
   }), [currentUser?.email]);
 
   const customization = useMemo(() => ({
