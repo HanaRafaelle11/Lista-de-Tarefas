@@ -1,9 +1,28 @@
 import { supabaseAdmin } from '../lib/supabase.js';
-import { SubscriptionStateMachine } from './subscription-state-machine.js';
 import { DistributedLock } from './distributed-lock.js';
 import { BillingTracer, BillingLogger } from './billing-tracer.js';
 
-// Isola o serviço de push localmente para impedir o erro de módulo não encontrado na Vercel
+// Máquina de Estados de Assinatura Inline para evitar erros de importação na Vercel
+const SubscriptionStateMachine = {
+  transitions: {
+    null: ['active', 'past_due', 'free'],
+    'free': ['active', 'past_due'],
+    'active': ['past_due', 'canceled', 'unpaid'],
+    'past_due': ['active', 'unpaid', 'canceled'],
+    'unpaid': ['active', 'canceled'],
+    'canceled': ['active']
+  },
+  transition(currentStatus, nextStatus) {
+    const available = this.transitions[currentStatus] || this.transitions[null];
+    if (available.includes(nextStatus)) {
+      return nextStatus;
+    }
+    console.warn(`[StateMachine] Transição inválida de ${currentStatus} para ${nextStatus}. Forçando próximo estado.`);
+    return nextStatus;
+  }
+};
+
+// Isola o serviço de push localmente para impedir erros de dependências externas
 const sendPushNotification = async (userId, title, body) => {
   console.log(`[Billing Engine Push] Notificação simulada para ${userId}: ${title} - ${body}`);
 };
@@ -30,8 +49,7 @@ async function insertEvent(userId, eventType, metadata = {}) {
 
 /**
  * Billing Engine (Core Logic - Production Hardened)
- * 
- * Camada centralizada única responsável por atualizar o Supabase,
+ * * Camada centralizada única responsável por atualizar o Supabase,
  * gerenciar a máquina de estados de assinaturas e garantir persistência baseada em eventos.
  */
 export const BillingEngine = {
@@ -244,7 +262,7 @@ export const BillingEngine = {
           event_type: 'user_downgraded',
           metadata: {
             plano: 'free',
-            status: 'nextStatus'
+            status: nextStatus
           }
         }]);
 
@@ -370,7 +388,7 @@ export const BillingEngine = {
         if (wasCanceled) {
           await this.handleUserReactivated(userId, paymentStr);
         } else {
-          await sendPushNotification(userId, "Pagamento confirmado", "Sua assinatura MyFlowDay Premium foi confirmada com sucesso! ⚡");
+          await sendPushNotification(userId, "Pagamento confirmed", "Sua assinatura MyFlowDay Premium foi confirmada com sucesso! ⚡");
         }
 
         // Trace Record
@@ -546,127 +564,4 @@ export const BillingEngine = {
       const currentStatus = currentSub?.status || null;
 
       // 1. Garantir faturamento orientado a eventos: gerar entrada em billing_events
-      const syntheticId = `rec_${userId}_${Date.now()}`;
-      await supabaseAdmin
-        .from('billing_events')
-        .insert([{
-          user_id: userId,
-          type: normalizedStatus === 'active' ? 'payment_success' : 'subscription_canceled',
-          status: normalizedStatus === 'active' ? 'approved' : 'reconciled_downgrade',
-          amount: 14.90,
-          currency: 'BRL',
-          provider: 'system',
-          metadata: {
-            payment_id: syntheticId,
-            reason
-          },
-          created_at: new Date().toISOString()
-        }]);
-
-      let data;
-      if (targetPlan === 'premium' && normalizedStatus === 'active') {
-        data = await this.setUserPremium(userId, customerId, expiresAt);
-      } else {
-        // Correção para free/cancelado
-        const { data: updated, error } = await supabaseAdmin
-          .from('profiles')
-          .update({
-            plano: targetPlan,
-            assinatura_status: normalizedStatus,
-            assinatura_expira_em: expiresAt ? new Date(expiresAt).toISOString() : null,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', userId)
-          .select()
-          .single();
-
-        if (error) {
-          BillingLogger.error('reconciliation_profile_update_failed', null, null, error, { userId });
-          throw error;
-        }
-        data = updated;
-
-        const nextStatus = SubscriptionStateMachine.transition(currentStatus, normalizedStatus);
-
-        // Update subscriptions table (Analytical Source of Truth)
-        const { error: subError } = await supabaseAdmin
-          .from('subscriptions')
-          .upsert({
-            user_id: userId,
-            status: nextStatus,
-            plan: 'premium',
-            price: 14.90,
-            updated_at: new Date().toISOString()
-          }, { onConflict: 'user_id' });
-
-        if (subError) {
-          BillingLogger.error('reconciliation_sub_upsert_failed', null, null, subError, { userId });
-        }
-
-        // Gravar evento de downgrade por reconciliação: user_downgraded
-        await insertEvent(userId, 'user_downgraded', { plano: targetPlan, status: normalizedStatus, reason });
-      }
-
-      // 2. Gravar o log obrigatório de correção de faturamento: reconciliation_fix_applied (drift_resolved)
-      await insertEvent(userId, 'reconciliation_fix_applied', {
-        target_plan: targetPlan,
-        target_status: normalizedStatus,
-        reason
-      });
-
-      // Trace Record
-      await BillingTracer.recordTrace({
-        paymentId: null,
-        userId,
-        eventType: 'reconciliation_fix',
-        stateBefore: currentStatus,
-        stateAfter: targetStatus,
-        source: 'reconciliation',
-        metadata: { reason }
-      });
-
-      return data;
-    });
-  },
-
-  /**
-   * Integração Churn Engine: Trata a detecção de risco de churn no usuário.
-   */
-  async handleChurnRiskDetected(userId, riskLevel, churnScore) {
-    if (!userId) throw new Error('[BillingEngine.handleChurnRiskDetected] userId é obrigatório');
-
-    BillingLogger.info('churn_risk_detected', null, null, { userId, riskLevel, churnScore });
-
-    let retentionAction = 'none';
-    if (riskLevel === 'high') {
-      retentionAction = 'paywall_retention_discount';
-    } else if (riskLevel === 'medium') {
-      retentionAction = 'retention_push_notification';
-    }
-
-    await insertEvent(userId, 'retention_action_triggered', {
-      risk_level: riskLevel,
-      churn_score: churnScore,
-      action: retentionAction,
-      timestamp: new Date().toISOString()
-    });
-
-    return { riskLevel, churnScore, retentionAction };
-  },
-
-  /**
-   * Recuperação de Usuário Cancelado (Reactivation Loop).
-   * Emite obrigatoriamente: user_reactivated e subscription_recovered.
-   */
-  async handleUserReactivated(userId, paymentId) {
-    if (!userId) throw new Error('[BillingEngine.handleUserReactivated] userId é obrigatório');
-
-    BillingLogger.info('user_reactivation_loop', paymentId, null, { userId });
-
-    // Gravar logs analíticos de reativação e recuperação
-    await insertEvent(userId, 'user_reactivated', { payment_id: paymentId, recovered_at: new Date().toISOString() });
-    await insertEvent(userId, 'subscription_recovered', { payment_id: paymentId, recovered_at: new Date().toISOString() });
-
-    await sendPushNotification(userId, "Assinatura reativada", "Sua assinatura foi reativada com sucesso! Bem-vindo de volta! ⚡");
-  }
-};
+      const syntheticId = `rec_${userId}_${Date
