@@ -202,7 +202,9 @@ export default function Checkout() {
   // Submit payment for Pix tab (direct API call)
   const handlePixSubmit = async (e) => {
     if (e) e.preventDefault();
-    if (!isFormValid) {
+    
+    const cleanCpf = userCpf.replace(/\D/g, '');
+    if (!firstName.trim() || !lastName.trim() || !validateEmail(email) || cleanCpf.length !== 11) {
       setError('Por favor, preencha e valide todos os dados do pagador.');
       return;
     }
@@ -211,8 +213,6 @@ export default function Checkout() {
       setError(null);
       setStatus('processando');
       
-      const cleanCpf = userCpf.replace(/\D/g, '');
-
       // Update name in profiles table (optimistic sync)
       const fullName = `${firstName.trim()} ${lastName.trim()}`;
       try {
@@ -228,6 +228,7 @@ export default function Checkout() {
         payment_method_id: 'pix',
         amount: 14.90,
         userId: currentUser?.id,
+        email: email.trim(),
         cpf: cleanCpf
       };
 
@@ -245,7 +246,7 @@ export default function Checkout() {
       }
 
       const resData = await response.json();
-      if (resData.status === 'pending' && resData.paymentMethod === 'pix') {
+      if (resData.status === 'pending' || resData.status === 'created') {
         setPixData({
           qr_code: resData.qr_code,
           qr_code_base64: resData.qr_code_base64
@@ -728,7 +729,7 @@ export default function Checkout() {
                     boxShadow: activeTab === 'card' ? '0 4px 12px rgba(16, 185, 129, 0.2)' : 'none'
                   }}
                 >
-                  💳 Cartão de Crédito
+                  Ref Card 💳 Cartão de Crédito
                 </button>
                 <button
                   onClick={() => isFormValid && setActiveTab('pix')}
@@ -753,7 +754,6 @@ export default function Checkout() {
               {/* Active Payment Flow Details */}
               {activeTab === 'card' ? (
                 <div style={{ minHeight: '150px' }}>
-                  {/* Payment Brick rendered ONLY if form is valid */}
                   {isFormValid ? (
                     <div id="payment-brick-container">
                       <MemoizedPayment
