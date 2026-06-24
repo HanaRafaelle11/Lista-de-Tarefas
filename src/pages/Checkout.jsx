@@ -119,11 +119,15 @@ export default function Checkout() {
     );
   }, [firstName, lastName, email, userCpf]);
 
+  // 1) CALLBACK DE ENVIO DE CARTÃO CORRIGIDO (Envia token, installments e a bandeira real)
   const handleSubmit = useCallback(async (param) => {
     try {
       setError(null);
       setStatus('processando');
+
       const paymentData = param.formData || param;
+      console.log("PAYLOAD BRUTO RECEBIDO DO BRICK DE CARTÃO:", paymentData);
+
       const cleanCpf = userCpfRef.current.replace(/\D/g, '');
 
       if (!isValidName(firstNameRef.current) || !isValidName(lastNameRef.current) || !validateEmail(emailRef.current)) {
@@ -146,21 +150,22 @@ export default function Checkout() {
         console.warn('Profile sync error ignored for payment checkout:', profileErr.message);
       }
 
-      let installments = paymentData.installments || 1;
       const uniqueTimestamp = new Date().getTime();
+      let installments = paymentData.installments || 1;
 
+      // Monta o payload de CARTÃO dinâmico baseado no que o Brick gerou
       const payload = {
         token: paymentData.token,
-        payment_method_id: paymentData.payment_method_id,
+        payment_method_id: paymentData.payment_method_id, // Ex: "visa", "mastercard" (NÃO fica mais travado como pix)
         transaction_amount: 14.90,
-        installments,
+        installments: installments,
         userId: currentUser?.id,
-        external_reference: `order_${currentUser?.id}_${uniqueTimestamp}`, // 1) Reference dinâmica única
-        metadata: {                                                        // 2) Limpeza de PII do metadata
+        external_reference: `order_${currentUser?.id}_${uniqueTimestamp}`,
+        metadata: {
           user_id: currentUser?.id,
           plan: "premium"
         },
-        additional_info: {                                                 // 3) Remoção do tracking_id:none suscetível
+        additional_info: {
           items: [
             {
               category_id: "services",
@@ -183,6 +188,8 @@ export default function Checkout() {
         },
         deviceId: window.MP_DEVICE_SESSION_ID || ""
       };
+
+      console.log("PAYLOAD ADAPTADO QUE VAI PARA A API /CREATE (CARTÃO):", payload);
 
       const response = await fetch('/api/payments/create', {
         method: 'POST',
@@ -208,6 +215,7 @@ export default function Checkout() {
     }
   }, [currentUser?.id]);
 
+  // 2) CALLBACK DE ENVIO DE PIX (Garante explicitamente payment_method_id: 'pix')
   const handlePixSubmit = async (e) => {
     if (e) e.preventDefault();
 
@@ -234,15 +242,15 @@ export default function Checkout() {
       const uniqueTimestamp = new Date().getTime();
 
       const payload = {
-        payment_method_id: 'pix',
+        payment_method_id: 'pix', // Mantido estrito como pix
         transaction_amount: 14.90,
         userId: currentUser?.id,
-        external_reference: `order_${currentUser?.id}_${uniqueTimestamp}`, // 1) Reference dinâmica única
-        metadata: {                                                        // 2) Limpeza de PII do metadata
+        external_reference: `order_${currentUser?.id}_${uniqueTimestamp}`,
+        metadata: {
           user_id: currentUser?.id,
           plan: "premium"
         },
-        additional_info: {                                                 // 3) Remoção do tracking_id:none suscetível
+        additional_info: {
           items: [
             {
               category_id: "services",
@@ -266,6 +274,8 @@ export default function Checkout() {
         deviceId: window.MP_DEVICE_SESSION_ID || ""
       };
 
+      console.log("PAYLOAD ADAPTADO QUE VAI PARA A API /CREATE (PIX):", payload);
+
       const response = await fetch('/api/payments/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -288,7 +298,7 @@ export default function Checkout() {
       } else if (resData.status === 'in_process') {
         setStatus('in_process');
       } else if (resData.status === 'rejected' || resData.status === 'cancelled') {
-        setError(resData.error || 'O Mercado Pago recusou a geração deste Pix. Use outro CPF ativo para testar.');
+        setError(resData.error || 'O Mercado Pago recusou a geração deste Pix.');
         setStatus('error');
       } else {
         setStatus('success');
@@ -428,7 +438,7 @@ export default function Checkout() {
               </div>
             </div>
             <div>
-              <label style={{ display: 'block', fontSize: '12px', color: 'rgba(255, 255, 255, 0.6)', marginBottom: '6px' }}>CPF (Somente números)</label>
+              <label style={{ display: 'block', fontSize: '12px', color: 'rgba(255, 255, 255, 0.6)', marginBottom: '6px' }}>CPF (Somente numbers)</label>
               <div style={{ position: 'relative' }}>
                 <input type="text" value={userCpf} onChange={(e) => { const val = e.target.value.replace(/\D/g, '').slice(0, 11); setUserCpf(val); }} placeholder="00000000000" style={{ width: '100%', padding: '10px 32px 10px 12px', backgroundColor: '#13131a', border: `1px solid ${userCpf ? (validateCpf(userCpf) ? 'rgba(16, 185, 129, 0.4)' : 'rgba(239, 68, 68, 0.4)') : 'rgba(255, 255, 255, 0.1)'}`, borderRadius: '8px', color: '#ffffff', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }} />
                 {userCpf && <span style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', color: validateCpf(userCpf) ? '#10b981' : '#ef4444', fontSize: '14px', fontWeight: 'bold' }}>{validateCpf(userCpf) ? '✓' : '✗'}</span>}
