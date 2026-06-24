@@ -128,9 +128,9 @@ export default function Checkout() {
       const paymentData = param.formData || param;
       console.log("PAYLOAD BRUTO RECEBIDO DO BRICK DE CARTÃO:", paymentData);
 
-      const cleanCpf = userCpfRef.current.replace(/\D/g, '');
+      const cleanCpf = userCpf.replace(/\D/g, '');
 
-      if (!isValidName(firstNameRef.current) || !isValidName(lastNameRef.current) || !validateEmail(emailRef.current)) {
+      if (!isValidName(firstName) || !isValidName(lastName) || !validateEmail(email)) {
         throw new Error('Por favor, preencha todos os dados de identificação corretamente antes de prosseguir.');
       }
       if (!cleanCpf || cleanCpf.length !== 11 || !validateCpf(cleanCpf)) {
@@ -140,11 +140,11 @@ export default function Checkout() {
         throw new Error('Usuário não autenticado.');
       }
 
-      const fullName = `${firstNameRef.current.trim()} ${lastNameRef.current.trim()}`;
+      const fullName = `${firstName.trim()} ${lastName.trim()}`;
       try {
         await profilesService.updateProfile(currentUser?.id, {
           name: fullName,
-          nickname: firstNameRef.current.toLowerCase().trim()
+          nickname: firstName.toLowerCase().trim()
         });
       } catch (profileErr) {
         console.warn('Profile sync error ignored for payment checkout:', profileErr.message);
@@ -178,9 +178,9 @@ export default function Checkout() {
           ]
         },
         payer: {
-          email: emailRef.current.trim(),
-          first_name: firstNameRef.current.trim(),
-          last_name: lastNameRef.current.trim(),
+          email: email.trim(),
+          first_name: firstName.trim(),
+          last_name: lastName.trim(),
           identification: {
             type: 'CPF',
             number: cleanCpf
@@ -213,7 +213,7 @@ export default function Checkout() {
       setError(err.message);
       setStatus('error');
     }
-  }, [currentUser?.id]);
+  }, [currentUser?.id, firstName, lastName, email, userCpf]);
 
   // 2) CALLBACK DE ENVIO DE PIX (Garante explicitamente payment_method_id: 'pix')
   const handlePixSubmit = async (e) => {
@@ -418,14 +418,14 @@ export default function Checkout() {
               <div style={{ flex: 1 }}>
                 <label style={{ display: 'block', fontSize: '12px', color: 'rgba(255, 255, 255, 0.6)', marginBottom: '6px' }}>Nome</label>
                 <div style={{ position: 'relative' }}>
-                  <input type="text" value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="Ex: João" style={{ width: '100%', padding: '10px 32px 10px 12px', backgroundColor: '#13131a', border: `1px solid ${firstName ? (isValidName(firstName) ? 'rgba(16, 185, 129, 0.4)' : 'rgba(239, 68, 68, 0.4)') : 'rgba(255, 255, 255, 0.1)'}`, borderRadius: '8px', color: '#ffffff', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }} />
+                  <input type="text" value={firstName} onChange={(e) => setFirstName(e.target.value)} autoComplete="new-password" placeholder="Ex: João" style={{ width: '100%', padding: '10px 32px 10px 12px', backgroundColor: '#13131a', border: `1px solid ${firstName ? (isValidName(firstName) ? 'rgba(16, 185, 129, 0.4)' : 'rgba(239, 68, 68, 0.4)') : 'rgba(255, 255, 255, 0.1)'}`, borderRadius: '8px', color: '#ffffff', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }} />
                   {firstName && <span style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', color: isValidName(firstName) ? '#10b981' : '#ef4444', fontSize: '14px', fontWeight: 'bold' }}>{isValidName(firstName) ? '✓' : '✗'}</span>}
                 </div>
               </div>
               <div style={{ flex: 1 }}>
                 <label style={{ display: 'block', fontSize: '12px', color: 'rgba(255, 255, 255, 0.6)', marginBottom: '6px' }}>Sobrenome</label>
                 <div style={{ position: 'relative' }}>
-                  <input type="text" value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder="Ex: Silva" style={{ width: '100%', padding: '10px 32px 10px 12px', backgroundColor: '#13131a', border: `1px solid ${lastName ? (isValidName(lastName) ? 'rgba(16, 185, 129, 0.4)' : 'rgba(239, 68, 68, 0.4)') : 'rgba(255, 255, 255, 0.1)'}`, borderRadius: '8px', color: '#ffffff', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }} />
+                  <input type="text" value={lastName} onChange={(e) => setLastName(e.target.value)} autoComplete="new-password" placeholder="Ex: Silva" style={{ width: '100%', padding: '10px 32px 10px 12px', backgroundColor: '#13131a', border: `1px solid ${lastName ? (isValidName(lastName) ? 'rgba(16, 185, 129, 0.4)' : 'rgba(239, 68, 68, 0.4)') : 'rgba(255, 255, 255, 0.1)'}`, borderRadius: '8px', color: '#ffffff', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }} />
                   {lastName && <span style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', color: isValidName(lastName) ? '#10b981' : '#ef4444', fontSize: '14px', fontWeight: 'bold' }}>{isValidName(lastName) ? '✓' : '✗'}</span>}
                 </div>
               </div>
@@ -440,7 +440,7 @@ export default function Checkout() {
             <div>
               <label style={{ display: 'block', fontSize: '12px', color: 'rgba(255, 255, 255, 0.6)', marginBottom: '6px' }}>CPF (Somente numbers)</label>
               <div style={{ position: 'relative' }}>
-                <input type="text" value={userCpf} onChange={(e) => { const val = e.target.value.replace(/\D/g, '').slice(0, 11); setUserCpf(val); }} placeholder="00000000000" style={{ width: '100%', padding: '10px 32px 10px 12px', backgroundColor: '#13131a', border: `1px solid ${userCpf ? (validateCpf(userCpf) ? 'rgba(16, 185, 129, 0.4)' : 'rgba(239, 68, 68, 0.4)') : 'rgba(255, 255, 255, 0.1)'}`, borderRadius: '8px', color: '#ffffff', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }} />
+                <input type="text" value={userCpf} onChange={(e) => { const val = e.target.value.replace(/\D/g, '').slice(0, 11); setUserCpf(val); }} autoComplete="new-password" placeholder="00000000000" style={{ width: '100%', padding: '10px 32px 10px 12px', backgroundColor: '#13131a', border: `1px solid ${userCpf ? (validateCpf(userCpf) ? 'rgba(16, 185, 129, 0.4)' : 'rgba(239, 68, 68, 0.4)') : 'rgba(255, 255, 255, 0.1)'}`, borderRadius: '8px', color: '#ffffff', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }} />
                 {userCpf && <span style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', color: validateCpf(userCpf) ? '#10b981' : '#ef4444', fontSize: '14px', fontWeight: 'bold' }}>{validateCpf(userCpf) ? '✓' : '✗'}</span>}
               </div>
             </div>
