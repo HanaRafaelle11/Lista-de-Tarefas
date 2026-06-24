@@ -1,396 +1,435 @@
-import crypto from 'crypto';
-import fetch from 'node-fetch';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { initMercadoPago, Payment } from '@mercadopago/sdk-react';
+import { useAppContext } from '../contexts/AppContext';
+import { profilesService } from '../services/profilesService';
 
-// Importação segura do cliente Supabase local
-import { supabaseAdmin } from '../lib/supabase.js';
+const MP_PUBLIC_KEY = import.meta.env.VITE_MP_PUBLIC_KEY;
 
-// =========================================================
-// MÁQUINA DE ESTADOS INLINE (Evita quebra no Rolldown/Vite)
-// =========================================================
-const PaymentStateMachine = {
-    transitions: {
-        'created': ['approved', 'pending', 'rejected', 'cancelled', 'in_process'],
-        'pending': ['approved', 'rejected', 'cancelled', 'in_process'],
-        'in_process': ['approved', 'rejected', 'cancelled'],
-        'approved': ['refunded', 'charged_back'],
-        'rejected': [],
-        'cancelled': []
-    },
-    transition(current, next) {
-        const allowed = this.transitions[current] || [];
-        if (allowed.includes(next) || current === next) return next;
-        console.warn('[PaymentStateMachine] Transição inválida de ' + current + ' para ' + next);
-        return next;
+if (MP_PUBLIC_KEY) {
+    initMercadoPago(MP_PUBLIC_KEY);
+}
+
+function validateCpf(cpf) {
+    if (!cpf) return false;
+    const cleanCpf = cpf.replace(/\D/g, '');
+    if (cleanCpf.length !== 11) return false;
+
+    if (/^(\d)\1{10}$/.test(cleanCpf)) return false;
+
+    let sum = 0;
+    for (let i = 0; i < 9; i++) {
+        sum += parseInt(cleanCpf.charAt(i)) * (10 - i);
     }
-};
+    let rev = 11 - (sum % 11);
+    if (rev === 10 || rev === 11) rev = 0;
+    if (rev !== parseInt(cleanCpf.charAt(9))) return false;
 
-// Engine de faturamento simplificada inline para garantir o deploy estável
-const BillingEngine = {
-    async handlePaymentApproved(userId, customerId, paymentIdStr, paymentResult) {
-        if (!userId) return;
-        const now = new Date();
-        const d = new Date();
-        d.setDate(d.getDate() + 30);
-        const expiresAt = d.toISOString();
-
-        // Salva o evento e atualiza o perfil diretamente
-        await supabaseAdmin.from('billing_events').insert([{
-            user_id: userId,
-            type: 'payment_success',
-            status: 'approved',
-            amount: paymentResult.transaction_amount || 14.90,
-            currency: 'BRL',
-            provider: 'mercadopago',
-            metadata: { payment_id: paymentIdStr, date_approved: now.toISOString() },
-            created_at: now.toISOString()
-        }]);
-
-        await supabaseAdmin.from('profiles').update({
-            plano: 'premium',
-            assinatura_status: 'active',
-            assinatura_inicio: now.toISOString(),
-            assinatura_expira_em: expiresAt,
-            mercadopago_customer_id: customerId || null,
-            updated_at: now.toISOString()
-        }).eq('id', userId);
-
-        await supabaseAdmin.from('subscriptions').upsert({
-            user_id: userId,
-            status: 'active',
-            plan: 'premium',
-            price: 14.90,
-            current_period_start: now.toISOString(),
-            current_period_end: expiresAt,
-            last_payment_id: paymentIdStr,
-            provider: 'mercado_pago',
-            updated_at: now.toISOString()
-        }, { onConflict: 'user_id' });
+    sum = 0;
+    for (let i = 0; i < 10; i++) {
+        sum += parseInt(cleanCpf.charAt(i)) * (11 - i);
     }
-};
+    rev = 11 - (sum % 11);
+    if (rev === 10 || rev === 11) rev = 0;
+    if (rev !== parseInt(cleanCpf.charAt(10))) return false;
 
-// Dublês (Stubs) de monitorização e resiliência
-const BillingTracer = {
-    runWithTrace: async (id, fn) => await fn(),
-    recordTrace: async () => { }
-};
+    return true;
+}
 
-// Funções auxiliares de segurança e mascaramento
-const maskEmail = (email) => {
-    if (!email) return '';
-    const [user, domain] = email.split('@');
-    return `${user.substring(0, 3)}***@${domain}`;
-};
+function isValidName(name) {
+    if (!name) return false;
+    const trimmed = name.trim().toLowerCase();
+    if (trimmed === '' || trimmed === 'usuario' || trimmed === 'flowday' || trimmed === 'usuario flowday' || trimmed === 'usuarioflowday' || trimmed === 'null' || trimmed === 'undefined') {
+        return false;
+    }
+    return name.trim().length >= 2;
+}
 
-const maskCpf = (cpf) => {
-    if (!cpf) return '';
-    return `***.${cpf.substring(3, 6)}.${cpf.substring(6, 9)}-**`;
-};
+// Em conformidade com as diretrizes de dados sensíveis, a validação de formato genérico de e-mail é mantida isolada de dados pessoais
+function validateEmail(email) {
+    if (!email) return false;
+    const trimmed = email.trim().toLowerCase();
+    if (trimmed === '' || trimmed === 'test_user@test.com' || trimmed === 'null' || trimmed === 'undefined') {
+        return false;
+    }
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed);
+}
 
-const isGenericName = (name) => {
-    const genericNames = ['teste', 'test', 'usuario', 'user', 'admin'];
-    return genericNames.includes(name.toLowerCase().trim());
-};
+const MemoizedPayment = React.memo(({ initialization, customization, onSubmit, onError, onReady }) => {
+    return (
+        <Payment
+            initialization={initialization}
+            customization={customization}
+            onSubmit={onSubmit}
+            onError={onError}
+            onReady={onReady}
+        />
+    );
+});
+MemoizedPayment.displayName = 'MemoizedPayment';
 
-const normalizeStatus = (status) => {
-    const mapping = {
-        'approved': 'approved',
-        'authorized': 'approved',
-        'in_process': 'in_process',
-        'in_mediation': 'in_process',
-        'pending': 'pending',
-        'rejected': 'rejected',
-        'cancelled': 'cancelled',
-        'refunded': 'refunded',
-        'charged_back': 'refunded'
-    };
-    return mapping[status] || 'pending';
-};
+export default function Checkout() {
+    const { currentUser, isPro, userProfile } = useAppContext();
+    const [status, setStatus] = useState(null);
+    const [error, setError] = useState(null);
+    const [pixData, setPixData] = useState(null);
+    const [activeTab, setActiveTab] = useState('card');
 
-// =========================================================
-// HANDLERS DE ROTA CONSOLIDADOS
-// =========================================================
+    const [firstName, setFirstName] = useState('');
+    const [lastName, setLastName] = useState('');
+    const [email, setEmail] = useState('');
+    const [userCpf, setUserCpf] = useState('');
 
-async function handlePaymentsCreate(req, res, routePath) {
-    try {
-        if (req.method !== 'POST') {
-            return res.status(405).json({ error: 'Método não permitido. Utilize POST.' });
+    const firstNameRef = useRef(firstName);
+    const lastNameRef = useRef(lastName);
+    const emailRef = useRef(email);
+    const userCpfRef = useRef(userCpf);
+
+    useEffect(() => { firstNameRef.current = firstName; }, [firstName]);
+    useEffect(() => { lastNameRef.current = lastName; }, [lastName]);
+    useEffect(() => { emailRef.current = email; }, [email]);
+    useEffect(() => { userCpfRef.current = userCpf; }, [userCpf]);
+
+    useEffect(() => {
+        if (currentUser?.email && !email) {
+            setEmail(currentUser.email);
         }
+    }, [currentUser?.email, email]);
 
-        const { userId, email, amount, payment_method_id, token, installments, cpf } = req.body || {};
-        const idempotencyKey = req.headers['x-idempotency-key'] || crypto.randomUUID();
-
-        if (!userId || !email || !payment_method_id) {
-            return res.status(400).json({ error: 'Campos obrigatórios em falta.' });
-        }
-
-        const cleanCpf = cpf ? cpf.replace(/\D/g, '') : '';
-        let first_name = '', last_name = '';
-
-        try {
-            const { data: profile } = await supabaseAdmin
-                .from('profiles')
-                .select('name, nickname')
-                .eq('id', userId)
-                .maybeSingle();
-
-            const fullName = profile?.name || profile?.nickname;
+    useEffect(() => {
+        if (userProfile && !firstName && !lastName) {
+            const fullName = userProfile.name || userProfile.nickname || '';
             if (fullName) {
                 const parts = fullName.trim().split(/\s+/);
-                first_name = parts[0] || '';
-                last_name = parts.slice(1).join(' ') || '';
+                const first = parts[0] || '';
+                const last = parts.slice(1).join(' ') || '';
+                if (isValidName(first)) setFirstName(first);
+                if (isValidName(last)) setLastName(last);
+            }
+        }
+    }, [userProfile, firstName, lastName]);
+
+    const isFormValid = useMemo(() => {
+        const cleanCpf = userCpf.replace(/\D/g, '');
+        return (
+            isValidName(firstName) &&
+            isValidName(lastName) &&
+            validateEmail(email) &&
+            cleanCpf.length === 11 &&
+            validateCpf(cleanCpf)
+        );
+    }, [firstName, lastName, email, userCpf]);
+
+    const handleSubmit = useCallback(async (param) => {
+        try {
+            setError(null);
+            setStatus('processando');
+            const paymentData = param.formData || param;
+            const cleanCpf = userCpfRef.current.replace(/\D/g, '');
+
+            if (!isValidName(firstNameRef.current) || !isValidName(lastNameRef.current) || !validateEmail(emailRef.current)) {
+                throw new Error('Por favor, preencha todos os dados de identificação corretamente antes de prosseguir.');
+            }
+            if (!cleanCpf || cleanCpf.length !== 11 || !validateCpf(cleanCpf)) {
+                throw new Error('Por favor, informe um CPF válido.');
+            }
+            if (!currentUser?.id) {
+                throw new Error('Usuário não autenticado.');
+            }
+
+            const fullName = `${firstNameRef.current.trim()} ${lastNameRef.current.trim()}`;
+            try {
+                await profilesService.updateProfile(currentUser?.id, {
+                    name: fullName,
+                    nickname: firstNameRef.current.toLowerCase().trim()
+                });
+            } catch (profileErr) {
+                console.warn('Profile sync error ignored for payment checkout:', profileErr.message);
+            }
+
+            let installments = paymentData.installments || 1;
+            const payload = {
+                token: paymentData.token,
+                payment_method_id: paymentData.payment_method_id,
+                amount: 14.90,
+                installments,
+                userId: currentUser?.id,
+                cpf: cleanCpf
+            };
+
+            const response = await fetch('/api/payments/create', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+                const errJson = await response.json().catch(() => ({}));
+                throw new Error(errJson.error || 'Erro ao processar pagamento.');
+            }
+
+            const resData = await response.json();
+            if (resData.status === 'in_process') {
+                setStatus('in_process');
+            } else {
+                setStatus('success');
             }
         } catch (err) {
-            console.warn(`[Unified API: ${routePath}] Falha ao procurar perfil:`, err.message);
+            console.error('Card Checkout error:', err);
+            setError(err.message);
+            setStatus('error');
+            throw err;
         }
+    }, [currentUser?.id]);
 
-        if (!first_name || !last_name || isGenericName(first_name) || isGenericName(last_name)) {
-            return res.status(400).json({ error: 'Nome e sobrenome válidos são obrigatórios para prosseguir.' });
+    const handlePixSubmit = async (e) => {
+        if (e) e.preventDefault();
+
+        const cleanCpf = userCpf.replace(/\D/g, '');
+        if (!firstName.trim() || !lastName.trim() || !validateEmail(email) || cleanCpf.length !== 11) {
+            setError('Por favor, preencha e valide todos os dados do pagador.');
+            return;
         }
-
-        const payload = {
-            transaction_amount: Number(amount) || 14.90,
-            payment_method_id,
-            description: "MyFlowDay Premium",
-            external_reference: userId,
-            statement_descriptor: "MYFLOWDAY",
-            payer: {
-                email: email.trim(),
-                first_name: first_name.trim(),
-                last_name: last_name.trim(),
-                identification: {
-                    type: "CPF",
-                    number: cleanCpf
-                }
-            },
-            metadata: {
-                user_id: userId,
-                cpf: cleanCpf,
-                email: email.trim(),
-                plan: "premium"
-            },
-            notification_url: process.env.MERCADOPAGO_WEBHOOK_URL || "https://myflowday.com.br/api/webhook/mercadopago"
-        };
-
-        if (payment_method_id !== 'pix') {
-            payload.token = token;
-            const resolvedInstallments = Number(installments) || 1;
-            if (!Number.isInteger(resolvedInstallments) || resolvedInstallments < 1 || resolvedInstallments > 12) {
-                return res.status(400).json({ error: 'Invalid installments value' });
-            }
-            payload.installments = resolvedInstallments;
-        }
-
-        const mpResponse = await fetch('https://api.mercadopago.com/v1/payments', {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${process.env.MERCADOPAGO_ACCESS_TOKEN}`,
-                'Content-Type': 'application/json',
-                'X-Idempotency-Key': idempotencyKey
-            },
-            body: JSON.stringify(payload)
-        });
-
-        if (!mpResponse.ok) {
-            const errData = await mpResponse.json().catch(() => ({}));
-            return res.status(400).json({ error: 'Falha no processamento no Mercado Pago.', details: errData });
-        }
-
-        const paymentResult = await mpResponse.json();
-        const maskedResponse = {
-            ...paymentResult,
-            payer: paymentResult.payer ? {
-                ...paymentResult.payer,
-                email: maskEmail(paymentResult.payer.email),
-                identification: paymentResult.payer.identification ? {
-                    ...paymentResult.payer.identification,
-                    number: maskCpf(paymentResult.payer.identification.number)
-                } : undefined
-            } : undefined
-        };
-
-        const paymentIdStr = String(paymentResult.id);
-        const paymentStatusRaw = paymentResult.status;
-        let paymentStatusNormalized = normalizeStatus(paymentStatusRaw);
-
-        // 🛡️ BLINDAGEM ANTI-SANDBOX (O Segredo do QR Code)
-        let isForcedPending = false;
-        if (payment_method_id === 'pix' && paymentStatusNormalized === 'approved') {
-            paymentStatusNormalized = 'pending';
-            isForcedPending = true;
-        }
-
-        const { data: existingPayment } = await supabaseAdmin
-            .from('payment_events')
-            .select('status')
-            .eq('payment_id', paymentIdStr)
-            .maybeSingle();
-
-        if (existingPayment && ['approved', 'rejected', 'cancelled', 'refunded', 'reconciled'].includes(existingPayment.status)) {
-            return res.status(200).json({ success: true, alreadyProcessed: true, status: existingPayment.status });
-        }
-
-        await supabaseAdmin.from('payment_ledger').insert([{
-            payment_id: paymentIdStr,
-            event_type: 'payment_created',
-            status_raw: 'created',
-            status_normalized: 'created',
-            user_id: userId,
-            payload: maskedResponse
-        }]);
-
-        await supabaseAdmin.from('payment_events').upsert({
-            payment_id: paymentIdStr,
-            status: 'created',
-            user_id: userId,
-            plan: 'premium',
-            processed_at: new Date().toISOString(),
-            raw_payload: maskedResponse
-        }, { onConflict: 'payment_id' });
-
-        await supabaseAdmin.from('subscriptions').upsert({
-            user_id: userId,
-            status: 'past_due',
-            plan: 'premium',
-            last_payment_id: paymentIdStr,
-            provider: 'mercado_pago',
-            updated_at: new Date().toISOString()
-        }, { onConflict: 'user_id' });
-
-        let currentStatus = 'created';
-
-        if (paymentStatusNormalized !== 'created') {
-            try {
-                PaymentStateMachine.transition(currentStatus, paymentStatusNormalized);
-
-                await supabaseAdmin.from('payment_events')
-                    .update({
-                        status: paymentStatusNormalized,
-                        processed_at: new Date().toISOString(),
-                        raw_payload: maskedResponse
-                    })
-                    .eq('payment_id', paymentIdStr);
-
-                currentStatus = paymentStatusNormalized;
-
-                if (paymentStatusNormalized === 'approved' && !isForcedPending) {
-                    const customerId = paymentResult.payer?.id || null;
-                    await BillingEngine.handlePaymentApproved(userId, customerId, paymentIdStr, paymentResult);
-                }
-            } catch (transitionErr) {
-                console.error(`[Unified API] Transição de estado inválida: ${transitionErr.message}`);
-            }
-        }
-
-        const transactionData = paymentResult.point_of_interaction?.transaction_data || {};
-
-        if (payment_method_id === 'pix') {
-            if (!transactionData.qr_code && !transactionData.qr_code_base64) {
-                return res.status(400).json({
-                    status: 'rejected',
-                    error: 'Mercado Pago não retornou os dados do QR Code. Tente com outro CPF.'
-                });
-            }
-
-            return res.status(200).json({
-                success: true,
-                paymentMethod: 'pix',
-                status: paymentStatusNormalized,
-                qr_code: transactionData.qr_code || transactionData.ticket_url || null,
-                qr_code_base64: transactionData.qr_code_base64 || null,
-                id: paymentResult.id,
-                point_of_interaction: paymentResult.point_of_interaction
-            });
-        }
-
-        return res.status(200).json({ success: true, id: paymentResult.id, status: paymentStatusNormalized });
-    } catch (error) {
-        console.error(`[Unified API] Erro crítico ao processar pagamento:`, error);
-        return res.status(500).json({ error: 'Erro crítico interno ao processar pagamento.', message: error.message });
-    }
-}
-
-async function handleWebhookMercadoPago(req, res, routePath) {
-    if (req.method !== 'POST') {
-        return res.status(405).json({ error: 'Método não permitido. Utilize POST.' });
-    }
-
-    const requestTraceId = req.headers['x-trace-id'] || crypto.randomUUID();
-
-    return await BillingTracer.runWithTrace(requestTraceId, async () => {
-        let paymentId = null;
-        let topic = null;
-
-        if (req.body && req.body.type === 'payment') {
-            paymentId = req.body.data && req.body.data.id;
-            topic = 'payment';
-        } else if (req.body && req.body.topic === 'payment') {
-            paymentId = req.body.id;
-            topic = 'payment';
-        }
-
-        if (topic !== 'payment' || !paymentId) {
-            return res.status(200).json({ message: 'Evento recebido, mas não processado.' });
-        }
-
-        const paymentIdStr = String(paymentId);
 
         try {
-            const mpResponse = await fetch(`https://api.mercadopago.com/v1/payments/${paymentIdStr}`, {
-                method: 'GET',
-                headers: {
-                    'Authorization': `Bearer ${process.env.MERCADOPAGO_ACCESS_TOKEN}`,
-                    'Content-Type': 'application/json'
-                }
+            setError(null);
+            setStatus('processando');
+
+            const fullName = `${firstName.trim()} ${lastName.trim()}`;
+            try {
+                await profilesService.updateProfile(currentUser?.id, {
+                    name: fullName,
+                    nickname: firstName.toLowerCase().trim()
+                });
+            } catch (profileErr) {
+                console.warn('Profile sync error ignored for payment checkout:', profileErr.message);
+            }
+
+            const payload = {
+                payment_method_id: 'pix',
+                amount: 14.90,
+                userId: currentUser?.id,
+                email: email.trim(),
+                cpf: cleanCpf
+            };
+
+            const response = await fetch('/api/payments/create', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
             });
 
-            if (!mpResponse.ok) {
-                return res.status(400).json({ error: 'Falha ao buscar detalhes do pagamento no Mercado Pago.' });
+            const resData = await response.json();
+            console.log("RESPOSTA REAL DA API NO PIX:", resData);
+
+            if (!response.ok) {
+                throw new Error(resData.error || 'Erro ao processar pagamento via Pix.');
             }
 
-            const paymentDetails = await mpResponse.json();
-            const userId = paymentDetails.metadata && paymentDetails.metadata.user_id;
-
-            if (userId && normalizeStatus(paymentDetails.status) === 'approved') {
-                const customerId = paymentDetails.payer && paymentDetails.payer.id;
-                await BillingEngine.handlePaymentApproved(userId, customerId, paymentIdStr, paymentDetails);
+            if (resData.status === 'pending' || resData.status === 'created') {
+                setPixData({
+                    qr_code: resData.qr_code,
+                    qr_code_base64: resData.qr_code_base64
+                });
+                setStatus('pix_pending');
+            } else if (resData.status === 'in_process') {
+                setStatus('in_process');
+            } else if (resData.status === 'rejected' || resData.status === 'cancelled') {
+                setError(resData.error || 'O Mercado Pago recusou a geração deste Pix. Use outro CPF ativo para testar.');
+                setStatus('error');
+            } else {
+                setStatus('success');
             }
-
-            return res.status(200).json({ success: true, paymentId: paymentIdStr });
-        } catch (webhookErr) {
-            console.error(`[Webhook Error]`, webhookErr);
-            return res.status(500).json({ error: 'Erro ao processar o webhook.' });
+        } catch (err) {
+            console.error('Pix Checkout error:', err);
+            setError(err.message);
+            setStatus('error');
         }
-    });
-}
+    };
 
-async function handleAccessCheck(req, res) {
-    res.status(200).json({ status: "free", isPro: false });
-}
+    const handleError = useCallback((err) => {
+        console.error('Mercado Pago Brick Error:', err);
+        setError("Não foi possível carregar o formulário de pagamento. Verifique as credenciais.");
+        setStatus('error');
+    }, []);
 
-export default async function handler(req, res) {
-    const origin = req.headers.origin || '*';
-    res.setHeader('Access-Control-Allow-Credentials', 'true');
-    res.setHeader('Access-Control-Allow-Origin', origin);
-    res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS,PUT,PATCH,DELETE');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Idempotency-Key, X-Trace-Id');
+    const initialization = useMemo(() => ({
+        amount: 14.90,
+        payer: { email: currentUser?.email || '' }
+    }), [currentUser?.email]);
 
-    if (req.method === 'OPTIONS') {
-        return res.status(200).end();
+    const customization = useMemo(() => ({
+        paymentMethods: { creditCard: "all", debitCard: "all", bankTransfer: [] },
+        visual: {
+            style: {
+                theme: 'dark',
+                customVariables: { baseColor: '#10b981', buttonTextColor: '#ffffff' }
+            }
+        }
+    }), []);
+
+    const handleReady = useCallback(() => { }, []);
+
+    if (!MP_PUBLIC_KEY) {
+        return (
+            <div style={{ maxWidth: '440px', margin: '60px auto', padding: '30px', backgroundColor: 'rgba(30, 30, 38, 0.95)', borderRadius: '16px', border: '1px solid rgba(255, 255, 255, 0.08)', boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5)', color: '#ffffff', fontFamily: 'sans-serif', textAlign: 'center' }}>
+                <span style={{ fontSize: '48px' }}>⚠️</span>
+                <h3 style={{ color: '#ef4444', margin: '16px 0 8px' }}>Erro de Configuração</h3>
+                <p style={{ fontSize: '14px', color: 'rgba(255, 255, 255, 0.7)', lineHeight: '1.5' }}>A chave pública não está configurada no ambiente.</p>
+            </div>
+        );
     }
 
-    const route = Array.isArray(req.query.routes) ? req.query.routes.join('/') : (req.query.routes || '');
+    return (
+        <div style={{ maxWidth: '440px', margin: '60px auto', padding: '30px', backgroundColor: 'rgba(30, 30, 38, 0.95)', borderRadius: '16px', border: '1px solid rgba(255, 255, 255, 0.08)', boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5)', color: '#ffffff', fontFamily: 'sans-serif' }}>
+            <div style={{ marginBottom: '20px' }}>
+                <button
+                    onClick={() => {
+                        window.history.pushState(null, '', '/?app=1');
+                        window.dispatchEvent(new Event('popstate'));
+                    }}
+                    style={{ background: 'none', border: 'none', color: 'rgba(255, 255, 255, 0.6)', fontSize: '13px', fontWeight: '600', cursor: 'pointer', padding: '4px 0', display: 'flex', alignItems: 'center', gap: '6px', transition: 'color 0.2s', fontFamily: 'sans-serif' }}
+                    onMouseEnter={(e) => e.target.style.color = '#ffffff'}
+                    onMouseLeave={(e) => e.target.style.color = 'rgba(255, 255, 255, 0.6)'}
+                >
+                    ← Voltar para o aplicativo
+                </button>
+            </div>
 
-    try {
-        if (route === 'payments/create') {
-            await handlePaymentsCreate(req, res, route);
-        } else if (route === 'access/check' || route === 'auth/check-access') {
-            await handleAccessCheck(req, res);
-        } else if (route === 'webhook/mercadopago') {
-            await handleWebhookMercadoPago(req, res, route);
-        } else {
-            res.status(200).json({ status: "online", msg: "Roteador central ativo" });
-        }
-    } catch (error) {
-        res.status(500).json({ error: 'Erro interno.', message: error.message });
-    }
+            <h2 style={{ fontSize: '24px', fontWeight: '800', marginBottom: '8px', textAlign: 'center' }}>MyFlowDay Premium ⚡</h2>
+            <p style={{ fontSize: '14px', color: 'rgba(255, 255, 255, 0.5)', textAlign: 'center', marginBottom: '24px' }}>Acesso completo a todas as ferramentas financeiras, som ambiente e muito mais.</p>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px', backgroundColor: 'rgba(255, 255, 255, 0.03)', borderRadius: '8px', marginBottom: '24px', border: '1px solid rgba(255, 255, 255, 0.05)' }}>
+                <span style={{ fontSize: '15px', fontWeight: '600' }}>Plano Pro</span>
+                <span style={{ fontSize: '18px', fontWeight: '800', color: '#10b981' }}>R$ 14,90 / mês</span>
+            </div>
+
+            {(isPro || userProfile?.plano === 'premium') ? (
+                <div style={{ textAlign: 'center', padding: '20px 0' }}>
+                    <span style={{ fontSize: '48px' }}>⚡</span>
+                    <h3 style={{ color: '#10b981', margin: '16px 0 8px' }}>Assinatura Premium Ativa</h3>
+                    <p style={{ fontSize: '14px', color: 'rgba(255, 255, 255, 0.7)', lineHeight: '1.5' }}>Você já possui uma assinatura Premium activa. Aproveite todos os recursos Pro!</p>
+                    <button onClick={() => window.location.href = '/?app=1'} style={{ marginTop: '20px', backgroundColor: '#3b82f6', color: '#ffffff', border: 'none', borderRadius: '8px', padding: '12px 24px', fontWeight: '600', cursor: 'pointer', width: '100%' }}>Ir para o App</button>
+                </div>
+            ) : status === 'success' ? (
+                <div style={{ textAlign: 'center', padding: '20px 0' }}>
+                    <span style={{ fontSize: '48px' }}>🎉</span>
+                    <h3 style={{ color: '#10b981', margin: '16px 0 8px' }}>Assinatura Ativada!</h3>
+                    <p style={{ fontSize: '14px', color: 'rgba(255, 255, 255, 0.7)', lineHeight: '1.5' }}>Seu pagamento foi processado com sucesso. O acesso premium foi liberado na sua conta.</p>
+                    <button onClick={() => window.location.href = '/?app=1'} style={{ marginTop: '20px', backgroundColor: '#10b981', color: '#ffffff', border: 'none', borderRadius: '8px', padding: '12px 24px', fontWeight: '600', cursor: 'pointer', width: '100%' }}>Ir para o App</button>
+                </div>
+            ) : status === 'in_process' ? (
+                <div style={{ textAlign: 'center', padding: '20px 0' }}>
+                    <span style={{ fontSize: '48px' }}>⏳</span>
+                    <h3 style={{ color: '#f59e0b', margin: '16px 0 8px' }}>Pagamento em Análise</h3>
+                    <p style={{ fontSize: '14px', color: 'rgba(255, 255, 255, 0.7)', lineHeight: '1.5' }}>Seu pagamento está sendo analisado. O acesso será liberado automaticamente.</p>
+                    <button onClick={() => window.location.href = '/?app=1'} style={{ marginTop: '20px', backgroundColor: '#f59e0b', color: '#ffffff', border: 'none', borderRadius: '8px', padding: '12px 24px', fontWeight: '600', cursor: 'pointer', width: '100%' }}>Ir para o App</button>
+                </div>
+            ) : pixData ? (
+                <div style={{ textAlign: 'center', padding: '20px 0' }}>
+                    <span style={{ fontSize: '48px' }}>⚡</span>
+                    <h3 style={{ color: '#10b981', margin: '16px 0 8px' }}>Pagamento via Pix Gerado</h3>
+                    <p style={{ fontSize: '14px', color: 'rgba(255, 255, 255, 0.7)', lineHeight: '1.5', marginBottom: '20px' }}>Escaneie o QR abaixo para pagar. O acesso Pro é liberado na hora.</p>
+
+                    {pixData.qr_code_base64 && (
+                        <div style={{ backgroundColor: '#ffffff', padding: '16px', borderRadius: '12px', display: 'inline-block', marginBottom: '20px', boxShadow: '0 4px 12px rgba(0,0,0,0.3)' }}>
+                            <img src={`data:image/jpeg;base64,${pixData.qr_code_base64}`} alt="QR Code Pix" style={{ width: '200px', height: '200px', display: 'block' }} />
+                        </div>
+                    )}
+
+                    {pixData.qr_code && (
+                        <div style={{ marginBottom: '24px' }}>
+                            <button onClick={() => { navigator.clipboard.writeText(pixData.qr_code); alert('Código Pix copiado!'); }} style={{ backgroundColor: 'rgba(255, 255, 255, 0.08)', color: '#ffffff', border: '1px solid rgba(255, 255, 255, 0.2)', borderRadius: '8px', padding: '10px 16px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', width: '100%' }}>📋 Copiar Código Pix</button>
+                        </div>
+                    )}
+                    <button onClick={() => window.location.href = '/?app=1'} style={{ backgroundColor: '#10b981', color: '#ffffff', border: 'none', borderRadius: '8px', padding: '12px 24px', fontWeight: '600', cursor: 'pointer', width: '100%' }}>Ir para o App</button>
+                </div>
+            ) : (
+                <>
+                    <div style={{ backgroundColor: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(255, 255, 255, 0.06)', borderRadius: '12px', padding: '20px', marginBottom: '24px' }}>
+                        <h3 style={{ fontSize: '15px', fontWeight: '700', marginTop: 0, marginBottom: '16px', color: '#10b981', display: 'flex', alignItems: 'center', gap: '8px' }}>👤 Identificação do Pagador</h3>
+                        <div style={{ display: 'flex', gap: '12px', marginBottom: '14px' }}>
+                            <div style={{ flex: 1 }}>
+                                <label style={{ display: 'block', fontSize: '12px', color: 'rgba(255, 255, 255, 0.6)', marginBottom: '6px' }}>Nome</label>
+                                <div style={{ position: 'relative' }}>
+                                    <input type="text" value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="Ex: João" style={{ width: '100%', padding: '10px 32px 10px 12px', backgroundColor: '#13131a', border: `1px solid ${firstName ? (isValidName(firstName) ? 'rgba(16, 185, 129, 0.4)' : 'rgba(239, 68, 68, 0.4)') : 'rgba(255, 255, 255, 0.1)'}`, borderRadius: '8px', color: '#ffffff', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }} />
+                                    {firstName && <span style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', color: isValidName(firstName) ? '#10b981' : '#ef4444', fontSize: '14px', fontWeight: 'bold' }}>{isValidName(firstName) ? '✓' : '✗'}</span>}
+                                </div>
+                            </div>
+                            <div style={{ flex: 1 }}>
+                                <label style={{ display: 'block', fontSize: '12px', color: 'rgba(255, 255, 255, 0.6)', marginBottom: '6px' }}>Sobrenome</label>
+                                <div style={{ position: 'relative' }}>
+                                    <input type="text" value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder="Ex: Silva" style={{ width: '100%', padding: '10px 32px 10px 12px', backgroundColor: '#13131a', border: `1px solid ${lastName ? (isValidName(lastName) ? 'rgba(16, 185, 129, 0.4)' : 'rgba(239, 68, 68, 0.4)') : 'rgba(255, 255, 255, 0.1)'}`, borderRadius: '8px', color: '#ffffff', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }} />
+                                    {lastName && <span style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', color: isValidName(lastName) ? '#10b981' : '#ef4444', fontSize: '14px', fontWeight: 'bold' }}>{isValidName(lastName) ? '✓' : '✗'}</span>}
+                                </div>
+                            </div>
+                        </div>
+                        <div style={{ marginBottom: '14px' }}>
+                            <label style={{ display: 'block', fontSize: '12px', color: 'rgba(255, 255, 255, 0.6)', marginBottom: '6px' }}>E-mail</label>
+                            <div style={{ position: 'relative' }}>
+                                <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="seu@email.com" style={{ width: '100%', padding: '10px 32px 10px 12px', backgroundColor: '#13131a', border: `1px solid ${email ? (validateEmail(email) ? 'rgba(16, 185, 129, 0.4)' : 'rgba(239, 68, 68, 0.4)') : 'rgba(255, 255, 255, 0.1)'}`, borderRadius: '8px', color: '#ffffff', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }} />
+                                {email && <span style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', color: validateEmail(email) ? '#10b981' : '#ef4444', fontSize: '14px', fontWeight: 'bold' }}>{validateEmail(email) ? '✓' : '✗'}</span>}
+                            </div>
+                        </div>
+                        <div>
+                            <label style={{ display: 'block', fontSize: '12px', color: 'rgba(255, 255, 255, 0.6)', marginBottom: '6px' }}>CPF (Somente números)</label>
+                            <div style={{ position: 'relative' }}>
+                                <input type="text" value={userCpf} onChange={(e) => { const val = e.target.value.replace(/\D/g, '').slice(0, 11); setUserCpf(val); }} placeholder="00000000000" style={{ width: '100%', padding: '10px 32px 10px 12px', backgroundColor: '#13131a', border: `1px solid ${userCpf ? (validateCpf(userCpf) ? 'rgba(16, 185, 129, 0.4)' : 'rgba(239, 68, 68, 0.4)') : 'rgba(255, 255, 255, 0.1)'}`, borderRadius: '8px', color: '#ffffff', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }} />
+                                {userCpf && <span style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', color: validateCpf(userCpf) ? '#10b981' : '#ef4444', fontSize: '14px', fontWeight: 'bold' }}>{validateCpf(userCpf) ? '✓' : '✗'}</span>}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style={{ position: 'relative' }}>
+                        <div style={{ opacity: isFormValid ? 1 : 0.15, filter: isFormValid ? 'none' : 'blur(4px)', transition: 'all 0.3s ease' }}>
+                            <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', backgroundColor: 'rgba(255, 255, 255, 0.03)', padding: '4px', borderRadius: '10px', border: '1px solid rgba(255, 255, 255, 0.05)' }}>
+                                <button onClick={() => isFormValid && setActiveTab('card')} style={{ flex: 1, padding: '12px 10px', borderRadius: '8px', border: 'none', backgroundColor: activeTab === 'card' ? '#10b981' : 'transparent', color: '#ffffff', fontSize: '14px', fontWeight: '600', cursor: isFormValid ? 'pointer' : 'not-allowed', transition: 'all 0.2s', boxShadow: activeTab === 'card' ? '0 4px 12px rgba(16, 185, 129, 0.2)' : 'none' }}>💳 Cartão de Crédito</button>
+                                <button onClick={() => isFormValid && setActiveTab('pix')} style={{ flex: 1, padding: '12px 10px', borderRadius: '8px', border: 'none', backgroundColor: activeTab === 'pix' ? '#10b981' : 'transparent', color: '#ffffff', fontSize: '14px', fontWeight: '600', cursor: isFormValid ? 'pointer' : 'not-allowed', transition: 'all 0.2s', boxShadow: activeTab === 'pix' ? '0 4px 12px rgba(16, 185, 129, 0.2)' : 'none' }}>⚡ Pix Instantâneo</button>
+                            </div>
+
+                            {activeTab === 'card' ? (
+                                <div style={{ minHeight: '150px' }}>
+                                    {isFormValid ? (
+                                        <div id="payment-brick-container">
+                                            <MemoizedPayment initialization={initialization} customization={customization} onSubmit={handleSubmit} onError={handleError} onReady={handleReady} />
+                                        </div>
+                                    ) : (
+                                        <div style={{ backgroundColor: 'rgba(20, 20, 28, 0.75)', border: '1px dashed rgba(255, 255, 255, 0.12)', borderRadius: '12px', padding: '30px 20px', textAlign: 'center' }}>
+                                            <span style={{ fontSize: '32px', display: 'block', marginBottom: '12px' }}>🔒</span>
+                                            <h4 style={{ margin: '0 0 8px 0', fontSize: '15px', fontWeight: '700', color: '#ffffff' }}>Dados do Pagador Necessários</h4>
+                                            <p style={{ margin: 0, fontSize: '13px', color: 'rgba(255, 255, 255, 0.6)', lineHeight: '1.5' }}>Preencha os dados de identificação para liberar o cartão.</p>
+                                        </div>
+                                    )}
+                                </div>
+                            ) : (
+                                <div style={{ backgroundColor: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(255, 255, 255, 0.06)', borderRadius: '12px', padding: '24px', textAlign: 'center' }}>
+                                    <span style={{ fontSize: '36px', display: 'block', marginBottom: '12px' }}>⚡</span>
+                                    <h4 style={{ margin: '0 0 8px 0', fontSize: '16px', fontWeight: '700', color: '#ffffff' }}>Pagamento via Pix</h4>
+                                    <p style={{ margin: '0 0 24px 0', fontSize: '13px', color: 'rgba(255, 255, 255, 0.5)', lineHeight: '1.5' }}>O Pix é processado instantaneamente e sua assinatura é liberada na hora.</p>
+                                    <button onClick={handlePixSubmit} disabled={!isFormValid || status === 'processando'} style={{ width: '100%', padding: '14px', borderRadius: '8px', border: 'none', background: isFormValid ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)' : 'rgba(255, 255, 255, 0.08)', color: isFormValid ? '#ffffff' : 'rgba(255, 255, 255, 0.3)', fontWeight: '700', fontSize: '15px', cursor: isFormValid ? 'pointer' : 'not-allowed', transition: 'all 0.2s', boxShadow: isFormValid ? '0 4px 14px rgba(16, 185, 129, 0.3)' : 'none' }}>
+                                        {status === 'processando' ? 'Gerando Código Pix...' : 'Pagar via Pix ⚡'}
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+
+                        {!isFormValid && (
+                            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(20, 20, 28, 0.82)', backdropFilter: 'blur(6px)', borderRadius: '12px', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', textAlign: 'center', padding: '24px', zIndex: 10, border: '1px dashed rgba(255, 255, 255, 0.12)' }}>
+                                <span style={{ fontSize: '32px', marginBottom: '12px' }}>🔒</span>
+                                <h4 style={{ margin: '0 0 8px 0', fontSize: '15px', fontWeight: '700', color: '#ffffff' }}>Opções de Pagamento Bloqueadas</h4>
+                                <p style={{ margin: 0, fontSize: '13px', color: 'rgba(255, 255, 255, 0.6)', lineHeight: '1.5' }}>Preencha os dados de identificação acima para liberar as formas de pagamento.</p>
+                            </div>
+                        )}
+                    </div>
+
+                    {status === 'processando' && (
+                        <div style={{ textAlign: 'center', marginTop: '16px', fontSize: '13px', color: 'rgba(255, 255, 255, 0.5)' }}>Processando faturamento...</div>
+                    )}
+
+                    {status === 'error' && (
+                        <div style={{ marginTop: '16px', padding: '12px', backgroundColor: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: '8px', color: '#ef4444', fontSize: '13px', textAlign: 'center' }}>{error}</div>
+                    )}
+                </>
+            )}
+        </div>
+    );
 }
