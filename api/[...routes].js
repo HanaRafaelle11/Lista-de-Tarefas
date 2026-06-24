@@ -283,6 +283,15 @@ async function handlePaymentsCreate(req, res, routePath) {
         const transactionData = paymentResult.point_of_interaction?.transaction_data || {};
 
         if (payment_method_id === 'pix') {
+            // 🛡️ CRÍTICO: Se o Mercado Pago rejeitou ou cancelou, barra o fluxo na hora e avisa o front
+            if (paymentStatusNormalized === 'rejected' || paymentStatusNormalized === 'cancelled') {
+                return res.status(400).json({
+                    success: false,
+                    status: paymentStatusNormalized,
+                    error: 'O Mercado Pago recusou a transação. Verifique se os dados de identificação e o sobrenome estão preenchidos de forma simples.'
+                });
+            }
+
             if (!transactionData.qr_code && !transactionData.qr_code_base64) {
                 return res.status(400).json({
                     status: 'rejected',
