@@ -115,8 +115,8 @@ async function handlePaymentsCreate(req, res, routePath) {
             return res.status(405).json({ error: 'Método não permitido. Utilize POST.' });
         }
 
-        // 🛡️ ADICIONADO: deviceId capturado do corpo da requisição enviada pelo frontend
-        const { userId, email, amount, payment_method_id, token, installments, cpf, deviceId } = req.body || {};
+        // 🛡️ CAPTURADO: Dados limpos vindo do payload unificado do frontend
+        const { userId, email, amount, payment_method_id, token, installments, cpf, deviceId, external_reference, metadata } = req.body || {};
         const idempotencyKey = req.headers['x-idempotency-key'] || crypto.randomUUID();
 
         if (!userId || !email || !payment_method_id) {
@@ -148,13 +148,14 @@ async function handlePaymentsCreate(req, res, routePath) {
         }
 
         const finalAmount = Number(amount) || 14.90;
+        const uniqueTimestamp = new Date().getTime();
 
-        // 🛡️ CORRIGIDO: Estrutura expandida contendo additional_info.items para passar no antifraude do ML
+        // 🛡️ CORRIGIDO: Payload dinâmico que respeita a referência única e o mapeamento de cartão
         const payload = {
             transaction_amount: finalAmount,
-            payment_method_id,
+            payment_method_id: payment_method_id, // Recebe dinamicamente a bandeira do cartão ou 'pix'
             description: "Plano MyFlowDay Premium",
-            external_reference: userId,
+            external_reference: external_reference || `order_${userId}_${uniqueTimestamp}`, // Único por tentativa
             statement_descriptor: "MYFLOWDAY",
             payer: {
                 email: email.trim(),
@@ -177,15 +178,14 @@ async function handlePaymentsCreate(req, res, routePath) {
                     }
                 ]
             },
-            metadata: {
+            metadata: metadata || {
                 user_id: userId,
-                cpf: cleanCpf,
-                email: email.trim(),
-                plan: "premium"
+                plan: "premium" // Removido dados PII duplicados por segurança
             },
             notification_url: process.env.MERCADOPAGO_WEBHOOK_URL || "https://myflowday.com.br/api/webhook/mercadopago"
         };
 
+        // Injeta os campos necessários caso o fluxo seja cartão de crédito
         if (payment_method_id !== 'pix') {
             payload.token = token;
             const resolvedInstallments = Number(installments) || 1;
@@ -195,7 +195,7 @@ async function handlePaymentsCreate(req, res, routePath) {
             payload.installments = resolvedInstallments;
         }
 
-        // 🛡️ CORRIGIDO: Injeção dinâmica do X-Melicookie se o deviceId estiver disponível
+        // 🛡️ CORRIGIDO: Mapeamento oficial com o header X-Meli-Session-Id exigido pelo antifraude
         const headers = {
             'Authorization': `Bearer ${process.env.MERCADOPAGO_ACCESS_TOKEN}`,
             'Content-Type': 'application/json',
@@ -204,7 +204,7 @@ async function handlePaymentsCreate(req, res, routePath) {
         };
 
         if (deviceId) {
-            headers['X-Melicookie'] = deviceId;
+            headers['X-Meli-Session-Id'] = deviceId; // Nome padrão oficial do Mercado Pago corrigido
         }
 
         const mpResponse = await fetch('https://api.mercadopago.com/v1/payments', {
