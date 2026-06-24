@@ -184,14 +184,21 @@ async function handlePaymentsCreate(req, res, routePath) {
             headers: {
                 'Authorization': `Bearer ${process.env.MERCADOPAGO_ACCESS_TOKEN}`,
                 'Content-Type': 'application/json',
-                'X-Idempotency-Key': idempotencyKey
+                'X-Idempotency-Key': idempotencyKey,
+                // 🛡️ ADICIONADO PARA HOMOLOGAÇÃO: Identifica a aplicação no validador de qualidade
+                'X-Developer-Id': '5944910093081420'
             },
             body: JSON.stringify(payload)
         });
 
         if (!mpResponse.ok) {
             const errData = await mpResponse.json().catch(() => ({}));
-            return res.status(400).json({ error: 'Falha no processamento no Mercado Pago.', details: errData });
+            // 🛡️ ADICIONADO PARA HOMOLOGAÇÃO: Melhora o tratamento detalhado de erros exigido pelo relatório
+            console.error('[Mercado Pago API Error Details]:', JSON.stringify(errData));
+            return res.status(400).json({
+                error: 'Falha no processamento no Mercado Pago.',
+                details: errData?.cause || errData?.message || errData
+            });
         }
 
         const paymentResult = await mpResponse.json();
@@ -283,7 +290,6 @@ async function handlePaymentsCreate(req, res, routePath) {
         const transactionData = paymentResult.point_of_interaction?.transaction_data || {};
 
         if (payment_method_id === 'pix') {
-            // 🛡️ CRÍTICO: Se o Mercado Pago rejeitou ou cancelou, barra o fluxo na hora e avisa o front
             if (paymentStatusNormalized === 'rejected' || paymentStatusNormalized === 'cancelled') {
                 return res.status(400).json({
                     success: false,
