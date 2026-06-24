@@ -152,7 +152,9 @@ export default function Checkout() {
         amount: 14.90,
         installments,
         userId: currentUser?.id,
-        cpf: cleanCpf
+        cpf: cleanCpf,
+        // 🛡️ ADICIONADO PARA ANTIFRAUDE: Envia o ID do dispositivo capturado pelo script global
+        deviceId: window.MP_DEVICE_SESSION_ID || ""
       };
 
       const response = await fetch('/api/payments/create', {
@@ -207,7 +209,9 @@ export default function Checkout() {
         amount: 14.90,
         userId: currentUser?.id,
         email: email.trim(),
-        cpf: cleanCpf
+        cpf: cleanCpf,
+        // 🛡️ ADICIONADO PARA ANTIFRAUDE: Envia o ID do dispositivo capturado pelo script global
+        deviceId: window.MP_DEVICE_SESSION_ID || ""
       };
 
       const response = await fetch('/api/payments/create', {
@@ -369,7 +373,7 @@ export default function Checkout() {
               </div>
             </div>
             <div>
-              <label style={{ display: 'block', fontSize: '12px', color: 'rgba(255, 255, 255, 0.6)', marginBottom: '6px' }}>CPF (Somente números)</label>
+              <label style={{ display: 'block', fontSize: '12px', color: 'rgba(255, 255, 255, 0.6)', marginBottom: '6px' }}>CPF (Somente numbers)</label>
               <div style={{ position: 'relative' }}>
                 <input type="text" value={userCpf} onChange={(e) => { const val = e.target.value.replace(/\D/g, '').slice(0, 11); setUserCpf(val); }} placeholder="00000000000" style={{ width: '100%', padding: '10px 32px 10px 12px', backgroundColor: '#13131a', border: `1px solid ${userCpf ? (validateCpf(userCpf) ? 'rgba(16, 185, 129, 0.4)' : 'rgba(239, 68, 68, 0.4)') : 'rgba(255, 255, 255, 0.1)'}`, borderRadius: '8px', color: '#ffffff', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }} />
                 {userCpf && <span style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', color: validateCpf(userCpf) ? '#10b981' : '#ef4444', fontSize: '14px', fontWeight: 'bold' }}>{validateCpf(userCpf) ? '✓' : '✗'}</span>}
