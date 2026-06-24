@@ -114,8 +114,8 @@ export default function Checkout() {
       isValidName(lastName) &&
       validateEmail(email) &&
       cleanCpf.length === 11 &&
-      validateCpf(cleanCpf) &&
-      typeof window !== 'undefined' && !!window.MP_DEVICE_SESSION_ID
+      validateCpf(cleanCpf)
+      // MP_DEVICE_SESSION_ID removido: não bloqueia mais o formulário se o script do MP não carregou
     );
   }, [firstName, lastName, email, userCpf]);
 
@@ -158,10 +158,11 @@ export default function Checkout() {
         token: paymentData.token,
         payment_method_id: paymentData.payment_method_id,
         transaction_amount: 14.90,
+        amount: 14.90,                  // duplicado: API lê 'amount' da raiz
         installments: installments,
         userId: currentUser?.id,
-        email: email.trim(),            // raiz: esperado pela API
-        cpf: cleanCpf,                  // raiz: esperado pela API
+        email: email.trim(),
+        cpf: cleanCpf,
         external_reference: `order_${currentUser?.id}_${uniqueTimestamp}`,
         metadata: {
           user_id: currentUser?.id,
@@ -248,9 +249,10 @@ export default function Checkout() {
       const payload = {
         payment_method_id: 'pix',
         transaction_amount: 14.90,
+        amount: 14.90,                  // duplicado: API lê 'amount' da raiz
         userId: currentUser?.id,
-        email: email.trim(),            // raiz: esperado pela API
-        cpf: cleanCpf,                  // raiz: esperado pela API
+        email: email.trim(),
+        cpf: cleanCpf,
         external_reference: `order_${currentUser?.id}_${uniqueTimestamp}`,
         metadata: {
           user_id: currentUser?.id,

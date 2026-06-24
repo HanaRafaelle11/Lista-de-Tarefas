@@ -17,26 +17,29 @@ const apiDevServerPlugin = () => ({
     server.middlewares.use(async (req, res, next) => {
       if (req.url && req.url.startsWith('/api/')) {
         const parsedUrl = new URL(req.url, 'http://localhost');
-        const pathname = parsedUrl.pathname;
+        const pathname = parsedUrl.pathname; // ex: /api/payments/create
 
-        // Remove trailing slash if any, and handle potential index file or direct .js resolution
-        let relativePath = `.${pathname}`;
-        let absolutePath = pathname.endsWith('.js')
-          ? path.resolve(process.cwd(), relativePath)
-          : path.resolve(process.cwd(), relativePath + '.js');
+        // ✅ CORRIGIDO: Simula exatamente o roteamento do vercel.json
+        // /api/(.*)  →  /api/[...routes].js?routes=$1
+        const catchAllPath = path.resolve(process.cwd(), 'api/[...routes].js');
+        const routeSegment = pathname.replace(/^\/api\//, ''); // ex: "payments/create"
 
-        if (!fs.existsSync(absolutePath)) {
-          // Try /index.js if it's a directory
-          const indexPath = path.resolve(process.cwd(), relativePath, 'index.js');
-          if (fs.existsSync(indexPath)) {
-            absolutePath = indexPath;
-          } else {
-            console.warn(`[API Dev Server] File not found: ${absolutePath} or ${indexPath}`);
-            res.statusCode = 404;
-            res.setHeader('Content-Type', 'application/json');
-            res.end(JSON.stringify({ error: `Not found: ${pathname}` }));
-            return;
-          }
+        // Tenta o arquivo literal primeiro, depois cai no catch-all
+        let absolutePath = null;
+        const literalPath = pathname.endsWith('.js')
+          ? path.resolve(process.cwd(), `.${pathname}`)
+          : path.resolve(process.cwd(), `.${pathname}.js`);
+
+        if (fs.existsSync(literalPath)) {
+          absolutePath = literalPath;
+        } else if (fs.existsSync(catchAllPath)) {
+          absolutePath = catchAllPath;
+        } else {
+          console.warn(`[API Dev Server] File not found for: ${pathname}`);
+          res.statusCode = 404;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify({ error: `Not found: ${pathname}` }));
+          return;
         }
 
         try {
@@ -45,6 +48,11 @@ const apiDevServerPlugin = () => ({
           parsedUrl.searchParams.forEach((value, key) => {
             query[key] = value;
           });
+
+          // ✅ Injeta routes como string (igual ao vercel.json: ?routes=payments/create)
+          if (absolutePath === catchAllPath && routeSegment) {
+            query.routes = routeSegment;
+          }
           req.query = query;
 
           // Read body if POST/PUT/PATCH/DELETE
