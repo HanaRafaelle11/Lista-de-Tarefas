@@ -107,7 +107,6 @@ export default function Checkout() {
     }
   }, [userProfile, firstName, lastName]);
 
-  // 🛡️ SEGURANÇA ANTIFRAUDE: O formulário só valida se os dados estiverem preenchidos E o Device ID do Meli já existir no escopo global
   const isFormValid = useMemo(() => {
     const cleanCpf = userCpf.replace(/\D/g, '');
     return (
@@ -155,6 +154,9 @@ export default function Checkout() {
         installments,
         userId: currentUser?.id,
         cpf: cleanCpf,
+        firstName: firstNameRef.current.trim(),
+        lastName: lastNameRef.current.trim(),
+        email: emailRef.current.trim(),
         deviceId: window.MP_DEVICE_SESSION_ID || ""
       };
 
@@ -205,12 +207,15 @@ export default function Checkout() {
         console.warn('Profile sync error ignored for payment checkout:', profileErr.message);
       }
 
+      // 🛡️ ENRIQUECIMENTO DE DADOS: Passa as informações destrinchadas para o antifraude validar o pagador legítimo
       const payload = {
         payment_method_id: 'pix',
         amount: 14.90,
         userId: currentUser?.id,
         email: email.trim(),
         cpf: cleanCpf,
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
         deviceId: window.MP_DEVICE_SESSION_ID || ""
       };
 
@@ -312,7 +317,7 @@ export default function Checkout() {
         <div style={{ textAlign: 'center', padding: '20px 0' }}>
           <span style={{ fontSize: '48px' }}>⚡</span>
           <h3 style={{ color: '#10b981', margin: '16px 0 8px' }}>Assinatura Premium Ativa</h3>
-          <p style={{ fontSize: '14px', color: 'rgba(255, 255, 255, 0.7)', lineHeight: '1.5' }}>Você já possui uma assinatura Premium ativa. Aproveite todos os recursos Pro!</p>
+          <p style={{ fontSize: '14px', color: 'rgba(255, 255, 255, 0.7)', lineHeight: '1.5' }}>Você já possui uma assinatura Premium activa. Aproveite todos os recursos Pro!</p>
           <button onClick={() => window.location.href = '/?app=1'} style={{ marginTop: '20px', backgroundColor: '#3b82f6', color: '#ffffff', border: 'none', borderRadius: '8px', padding: '12px 24px', fontWeight: '600', cursor: 'pointer', width: '100%' }}>Ir para o App</button>
         </div>
       ) : status === 'success' ? (
@@ -376,7 +381,7 @@ export default function Checkout() {
               </div>
             </div>
             <div>
-              <label style={{ display: 'block', fontSize: '12px', color: 'rgba(255, 255, 255, 0.6)', marginBottom: '6px' }}>CPF (Somente números)</label>
+              <label style={{ display: 'block', fontSize: '12px', color: 'rgba(255, 255, 255, 0.6)', marginBottom: '6px' }}>CPF (Somente numbers)</label>
               <div style={{ position: 'relative' }}>
                 <input type="text" value={userCpf} onChange={(e) => { const val = e.target.value.replace(/\D/g, '').slice(0, 11); setUserCpf(val); }} placeholder="00000000000" style={{ width: '100%', padding: '10px 32px 10px 12px', backgroundColor: '#13131a', border: `1px solid ${userCpf ? (validateCpf(userCpf) ? 'rgba(16, 185, 129, 0.4)' : 'rgba(239, 68, 68, 0.4)') : 'rgba(255, 255, 255, 0.1)'}`, borderRadius: '8px', color: '#ffffff', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }} />
                 {userCpf && <span style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', color: validateCpf(userCpf) ? '#10b981' : '#ef4444', fontSize: '14px', fontWeight: 'bold' }}>{validateCpf(userCpf) ? '✓' : '✗'}</span>}
@@ -395,46 +400,4 @@ export default function Checkout() {
                 <div style={{ minHeight: '150px' }}>
                   {isFormValid ? (
                     <div id="payment-brick-container">
-                      <MemoizedPayment initialization={initialization} customization={customization} onSubmit={handleSubmit} onError={handleError} onReady={handleReady} />
-                    </div>
-                  ) : (
-                    <div style={{ backgroundColor: 'rgba(20, 20, 28, 0.75)', border: '1px dashed rgba(255, 255, 255, 0.12)', borderRadius: '12px', padding: '30px 20px', textAlign: 'center' }}>
-                      <span style={{ fontSize: '32px', display: 'block', marginBottom: '12px' }}>🔒</span>
-                      <h4 style={{ margin: '0 0 8px 0', fontSize: '15px', fontWeight: '700', color: '#ffffff' }}>Dados do Pagador Necessários</h4>
-                      <p style={{ margin: 0, fontSize: '13px', color: 'rgba(255, 255, 255, 0.6)', lineHeight: '1.5' }}>Preencha os dados de identificação para liberar o cartão.</p>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div style={{ backgroundColor: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(255, 255, 255, 0.06)', borderRadius: '12px', padding: '24px', textAlign: 'center' }}>
-                  <span style={{ fontSize: '36px', display: 'block', marginBottom: '12px' }}>⚡</span>
-                  <h4 style={{ margin: '0 0 8px 0', fontSize: '16px', fontWeight: '700', color: '#ffffff' }}>Pagamento via Pix</h4>
-                  <p style={{ margin: '0 0 24px 0', fontSize: '13px', color: 'rgba(255, 255, 255, 0.5)', lineHeight: '1.5' }}>O Pix é processado instantaneamente e sua assinatura é liberada na hora.</p>
-                  <button onClick={handlePixSubmit} disabled={!isFormValid || status === 'processando'} style={{ width: '100%', padding: '14px', borderRadius: '8px', border: 'none', background: isFormValid ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)' : 'rgba(255, 255, 255, 0.08)', color: isFormValid ? '#ffffff' : 'rgba(255, 255, 255, 0.3)', fontWeight: '700', fontSize: '15px', cursor: isFormValid ? 'pointer' : 'not-allowed', transition: 'all 0.2s', boxShadow: isFormValid ? '0 4px 14px rgba(16, 185, 129, 0.3)' : 'none' }}>
-                    {status === 'processando' ? 'Gerando Código Pix...' : 'Pagar via Pix ⚡'}
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {!isFormValid && (
-              <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(20, 20, 28, 0.82)', backdropFilter: 'blur(6px)', borderRadius: '12px', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', textAlign: 'center', padding: '24px', zIndex: 10, border: '1px dashed rgba(255, 255, 255, 0.12)' }}>
-                <span style={{ fontSize: '32px', marginBottom: '12px' }}>🔒</span>
-                <h4 style={{ margin: '0 0 8px 0', fontSize: '15px', fontWeight: '700', color: '#ffffff' }}>Opções de Pagamento Bloqueadas</h4>
-                <p style={{ margin: 0, fontSize: '13px', color: 'rgba(255, 255, 255, 0.6)', lineHeight: '1.5' }}>Preencha os dados de identificação acima para liberar as formas de pagamento.</p>
-              </div>
-            )}
-          </div>
-
-          {status === 'processando' && (
-            <div style={{ textAlign: 'center', marginTop: '16px', fontSize: '13px', color: 'rgba(255, 255, 255, 0.5)' }}>Processando faturamento...</div>
-          )}
-
-          {status === 'error' && (
-            <div style={{ marginTop: '16px', padding: '12px', backgroundColor: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: '8px', color: '#ef4444', fontSize: '13px', textAlign: 'center' }}>{error}</div>
-          )}
-        </>
-      )}
-    </div>
-  );
-}
+                      <MemoizedPayment initialization={initialization} customization
