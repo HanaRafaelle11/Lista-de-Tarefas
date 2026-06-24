@@ -1,4 +1,4 @@
-﻿// Máquina de estados dos pagamentos do Mercado Pago
+﻿// Máquina de estados dos pagamentos do Mercado Pago limpa
 export const PaymentStateMachine = {
   transitions: {
     'created': ['approved', 'pending', 'rejected', 'cancelled', 'in_process'],
@@ -11,7 +11,7 @@ export const PaymentStateMachine = {
   transition(current, next) {
     const allowed = this.transitions[current] || [];
     if (allowed.includes(next) || current === next) return next;
-    console.warn(\[PaymentStateMachine] Transição inválida de \ para \\);
+    console.warn('[PaymentStateMachine] Transição inválida de ' + current + ' para ' + next);
     return next;
   }
 };
