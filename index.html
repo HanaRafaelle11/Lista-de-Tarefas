@@ -28,14 +28,24 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet">
-
-    <!-- ✅ ANTIFRAUDE: gera MP_DEVICE_SESSION_ID (fingerprint do dispositivo) -->
-    <script src="https://www.mercadopago.com/v2/security.js" view="checkout"></script>
-    <!-- ✅ SDK MercadoPago.JS V2 (obrigatório pelo checklist de qualidade do MP) -->
-    <script src="https://sdk.mercadopago.com/js/v2"></script>
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
+
+    <!-- ✅ ANTIFRAUDE: gera MP_DEVICE_SESSION_ID em todas as páginas -->
+    <script src="https://www.mercadopago.com/v2/security.js" view="checkout"></script>
+
+    <!-- ✅ SDK MercadoPago.JS V2 — checklist item "SDK do frontend" -->
+    <script src="https://sdk.mercadopago.com/js/v2"></script>
+    <script>
+      // Inicialização explícita exigida pelo checklist de qualidade do Mercado Pago
+      // "SDK do frontend" + "Identificador do dispositivo"
+      window.addEventListener('load', function () {
+        if (typeof MercadoPago !== 'undefined') {
+          window.mp = new MercadoPago('%VITE_MP_PUBLIC_KEY%', { locale: 'pt-BR' });
+        }
+      });
+    </script>
   </body>
-</html>
+</html>
