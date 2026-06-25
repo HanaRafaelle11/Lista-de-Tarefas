@@ -233,6 +233,22 @@ async function handlePaymentsCreate(req, res, routePath) {
             headers['X-Meli-Session-Id'] = deviceId; // Anti-fraude: device fingerprint do comprador
         }
 
+        // 🔍 LOG DIAGNÓSTICO — mostra o que está sendo enviado ao MP
+        console.log('[MP Request] Diagnóstico:', {
+            payment_method: payment_method_id,
+            amount: finalAmount,
+            has_device_fingerprint: !!deviceId,
+            device_id_length: deviceId ? deviceId.length : 0,
+            payer_email_masked: email ? email.slice(0, 3) + '***' : 'VAZIO',
+            cpf_length: cleanCpf ? cleanCpf.length : 0,
+            entity_type: payload.payer?.entity_type,
+            idempotency_key: idempotencyKey.slice(0, 8) + '...'
+        });
+
+        if (!deviceId) {
+            console.warn('[MP Request] ⚠️ X-Meli-Session-Id NÃO enviado — security.js pode não ter carregado no frontend!');
+        }
+
         const mpResponse = await fetch('https://api.mercadopago.com/v1/payments', {
             method: 'POST',
             headers,
