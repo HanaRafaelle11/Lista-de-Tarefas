@@ -1,5 +1,5 @@
 import crypto from 'crypto';
-import fetch from 'node-fetch';
+import { MercadoPagoConfig, Payment as MPPayment } from 'mercadopago';
 
 // Importação segura do cliente Supabase local
 import { supabaseAdmin } from '../lib/supabase.js';
@@ -222,18 +222,13 @@ async function handlePaymentsCreate(req, res, routePath) {
             payload.installments = resolvedInstallments;
         }
 
-        // ✅ Headers oficiais do Mercado Pago (X-Developer-Id removido — não existe na API)
-        const headers = {
-            'Authorization': `Bearer ${process.env.MERCADOPAGO_ACCESS_TOKEN}`,
-            'Content-Type': 'application/json',
-            'X-Idempotency-Key': idempotencyKey
-        };
+        // ✅ SDK OFICIAL DO MERCADO PAGO (satisfaz checklist + reconhecido pelo antifraude)
+        const mpClient = new MercadoPagoConfig({
+            accessToken: process.env.MERCADOPAGO_ACCESS_TOKEN
+        });
+        const mpPayment = new MPPayment(mpClient);
 
-        if (deviceId) {
-            headers['X-Meli-Session-Id'] = deviceId; // Anti-fraude: device fingerprint do comprador
-        }
-
-        // 🔍 LOG DIAGNÓSTICO — mostra o que está sendo enviado ao MP
+        // 🔍 LOG DIAGNÓSTICO
         console.log('[MP Request] Diagnóstico:', {
             payment_method: payment_method_id,
             amount: finalAmount,
@@ -249,23 +244,27 @@ async function handlePaymentsCreate(req, res, routePath) {
             console.warn('[MP Request] ⚠️ X-Meli-Session-Id NÃO enviado — security.js pode não ter carregado no frontend!');
         }
 
-        const mpResponse = await fetch('https://api.mercadopago.com/v1/payments', {
-            method: 'POST',
-            headers,
-            body: JSON.stringify(payload)
-        });
-
-        if (!mpResponse.ok) {
-            const errData = await mpResponse.json().catch(() => ({}));
-            console.error('[Mercado Pago API Error Details]:', JSON.stringify(errData));
+        let paymentResult;
+        try {
+            paymentResult = await mpPayment.create({
+                body: payload,
+                requestOptions: {
+                    idempotencyKey,
+                    ...(deviceId && {
+                        customHeaders: { 'X-Meli-Session-Id': deviceId }
+                    })
+                }
+            });
+        } catch (mpError) {
+            const errData = mpError?.cause || mpError;
+            console.error('[Mercado Pago SDK Error]:', JSON.stringify(errData));
             return res.status(400).json({
                 error: errData?.message || 'Falha no processamento no Mercado Pago.',
                 status_detail: errData?.status_detail || null,
-                details: errData?.cause || errData
+                details: errData
             });
         }
 
-        const paymentResult = await mpResponse.json();
         const maskedResponse = {
             ...paymentResult,
             payer: paymentResult.payer ? {

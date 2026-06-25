@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { initMercadoPago, Payment } from '@mercadopago/sdk-react';
+import { initMercadoPago, CardPayment } from '@mercadopago/sdk-react';
 import { useAppContext } from '../contexts/AppContext';
 import { profilesService } from '../services/profilesService';
 
@@ -53,9 +53,10 @@ function validateEmail(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed);
 }
 
-const MemoizedPayment = React.memo(({ initialization, customization, onSubmit, onError, onReady }) => {
+// ✅ PCI Compliance: CardPayment Brick usa Secure Fields (tokenização client-side)
+const MemoizedCardPayment = React.memo(({ initialization, customization, onSubmit, onError, onReady }) => {
   return (
-    <Payment
+    <CardPayment
       initialization={initialization}
       customization={customization}
       onSubmit={onSubmit}
@@ -64,7 +65,7 @@ const MemoizedPayment = React.memo(({ initialization, customization, onSubmit, o
     />
   );
 });
-MemoizedPayment.displayName = 'MemoizedPayment';
+MemoizedCardPayment.displayName = 'MemoizedCardPayment';
 
 export default function Checkout() {
   const { currentUser, isPro, userProfile } = useAppContext();
@@ -353,13 +354,17 @@ export default function Checkout() {
     }
   }), [currentUser?.email]);
 
+  // ✅ CardPayment: customization específica para PCI Compliance
   const customization = useMemo(() => ({
-    paymentMethods: { creditCard: "all", debitCard: "all", bankTransfer: [] },
     visual: {
       style: {
         theme: 'dark',
         customVariables: { baseColor: '#10b981', buttonTextColor: '#ffffff' }
       }
+    },
+    paymentMethods: {
+      minInstallments: 1,
+      maxInstallments: 12
     }
   }), []);
 
@@ -485,8 +490,8 @@ export default function Checkout() {
               {activeTab === 'card' ? (
                 <div style={{ minHeight: '150px' }}>
                   {isFormValid ? (
-                    <div id="payment-brick-container">
-                      <MemoizedPayment initialization={initialization} customization={customization} onSubmit={handleSubmit} onError={handleError} onReady={handleReady} />
+                    <div id="card-payment-brick-container">
+                      <MemoizedCardPayment initialization={initialization} customization={customization} onSubmit={handleSubmit} onError={handleError} onReady={handleReady} />
                     </div>
                   ) : (
                     <div style={{ backgroundColor: 'rgba(20, 20, 28, 0.75)', border: '1px dashed rgba(255, 255, 255, 0.12)', borderRadius: '12px', padding: '30px 20px', textAlign: 'center' }}>
