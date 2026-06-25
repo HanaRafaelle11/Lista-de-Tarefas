@@ -471,6 +471,13 @@ export default async function handler(req, res) {
 
     const route = Array.isArray(req.query.routes) ? req.query.routes.join('/') : (req.query.routes || '');
 
+    // 🔒 Bloqueia acesso a arquivos sensíveis
+    const blockedPatterns = ['.env', '.git', 'config', 'secrets', 'credentials'];
+    if (blockedPatterns.some(p => route.toLowerCase().includes(p))) {
+        console.warn(`[Security] Acesso bloqueado à rota sensível: ${route} | IP: ${req.headers['x-forwarded-for'] || 'desconhecido'}`);
+        return res.status(403).json({ error: 'Acesso negado.' });
+    }
+
     try {
         if (route === 'payments/create') {
             await handlePaymentsCreate(req, res, route);
@@ -478,10 +485,14 @@ export default async function handler(req, res) {
             await handleAccessCheck(req, res);
         } else if (route === 'webhook/mercadopago') {
             await handleWebhookMercadoPago(req, res, route);
+        } else if (route === '' || route === 'health') {
+            // Health check — único caso que retorna 200 para rota vazia
+            res.status(200).json({ status: 'online', ts: new Date().toISOString() });
         } else {
-            res.status(200).json({ status: "online", msg: "Roteador central ativo" });
+            console.warn(`[Router] Rota não encontrada: ${route}`);
+            res.status(404).json({ error: `Rota não encontrada: ${route}` });
         }
     } catch (error) {
         res.status(500).json({ error: 'Erro interno.', message: error.message });
     }
-}
+}
