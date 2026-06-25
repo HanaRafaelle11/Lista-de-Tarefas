@@ -27,16 +27,20 @@ const sendPushNotification = async (userId, title, body) => {
 };
 
 async function insertEvent(userId, eventType, metadata = {}) {
-  const event = {
-    user_id: userId,
-    event_type: eventType,
-    metadata
-  };
+  // Não lança exceção — falha de RLS no log de eventos não deve quebrar o fluxo de pagamento
   try {
-    const { error } = await supabaseAdmin.from('events').insert([event]);
-    if (error) console.error(error);
+    const { error } = await supabaseAdmin.from('events').insert([{
+      user_id: userId,
+      event_type: eventType,
+      metadata,
+      created_at: new Date().toISOString()
+    }]);
+    if (error) {
+      // RLS (42501) ou tabela inexistente (42P01) são não-críticos — apenas loga
+      console.warn(`[BillingEngine] insertEvent ignorado (${error.code}): ${error.message}`);
+    }
   } catch (err) {
-    console.error(err);
+    console.warn('[BillingEngine] insertEvent falhou silenciosamente:', err?.message);
   }
 }
 
