@@ -543,6 +543,17 @@ async function handleSubscriptionCreate(req, res) {
         // deduplicada pelo Mercado Pago durante a janela de idempotência (tipicamente 24h).
         const idempotencyKey = `subscription_create_${userId}`;
 
+        // ── [MP DEBUG] Diagnóstico temporário — remover após identificar causa do erro 404 ──
+        console.log('[MP DEBUG] MP_ACCESS_TOKEN existe?', !!process.env.MP_ACCESS_TOKEN);
+        console.log('[MP DEBUG] Prefixo token:', process.env.MP_ACCESS_TOKEN?.substring(0, 10));
+        console.log('[MP DEBUG] card_token_id:', card_token_id);
+        console.log('[MP DEBUG] email:', email);
+        console.log('[MP DEBUG] cpf:', cleanCpf);
+        console.log('[MP DEBUG] first_name:', first_name);
+        console.log('[MP DEBUG] last_name:', last_name);
+        console.log('[MP DEBUG] preapprovalPayload:', JSON.stringify(preapprovalPayload, null, 2));
+        // ── fim [MP DEBUG] ───────────────────────────────────────────────────────────────
+
         // Chama a API REST do Mercado Pago diretamente
         const mpResponse = await fetch('https://api.mercadopago.com/preapproval', {
             method: 'POST',
@@ -555,6 +566,11 @@ async function handleSubscriptionCreate(req, res) {
         });
 
         const mpData = await mpResponse.json();
+
+        // ── [MP DEBUG] Diagnóstico temporário — remover após identificar causa do erro 404 ──
+        console.log('[MP DEBUG] HTTP Status:', mpResponse.status);
+        console.log('[MP DEBUG] MP Response:', JSON.stringify(mpData, null, 2));
+        // ── fim [MP DEBUG] ───────────────────────────────────────────────────────────────
 
         if (!mpResponse.ok) {
             console.error('[handleSubscriptionCreate] Erro MP:', JSON.stringify(mpData));
