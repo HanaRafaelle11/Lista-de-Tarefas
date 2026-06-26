@@ -5,8 +5,10 @@ import { profilesService } from '../services/profilesService';
 
 const MP_PUBLIC_KEY = import.meta.env.VITE_MP_PUBLIC_KEY;
 
-if (MP_PUBLIC_KEY) {
+// ✨ CORREÇÃO: Inicializa o Mercado Pago de forma estrita, apenas uma vez
+if (MP_PUBLIC_KEY && !window.hasInitializedMP) {
   initMercadoPago(MP_PUBLIC_KEY);
+  window.hasInitializedMP = true; // Trava global contra múltiplas inicializações
 }
 
 // ─────────────────────────────────────────────
@@ -335,11 +337,11 @@ export default function Checkout() {
         <div style={{ textAlign: 'center', padding: '20px 0' }}>
           <span style={{ fontSize: '48px' }}>⚡</span>
           <h3 style={{ color: '#10b981', margin: '16px 0 8px' }}>Assinatura Premium Ativa</h3>
-          <p style={{ fontSize: '14px', color: 'rgba(255, 255, 255, 0.7)', lineHeight: '1.5' }}>Você já possui uma assinatura Premium ativa. Aproveite todos os recursos Pro!</p>
+          <p style={{ fontSize: '14px', color: 'rgba(255, 255, 255, 0.7)', lineHeight: '1.5' }}>Você já possui uma assinatura Premium activa. Aproveite todos os recursos Pro!</p>
           <button onClick={() => window.location.href = '/?app=1'} style={{ marginTop: '20px', backgroundColor: '#3b82f6', color: '#ffffff', border: 'none', borderRadius: '8px', padding: '12px 24px', fontWeight: '600', cursor: 'pointer', width: '100%' }}>Ir para o App</button>
         </div>
 
-      /* ── ESTADO: Assinatura criada com sucesso ── */
+        /* ── ESTADO: Assinatura criada com sucesso ── */
       ) : status === 'success' ? (
         <div style={{ textAlign: 'center', padding: '20px 0' }}>
           <span style={{ fontSize: '48px' }}>🎉</span>
@@ -381,7 +383,7 @@ export default function Checkout() {
           </button>
         </div>
 
-      /* ── ESTADO: Assinatura pendente ── */
+        /* ── ESTADO: Assinatura pendente ── */
       ) : status === 'pending' ? (
         <div style={{ textAlign: 'center', padding: '20px 0' }}>
           <span style={{ fontSize: '48px' }}>⏳</span>
@@ -399,7 +401,7 @@ export default function Checkout() {
           </button>
         </div>
 
-      /* ── ESTADO: Formulário de assinatura ── */
+        /* ── ESTADO: Formulário de assinatura ── */
       ) : (
         <>
           {/* Bloco de identificação do pagador */}
