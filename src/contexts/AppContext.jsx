@@ -797,6 +797,16 @@ export function AppProvider({ children }) {
   // ═══════════════════════════════════════════════════════════════════════════
   // 1. Efeito para Auth State (getSession e onAuthStateChange)
   useEffect(() => {
+    let active = true;
+
+    // Fallback de segurança: Garante 100% que a tela de carregamento inicial é desativada em no máximo 3 segundos
+    const initFallbackTimer = setTimeout(() => {
+      if (active) {
+        console.warn('[AppContext] Fallback de inicialização acionado para destravar renderização.');
+        setIsInitializing(false);
+      }
+    }, 3000);
+
     const buildUser = (u) => ({
       id: u.id,
       email: u.email,
@@ -825,11 +835,15 @@ export function AppProvider({ children }) {
           setCurrentUser(u);
           eventsService.logEvent(u.id, 'login', { method: 'session_restore' }).catch(() => {});
         }
+        clearTimeout(initFallbackTimer);
         setIsInitializing(false);
       })
       .catch((err) => {
         console.error('[AppContext] Erro ao verificar sessão:', err);
-        if (active) setIsInitializing(false);
+        if (active) {
+          clearTimeout(initFallbackTimer);
+          setIsInitializing(false);
+        }
       });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((e, session) => {
@@ -855,11 +869,14 @@ export function AppProvider({ children }) {
       } else {
         setCurrentUser(null);
       }
+      clearTimeout(initFallbackTimer);
+      setIsInitializing(false);
     });
 
     return () => {
       active = false;
-      subscription.unsubscribe();
+      clearTimeout(initFallbackTimer);
+      subscription?.unsubscribe?.();
     };
   }, [runSilentHealthCheck]);
 
