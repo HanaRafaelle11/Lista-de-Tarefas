@@ -1,18 +1,9 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { initMercadoPago, CardPayment } from '@mercadopago/sdk-react';
 import { useAppContext } from '../contexts/AppContext';
 import { profilesService } from '../services/profilesService';
 
-const MP_PUBLIC_KEY = import.meta.env.VITE_MP_PUBLIC_KEY;
-
-// ✨ CORREÇÃO: Inicializa o Mercado Pago de forma estrita, apenas uma vez
-if (MP_PUBLIC_KEY && !window.hasInitializedMP) {
-  initMercadoPago(MP_PUBLIC_KEY);
-  window.hasInitializedMP = true; // Trava global contra múltiplas inicializações
-}
-
 // ─────────────────────────────────────────────
-// Funções de validação (mantidas sem alteração)
+// Funções de validação de formulário
 // ─────────────────────────────────────────────
 
 function validateCpf(cpf) {
@@ -84,63 +75,40 @@ function formatDate(dateStr) {
   }
 }
 
-// ─────────────────────────────────────────────
-// CardPayment Brick memoizado (PCI Compliance)
-// ─────────────────────────────────────────────
-
-const MemoizedCardPayment = React.memo(({ initialization, customization, onSubmit, onError, onReady }) => {
-  return (
-    <CardPayment
-      initialization={initialization}
-      customization={customization}
-      onSubmit={onSubmit}
-      onError={onError}
-      onReady={onReady}
-    />
-  );
-});
-MemoizedCardPayment.displayName = 'MemoizedCardPayment';
-
-// ─────────────────────────────────────────────
-// Componente principal
-// ─────────────────────────────────────────────
-
 export default function Checkout() {
   const { currentUser, isPro, userProfile } = useAppContext();
 
-  // Status do fluxo de assinatura
-  // null | 'processando' | 'success' | 'pending' | 'error'
+  // Aba selecionada: 'pix' | 'card'
+  const [paymentMethod, setPaymentMethod] = useState('pix');
+
+  // Status do fluxo
+  // null | 'processando' | 'pix_generated' | 'success' | 'error'
   const [status, setStatus] = useState(null);
   const [error, setError] = useState(null);
+  const [copied, setCopied] = useState(false);
 
-  // Dados da assinatura criada — exibidos na tela de sucesso
-  const [subscriptionData, setSubscriptionData] = useState(null);
+  // Dados da assinatura/pix gerado
+  const [checkoutData, setCheckoutData] = useState(null);
 
-  // Campos de identificação do pagador
+  // Campos de identificação
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [userCpf, setUserCpf] = useState('');
 
-  // Refs para captura dentro de callbacks assíncronos
-  const firstNameRef = useRef(firstName);
-  const lastNameRef = useRef(lastName);
-  const emailRef = useRef(email);
-  const userCpfRef = useRef(userCpf);
+  // Campos de cartão de crédito
+  const [cardNumber, setCardNumber] = useState('');
+  const [cardHolderName, setCardHolderName] = useState('');
+  const [cardExpiry, setCardExpiry] = useState('');
+  const [cardCcv, setCardCcv] = useState('');
 
-  useEffect(() => { firstNameRef.current = firstName; }, [firstName]);
-  useEffect(() => { lastNameRef.current = lastName; }, [lastName]);
-  useEffect(() => { emailRef.current = email; }, [email]);
-  useEffect(() => { userCpfRef.current = userCpf; }, [userCpf]);
-
-  // Pré-preenchimento de email via usuário logado
+  // Sincronização de usuário logado
   useEffect(() => {
     if (currentUser?.email && !email) {
       setEmail(currentUser.email);
     }
   }, [currentUser?.email, email]);
 
-  // Pré-preenchimento de nome via perfil Supabase
   useEffect(() => {
     if (userProfile && !firstName && !lastName) {
       const fullName = userProfile.name || userProfile.nickname || '';
@@ -154,39 +122,49 @@ export default function Checkout() {
     }
   }, [userProfile, firstName, lastName]);
 
-  // Validação consolidada do formulário de identificação
-  const isFormValid = useMemo(() => {
-    const cleanCpf = userCpf.replace(/\D/g, '');
-    return (
-      isValidName(firstName) &&
-      isValidName(lastName) &&
-      validateEmail(email) &&
-      cleanCpf.length === 11 &&
-      validateCpf(cleanCpf)
-    );
-  }, [firstName, lastName, email, userCpf]);
+  // Polling automático de confirmação Pix
+  useEffect(() => {
+    let timer = null;
+    if (status === 'pix_generated' && currentUser?.id) {
+      timer = setInterval(async () => {
+        try {
+          const res = await fetch(`/api/access/check?userId=${currentUser.id}`);
+          if (res.ok) {
+            const data = await res.json();
+            if (data.isPro) {
+              setStatus('success');
+              clearInterval(timer);
+            }
+          }
+        } catch (e) {
+          console.warn('[Checkout Polling Error]', e);
+        }
+      }, 3000);
+    }
+    return () => {
+      if (timer) clearInterval(timer);
+    };
+  }, [status, currentUser?.id]);
 
-  // ─────────────────────────────────────────────
-  // Handler principal: recebe token do Brick e
-  // envia para /api/subscription/create
-  // ─────────────────────────────────────────────
-  const handleSubmit = useCallback(async (param) => {
+  const handleCopyPix = () => {
+    if (checkoutData?.qr_code) {
+      navigator.clipboard.writeText(checkoutData.qr_code);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 3000);
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError(null);
+    setStatus('processando');
+
     try {
-      setError(null);
-      setStatus('processando');
-
-      const paymentData = param.formData || param;
-
-      const cleanCpf = userCpfRef.current.replace(/\D/g, '');
-      const currentFirstName = firstNameRef.current;
-      const currentLastName = lastNameRef.current;
-      const currentEmail = emailRef.current;
-
-      // Validações de segurança antes de enviar
-      if (!isValidName(currentFirstName) || !isValidName(currentLastName)) {
-        throw new Error('Por favor, preencha nome e sobrenome válidos antes de prosseguir.');
+      const cleanCpf = userCpf.replace(/\D/g, '');
+      if (!isValidName(firstName) || !isValidName(lastName)) {
+        throw new Error('Por favor, informe seu nome e sobrenome completos.');
       }
-      if (!validateEmail(currentEmail)) {
+      if (!validateEmail(email)) {
         throw new Error('Por favor, informe um e-mail válido.');
       }
       if (!cleanCpf || cleanCpf.length !== 11 || !validateCpf(cleanCpf)) {
@@ -195,348 +173,245 @@ export default function Checkout() {
       if (!currentUser?.id) {
         throw new Error('Usuário não autenticado. Faça login novamente.');
       }
-      if (!paymentData.token) {
-        throw new Error('Token do cartão não gerado. Verifique os dados do cartão.');
-      }
 
-      // Sincroniza nome no perfil Supabase
-      const fullName = `${currentFirstName.trim()} ${currentLastName.trim()}`;
+      // Sincronizar perfil no Supabase
       try {
         await profilesService.updateProfile(currentUser.id, {
-          name: fullName,
-          nickname: currentFirstName.toLowerCase().trim()
+          name: `${firstName.trim()} ${lastName.trim()}`,
+          nickname: firstName.toLowerCase().trim()
         });
-      } catch (profileErr) {
-        console.warn('[Checkout] Profile sync ignorado:', profileErr.message);
-      }
+      } catch (_) {}
 
-      // Payload para o backend de assinatura
-      const payload = {
-        card_token_id: paymentData.token,
-        userId: currentUser.id,
-        email: currentEmail.trim(),
-        cpf: cleanCpf,
-        firstName: currentFirstName.trim(),
-        lastName: currentLastName.trim()
-      };
+      if (paymentMethod === 'pix') {
+        const payload = {
+          billingType: 'PIX',
+          userId: currentUser.id,
+          email: email.trim(),
+          cpf: cleanCpf,
+          firstName: firstName.trim(),
+          lastName: lastName.trim()
+        };
 
-      console.log('[Checkout] Enviando para /api/subscription/create:', {
-        ...payload,
-        card_token_id: payload.card_token_id?.slice(0, 8) + '...',
-        cpf: '***.' + cleanCpf.substring(3, 6) + '.' + cleanCpf.substring(6, 9) + '-**'
-      });
+        const res = await fetch('/api/subscription/create', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
 
-      const response = await fetch('/api/subscription/create', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.error || 'Falha ao gerar cobrança Pix.');
+        }
 
-      const resData = await response.json();
-
-      if (!response.ok) {
-        const errorMsg = resData.error || resData.message || 'Erro ao criar assinatura.';
-        throw new Error(errorMsg);
-      }
-
-      if (resData.status === 'authorized') {
-        setSubscriptionData(resData);
-        setStatus('success');
-      } else if (resData.status === 'pending') {
-        setSubscriptionData(resData);
-        setStatus('pending');
+        setCheckoutData(data);
+        setStatus('pix_generated');
       } else {
-        throw new Error(resData.error || `Status inesperado: ${resData.status}`);
+        // Cartão de Crédito
+        const cleanCard = cardNumber.replace(/\D/g, '');
+        const [expMonth, expYear] = cardExpiry.split('/').map(s => s.trim());
+
+        if (cleanCard.length < 13 || !cardHolderName || !expMonth || !expYear || cardCcv.length < 3) {
+          throw new Error('Por favor, preencha todos os dados do cartão corretamente.');
+        }
+
+        const payload = {
+          billingType: 'CREDIT_CARD',
+          userId: currentUser.id,
+          email: email.trim(),
+          cpf: cleanCpf,
+          firstName: firstName.trim(),
+          lastName: lastName.trim(),
+          creditCard: {
+            holderName: cardHolderName.toUpperCase().trim(),
+            number: cleanCard,
+            expiryMonth: expMonth.padStart(2, '0'),
+            expiryYear: expYear.length === 2 ? `20${expYear}` : expYear,
+            ccv: cardCcv.trim()
+          },
+          creditCardHolderInfo: {
+            name: cardHolderName.toUpperCase().trim(),
+            email: email.trim(),
+            cpfCnpj: cleanCpf
+          }
+        };
+
+        const res = await fetch('/api/subscription/create', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.error || 'Falha ao processar assinatura no cartão.');
+        }
+
+        setCheckoutData(data);
+        setStatus('success');
       }
     } catch (err) {
-      console.error('[Checkout] Erro ao criar assinatura:', err);
+      console.error('[Checkout Error]', err);
       setError(err.message);
       setStatus('error');
     }
-  }, [currentUser?.id]);
-
-  const handleError = useCallback((err) => {
-    console.error('[Checkout] Mercado Pago Brick Error:', err);
-    setError('Não foi possível carregar o formulário de pagamento. Verifique as credenciais.');
-    setStatus('error');
-  }, []);
-
-  // Inicialização do Brick — amount necessário pelo CardPayment
-  const initialization = useMemo(() => ({
-    amount: 14.90,
-    payer: {
-      email: currentUser?.email || '',
-      entity_type: 'individual'
-    }
-  }), [currentUser?.email]);
-
-  // Customização do Brick — maxInstallments: 1 pois assinatura não tem parcelamento
-  const customization = useMemo(() => ({
-    visual: {
-      style: {
-        theme: 'dark',
-        customVariables: { baseColor: '#10b981', buttonTextColor: '#ffffff' }
-      }
-    },
-    paymentMethods: {
-      minInstallments: 1,
-      maxInstallments: 1
-    }
-  }), []);
-
-  const handleReady = useCallback(() => { }, []);
-
-  // ─────────────────────────────────────────────
-  // Renderização
-  // ─────────────────────────────────────────────
-
-  // Guard: chave pública ausente
-  if (!MP_PUBLIC_KEY) {
-    return (
-      <div style={{ maxWidth: '440px', margin: '60px auto', padding: '30px', backgroundColor: 'rgba(30, 30, 38, 0.95)', borderRadius: '16px', border: '1px solid rgba(255, 255, 255, 0.08)', boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5)', color: '#ffffff', fontFamily: 'sans-serif', textAlign: 'center' }}>
-        <span style={{ fontSize: '48px' }}>⚠️</span>
-        <h3 style={{ color: '#ef4444', margin: '16px 0 8px' }}>Erro de Configuração</h3>
-        <p style={{ fontSize: '14px', color: 'rgba(255, 255, 255, 0.7)', lineHeight: '1.5' }}>A chave pública do Mercado Pago não está configurada no ambiente.</p>
-      </div>
-    );
-  }
+  };
 
   return (
-    <div style={{ maxWidth: '440px', margin: '60px auto', padding: '30px', backgroundColor: 'rgba(30, 30, 38, 0.95)', borderRadius: '16px', border: '1px solid rgba(255, 255, 255, 0.08)', boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5)', color: '#ffffff', fontFamily: 'sans-serif' }}>
+    <div style={{ maxWidth: '460px', margin: '40px auto', padding: '28px', backgroundColor: 'rgba(24, 24, 32, 0.95)', borderRadius: '20px', border: '1px solid rgba(255, 255, 255, 0.08)', boxShadow: '0 12px 40px rgba(0, 0, 0, 0.6)', color: '#ffffff', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
 
-      {/* Botão voltar */}
-      <div style={{ marginBottom: '20px' }}>
+      {/* Voltar */}
+      <div style={{ marginBottom: '16px' }}>
         <button
           onClick={() => {
             window.history.pushState(null, '', '/?app=1');
             window.dispatchEvent(new Event('popstate'));
           }}
-          style={{ background: 'none', border: 'none', color: 'rgba(255, 255, 255, 0.6)', fontSize: '13px', fontWeight: '600', cursor: 'pointer', padding: '4px 0', display: 'flex', alignItems: 'center', gap: '6px', transition: 'color 0.2s', fontFamily: 'sans-serif' }}
-          onMouseEnter={(e) => e.target.style.color = '#ffffff'}
-          onMouseLeave={(e) => e.target.style.color = 'rgba(255, 255, 255, 0.6)'}
+          style={{ background: 'none', border: 'none', color: 'rgba(255, 255, 255, 0.6)', fontSize: '13px', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
         >
           ← Voltar para o aplicativo
         </button>
       </div>
 
-      {/* Cabeçalho */}
-      <h2 style={{ fontSize: '24px', fontWeight: '800', marginBottom: '8px', textAlign: 'center' }}>MyFlowDay Premium ⚡</h2>
-      <p style={{ fontSize: '14px', color: 'rgba(255, 255, 255, 0.5)', textAlign: 'center', marginBottom: '24px' }}>Acesso completo a todas as ferramentas financeiras, som ambiente e muito mais.</p>
+      <h2 style={{ fontSize: '24px', fontWeight: '800', marginBottom: '6px', textAlign: 'center' }}>MyFlowDay Premium ⚡</h2>
+      <p style={{ fontSize: '13px', color: 'rgba(255, 255, 255, 0.5)', textAlign: 'center', marginBottom: '20px' }}>Libere todas as ferramentas de foco, gestão e áudio sem limites.</p>
 
       {/* Resumo do plano */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px', backgroundColor: 'rgba(255, 255, 255, 0.03)', borderRadius: '8px', marginBottom: '24px', border: '1px solid rgba(255, 255, 255, 0.05)' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px', backgroundColor: 'rgba(16, 185, 129, 0.08)', borderRadius: '12px', marginBottom: '20px', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
         <div>
-          <span style={{ fontSize: '15px', fontWeight: '600', display: 'block' }}>Plano Pro</span>
-          <span style={{ fontSize: '12px', color: 'rgba(255, 255, 255, 0.4)' }}>Assinatura mensal automática</span>
+          <span style={{ fontSize: '15px', fontWeight: '700', display: 'block' }}>Assinatura Pro</span>
+          <span style={{ fontSize: '12px', color: 'rgba(255, 255, 255, 0.5)' }}>Cobrança recorrente mensal</span>
         </div>
         <span style={{ fontSize: '18px', fontWeight: '800', color: '#10b981' }}>R$ 14,90 / mês</span>
       </div>
 
-      {/* ── ESTADO: Já é premium ── */}
+      {/* ESTADO: Já é Pro */}
       {(isPro || userProfile?.plano === 'premium') ? (
-        <div style={{ textAlign: 'center', padding: '20px 0' }}>
+        <div style={{ textAlign: 'center', padding: '24px 0' }}>
           <span style={{ fontSize: '48px' }}>⚡</span>
-          <h3 style={{ color: '#10b981', margin: '16px 0 8px' }}>Assinatura Premium Ativa</h3>
-          <p style={{ fontSize: '14px', color: 'rgba(255, 255, 255, 0.7)', lineHeight: '1.5' }}>Você já possui uma assinatura Premium activa. Aproveite todos os recursos Pro!</p>
-          <button onClick={() => window.location.href = '/?app=1'} style={{ marginTop: '20px', backgroundColor: '#3b82f6', color: '#ffffff', border: 'none', borderRadius: '8px', padding: '12px 24px', fontWeight: '600', cursor: 'pointer', width: '100%' }}>Ir para o App</button>
+          <h3 style={{ color: '#10b981', margin: '16px 0 8px' }}>Sua Assinatura está Ativa!</h3>
+          <p style={{ fontSize: '14px', color: 'rgba(255, 255, 255, 0.7)', lineHeight: '1.5', marginBottom: '20px' }}>Você já é um membro Premium. Todos os recursos Pro estão liberados na sua conta.</p>
+          <button onClick={() => window.location.href = '/?app=1'} style={{ width: '100%', backgroundColor: '#10b981', color: '#ffffff', border: 'none', borderRadius: '10px', padding: '14px', fontWeight: '700', cursor: 'pointer' }}>Acessar MyFlowDay ⚡</button>
         </div>
-
-        /* ── ESTADO: Assinatura criada com sucesso ── */
       ) : status === 'success' ? (
-        <div style={{ textAlign: 'center', padding: '20px 0' }}>
+        /* ESTADO: Sucesso */
+        <div style={{ textAlign: 'center', padding: '24px 0' }}>
           <span style={{ fontSize: '48px' }}>🎉</span>
-          <h3 style={{ color: '#10b981', margin: '16px 0 8px' }}>Assinatura Ativada!</h3>
-          <p style={{ fontSize: '14px', color: 'rgba(255, 255, 255, 0.7)', lineHeight: '1.5', marginBottom: '20px' }}>
-            Sua assinatura foi criada com sucesso e o acesso Premium já está liberado.
-          </p>
+          <h3 style={{ color: '#10b981', margin: '16px 0 8px' }}>Assinatura Ativada com Sucesso!</h3>
+          <p style={{ fontSize: '14px', color: 'rgba(255, 255, 255, 0.7)', lineHeight: '1.5', marginBottom: '20px' }}>Seu pagamento foi confirmado pelo Asaas e o plano Premium já está pronto para uso.</p>
+          <button onClick={() => window.location.href = '/?app=1'} style={{ width: '100%', backgroundColor: '#10b981', color: '#ffffff', border: 'none', borderRadius: '10px', padding: '14px', fontWeight: '700', cursor: 'pointer' }}>Entrar no App Pro ⚡</button>
+        </div>
+      ) : status === 'pix_generated' ? (
+        /* ESTADO: Pix Gerado */
+        <div style={{ textAlign: 'center' }}>
+          <h3 style={{ color: '#10b981', fontSize: '18px', marginBottom: '12px' }}>Pague com Pix para Ativar ⚡</h3>
+          <p style={{ fontSize: '13px', color: 'rgba(255, 255, 255, 0.7)', marginBottom: '16px' }}>Abra o app do seu banco e escaneie o código abaixo ou use o Pix Copia e Cola.</p>
 
-          {/* Detalhes da assinatura */}
-          {subscriptionData && (
-            <div style={{ backgroundColor: 'rgba(16, 185, 129, 0.05)', border: '1px solid rgba(16, 185, 129, 0.2)', borderRadius: '10px', padding: '16px', marginBottom: '20px', textAlign: 'left' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
-                <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)' }}>ID da Assinatura</span>
-                <span style={{ fontSize: '12px', color: '#10b981', fontFamily: 'monospace' }}>
-                  {subscriptionData.mp_subscription_id
-                    ? subscriptionData.mp_subscription_id.slice(0, 12) + '...'
-                    : '—'}
-                </span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
-                <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)' }}>Status</span>
-                <span style={{ fontSize: '12px', fontWeight: '700', color: '#10b981' }}>✓ Autorizada</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
-                <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)' }}>Próxima cobrança</span>
-                <span style={{ fontSize: '12px', color: '#ffffff', fontWeight: '600' }}>
-                  {formatDate(subscriptionData.next_payment_date)}
-                </span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)' }}>Valor mensal</span>
-                <span style={{ fontSize: '12px', color: '#ffffff', fontWeight: '600' }}>R$ 14,90</span>
-              </div>
+          {checkoutData?.qr_code_base64 && (
+            <div style={{ backgroundColor: '#ffffff', padding: '12px', borderRadius: '12px', display: 'inline-block', marginBottom: '16px' }}>
+              <img src={checkoutData.qr_code_base64} alt="QR Code Pix" style={{ width: '180px', height: '180px', display: 'block' }} />
             </div>
           )}
 
-          <button onClick={() => window.location.href = '/?app=1'} style={{ backgroundColor: '#10b981', color: '#ffffff', border: 'none', borderRadius: '8px', padding: '12px 24px', fontWeight: '600', cursor: 'pointer', width: '100%' }}>
-            Acessar MyFlowDay Premium ⚡
-          </button>
-        </div>
-
-        /* ── ESTADO: Assinatura pendente ── */
-      ) : status === 'pending' ? (
-        <div style={{ textAlign: 'center', padding: '20px 0' }}>
-          <span style={{ fontSize: '48px' }}>⏳</span>
-          <h3 style={{ color: '#f59e0b', margin: '16px 0 8px' }}>Assinatura em Análise</h3>
-          <p style={{ fontSize: '14px', color: 'rgba(255, 255, 255, 0.7)', lineHeight: '1.5', marginBottom: '20px' }}>
-            Sua assinatura está sendo analisada pelo Mercado Pago. O acesso Premium será liberado automaticamente assim que aprovada.
-          </p>
-          {subscriptionData?.mp_subscription_id && (
-            <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.4)', marginBottom: '20px', fontFamily: 'monospace' }}>
-              Ref: {subscriptionData.mp_subscription_id}
-            </p>
+          {checkoutData?.qr_code && (
+            <div style={{ marginBottom: '20px' }}>
+              <input
+                type="text"
+                readOnly
+                value={checkoutData.qr_code}
+                style={{ width: '100%', padding: '10px', backgroundColor: 'rgba(255, 255, 255, 0.05)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '8px', color: 'rgba(255, 255, 255, 0.8)', fontSize: '12px', fontFamily: 'monospace', marginBottom: '10px', textAlign: 'center' }}
+              />
+              <button
+                onClick={handleCopyPix}
+                style={{ width: '100%', backgroundColor: copied ? '#059669' : '#10b981', color: '#ffffff', border: 'none', borderRadius: '10px', padding: '12px', fontWeight: '700', cursor: 'pointer', transition: 'background 0.2s' }}
+              >
+                {copied ? '✓ Código Copiado!' : '📋 Copiar Código Pix (Copia e Cola)'}
+              </button>
+            </div>
           )}
-          <button onClick={() => window.location.href = '/?app=1'} style={{ backgroundColor: '#f59e0b', color: '#ffffff', border: 'none', borderRadius: '8px', padding: '12px 24px', fontWeight: '600', cursor: 'pointer', width: '100%' }}>
-            Voltar ao App
-          </button>
-        </div>
 
-        /* ── ESTADO: Formulário de assinatura ── */
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontSize: '13px', color: '#f59e0b', backgroundColor: 'rgba(245, 158, 11, 0.1)', padding: '10px', borderRadius: '8px' }}>
+            <span className="spinner" style={{ display: 'inline-block', animation: 'spin 1s linear infinite' }}>⏳</span>
+            <span>Aguardando confirmação do pagamento em tempo real...</span>
+          </div>
+        </div>
       ) : (
-        <>
-          {/* Bloco de identificação do pagador */}
-          <div style={{ backgroundColor: 'rgba(255, 255, 255, 0.02)', border: '1px solid rgba(255, 255, 255, 0.06)', borderRadius: '12px', padding: '20px', marginBottom: '24px' }}>
-            <h3 style={{ fontSize: '15px', fontWeight: '700', marginTop: 0, marginBottom: '16px', color: '#10b981', display: 'flex', alignItems: 'center', gap: '8px' }}>👤 Identificação do Pagador</h3>
-
-            {/* Nome + Sobrenome */}
-            <div style={{ display: 'flex', gap: '12px', marginBottom: '14px' }}>
-              <div style={{ flex: 1 }}>
-                <label style={{ display: 'block', fontSize: '12px', color: 'rgba(255, 255, 255, 0.6)', marginBottom: '6px' }}>Nome</label>
-                <div style={{ position: 'relative' }}>
-                  <input
-                    type="text"
-                    value={firstName}
-                    onChange={(e) => setFirstName(e.target.value)}
-                    autoComplete="new-password"
-                    placeholder="Ex: João"
-                    style={{ width: '100%', padding: '10px 32px 10px 12px', backgroundColor: '#13131a', border: `1px solid ${firstName ? (isValidName(firstName) ? 'rgba(16, 185, 129, 0.4)' : 'rgba(239, 68, 68, 0.4)') : 'rgba(255, 255, 255, 0.1)'}`, borderRadius: '8px', color: '#ffffff', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }}
-                  />
-                  {firstName && <span style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', color: isValidName(firstName) ? '#10b981' : '#ef4444', fontSize: '14px', fontWeight: 'bold' }}>{isValidName(firstName) ? '✓' : '✗'}</span>}
-                </div>
-              </div>
-              <div style={{ flex: 1 }}>
-                <label style={{ display: 'block', fontSize: '12px', color: 'rgba(255, 255, 255, 0.6)', marginBottom: '6px' }}>Sobrenome</label>
-                <div style={{ position: 'relative' }}>
-                  <input
-                    type="text"
-                    value={lastName}
-                    onChange={(e) => setLastName(e.target.value)}
-                    autoComplete="new-password"
-                    placeholder="Ex: Silva"
-                    style={{ width: '100%', padding: '10px 32px 10px 12px', backgroundColor: '#13131a', border: `1px solid ${lastName ? (isValidName(lastName) ? 'rgba(16, 185, 129, 0.4)' : 'rgba(239, 68, 68, 0.4)') : 'rgba(255, 255, 255, 0.1)'}`, borderRadius: '8px', color: '#ffffff', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }}
-                  />
-                  {lastName && <span style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', color: isValidName(lastName) ? '#10b981' : '#ef4444', fontSize: '14px', fontWeight: 'bold' }}>{isValidName(lastName) ? '✓' : '✗'}</span>}
-                </div>
-              </div>
-            </div>
-
-            {/* E-mail */}
-            <div style={{ marginBottom: '14px' }}>
-              <label style={{ display: 'block', fontSize: '12px', color: 'rgba(255, 255, 255, 0.6)', marginBottom: '6px' }}>E-mail</label>
-              <div style={{ position: 'relative' }}>
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="seu@email.com"
-                  style={{ width: '100%', padding: '10px 32px 10px 12px', backgroundColor: '#13131a', border: `1px solid ${email ? (validateEmail(email) ? 'rgba(16, 185, 129, 0.4)' : 'rgba(239, 68, 68, 0.4)') : 'rgba(255, 255, 255, 0.1)'}`, borderRadius: '8px', color: '#ffffff', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }}
-                />
-                {email && <span style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', color: validateEmail(email) ? '#10b981' : '#ef4444', fontSize: '14px', fontWeight: 'bold' }}>{validateEmail(email) ? '✓' : '✗'}</span>}
-              </div>
-            </div>
-
-            {/* CPF */}
-            <div>
-              <label style={{ display: 'block', fontSize: '12px', color: 'rgba(255, 255, 255, 0.6)', marginBottom: '6px' }}>CPF (somente números)</label>
-              <div style={{ position: 'relative' }}>
-                <input
-                  type="text"
-                  value={userCpf}
-                  onChange={(e) => {
-                    const val = e.target.value.replace(/\D/g, '').slice(0, 11);
-                    setUserCpf(val);
-                  }}
-                  autoComplete="new-password"
-                  placeholder="00000000000"
-                  style={{ width: '100%', padding: '10px 32px 10px 12px', backgroundColor: '#13131a', border: `1px solid ${userCpf ? (validateCpf(userCpf) ? 'rgba(16, 185, 129, 0.4)' : 'rgba(239, 68, 68, 0.4)') : 'rgba(255, 255, 255, 0.1)'}`, borderRadius: '8px', color: '#ffffff', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }}
-                />
-                {userCpf && <span style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', color: validateCpf(userCpf) ? '#10b981' : '#ef4444', fontSize: '14px', fontWeight: 'bold' }}>{validateCpf(userCpf) ? '✓' : '✗'}</span>}
-              </div>
-            </div>
+        /* FORMULÁRIO DE CHECKOUT */
+        <form onSubmit={handleSubmit}>
+          {/* Seletor de Métodos */}
+          <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
+            <button
+              type="button"
+              onClick={() => setPaymentMethod('pix')}
+              style={{ flex: 1, padding: '12px', borderRadius: '10px', border: '1px solid', borderColor: paymentMethod === 'pix' ? '#10b981' : 'rgba(255, 255, 255, 0.1)', backgroundColor: paymentMethod === 'pix' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(255, 255, 255, 0.03)', color: '#ffffff', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+            >
+              <span>❖</span> Pix (Instantâneo)
+            </button>
+            <button
+              type="button"
+              onClick={() => setPaymentMethod('card')}
+              style={{ flex: 1, padding: '12px', borderRadius: '10px', border: '1px solid', borderColor: paymentMethod === 'card' ? '#10b981' : 'rgba(255, 255, 255, 0.1)', backgroundColor: paymentMethod === 'card' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(255, 255, 255, 0.03)', color: '#ffffff', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+            >
+              <span>💳</span> Cartão de Crédito
+            </button>
           </div>
 
-          {/* Bloco do Brick de cartão com blur-lock */}
-          <div style={{ position: 'relative' }}>
-            <div style={{ opacity: isFormValid ? 1 : 0.15, filter: isFormValid ? 'none' : 'blur(4px)', transition: 'all 0.3s ease' }}>
-              {/* Indicador de assinatura recorrente */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px', padding: '10px 14px', backgroundColor: 'rgba(16, 185, 129, 0.06)', border: '1px solid rgba(16, 185, 129, 0.15)', borderRadius: '8px' }}>
-                <span style={{ fontSize: '16px' }}>🔄</span>
-                <div>
-                  <span style={{ fontSize: '13px', fontWeight: '600', color: '#10b981', display: 'block' }}>Assinatura Recorrente</span>
-                  <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.45)' }}>R$ 14,90 cobrado automaticamente todo mês. Cancele quando quiser.</span>
-                </div>
-              </div>
-
-              <div id="card-payment-brick-container" style={{ minHeight: '150px' }}>
-                {isFormValid ? (
-                  <MemoizedCardPayment
-                    initialization={initialization}
-                    customization={customization}
-                    onSubmit={handleSubmit}
-                    onError={handleError}
-                    onReady={handleReady}
-                  />
-                ) : (
-                  <div style={{ backgroundColor: 'rgba(20, 20, 28, 0.75)', border: '1px dashed rgba(255, 255, 255, 0.12)', borderRadius: '12px', padding: '30px 20px', textAlign: 'center' }}>
-                    <span style={{ fontSize: '32px', display: 'block', marginBottom: '12px' }}>🔒</span>
-                    <h4 style={{ margin: '0 0 8px 0', fontSize: '15px', fontWeight: '700', color: '#ffffff' }}>Dados do Pagador Necessários</h4>
-                    <p style={{ margin: 0, fontSize: '13px', color: 'rgba(255, 255, 255, 0.6)', lineHeight: '1.5' }}>Preencha os dados de identificação para liberar o cartão.</p>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Overlay de bloqueio */}
-            {!isFormValid && (
-              <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(20, 20, 28, 0.82)', backdropFilter: 'blur(6px)', borderRadius: '12px', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', textAlign: 'center', padding: '24px', zIndex: 10, border: '1px dashed rgba(255, 255, 255, 0.12)' }}>
-                <span style={{ fontSize: '32px', marginBottom: '12px' }}>🔒</span>
-                <h4 style={{ margin: '0 0 8px 0', fontSize: '15px', fontWeight: '700', color: '#ffffff' }}>Cartão Bloqueado</h4>
-                <p style={{ margin: 0, fontSize: '13px', color: 'rgba(255, 255, 255, 0.6)', lineHeight: '1.5' }}>Preencha os dados de identificação acima para liberar o formulário de cartão.</p>
-              </div>
-            )}
-          </div>
-
-          {/* Indicador de processamento */}
-          {status === 'processando' && (
-            <div style={{ textAlign: 'center', marginTop: '16px', fontSize: '13px', color: 'rgba(255, 255, 255, 0.5)' }}>
-              ⏳ Criando assinatura...
+          {error && (
+            <div style={{ backgroundColor: 'rgba(239, 68, 68, 0.15)', border: '1px solid rgba(239, 68, 68, 0.3)', color: '#fca5a5', padding: '12px', borderRadius: '8px', fontSize: '13px', marginBottom: '16px' }}>
+              ⚠️ {error}
             </div>
           )}
 
-          {/* Mensagem de erro */}
-          {status === 'error' && (
-            <div style={{ marginTop: '16px', padding: '12px', backgroundColor: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: '8px', color: '#ef4444', fontSize: '13px', textAlign: 'center' }}>
-              {error}
+          {/* Dados do Titular */}
+          <div style={{ marginBottom: '16px' }}>
+            <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: 'rgba(255, 255, 255, 0.7)', marginBottom: '6px' }}>Seu Nome Completo</label>
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <input type="text" placeholder="Nome" value={firstName} onChange={e => setFirstName(e.target.value)} required style={{ flex: 1, padding: '10px 12px', backgroundColor: 'rgba(255, 255, 255, 0.05)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '8px', color: '#ffffff', fontSize: '14px' }} />
+              <input type="text" placeholder="Sobrenome" value={lastName} onChange={e => setLastName(e.target.value)} required style={{ flex: 1, padding: '10px 12px', backgroundColor: 'rgba(255, 255, 255, 0.05)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '8px', color: '#ffffff', fontSize: '14px' }} />
+            </div>
+          </div>
+
+          <div style={{ marginBottom: '16px' }}>
+            <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: 'rgba(255, 255, 255, 0.7)', marginBottom: '6px' }}>E-mail</label>
+            <input type="email" placeholder="seuemail@exemplo.com" value={email} onChange={e => setEmail(e.target.value)} required style={{ width: '100%', padding: '10px 12px', backgroundColor: 'rgba(255, 255, 255, 0.05)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '8px', color: '#ffffff', fontSize: '14px' }} />
+          </div>
+
+          <div style={{ marginBottom: '20px' }}>
+            <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: 'rgba(255, 255, 255, 0.7)', marginBottom: '6px' }}>CPF do Titular</label>
+            <input type="text" placeholder="000.000.000-00" value={userCpf} onChange={e => setUserCpf(e.target.value)} required style={{ width: '100%', padding: '10px 12px', backgroundColor: 'rgba(255, 255, 255, 0.05)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '8px', color: '#ffffff', fontSize: '14px' }} />
+          </div>
+
+          {/* Campos de Cartão de Crédito */}
+          {paymentMethod === 'card' && (
+            <div style={{ padding: '16px', backgroundColor: 'rgba(255, 255, 255, 0.02)', borderRadius: '12px', border: '1px solid rgba(255, 255, 255, 0.06)', marginBottom: '20px' }}>
+              <div style={{ marginBottom: '12px' }}>
+                <label style={{ display: 'block', fontSize: '11px', color: 'rgba(255, 255, 255, 0.6)', marginBottom: '4px' }}>Número do Cartão</label>
+                <input type="text" placeholder="0000 0000 0000 0000" value={cardNumber} onChange={e => setCardNumber(e.target.value)} required style={{ width: '100%', padding: '10px', backgroundColor: 'rgba(0, 0, 0, 0.2)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '6px', color: '#ffffff', fontSize: '13px' }} />
+              </div>
+              <div style={{ marginBottom: '12px' }}>
+                <label style={{ display: 'block', fontSize: '11px', color: 'rgba(255, 255, 255, 0.6)', marginBottom: '4px' }}>Nome impresso no cartão</label>
+                <input type="text" placeholder="NOME COMO NO CARTAO" value={cardHolderName} onChange={e => setCardHolderName(e.target.value)} required style={{ width: '100%', padding: '10px', backgroundColor: 'rgba(0, 0, 0, 0.2)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '6px', color: '#ffffff', fontSize: '13px' }} />
+              </div>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <div style={{ flex: 1 }}>
+                  <label style={{ display: 'block', fontSize: '11px', color: 'rgba(255, 255, 255, 0.6)', marginBottom: '4px' }}>Validade (MM/AA)</label>
+                  <input type="text" placeholder="12/28" value={cardExpiry} onChange={e => setCardExpiry(e.target.value)} required style={{ width: '100%', padding: '10px', backgroundColor: 'rgba(0, 0, 0, 0.2)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '6px', color: '#ffffff', fontSize: '13px' }} />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label style={{ display: 'block', fontSize: '11px', color: 'rgba(255, 255, 255, 0.6)', marginBottom: '4px' }}>CVV / CCV</label>
+                  <input type="text" placeholder="123" value={cardCcv} onChange={e => setCardCcv(e.target.value)} required style={{ width: '100%', padding: '10px', backgroundColor: 'rgba(0, 0, 0, 0.2)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '6px', color: '#ffffff', fontSize: '13px' }} />
+                </div>
+              </div>
             </div>
           )}
 
-          {/* Rodapé de segurança */}
-          <div style={{ marginTop: '20px', textAlign: 'center' }}>
-            <p style={{ fontSize: '11px', color: 'rgba(255, 255, 255, 0.3)', margin: 0 }}>
-              🔒 Pagamento seguro via Mercado Pago · Seus dados são criptografados
-            </p>
-          </div>
-        </>
+          <button
+            type="submit"
+            disabled={status === 'processando'}
+            style={{ width: '100%', backgroundColor: '#10b981', color: '#ffffff', border: 'none', borderRadius: '12px', padding: '14px', fontSize: '15px', fontWeight: '700', cursor: 'pointer', opacity: status === 'processando' ? 0.7 : 1 }}
+          >
+            {status === 'processando' ? 'Processando no Asaas...' : paymentMethod === 'pix' ? 'Gerar QR Code Pix ⚡' : 'Assinar com Cartão ⚡'}
+          </button>
+        </form>
       )}
     </div>
   );

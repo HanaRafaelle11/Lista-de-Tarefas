@@ -150,9 +150,9 @@ async function testCheckPremiumAccessDirectly() {
 async function testWebhookUnknownEvent() {
     console.log('\n🔔 Suite 5: Webhook — evento desconhecido logado');
 
-    const r = await apiPost('webhooks/mercadopago', {
-        type: 'unknown_event_type',
-        data: { id: 'test-123' }
+    const r = await apiPost('webhooks/asaas', {
+        event: 'UNKNOWN_EVENT_TYPE',
+        payment: { id: 'test-123' }
     });
 
     // Deve aceitar (200) mas não processar

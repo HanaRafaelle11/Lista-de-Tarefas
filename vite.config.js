@@ -123,10 +123,20 @@ const apiDevServerPlugin = () => ({
   }
 });
 
+const hasCertificates = fs.existsSync('key.pem') && fs.existsSync('cert.pem');
+const serverConfig = hasCertificates ? {
+  https: {
+    key: fs.readFileSync('key.pem'),
+    cert: fs.readFileSync('cert.pem')
+  },
+  host: true
+} : undefined;
+
 export default defineConfig({
   define: {
     __APP_VERSION__: JSON.stringify(process.env.npm_package_version || '2.0.1')
   },
+  server: serverConfig,
   plugins: [
     apiDevServerPlugin(),
     react(),

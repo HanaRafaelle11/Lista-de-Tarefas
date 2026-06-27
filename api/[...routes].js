@@ -1,9 +1,15 @@
-import crypto from 'crypto'; // [cite: 1]
-// NOTA: MPPayment mantido para o fluxo LEGACY de pagamentos avulsos.
-// O novo fluxo de assinaturas usa fetch direto à API REST do Mercado Pago.
-import { MercadoPagoConfig, Payment as MPPayment } from 'mercadopago'; // [cite: 2, 3]
+import crypto from 'crypto';
+import https from 'https';
+
+// Forçar TLS 1.2 ou superior em todas as conexões HTTPS globais realizadas pelo Node.js
+https.globalAgent.options.minVersion = 'TLSv1.2';
 
 import { supabaseAdmin } from '../lib/supabase.js';
+import { PaymentGateway } from '../lib/paymentGateway/index.js';
+import { handleAsaasWebhook } from './webhooks/asaas.js';
+import handleUnifiedAsaasWebhook from './billing/asaas-webhook.js';
+import handleBillingExpirationCron from './cron/billing-expiration.js';
+
 
 // =========================================================
 // UTILITÁRIOS DE SEGURANÇA E MASCARAMENTO
@@ -21,9 +27,36 @@ const maskCpf = (cpf) => {
 };
 
 const isGenericName = (name) => {
-    const genericNames = ['teste', 'test', 'usuario', 'user', 'admin'];
-    return genericNames.includes(name.toLowerCase().trim()); // [cite: 7]
+    if (!name) return true;
+    const genericNames = ['usuario', 'flowday', 'usuario flowday', 'usuarioflowday', 'null', 'undefined'];
+    return genericNames.includes(name.toLowerCase().trim()) || name.trim() === '';
 };
+
+function validateCpf(cpf) {
+    if (!cpf) return false;
+    const cleanCpf = cpf.replace(/\D/g, '');
+    if (cleanCpf.length !== 11) return false;
+    
+    if (/^(\d)\1{10}$/.test(cleanCpf)) return false;
+    
+    let sum = 0;
+    for (let i = 0; i < 9; i++) {
+        sum += parseInt(cleanCpf.charAt(i)) * (10 - i);
+    }
+    let rev = 11 - (sum % 11);
+    if (rev === 10 || rev === 11) rev = 0;
+    if (rev !== parseInt(cleanCpf.charAt(9))) return false;
+    
+    sum = 0;
+    for (let i = 0; i < 10; i++) {
+        sum += parseInt(cleanCpf.charAt(i)) * (11 - i);
+    }
+    rev = 11 - (sum % 11);
+    if (rev === 10 || rev === 11) rev = 0;
+    if (rev !== parseInt(cleanCpf.charAt(10))) return false;
+    
+    return true;
+}
 
 // =========================================================
 // normalizeStatus — MANTIDA (fluxo legado de pagamentos)
@@ -51,9 +84,9 @@ const normalizeStatus = (status) => {
 // =========================================================
 
 const subscriptionStatusMap = {
-    'authorized': 'authorized',
+    'authorized': 'active',
     'paused': 'paused',
-    'cancelled': 'cancelled',
+    'cancelled': 'canceled',
     'expired': 'expired',
     'payment_required': 'payment_required',
     'pending': 'pending'
@@ -163,17 +196,31 @@ const SubscriptionBillingEngine = {
         }
     },
 
-    // Ativa premium: status authorized
+    // Ativa premium: status active
     async handleAuthorized(userId, mpSubscriptionId, subscriptionResult) {
         if (!userId || !mpSubscriptionId) return;
         const now = new Date().toISOString(); // [cite: 30]
 
+        const { data: profileBefore } = await supabaseAdmin
+            .from('profiles')
+            .select('plano')
+            .eq('id', userId)
+            .maybeSingle();
+        const isUpgrading = !profileBefore || profileBefore.plano !== 'premium';
+
         const nextBillingDate = subscriptionResult.next_payment_date || null;
+
+        console.log('[SUPABASE UPDATE]', {
+            user_id: userId,
+            update_fields: { plano: 'premium', assinatura_status: 'active', assinatura_inicio: now, assinatura_expira_em: nextBillingDate },
+            timestamp: new Date().toISOString()
+        });
+
         // DENORMALIZAÇÃO — fonte de verdade é subscriptions.status
         // profiles.assinatura_status existe apenas para leitura rápida no frontend
         await supabaseAdmin.from('profiles').update({
             plano: 'premium',
-            assinatura_status: 'authorized',
+            assinatura_status: 'active',
             assinatura_inicio: now,
             assinatura_expira_em: nextBillingDate,
             mercadopago_customer_id: subscriptionResult.payer_id // [cite: 32]
@@ -184,7 +231,7 @@ const SubscriptionBillingEngine = {
         await supabaseAdmin.from('subscriptions').upsert({ // [cite: 33]
             user_id: userId,
             mp_subscription_id: mpSubscriptionId,
-            status: 'authorized',
+            status: 'active',
             plan: 'premium',
             amount: 14.90,
             next_billing_date: nextBillingDate,
@@ -194,6 +241,62 @@ const SubscriptionBillingEngine = {
             provider: 'mercado_pago',
             updated_at: now
         }, { onConflict: 'user_id' });
+
+        console.log('[PLAN UPDATED]', {
+            user_id: userId,
+            plan_before: profileBefore?.plano || 'free',
+            plan_after: 'premium',
+            timestamp: new Date().toISOString()
+        });
+
+        try {
+            await supabaseAdmin.from('events').insert([
+                {
+                    user_id: userId,
+                    event_type: 'payment_received',
+                    metadata: { payment_id: mpSubscriptionId },
+                    created_at: now
+                },
+                {
+                    user_id: userId,
+                    event_type: 'payment_approved',
+                    metadata: { payment_id: mpSubscriptionId },
+                    created_at: now
+                }
+            ]);
+        } catch (_) {}
+
+        if (isUpgrading) {
+            try {
+                await supabaseAdmin.from('events').insert([{
+                    user_id: userId,
+                    event_type: 'user_upgraded',
+                    metadata: { payment_id: mpSubscriptionId, from_plan: profileBefore?.plano || 'free', to_plan: 'premium' },
+                    created_at: now
+                }]);
+            } catch (_) {}
+        }
+
+        try {
+            await supabaseAdmin.from('billing_events').insert([{
+                payment_id: mpSubscriptionId,
+                user_id: userId,
+                status: 'approved',
+                created_at: now
+            }]);
+        } catch (_) {}
+
+        if (isUpgrading) {
+            try {
+                await supabaseAdmin.from('billing_events').insert([{
+                    payment_id: `upg_${mpSubscriptionId}`,
+                    user_id: userId,
+                    status: 'approved',
+                    created_at: now
+                }]);
+            } catch (_) {}
+        }
+
         await this.logEvent(mpSubscriptionId, 'subscription.authorized', { // [cite: 35]
             user_id: userId,
             next_payment_date: nextBillingDate,
@@ -211,28 +314,98 @@ const SubscriptionBillingEngine = {
         const nextBillingDate = nextMonth.toISOString();
         const nowIso = now.toISOString(); // [cite: 38]
 
+        const paymentStr = paymentId ? String(paymentId) : `pay_${Date.now()}`;
+        const { data: profileBefore } = await supabaseAdmin
+            .from('profiles')
+            .select('plano')
+            .eq('id', userId)
+            .maybeSingle();
+        const isUpgrading = !profileBefore || profileBefore.plano !== 'premium';
+
+        console.log('[SUPABASE UPDATE]', {
+            user_id: userId,
+            update_fields: { plano: 'premium', assinatura_status: 'active', assinatura_expira_em: nextBillingDate },
+            timestamp: new Date().toISOString()
+        });
+
         // DENORMALIZAÇÃO — fonte de verdade é subscriptions.status
         await supabaseAdmin.from('profiles').update({
             plano: 'premium',
-            assinatura_status: 'authorized',
+            assinatura_status: 'active',
             assinatura_expira_em: nextBillingDate,
             updated_at: nowIso
         }).eq('id', userId);
         await supabaseAdmin.from('subscriptions').upsert({ // [cite: 39]
             user_id: userId,
             mp_subscription_id: mpSubscriptionId,
-            status: 'authorized',
+            status: 'active',
             plan: 'premium',
             amount: amount || 14.90,
             next_billing_date: nextBillingDate,
             last_payment_date: nowIso,
-            last_payment_id: paymentId ? String(paymentId) : null, // [cite: 40]
+            last_payment_id: paymentStr, // [cite: 40]
             provider: 'mercado_pago',
             updated_at: nowIso
         }, { onConflict: 'user_id' });
+
+        console.log('[PLAN UPDATED]', {
+            user_id: userId,
+            plan_before: profileBefore?.plano || 'free',
+            plan_after: 'premium',
+            timestamp: new Date().toISOString()
+        });
+
+        try {
+            await supabaseAdmin.from('events').insert([
+                {
+                    user_id: userId,
+                    event_type: 'payment_received',
+                    metadata: { payment_id: paymentStr, amount },
+                    created_at: nowIso
+                },
+                {
+                    user_id: userId,
+                    event_type: 'payment_approved',
+                    metadata: { payment_id: paymentStr, amount },
+                    created_at: nowIso
+                }
+            ]);
+        } catch (_) {}
+
+        if (isUpgrading) {
+            try {
+                await supabaseAdmin.from('events').insert([{
+                    user_id: userId,
+                    event_type: 'user_upgraded',
+                    metadata: { payment_id: paymentStr, from_plan: profileBefore?.plano || 'free', to_plan: 'premium' },
+                    created_at: nowIso
+                }]);
+            } catch (_) {}
+        }
+
+        try {
+            await supabaseAdmin.from('billing_events').insert([{
+                payment_id: paymentStr,
+                user_id: userId,
+                status: 'approved',
+                created_at: nowIso
+            }]);
+        } catch (_) {}
+
+        if (isUpgrading) {
+            try {
+                await supabaseAdmin.from('billing_events').insert([{
+                    payment_id: `upg_${paymentStr}`,
+                    user_id: userId,
+                    status: 'approved',
+                    created_at: nowIso
+                }]);
+            } catch (_) {}
+        }
+
         await this.logEvent(mpSubscriptionId, 'subscription.payment_approved', { // [cite: 41]
             user_id: userId,
-            payment_id: paymentId,
+            payment_id: paymentStr,
             amount: amount,
             next_billing_date: nextBillingDate
         });
@@ -262,7 +435,7 @@ const SubscriptionBillingEngine = {
         console.warn(`[SubscriptionBillingEngine] ⏸ Acesso SUSPENSO para userId=${userId} | sub=${mpSubscriptionId}`); // [cite: 46]
     },
 
-    // Cancela acesso: status cancelled
+    // Cancela acesso: status canceled
     async handleCancelled(userId, mpSubscriptionId, rawPayload) {
         if (!userId) return;
         const now = new Date().toISOString(); // [cite: 47]
@@ -270,13 +443,13 @@ const SubscriptionBillingEngine = {
         // DENORMALIZAÇÃO — fonte de verdade é subscriptions.status
         await supabaseAdmin.from('profiles').update({
             plano: 'free',
-            assinatura_status: 'cancelled',
+            assinatura_status: 'canceled',
             updated_at: now
         }).eq('id', userId);
         await supabaseAdmin.from('subscriptions').upsert({ // [cite: 48]
             user_id: userId,
             mp_subscription_id: mpSubscriptionId,
-            status: 'cancelled',
+            status: 'canceled',
             updated_at: now
         }, { onConflict: 'user_id' });
         await this.logEvent(mpSubscriptionId, 'subscription.cancelled', { // [cite: 49]
@@ -314,21 +487,63 @@ const SubscriptionBillingEngine = {
     async handleChargedBack(userId, mpSubscriptionId, paymentId, rawPayload) {
         if (!userId) return;
         const now = new Date().toISOString(); // [cite: 55]
+        const paymentStr = paymentId ? String(paymentId) : `pay_${Date.now()}`;
+
+        console.log('[SUPABASE UPDATE]', {
+            user_id: userId,
+            update_fields: { plano: 'free', assinatura_status: 'canceled' },
+            timestamp: new Date().toISOString()
+        });
 
         // DENORMALIZAÇÃO — fonte de verdade é subscriptions.status
         await supabaseAdmin.from('profiles').update({
-            assinatura_status: 'paused',
+            plano: 'free',
+            assinatura_status: 'canceled',
             updated_at: now
         }).eq('id', userId);
         await supabaseAdmin.from('subscriptions').upsert({ // [cite: 56]
             user_id: userId,
             mp_subscription_id: mpSubscriptionId,
-            status: 'paused',
+            status: 'canceled',
             updated_at: now
         }, { onConflict: 'user_id' });
+
+        console.log('[PLAN UPDATED]', {
+            user_id: userId,
+            plan_before: 'premium',
+            plan_after: 'free',
+            timestamp: new Date().toISOString()
+        });
+
+        try {
+            await supabaseAdmin.from('events').insert([
+                {
+                    user_id: userId,
+                    event_type: 'payment_failed',
+                    metadata: { payment_id: paymentStr, reason: 'charged_back', raw: rawPayload },
+                    created_at: now
+                },
+                {
+                    user_id: userId,
+                    event_type: 'user_downgraded',
+                    metadata: { payment_id: paymentStr, from_plan: 'premium', to_plan: 'free' },
+                    created_at: now
+                }
+            ]);
+        } catch (_) {}
+
+        try {
+            await supabaseAdmin.from('billing_events').insert([{
+                payment_id: `down_${paymentStr}`,
+                user_id: userId,
+                status: 'canceled',
+                created_at: now
+            }]);
+        } catch (_) {}
+
         await this.logEvent(mpSubscriptionId, 'payment.charged_back', { // [cite: 57]
             user_id: userId,
-            payment_id: paymentId,
+            payment_id: paymentStr,
             raw: rawPayload
         });
         console.error(`[SubscriptionBillingEngine] 🔴 Chargeback detectado para userId=${userId} | sub=${mpSubscriptionId}`); // [cite: 58]
@@ -365,8 +580,8 @@ async function checkPremiumAccess(userId) {
             return { allowed: false, reason: 'sem_assinatura' }; // [cite: 63]
         }
 
-        const allowedStatuses = ['authorized'];
-        const blockedStatuses = ['paused', 'cancelled', 'expired', 'pending', 'payment_required'];
+        const allowedStatuses = ['active'];
+        const blockedStatuses = ['paused', 'canceled', 'expired', 'pending', 'payment_required'];
         if (allowedStatuses.includes(subscription.status)) { // [cite: 65]
             return {
                 allowed: true,
@@ -397,181 +612,152 @@ async function checkPremiumAccess(userId) {
 
 async function handleSubscriptionCreate(req, res) {
     if (req.method !== 'POST') {
-        return res.status(405).json({ error: 'Método não permitido. Utilize POST.' }); // [cite: 69]
+        return res.status(405).json({ error: 'Método não permitido. Utilize POST.' });
     }
 
     try {
         const {
-            card_token_id,
+            billingType = 'PIX',
             email,
             cpf,
             userId,
             firstName,
-            lastName
-        } = req.body || {}; // [cite: 70, 71]
+            lastName,
+            creditCard,
+            creditCardHolderInfo
+        } = req.body || {};
 
-        if (!userId) { return res.status(400).json({ error: 'userId é obrigatório.' }); } // [cite: 71, 72]
-        if (!card_token_id) { return res.status(400).json({ error: 'card_token_id é obrigatório.' }); } // [cite: 72, 73]
-        if (!email) { return res.status(400).json({ error: 'email é obrigatório.' }); } // [cite: 73, 74]
-        if (!cpf) { return res.status(400).json({ error: 'cpf é obrigatório.' }); } // [cite: 74, 75]
+        if (!userId) { return res.status(400).json({ error: 'userId é obrigatório.' }); }
+        if (!email) { return res.status(400).json({ error: 'email é obrigatório.' }); }
+        if (!cpf) { return res.status(400).json({ error: 'cpf é obrigatório.' }); }
 
-        const cleanCpf = cpf.replace(/\D/g, ''); // [cite: 75]
+        const cleanCpf = cpf.replace(/\D/g, '');
         if (cleanCpf.length !== 11) {
-            return res.status(400).json({ error: 'CPF inválido. Deve conter 11 dígitos.' }); // [cite: 76]
+            return res.status(400).json({ error: 'CPF inválido. Deve conter 11 dígitos.' });
         }
 
-        let first_name = firstName?.trim() || ''; // [cite: 77, 78]
-        let last_name = lastName?.trim() || ''; // [cite: 78]
+        let first_name = firstName?.trim() || '';
+        let last_name = lastName?.trim() || '';
 
         if (!first_name || !last_name) {
             try {
                 const { data: profile } = await supabaseAdmin
                     .from('profiles')
                     .select('name, nickname')
-                    .eq('id', userId) // [cite: 79]
+                    .eq('id', userId)
                     .maybeSingle();
-                const fullName = profile?.name || profile?.nickname || ''; // [cite: 80]
+                const fullName = profile?.name || profile?.nickname || '';
                 if (fullName) {
                     const parts = fullName.trim().split(/\s+/);
-                    if (!first_name) first_name = parts[0] || ''; // [cite: 81]
-                    if (!last_name) last_name = parts.slice(1).join(' ') || ''; // [cite: 81]
+                    if (!first_name) first_name = parts[0] || '';
+                    if (!last_name) last_name = parts.slice(1).join(' ') || '';
                 }
             } catch (profileErr) {
-                console.warn('[handleSubscriptionCreate] Falha ao buscar perfil:', profileErr.message); // [cite: 82]
+                console.warn('[handleSubscriptionCreate] Falha ao buscar perfil:', profileErr.message);
             }
         }
 
-        if (!first_name || !last_name || isGenericName(first_name) || isGenericName(last_name)) {
-            return res.status(400).json({ error: 'Nome e sobrenome válidos são obrigatórios.' }); // [cite: 83]
-        }
+        const { data: profileRow } = await supabaseAdmin
+            .from('profiles')
+            .select('*')
+            .eq('id', userId)
+            .maybeSingle();
+
+        const customerId = await PaymentGateway.ensureCustomer(profileRow || { id: userId, name: `${first_name} ${last_name}` }, email, cleanCpf);
 
         const { data: existingSub } = await supabaseAdmin
             .from('subscriptions')
-            .select('mp_subscription_id, status, next_billing_date')
+            .select('asaas_subscription_id, mp_subscription_id, status, next_billing_date')
             .eq('user_id', userId)
             .maybeSingle();
-        if (existingSub && existingSub.status === 'authorized' && existingSub.mp_subscription_id) { // [cite: 85]
-            console.log(`[handleSubscriptionCreate] Assinatura já ativa para userId=${userId}`); // [cite: 85]
-            return res.status(200).json({ // [cite: 86]
+
+        if (existingSub && (existingSub.status === 'authorized' || existingSub.status === 'active') && (existingSub.asaas_subscription_id || existingSub.mp_subscription_id)) {
+            console.log(`[handleSubscriptionCreate] Assinatura já ativa para userId=${userId}`);
+            return res.status(200).json({
                 success: true,
                 alreadyExists: true,
-                mp_subscription_id: existingSub.mp_subscription_id,
+                asaas_subscription_id: existingSub.asaas_subscription_id || existingSub.mp_subscription_id,
                 status: 'authorized',
                 next_payment_date: existingSub.next_billing_date
             });
         }
 
-        const preapprovalPayload = {
-            reason: 'MyFlowDay Premium',
-            back_url: 'https://myflowday.com.br', // 
-            payer_email: email.trim(),
-            card_token_id: card_token_id,
-            status: 'authorized', // [cite: 88]
-            auto_recurring: {
-                frequency: 1,
-                frequency_type: 'months',
-                transaction_amount: 14.90,
-                currency_id: 'BRL'
-            },
-            payer: {
-                email: email.trim(),
-                identification: {
-                    type: 'CPF',
-                    number: cleanCpf
-                }
-            },
-            external_reference: `mfd_premium_${userId}`,
-            notification_url: process.env.MP_WEBHOOK_URL || 'https://myflowday.com.br/api/webhooks/mercadopago' // [cite: 90, 91]
-        };
+        const externalReference = `mfd_premium_${userId}`;
+        const typeUpper = String(billingType).toUpperCase();
 
-        console.log('[handleSubscriptionCreate] Enviando para /preapproval:', {
-            payer_email: maskEmail(email),
-            has_token: !!card_token_id,
-            cpf: maskCpf(cleanCpf),
-            userId: userId
-        });
-        const idempotencyKey = `subscription_create_${userId}`; // [cite: 92]
+        if (typeUpper === 'PIX') {
+            const pixCharge = await PaymentGateway.createPixCharge({
+                customerId,
+                amount: 14.90,
+                description: 'Plano MyFlowDay Premium ⚡',
+                externalReference
+            });
 
-        console.log('[MP DEBUG] MP_ACCESS_TOKEN existe?', !!process.env.MP_ACCESS_TOKEN); // [cite: 93]
-        console.log('[MP DEBUG] Prefixo token:', process.env.MP_ACCESS_TOKEN?.substring(0, 10)); // [cite: 94]
-        console.log('[MP DEBUG] card_token_id:', card_token_id);
-        console.log('[MP DEBUG] email:', email);
-        console.log('[MP DEBUG] cpf:', cleanCpf);
-        console.log('[MP DEBUG] first_name:', first_name); // [cite: 95]
-        console.log('[MP DEBUG] last_name:', last_name);
-        console.log('[MP DEBUG] preapprovalPayload:', JSON.stringify(preapprovalPayload, null, 2));
-
-        const mpResponse = await fetch('https://api.mercadopago.com/preapproval', {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${process.env.MP_ACCESS_TOKEN}`,
-                'Content-Type': 'application/json',
-                'X-Idempotency-Key': idempotencyKey // [cite: 97]
-            },
-            body: JSON.stringify(preapprovalPayload)
-        });
-        const mpData = await mpResponse.json(); // [cite: 98]
-
-        console.log('[MP DEBUG] HTTP Status:', mpResponse.status);
-        console.log('[MP DEBUG] MP Response:', JSON.stringify(mpData, null, 2)); // [cite: 99]
-
-        if (!mpResponse.ok) {
-            console.error('[handleSubscriptionCreate] Erro MP:', JSON.stringify(mpData));
-            await SubscriptionBillingEngine.logEvent(null, 'subscription.create_failed', { // [cite: 100]
+            const now = new Date().toISOString();
+            await supabaseAdmin.from('subscriptions').upsert({
                 user_id: userId,
-                mp_error: mpData,
-                status_code: mpResponse.status
+                asaas_subscription_id: pixCharge.id,
+                status: 'pending',
+                plan: 'premium',
+                amount: 14.90,
+                provider: 'asaas',
+                gateway: 'asaas',
+                updated_at: now
+            }, { onConflict: 'user_id' });
+
+            return res.status(200).json({
+                success: true,
+                paymentMethod: 'pix',
+                status: 'pending',
+                qr_code: pixCharge.qr_code,
+                qr_code_base64: pixCharge.qr_code_base64,
+                expirationDate: pixCharge.expirationDate,
+                id: pixCharge.id
             });
-            return res.status(400).json({ // [cite: 101]
-                error: mpData.message || 'Falha ao criar assinatura no Mercado Pago.',
-                mp_status: mpResponse.status,
-                details: mpData
+        } else {
+            const subResult = await PaymentGateway.createSubscription({
+                customerId,
+                amount: 14.90,
+                billingType: 'CREDIT_CARD',
+                creditCard,
+                creditCardHolderInfo: creditCardHolderInfo || { name: `${first_name} ${last_name}`, email, cpfCnpj: cleanCpf },
+                externalReference
+            });
+
+            const now = new Date().toISOString();
+            await supabaseAdmin.from('subscriptions').upsert({
+                user_id: userId,
+                asaas_subscription_id: subResult.id,
+                status: 'active',
+                plan: 'premium',
+                amount: 14.90,
+                provider: 'asaas',
+                gateway: 'asaas',
+                updated_at: now
+            }, { onConflict: 'user_id' });
+
+            await supabaseAdmin.from('profiles').update({
+                plano: 'premium',
+                assinatura_status: 'active',
+                updated_at: now
+            }).eq('id', userId);
+
+            return res.status(200).json({
+                success: true,
+                paymentMethod: 'credit_card',
+                status: 'authorized',
+                asaas_subscription_id: subResult.id,
+                id: subResult.id
             });
         }
-
-        const mpSubscriptionId = mpData.id;
-        const subscriptionStatus = normalizeSubscriptionStatus(mpData.status);
-        const nextPaymentDate = mpData.next_payment_date || null; // [cite: 103]
-        const payerId = mpData.payer_id ? String(mpData.payer_id) : null;
-        const now = new Date().toISOString();
-        console.log(`[handleSubscriptionCreate] MP retornou: id=${mpSubscriptionId} status=${subscriptionStatus}`); // [cite: 104]
-
-        const { error: upsertError } = await supabaseAdmin.from('subscriptions').upsert({ // [cite: 105]
-            user_id: userId,
-            mp_subscription_id: mpSubscriptionId,
-            status: 'pending',
-            plan: 'premium',
-            amount: 14.90,
-            next_billing_date: nextPaymentDate, // [cite: 106]
-            payer_id: payerId,
-            provider: 'mercado_pago',
-            webhook_payload: mpData,
-            updated_at: now
-        }, { onConflict: 'user_id' });
-        if (upsertError) { // [cite: 107]
-            console.error('[handleSubscriptionCreate] Erro ao salvar no Supabase:', upsertError.message); // [cite: 107]
-        }
-
-        await SubscriptionBillingEngine.logEvent(mpSubscriptionId, `subscription.created.${subscriptionStatus}`, {
-            user_id: userId,
-            mp_status: mpData.status,
-            next_payment_date: nextPaymentDate
-        });
-        return res.status(200).json({ // [cite: 109]
-            success: true,
-            mp_subscription_id: mpSubscriptionId,
-            status: subscriptionStatus,
-            next_payment_date: nextPaymentDate,
-            date_created: mpData.date_created || now
-        });
-    } catch (error) { // [cite: 110]
-        console.error('[handleSubscriptionCreate] Erro crítico:', error); // [cite: 110]
-        return res.status(500).json({ // [cite: 111]
-            error: 'Erro interno ao criar assinatura.',
-            message: error.message
+    } catch (error) {
+        console.error('[handleSubscriptionCreate] Erro crítico:', error);
+        return res.status(500).json({
+            error: error.message || 'Erro interno ao criar assinatura.'
         });
     }
 }
+
 
 // =========================================================
 // HANDLER: handleSubscriptionStatus (NOVO)
@@ -662,6 +848,71 @@ function validateMercadoPagoWebhook(req) {
 }
 
 // =========================================================
+// AUX: handleWebhookDuplicate (IDEMPOTÊNCIA PRE/POST LOCK)
+// =========================================================
+async function handleWebhookDuplicate(res, eventId, preapprovalIdStr) {
+    let userId = null;
+    try {
+        const { data: ledgerRow } = await supabaseAdmin
+            .from('payment_ledger')
+            .select('user_id')
+            .eq('payment_id', preapprovalIdStr)
+            .maybeSingle();
+        userId = ledgerRow?.user_id || null;
+    } catch (_) {}
+
+    if (!userId) {
+        try {
+            const { data: subRow } = await supabaseAdmin
+                .from('subscriptions')
+                .select('user_id')
+                .eq('mp_subscription_id', preapprovalIdStr)
+                .maybeSingle();
+            userId = subRow?.user_id || null;
+        } catch (_) {}
+    }
+
+    if (!userId) {
+        try {
+            const { data: profileRow } = await supabaseAdmin
+                .from('profiles')
+                .select('id')
+                .eq('mercadopago_customer_id', preapprovalIdStr)
+                .maybeSingle();
+            userId = profileRow?.id || null;
+        } catch (_) {}
+    }
+
+    if (userId) {
+        try {
+            await supabaseAdmin.from('events').insert([{
+                user_id: userId,
+                event_type: 'payment_ignored_duplicate',
+                metadata: { event_id: eventId, payment_id: preapprovalIdStr },
+                created_at: new Date().toISOString()
+            }]);
+        } catch (_) {}
+    }
+
+    try {
+        await supabaseAdmin.from('payment_ledger').insert([{
+            payment_id: preapprovalIdStr,
+            event_type: 'webhook_ignored',
+            status_raw: 'duplicate',
+            status_normalized: 'duplicate',
+            user_id: userId,
+            payload: { event_id: eventId, reason: 'idempotency' }
+        }]);
+    } catch (_) {}
+
+    return res.status(200).json({
+        message: 'Evento já processado.',
+        idempotent: true,
+        billingResult: { duplicated: true }
+    });
+}
+
+// =========================================================
 // HANDLER: handleWebhookMercadoPago (BLINDADO)
 // =========================================================
 
@@ -673,6 +924,15 @@ async function handleWebhookMercadoPago(req, res) {
 
         const requestTraceId = req.headers['x-trace-id'] || crypto.randomUUID(); // [cite: 134]
         const body = req.body || {}; // [cite: 134]
+        console.log('[MP WEBHOOK RECEIVED]', {
+            headers: req.headers,
+            body: body,
+            topic: body.topic,
+            type: body.type,
+            action: body.action,
+            resource_id: body.data?.id || body.id,
+            timestamp: new Date().toISOString()
+        });
         console.log(`[Webhook] Recebido: type=${body.type} | topic=${body.topic} | traceId=${requestTraceId}`); // [cite: 135]
 
         const signatureCheck = validateMercadoPagoWebhook(req);
@@ -706,174 +966,311 @@ async function handleWebhookMercadoPago(req, res) {
                 .maybeSingle();
             if (alreadyProcessed) { // [cite: 144]
                 console.log(`[Webhook] Evento já processado (idempotência): eventId=${eventId} | processedAt=${alreadyProcessed.processed_at}`); // [cite: 144]
-                return res.status(200).json({ message: 'Evento já processado.', idempotent: true }); // [cite: 145]
+                return await handleWebhookDuplicate(res, eventId, preapprovalIdStr);
             }
-        } catch (idempotencyErr) {
-            console.warn('[Webhook] Aviso de idempotência (execute migration v21):', idempotencyErr.message);
-        }
+        } catch (_) {}
 
-        return await BillingTracer.runWithTrace(requestTraceId, async () => {
-            // ── Evento de ASSINATURA (preapproval) ──────────────────────────
-            if (body.type === 'preapproval' || body.topic === 'preapproval') {
+        const lockKey = `webhook:${preapprovalIdStr}`;
+        const { DistributedLock } = await import('../services/distributed-lock.js');
 
-                const mpRes = await fetch(`https://api.mercadopago.com/preapproval/${preapprovalIdStr}`, {
-                    headers: { 'Authorization': `Bearer ${process.env.MP_ACCESS_TOKEN}` } // [cite: 147]
-                });
+        return await DistributedLock.withLock(lockKey, async () => {
+            // Verificar duplicados novamente dentro do lock para concorrência estrita
+            try {
+                const { data: alreadyProcessed } = await supabaseAdmin
+                    .from('webhook_events')
+                    .select('id, processed_at')
+                    .eq('event_id', eventId)
+                    .maybeSingle();
+                if (alreadyProcessed) {
+                    console.log(`[Webhook] Evento já processado após lock: eventId=${eventId}`);
+                    return await handleWebhookDuplicate(res, eventId, preapprovalIdStr);
+                }
+            } catch (_) {}
 
-                if (!mpRes.ok) {
-                    console.error(`[Webhook] Falha ao buscar preapproval/${preapprovalIdStr}`);
-                    await SubscriptionBillingEngine.logEvent(preapprovalIdStr, 'webhook.preapproval.fetch_failed', { // [cite: 148]
-                        http_status: mpRes.status
+            return await BillingTracer.runWithTrace(requestTraceId, async () => {
+                // ── Evento de ASSINATURA (preapproval) ──────────────────────────
+                if (body.type === 'preapproval' || body.topic === 'preapproval') {
+
+                    console.log('[PAYMENT FETCH FROM MP]', {
+                        preapproval_id: preapprovalIdStr,
+                        endpoint: 'preapproval',
+                        timestamp: new Date().toISOString()
                     });
-                    return res.status(200).json({ message: 'Failed to fetch preapproval from MP.' });
-                }
+                    const mpRes = await fetch(`https://api.mercadopago.com/preapproval/${preapprovalIdStr}`, {
+                        headers: { 'Authorization': `Bearer ${MP_ACCESS_TOKEN}` }
+                    });
 
-                const preapprovalData = await mpRes.json(); // [cite: 149]
-                const subscriptionStatus = normalizeSubscriptionStatus(preapprovalData.status); // [cite: 150]
-                const externalRef = preapprovalData.external_reference || '';
+                    if (!mpRes.ok) {
+                        console.error(`[Webhook] Falha ao buscar preapproval/${preapprovalIdStr}`);
+                        await SubscriptionBillingEngine.logEvent(preapprovalIdStr, 'webhook.preapproval.fetch_failed', {
+                            http_status: mpRes.status
+                        });
+                        return res.status(200).json({ message: 'Failed to fetch preapproval from MP.' });
+                    }
 
-                let userId = null;
-                if (externalRef.startsWith('mfd_premium_')) { // [cite: 151]
-                    userId = externalRef.replace('mfd_premium_', ''); // [cite: 151]
-                } else { // [cite: 152]
-                    const { data: subRow } = await supabaseAdmin
-                        .from('subscriptions')
-                        .select('user_id')
-                        .eq('mp_subscription_id', preapprovalIdStr) // [cite: 153]
-                        .maybeSingle();
-                    userId = subRow?.user_id || null; // [cite: 154]
-                }
+                    const preapprovalData = await mpRes.json();
+                    const subscriptionStatus = normalizeSubscriptionStatus(preapprovalData.status);
+                    const externalRef = preapprovalData.external_reference || '';
 
-                const now = new Date().toISOString();
-                await supabaseAdmin.from('subscriptions').upsert({ // [cite: 155]
-                    user_id: userId,
-                    mp_subscription_id: preapprovalIdStr,
-                    status: subscriptionStatus,
-                    last_webhook_at: now,
-                    webhook_payload: preapprovalData, // [cite: 156]
-                    updated_at: now
-                }, { onConflict: 'mp_subscription_id' });
+                    let userId = null;
+                    if (externalRef.startsWith('mfd_premium_')) {
+                        userId = externalRef.replace('mfd_premium_', '');
+                    } else {
+                        const { data: subRow } = await supabaseAdmin
+                            .from('subscriptions')
+                            .select('user_id')
+                            .eq('mp_subscription_id', preapprovalIdStr)
+                            .maybeSingle();
+                        userId = subRow?.user_id || null;
+                    }
 
-                if (subscriptionStatus === 'authorized') { // [cite: 157]
-                    await SubscriptionBillingEngine.handleAuthorized(userId, preapprovalIdStr, preapprovalData); // [cite: 157]
-                } else if (subscriptionStatus === 'paused') { // [cite: 158]
-                    await SubscriptionBillingEngine.handlePaused(userId, preapprovalIdStr, preapprovalData); // [cite: 158]
-                } else if (subscriptionStatus === 'cancelled') { // [cite: 159]
-                    await SubscriptionBillingEngine.handleCancelled(userId, preapprovalIdStr, preapprovalData); // [cite: 159]
-                } else if (subscriptionStatus === 'expired') { // [cite: 160]
-                    await SubscriptionBillingEngine.handleExpired(userId, preapprovalIdStr, preapprovalData); // [cite: 160]
-                } else { // [cite: 161]
-                    await SubscriptionBillingEngine.logEvent(preapprovalIdStr, `preapproval.${subscriptionStatus || 'unknown'}`, {
+                    // Prevenção de webhooks fora de ordem
+                    const { EventOrderingEngine } = await import('../services/event-ordering-engine.js');
+                    const eventTimestamp = preapprovalData.last_modified || preapprovalData.date_created || new Date().toISOString();
+                    if (await EventOrderingEngine.isEventOutOfOrder(userId, eventTimestamp)) {
+                        console.log(`[Webhook] Evento preapproval ignorado por estar fora de ordem: user=${userId} | eventId=${eventId}`);
+                        try {
+                            await supabaseAdmin.from('webhook_events').insert([{ event_id: eventId, event_type: body.type, resource_id: preapprovalIdStr, payload: body }]);
+                        } catch (_) {}
+                        return res.status(200).json({ message: 'Evento ignorado por estar fora de ordem.', ignored: true, billingResult: { ignored: true } });
+                    }
+
+                    const now = new Date().toISOString();
+                    await supabaseAdmin.from('subscriptions').upsert({
                         user_id: userId,
-                        mp_status: preapprovalData.status,
-                        raw: preapprovalData // [cite: 161]
+                        mp_subscription_id: preapprovalIdStr,
+                        status: subscriptionStatus,
+                        last_webhook_at: now,
+                        webhook_payload: preapprovalData,
+                        updated_at: now
+                    }, { onConflict: 'mp_subscription_id' });
+
+                    if (subscriptionStatus === 'active') {
+                        await SubscriptionBillingEngine.handleAuthorized(userId, preapprovalIdStr, preapprovalData);
+                    } else if (subscriptionStatus === 'paused') {
+                        await SubscriptionBillingEngine.handlePaused(userId, preapprovalIdStr, preapprovalData);
+                    } else if (subscriptionStatus === 'canceled') {
+                        await SubscriptionBillingEngine.handleCancelled(userId, preapprovalIdStr, preapprovalData);
+                    } else if (subscriptionStatus === 'expired') {
+                        await SubscriptionBillingEngine.handleExpired(userId, preapprovalIdStr, preapprovalData);
+                    } else {
+                        await SubscriptionBillingEngine.logEvent(preapprovalIdStr, `preapproval.${subscriptionStatus || 'unknown'}`, {
+                            user_id: userId,
+                            mp_status: preapprovalData.status,
+                            raw: preapprovalData
+                        });
+                        console.warn(`[Webhook] Status de preapproval não mapeado: ${preapprovalData.status}`);
+                    }
+
+                    try {
+                        await supabaseAdmin.from('webhook_events').insert([{
+                            event_id: eventId,
+                            event_type: body.type || 'preapproval',
+                            resource_id: preapprovalIdStr,
+                            payload: body
+                        }]);
+                    } catch (e) {
+                        console.warn('[Webhook] Não foi possível salvar webhook_events:', e.message);
+                    }
+                    return res.status(200).json({
+                        success: true,
+                        event: 'preapproval',
+                        preapprovalId: preapprovalIdStr,
+                        status: subscriptionStatus
                     });
-                    console.warn(`[Webhook] Status de preapproval não mapeado: ${preapprovalData.status}`); // [cite: 163]
                 }
 
-                await supabaseAdmin.from('webhook_events').insert([{
-                    event_id: eventId,
-                    event_type: body.type || 'preapproval',
-                    resource_id: preapprovalIdStr,
-                    payload: body // [cite: 164]
-                }]).catch((e) => console.warn('[Webhook] Não foi possível salvar webhook_events:', e.message));
-                return res.status(200).json({ // [cite: 165]
-                    success: true,
-                    event: 'preapproval',
-                    preapprovalId: preapprovalIdStr,
-                    status: subscriptionStatus
-                }); // [cite: 166]
-            }
+                // Suporte resiliente a eventos payment e action: "payment.updated"
+                if (body.type === 'payment' || body.topic === 'payment' || body.action === 'payment.updated') {
 
-            // Suporte resiliente a eventos payment e action: "payment.updated"
-            if (body.type === 'payment' || body.topic === 'payment' || body.action === 'payment.updated') {
-
-                const mpPayRes = await fetch(`https://api.mercadopago.com/v1/payments/${preapprovalIdStr}`, {
-                    headers: { 'Authorization': `Bearer ${process.env.MP_ACCESS_TOKEN}` } // [cite: 167]
-                });
-                if (!mpPayRes.ok) { // [cite: 168]
-                    await SubscriptionBillingEngine.logEvent(null, 'webhook.payment.fetch_failed', {
+                    console.log('[PAYMENT FETCH FROM MP]', {
                         payment_id: preapprovalIdStr,
-                        http_status: mpPayRes.status
+                        endpoint: 'payment',
+                        timestamp: new Date().toISOString()
                     });
-                    return res.status(200).json({ message: 'Failed to fetch payment details.' }); // [cite: 169]
-                }
+                    const mpPayRes = await fetch(`https://api.mercadopago.com/v1/payments/${preapprovalIdStr}`, {
+                        headers: { 'Authorization': `Bearer ${MP_ACCESS_TOKEN}` }
+                    });
+                    if (!mpPayRes.ok) {
+                        await SubscriptionBillingEngine.logEvent(null, 'webhook.payment.fetch_failed', {
+                            payment_id: preapprovalIdStr,
+                            http_status: mpPayRes.status
+                        });
+                        return res.status(200).json({ message: 'Failed to fetch payment details.' });
+                    }
 
-                const paymentData = await mpPayRes.json();
-                const paymentStatus = normalizeStatus(paymentData.status); // [cite: 170]
-
-                let userId = paymentData.metadata?.user_id || null;
-                const externalRef = paymentData.external_reference || '';
-                if (!userId && externalRef.startsWith('mfd_premium_')) { // [cite: 171]
-                    userId = externalRef.replace('mfd_premium_', ''); // [cite: 171]
-                }
-
-                const mpSubscriptionId = paymentData.preapproval_id ? String(paymentData.preapproval_id) : null; // [cite: 172, 173]
-                if (!userId && mpSubscriptionId) { // [cite: 174]
-                    const { data: subRow } = await supabaseAdmin
-                        .from('subscriptions')
-                        .select('user_id')
-                        .eq('mp_subscription_id', mpSubscriptionId) // [cite: 175]
-                        .maybeSingle();
-                    userId = subRow?.user_id || null; // [cite: 176]
-                }
-
-                await SubscriptionBillingEngine.logEvent(
-                    mpSubscriptionId,
-                    `payment.${paymentData.status || 'unknown'}`,
-                    {
-                        payment_id: preapprovalIdStr, // [cite: 177]
-                        user_id: userId,
+                    const paymentData = await mpPayRes.json();
+                    console.log('[PAYMENT FETCH FROM MP SUCCESS]', {
+                        payment_id: preapprovalIdStr,
                         status: paymentData.status,
                         status_detail: paymentData.status_detail,
-                        transaction_amount: paymentData.transaction_amount, // [cite: 178]
-                        date_approved: paymentData.date_approved,
-                        preapproval_id: mpSubscriptionId
+                        money_release_date: paymentData.money_release_date,
+                        timestamp: new Date().toISOString()
+                    });
+                    const paymentStatus = normalizeStatus(paymentData.status);
+
+                    let userId = paymentData.metadata?.user_id || null;
+                    const externalRef = paymentData.external_reference || '';
+                    if (!userId && externalRef.startsWith('mfd_premium_')) {
+                        userId = externalRef.replace('mfd_premium_', '');
                     }
-                );
-                if (mpSubscriptionId) { // [cite: 179]
-                    await supabaseAdmin.from('subscriptions')
-                        .update({
-                            last_webhook_at: new Date().toISOString(),
-                            last_payment_date: paymentData.date_approved || new Date().toISOString() // [cite: 180]
-                        })
-                        .eq('mp_subscription_id', mpSubscriptionId);
-                }
 
-                if (paymentStatus === 'approved' && userId) {
-                    await SubscriptionBillingEngine.handlePaymentApproved(
-                        userId,
+                    const mpSubscriptionId = paymentData.preapproval_id ? String(paymentData.preapproval_id) : null;
+                    if (!userId && mpSubscriptionId) {
+                        const { data: subRow } = await supabaseAdmin
+                            .from('subscriptions')
+                            .select('user_id')
+                            .eq('mp_subscription_id', mpSubscriptionId)
+                            .maybeSingle();
+                        userId = subRow?.user_id || null;
+                    }
+
+                    // Prevenção de webhooks fora de ordem
+                    const { EventOrderingEngine } = await import('../services/event-ordering-engine.js');
+                    const eventTimestamp = paymentData.date_last_updated || paymentData.date_approved || new Date().toISOString();
+                    if (await EventOrderingEngine.isEventOutOfOrder(userId, eventTimestamp)) {
+                        console.log(`[Webhook] Evento payment ignorado por estar fora de ordem: user=${userId} | eventId=${eventId}`);
+                        try {
+                            await supabaseAdmin.from('webhook_events').insert([{ event_id: eventId, event_type: body.type, resource_id: preapprovalIdStr, payload: body }]);
+                        } catch (_) {}
+                        return res.status(200).json({ message: 'Evento ignorado por estar fora de ordem.', ignored: true, billingResult: { ignored: true } });
+                    }
+
+                    // Registrar recebimento no ledger
+                    try {
+                        await supabaseAdmin.from('payment_ledger').insert([
+                            {
+                                payment_id: preapprovalIdStr,
+                                event_type: 'webhook_received',
+                                status_raw: paymentData.status,
+                                status_normalized: paymentStatus,
+                                user_id: userId,
+                                payload: paymentData
+                            },
+                            {
+                                payment_id: preapprovalIdStr,
+                                event_type: 'payment_created',
+                                status_raw: paymentData.status,
+                                status_normalized: paymentStatus,
+                                user_id: userId,
+                                payload: paymentData
+                            },
+                            {
+                                payment_id: preapprovalIdStr,
+                                event_type: 'payment_received',
+                                status_raw: paymentData.status,
+                                status_normalized: paymentStatus,
+                                user_id: userId,
+                                payload: paymentData
+                            }
+                        ]);
+                    } catch (_) {}
+
+                    await SubscriptionBillingEngine.logEvent(
                         mpSubscriptionId,
-                        preapprovalIdStr, // [cite: 182]
-                        paymentData.transaction_amount
+                        `payment.${paymentData.status || 'unknown'}`,
+                        {
+                            payment_id: preapprovalIdStr,
+                            user_id: userId,
+                            status: paymentData.status,
+                            status_detail: paymentData.status_detail,
+                            transaction_amount: paymentData.transaction_amount,
+                            date_approved: paymentData.date_approved,
+                            preapproval_id: mpSubscriptionId
+                        }
                     );
-                } else if (paymentStatus === 'refunded' && userId) { // [cite: 183]
-                    await SubscriptionBillingEngine.handleChargedBack(userId, mpSubscriptionId, preapprovalIdStr, paymentData);
-                } else { // [cite: 184]
-                    console.warn(`[Webhook] Payment ${preapprovalIdStr} com status="${paymentData.status}" — sem ação.`); // [cite: 184]
+                    if (mpSubscriptionId) {
+                        await supabaseAdmin.from('subscriptions')
+                            .update({
+                                last_webhook_at: new Date().toISOString(),
+                                last_payment_date: paymentData.date_approved || new Date().toISOString()
+                            })
+                            .eq('mp_subscription_id', mpSubscriptionId);
+                    }
+
+                    if (paymentStatus === 'approved' && userId) {
+                        try {
+                            await supabaseAdmin.from('payment_ledger').insert([
+                                {
+                                    payment_id: preapprovalIdStr,
+                                    event_type: 'payment_approved',
+                                    status_raw: paymentData.status,
+                                    status_normalized: 'approved',
+                                    user_id: userId,
+                                    payload: paymentData
+                                },
+                                {
+                                    payment_id: preapprovalIdStr,
+                                    event_type: 'status_updated',
+                                    status_raw: paymentData.status,
+                                    status_normalized: 'approved',
+                                    user_id: userId,
+                                    payload: { new_status: 'active' }
+                                }
+                            ]);
+                        } catch (_) {}
+                        await SubscriptionBillingEngine.handlePaymentApproved(
+                            userId,
+                            mpSubscriptionId,
+                            preapprovalIdStr,
+                            paymentData.transaction_amount
+                        );
+                    } else if (paymentStatus === 'refunded' && userId) {
+                        await SubscriptionBillingEngine.handleChargedBack(userId, mpSubscriptionId, preapprovalIdStr, paymentData);
+                    } else if ((paymentStatus === 'rejected' || paymentStatus === 'cancelled') && userId) {
+                        try {
+                            await supabaseAdmin.from('payment_ledger').insert([{
+                                payment_id: preapprovalIdStr,
+                                event_type: 'payment_failed',
+                                status_raw: paymentData.status,
+                                status_normalized: paymentStatus,
+                                user_id: userId,
+                                payload: paymentData
+                            }]);
+                        } catch (_) {}
+                        await supabaseAdmin.from('subscriptions')
+                            .update({ status: 'past_due', updated_at: new Date().toISOString() })
+                            .eq('user_id', userId);
+                        await supabaseAdmin.from('profiles')
+                            .update({ assinatura_status: 'past_due', updated_at: new Date().toISOString() })
+                            .eq('id', userId);
+                        await SubscriptionBillingEngine.logEvent(mpSubscriptionId, 'payment.failed_transition_past_due', {
+                            payment_id: preapprovalIdStr,
+                            user_id: userId,
+                            status: paymentData.status
+                        });
+                    } else {
+                        console.warn(`[Webhook] Payment ${preapprovalIdStr} com status="${paymentData.status}" — sem ação.`);
+                    }
+
+                    try {
+                        await supabaseAdmin.from('webhook_events').insert([{
+                            event_id: eventId,
+                            event_type: body.type || 'payment',
+                            resource_id: preapprovalIdStr,
+                            payload: body
+                        }]);
+                    } catch (e) {
+                        console.warn('[Webhook] Não foi possível salvar webhook_events:', e.message);
+                    }
+                    return res.status(200).json({
+                        success: true,
+                        event: 'payment',
+                        paymentId: preapprovalIdStr,
+                        status: paymentData.status
+                    });
                 }
 
-                await supabaseAdmin.from('webhook_events').insert([{
-                    event_id: eventId,
-                    event_type: body.type || 'payment',
-                    resource_id: preapprovalIdStr,
-                    payload: body // [cite: 186]
-                }]).catch((e) => console.warn('[Webhook] Não foi possível salvar webhook_events:', e.message));
-                return res.status(200).json({ // [cite: 187]
-                    success: true,
-                    event: 'payment',
-                    paymentId: preapprovalIdStr,
-                    status: paymentData.status
-                }); // [cite: 188]
-            }
+                // Fallback para layouts desconhecidos
+                await SubscriptionBillingEngine.logEvent(null, `webhook.unknown.${body.type || 'no_type'}`, { body });
+                console.warn(`[Webhook] Evento não reconhecido: type=${body.type} topic=${body.topic}`);
 
-            // Fallback para layouts desconhecidos
-            await SubscriptionBillingEngine.logEvent(null, `webhook.unknown.${body.type || 'no_type'}`, { body });
-            console.warn(`[Webhook] Evento não reconhecido: type=${body.type} topic=${body.topic}`); // [cite: 189]
-
-            await supabaseAdmin.from('webhook_events').insert([{ event_id: eventId, event_type: body.type || body.topic || 'unknown', resource_id: preapprovalIdStr, payload: body }]).catch(() => { });
-            return res.status(200).json({ message: 'Evento recebido de forma genérica.' }); // [cite: 190]
-        });
+                try {
+                    await supabaseAdmin.from('webhook_events').insert([{ event_id: eventId, event_type: body.type || body.topic || 'unknown', resource_id: preapprovalIdStr, payload: body }]);
+                } catch (_) {}
+                return res.status(200).json({ message: 'Evento recebido de forma genérica.' });
+            });
+        }, { lockTimeoutMs: 10000, acquireTimeoutMs: 5000 });
     } catch (webhookErr) { // [cite: 191]
         console.error('[Webhook Critical Error] Erro capturado no wrapper global:', webhookErr); // [cite: 191]
         try { // [cite: 192]
@@ -903,15 +1300,49 @@ async function handlePaymentsCreate(req, res, routePath) {
         const { userId, email: emailRoot, amount, payment_method_id, token, installments, cpf: cpfRoot, deviceId, external_reference, metadata, payer } = req.body || {}; // [cite: 195, 196]
         const idempotencyKey = req.headers['x-idempotency-key'] || crypto.randomUUID();
 
-        const email = emailRoot || payer?.email || '';
-        const cpf = cpfRoot || payer?.identification?.number || ''; // [cite: 196, 197]
-        const payerFirstName = payer?.first_name || '';
-        const payerLastName = payer?.last_name || '';
-        if (!userId || !email || !payment_method_id) { // [cite: 198]
-            return res.status(400).json({ error: 'Campos obrigatórios em falta: userId, email ou payment_method_id.' }); // [cite: 199]
+        if (!userId) {
+            return res.status(400).json({ error: 'userId é obrigatório.' });
         }
 
-        const cleanCpf = cpf ? cpf.replace(/\D/g, '') : ''; // [cite: 199]
+        if (!payment_method_id) {
+            return res.status(400).json({ error: 'payment_method_id é obrigatório.' });
+        }
+
+        if (payment_method_id !== 'pix' && !token) {
+            return res.status(400).json({ error: 'token é obrigatório para pagamentos com cartão.' });
+        }
+
+        let email = emailRoot || payer?.email || '';
+        if (!email || email.trim() === '' || email === 'test_user@test.com' || email.toLowerCase() === 'null' || email.toLowerCase() === 'undefined') {
+            try {
+                const authRes = await supabaseAdmin.auth.admin.getUserById(userId);
+                console.log('--- DEBUG AUTH LOOKUP ---', { userId, authRes });
+                email = authRes?.data?.user?.email;
+            } catch (err) {
+                console.warn('[API Create] Failed fetching email from Auth:', err.message);
+            }
+        }
+
+        if (!email || email.trim() === '' || email === 'test_user@test.com' || email.toLowerCase() === 'null' || email.toLowerCase() === 'undefined') {
+            return res.status(400).json({ error: 'Email obrigatório.' });
+        }
+
+        const cpf = cpfRoot || payer?.identification?.number || '';
+        if (!cpf) {
+            return res.status(400).json({ error: 'CPF é obrigatório.' });
+        }
+
+        const cleanCpf = cpf.replace(/\D/g, '');
+        if (cleanCpf.length !== 11) {
+            return res.status(400).json({ error: 'CPF deve conter exatamente 11 dígitos.' });
+        }
+
+        if (!validateCpf(cleanCpf)) {
+            return res.status(400).json({ error: 'CPF inválido.' });
+        }
+
+        const payerFirstName = payer?.first_name || '';
+        const payerLastName = payer?.last_name || '';
         let first_name = payerFirstName; // [cite: 200]
         let last_name = payerLastName;
 
@@ -976,7 +1407,7 @@ async function handlePaymentsCreate(req, res, routePath) {
             payload.installments = resolvedInstallments; // [cite: 217]
         }
 
-        const mpClient = new MercadoPagoConfig({ accessToken: process.env.MP_ACCESS_TOKEN }); // [cite: 218]
+        const mpClient = new MercadoPagoConfig({ accessToken: MP_ACCESS_TOKEN }); // [cite: 218]
         const mpPayment = new MPPayment(mpClient); // [cite: 219]
 
         console.log('[LEGACY MP Request]:', {
@@ -1045,67 +1476,54 @@ async function handlePaymentsCreate(req, res, routePath) {
 // =========================================================
 
 async function handleSubscriptionSync(req, res) {
-    if (req.method !== 'POST') {
-        return res.status(405).json({ error: 'Método não permitido. Utilize POST.' }); // [cite: 252]
+    if (req.method !== 'POST' && req.method !== 'GET') {
+        return res.status(405).json({ error: 'Método não permitido. Utilize POST ou GET.' });
     }
 
     const authHeader = req.headers['authorization'] || '';
-    const syncSecret = process.env.SYNC_SECRET_KEY || '';
-    if (!syncSecret) return res.status(500).json({ error: 'Sync não configurado.' }); // [cite: 254, 255]
-    if (authHeader !== `Bearer ${syncSecret}`) return res.status(401).json({ error: 'Não autorizado.' }); // [cite: 255, 256]
+    const querySecret = req.query?.secret || '';
+    const providedSecret = authHeader ? authHeader.replace('Bearer ', '').trim() : querySecret;
+    const syncSecret = process.env.SYNC_SECRET_KEY || process.env.CRON_SECRET || '';
 
-    const { userId } = req.body || {}; // [cite: 256]
-    const startedAt = new Date().toISOString(); // [cite: 257]
-    let cronRunId = null;
+    if (!syncSecret) {
+        return res.status(500).json({ error: 'Sync não configurado.' });
+    }
+    if (providedSecret !== syncSecret) {
+        console.warn('[Reconcile Cron] Tentativa de execução não autorizada.');
+        return res.status(401).json({ error: 'Não autorizado. Chave secreta inválida.' });
+    }
+
+    console.log('[Reconcile Cron] Iniciando auditoria periódica de faturamento (Anti-drift)...');
+
+    // Gravar evento de observabilidade: consistency_check_run
+    try {
+        const event = {
+            event_type: 'consistency_check_run',
+            metadata: { timestamp: new Date().toISOString(), trigger: 'cron_job' }
+        };
+        await supabaseAdmin.from('events').insert([event]);
+    } catch (logErr) {
+        console.warn('[Reconcile Cron] Falha ao registrar log consistency_check_run:', logErr.message);
+    }
 
     try {
-        const { data: cronRun } = await supabaseAdmin.from('cron_runs').insert([{ job_name: 'subscription-sync', started_at: startedAt, status: 'running' }]).select('id').maybeSingle();
-        cronRunId = cronRun?.id || null; // [cite: 258]
-    } catch (_) { }
+        const { runReconciliation } = await import('../jobs/payment-reconciliation.js');
+        const result = await runReconciliation();
+        console.log('[Reconcile Cron] Auditoria finalizada. Resultados:', result);
 
-    try {
-        let subscriptionsToSync = [];
-        if (userId) { // [cite: 259]
-            const { data } = await supabaseAdmin.from('subscriptions').select('user_id, mp_subscription_id, status').eq('user_id', userId).maybeSingle(); // [cite: 259]
-            if (data) subscriptionsToSync = [data]; // [cite: 260]
-        } else {
-            const { data } = await supabaseAdmin.from('subscriptions').select('user_id, mp_subscription_id, status').eq('status', 'pending').not('mp_subscription_id', 'is', null).limit(50); // [cite: 260, 261]
-            subscriptionsToSync = data || [];
-        }
-
-        let synced = 0, skipped = 0, errors = 0; // [cite: 262, 263]
-
-        for (const sub of subscriptionsToSync) {
-            if (!sub.mp_subscription_id) { skipped++; continue; } // [cite: 263, 264]
-            try {
-                const mpRes = await fetch(`https://api.mercadopago.com/preapproval/${sub.mp_subscription_id}`, { headers: { 'Authorization': `Bearer ${process.env.MP_ACCESS_TOKEN}` } }); // [cite: 264]
-                if (!mpRes.ok) { errors++; continue; } // [cite: 265, 266]
-
-                const mpData = await mpRes.json();
-                const mpStatus = normalizeSubscriptionStatus(mpData.status); // [cite: 267]
-
-                if (mpStatus === sub.status) { skipped++; continue; } // [cite: 267, 268]
-                if (mpStatus === 'authorized') { // [cite: 269]
-                    await SubscriptionBillingEngine.handleAuthorized(sub.user_id, sub.mp_subscription_id, mpData); // [cite: 269]
-                } else if (mpStatus === 'paused') { // [cite: 270]
-                    await SubscriptionBillingEngine.handlePaused(sub.user_id, sub.mp_subscription_id, mpData); // [cite: 270]
-                } else if (mpStatus === 'cancelled') { // [cite: 271]
-                    await SubscriptionBillingEngine.handleCancelled(sub.user_id, sub.mp_subscription_id, mpData); // [cite: 271]
-                } else if (mpStatus === 'expired') { // [cite: 272]
-                    await SubscriptionBillingEngine.handleExpired(sub.user_id, sub.mp_subscription_id, mpData); // [cite: 272]
-                } else {
-                    await supabaseAdmin.from('subscriptions').update({ status: mpStatus, last_webhook_at: new Date().toISOString() }).eq('user_id', sub.user_id); // [cite: 273]
-                }
-                synced++; // [cite: 275]
-            } catch (subErr) { errors++; } // [cite: 277, 278]
-        }
-
-        if (cronRunId) {
-            await supabaseAdmin.from('cron_runs').update({ finished_at: new Date().toISOString(), status: errors > 0 ? 'partial' : 'success' }).eq('id', cronRunId).catch(() => { }); // [cite: 279]
-        }
-        return res.status(200).json({ success: true, total: subscriptionsToSync.length, synced, skipped, errors }); // [cite: 280]
-    } catch (err) {
-        return res.status(500).json({ error: 'Erro ao executar sincronização.', message: err.message }); // [cite: 283]
+        return res.status(200).json({
+            success: result.success,
+            paymentsAudited: result.paymentsAudited,
+            subscriptionsAudited: result.subscriptionsAudited,
+            discrepanciesFixed: result.fixedCount,
+            errors: []
+        });
+    } catch (error) {
+        console.error('[Reconcile Cron] Erro grave durante reconciliação:', error);
+        return res.status(500).json({
+            error: 'Erro interno ao executar reconciliação.',
+            message: error.message
+        });
     }
 }
 
@@ -1114,7 +1532,171 @@ async function handleSubscriptionSync(req, res) {
 // =========================================================
 
 async function handleAccessCheck(req, res) {
-    res.status(200).json({ status: 'free', isPro: false }); // [cite: 284]
+    const userId = req.method === 'GET' ? req.query.userId : req.body?.userId;
+
+    if (!userId) {
+        return res.status(200).json({ isPro: false, reason: 'INVALID', error: 'userId não fornecido.' });
+    }
+
+    try {
+        const { AccessDecisionEngine } = await import('../services/access-decision-engine.js');
+        const { ChurnEngine } = await import('../services/churn-engine.js');
+
+        // 1. Buscar assinatura do usuário no Supabase
+        const { data: subscription, error } = await supabaseAdmin
+            .from('subscriptions')
+            .select('status, current_period_end, plan')
+            .eq('user_id', userId)
+            .maybeSingle();
+
+        if (error) {
+            console.error(`[API Access Check] Erro ao consultar Supabase para user ${userId}:`, error.message);
+            return res.status(200).json({ isPro: false, reason: 'INVALID', error: 'Erro ao carregar dados da assinatura.' });
+        }
+
+        // 2. Determinar o veredito via AccessDecisionEngine (Fonte Absoluta de Verdade)
+        const decision = AccessDecisionEngine.evaluateAccess(subscription);
+
+        // 3. Registrar logs estruturados de auditoria (Observabilidade)
+        try {
+            await supabaseAdmin.from('events').insert([{
+                user_id: userId,
+                event_type: 'access_decision_evaluated',
+                metadata: {
+                    isPro: decision.isPro,
+                    reason: decision.reason,
+                    plano: subscription?.plan || 'free',
+                    status: subscription?.status || 'free',
+                    expiresAt: subscription?.current_period_end || null,
+                    timestamp: new Date().toISOString()
+                }
+            }]);
+        } catch (err) {}
+
+        const auditEvent = decision.isPro ? 'access_granted' : 'access_denied_reason';
+        try {
+            await supabaseAdmin.from('events').insert([{
+                user_id: userId,
+                event_type: auditEvent,
+                metadata: {
+                    reason: decision.reason,
+                    timestamp: new Date().toISOString()
+                }
+            }]);
+        } catch (err) {}
+
+        // 4. Disparar a reavaliação de Churn em background
+        let churnData = null;
+        try {
+            churnData = await ChurnEngine.calculateChurnScore(userId);
+        } catch (_) {}
+
+        return res.status(200).json({ 
+            isPro: decision.isPro,
+            plano: subscription?.plan || 'free',
+            status: decision.reason,
+            expiresAt: subscription?.current_period_end || null,
+            churn: churnData ? {
+                score: churnData.score,
+                risk: churnData.risk
+            } : null
+        });
+    } catch (error) {
+        console.error(`[API Access Check] Erro crítico para user ${userId}:`, error);
+        return res.status(200).json({ 
+            isPro: false, 
+            reason: 'INVALID',
+            error: 'Erro crítico interno ao verificar acesso.',
+            message: error.message 
+        });
+    }
+}
+
+async function checkAdmin(userId) {
+    if (!userId) return false;
+    try {
+        const { data: { user }, error } = await supabaseAdmin.auth.admin.getUserById(userId);
+        if (error || !user) return false;
+        const email = user.email || '';
+        return ['admin@flowday.app', 'rafaelle@flowday.app', 'rafox@flowday.app'].includes(email.toLowerCase()) || 
+               user.user_metadata?.is_admin === true;
+    } catch (_) {
+        return false;
+    }
+}
+
+async function handleAnalyticsRevenue(req, res) {
+    const userId = req.method === 'GET' ? req.query.userId : req.body?.userId;
+    if (!userId) return res.status(400).json({ error: 'userId é obrigatório.' });
+
+    const isAdmin = await checkAdmin(userId);
+    if (!isAdmin) {
+        return res.status(403).json({ error: 'Acesso negado. Apenas administradores podem acessar este recurso.' });
+    }
+
+    try {
+        const { RevenueAnalyticsService } = await import('../services/revenue-analytics-service.js');
+        const metrics = await RevenueAnalyticsService.getRevenueMetrics();
+        return res.status(200).json(metrics);
+    } catch (error) {
+        return res.status(500).json({ error: 'Erro crítico interno ao carregar analytics.', message: error.message });
+    }
+}
+
+async function handleAnalyticsUserTimeline(req, res) {
+    const userId = req.method === 'GET' ? req.query.userId : req.body?.userId;
+    const targetUserId = req.method === 'GET' ? req.query.targetUserId : req.body?.targetUserId;
+
+    if (!userId) return res.status(400).json({ error: 'userId é obrigatório.' });
+    if (!targetUserId) return res.status(400).json({ error: 'targetUserId é obrigatório.' });
+
+    const isAdmin = await checkAdmin(userId);
+    if (!isAdmin) {
+        return res.status(403).json({ error: 'Acesso negado. Apenas administradores podem acessar este recurso.' });
+    }
+
+    try {
+        const { RevenueAnalyticsService } = await import('../services/revenue-analytics-service.js');
+        const timelineData = await RevenueAnalyticsService.getUserTimeline(targetUserId);
+        if (!timelineData) {
+            return res.status(404).json({ error: 'Perfil do usuário alvo não encontrado.' });
+        }
+        return res.status(200).json(timelineData);
+    } catch (error) {
+        return res.status(500).json({ error: 'Erro crítico interno ao carregar a timeline do usuário.', message: error.message });
+    }
+}
+
+async function handleAnalyticsRevenueIntegrity(req, res) {
+    const userId = req.method === 'GET' ? req.query.userId : req.body?.userId;
+    if (!userId) return res.status(400).json({ error: 'userId é obrigatório.' });
+
+    const isAdmin = await checkAdmin(userId);
+    if (!isAdmin) {
+        return res.status(403).json({ error: 'Acesso negado. Apenas administradores podem acessar este recurso.' });
+    }
+
+    try {
+        const { RevenueIntegrityService } = await import('../services/revenue-integrity-service.js');
+        const mrr = await RevenueIntegrityService.calculateMRR();
+        const churnRate = await RevenueIntegrityService.calculateChurnRate();
+        const leakage = await RevenueIntegrityService.detectRevenueLeakage();
+        const cohorts = await RevenueIntegrityService.getCohortTracking();
+
+        return res.status(200).json({
+            success: true,
+            metrics: {
+                mrr,
+                churnRate,
+                leakageCount: leakage.length,
+                cohortCount: cohorts.length
+            },
+            leakage,
+            cohorts
+        });
+    } catch (error) {
+        return res.status(500).json({ error: 'Erro crítico interno ao carregar faturamento e integridade.', message: error.message });
+    }
 }
 
 // =========================================================
@@ -1137,20 +1719,37 @@ export default async function handler(req, res) {
         if (route === 'subscription/create') {
             await handleSubscriptionCreate(req, res);
         } else if (route === 'subscription/status') {
-            await handleSubscriptionStatus(req, res); // [cite: 293]
+            await handleSubscriptionStatus(req, res);
         } else if (route === 'subscription/sync') {
-            await handleSubscriptionSync(req, res); // [cite: 294]
+            await handleSubscriptionSync(req, res);
+        } else if (route === 'billing/asaas-webhook' || route === 'webhooks/asaas' || route === 'webhook/asaas') {
+            await handleUnifiedAsaasWebhook(req, res);
+        } else if (route === 'cron/billing-expiration') {
+            await handleBillingExpirationCron(req, res);
         } else if (route === 'webhooks/mercadopago' || route === 'webhook/mercadopago') {
-            await handleWebhookMercadoPago(req, res); // [cite: 295]
+            await handleUnifiedAsaasWebhook(req, res);
         } else if (route === 'access/check' || route === 'auth/check-access') {
-            await handleAccessCheck(req, res); // [cite: 296]
-        } else if (route === 'payments/create') {
-            await handlePaymentsCreate(req, res, route); // [cite: 297]
+            await handleAccessCheck(req, res);
+        } else if (route === 'payments/create' || route === 'payments/pix') {
+            await handleSubscriptionCreate(req, res);
+        } else if (route === 'analytics/revenue') {
+            await handleAnalyticsRevenue(req, res);
+        } else if (route === 'analytics/user-timeline') {
+            await handleAnalyticsUserTimeline(req, res);
+        } else if (route === 'analytics/revenue-integrity') {
+            await handleAnalyticsRevenueIntegrity(req, res);
         } else if (route === '' || route === 'health') {
-            res.status(200).json({ status: 'online', ts: new Date().toISOString() }); // [cite: 298]
+            res.status(200).json({ 
+                status: 'online', 
+                ts: new Date().toISOString(),
+                hasAsaasKey: !!process.env.ASAAS_API_KEY,
+                asaasEnv: process.env.ASAAS_ENV || 'not_set',
+                keyLen: (process.env.ASAAS_API_KEY || '').length
+            });
         } else {
-            res.status(404).json({ error: `Rota não encontrada: ${route}` }); // [cite: 300]
+            res.status(404).json({ error: `Rota não encontrada: ${route}` });
         }
+
     } catch (error) {
         res.status(500).json({ error: 'Erro interno.', message: error.message }); // [cite: 301]
     }

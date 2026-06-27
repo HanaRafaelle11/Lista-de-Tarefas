@@ -63,35 +63,63 @@ export const BillingEngine = {
       const currentStatus = currentSub?.status || null;
       const nextStatus = SubscriptionStateMachine.transition(currentStatus, 'active');
 
-      const { data, error } = await supabaseAdmin
+      const updatePayload = {
+        plano: 'premium',
+        assinatura_status: nextStatus,
+        assinatura_inicio: now.toISOString(),
+        assinatura_expira_em: expirationDate.toISOString(),
+        updated_at: now.toISOString()
+      };
+      if (customerId && customerId.startsWith('cus_')) {
+        updatePayload.asaas_customer_id = customerId;
+      } else if (customerId) {
+        updatePayload.mercadopago_customer_id = customerId;
+      }
+
+      let { data, error } = await supabaseAdmin
         .from('profiles')
-        .update({
-          plano: 'premium',
-          assinatura_status: nextStatus,
-          assinatura_inicio: now.toISOString(),
-          assinatura_expira_em: expirationDate.toISOString(),
-          mercadopago_customer_id: customerId || null,
-          updated_at: now.toISOString()
-        })
+        .update(updatePayload)
         .eq('id', userId)
         .select()
-        .single();
+        .maybeSingle();
 
-      if (error) throw error;
+      if (error && error.message.includes('asaas_customer_id')) {
+        delete updatePayload.asaas_customer_id;
+        updatePayload.mercadopago_customer_id = customerId;
+        const fallbackRes = await supabaseAdmin
+          .from('profiles')
+          .update(updatePayload)
+          .eq('id', userId)
+          .select()
+          .single();
+        data = fallbackRes.data;
+      } else if (error) {
+        throw error;
+      }
 
-      await supabaseAdmin
-        .from('subscriptions')
-        .upsert({
-          user_id: userId,
-          status: nextStatus,
-          plan: 'premium',
-          price: 14.90,
-          current_period_start: now.toISOString(),
-          current_period_end: expirationDate.toISOString(),
-          last_payment_id: paymentId || null,
-          provider: 'mercado_pago',
-          updated_at: now.toISOString()
-        }, { onConflict: 'user_id' });
+      const subUpsert = {
+        user_id: userId,
+        status: nextStatus,
+        plan: 'premium',
+        price: 14.90,
+        current_period_start: now.toISOString(),
+        current_period_end: expirationDate.toISOString(),
+        last_payment_id: paymentId || null,
+        provider: 'asaas',
+        updated_at: now.toISOString()
+      };
+
+      try {
+        await supabaseAdmin
+          .from('subscriptions')
+          .upsert({ ...subUpsert, gateway: 'asaas', asaas_subscription_id: (paymentId && paymentId.startsWith('sub_')) ? paymentId : undefined }, { onConflict: 'user_id' });
+      } catch (subErr) {
+        await supabaseAdmin
+          .from('subscriptions')
+          .upsert(subUpsert, { onConflict: 'user_id' });
+      }
+
+
 
       return data;
     });
@@ -177,7 +205,7 @@ export const BillingEngine = {
             status: 'approved',
             amount: paymentData.transaction_amount || 14.90,
             currency: 'BRL',
-            provider: 'mercadopago',
+            provider: 'asaas',
             metadata: {
               payment_id: paymentStr,
               date_approved: paymentData.date_approved || new Date().toISOString()

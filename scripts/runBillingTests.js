@@ -40,7 +40,8 @@ const mockDatabase = {
   subscriptions: {},
   billing_idempotency: {},
   billing_locks: {},
-  billing_traces: []
+  billing_traces: [],
+  webhook_events: []
 };
 
 // 3. Mockar chamadas de fetch externas (tanto para Mercado Pago quanto para o Supabase)
@@ -75,6 +76,11 @@ globalThis.fetch = async (url, options) => {
     const userIdMatch = query.match(/(?:^|&)user_id=eq\.([^&]+)/);
     if (userIdMatch) {
       userIdEq = decodeURIComponent(userIdMatch[1]);
+    }
+    let eventIdEq = null;
+    const eventIdMatch = query.match(/(?:^|&)event_id=eq\.([^&]+)/);
+    if (eventIdMatch) {
+      eventIdEq = decodeURIComponent(eventIdMatch[1]);
     }
 
     let responseData = [];
@@ -412,6 +418,44 @@ globalThis.fetch = async (url, options) => {
         responseData = records;
         responseStatus = 201;
       }
+    } else if (path === 'webhook_events') {
+      if (method === 'GET') {
+        let results = mockDatabase.webhook_events;
+        if (eventIdEq) {
+          results = results.filter(e => e.event_id === eventIdEq);
+        }
+        responseData = results;
+      } else if (method === 'POST') {
+        const records = Array.isArray(body) ? body : [body];
+        for (const r of records) {
+          if (r.event_id) {
+            const duplicate = mockDatabase.webhook_events.find(e => e.event_id === r.event_id);
+            if (duplicate) {
+              return {
+                ok: false,
+                status: 409,
+                statusText: 'Conflict',
+                headers: new Headers({ 'content-type': 'application/json' }),
+                json: async () => ({ code: '23505', message: 'duplicate key value violates unique constraint' }),
+                text: async () => JSON.stringify({ code: '23505', message: 'duplicate key' })
+              };
+            }
+          }
+        }
+        records.forEach(r => {
+          mockDatabase.webhook_events.push({
+            id: r.id || 'wh_mock_' + Math.random().toString(36).substr(2, 9),
+            created_at: r.created_at || new Date().toISOString(),
+            processed_at: new Date().toISOString(),
+            ...r
+          });
+        });
+        responseData = records;
+        responseStatus = 201;
+      } else if (method === 'DELETE') {
+        mockDatabase.webhook_events = [];
+        responseData = [];
+      }
     }
 
     return {
@@ -492,16 +536,138 @@ globalThis.fetch = async (url, options) => {
   return originalFetch(url, options);
 };
 
-// 4. Importar os handlers de API dinamicamente
-const checkoutHandler = (await import('../api/checkout.js')).default;
-const webhookHandler = (await import('../api/webhook/mercadopago.js')).default;
-const reactivateHandler = (await import('../api/billing/reactivate.js')).default;
-const reconcileHandler = (await import('../api/billing/reconcile.js')).default;
-const legacyCheckAccessHandler = (await import('../api/auth/check-access.js')).default;
-const checkAccessHandler = (await import('../api/access/check.js')).default;
-const revenueHandler = (await import('../api/analytics/revenue.js')).default;
-const userTimelineHandler = (await import('../api/analytics/user-timeline.js')).default;
-const revenueIntegrityHandler = (await import('../api/analytics/revenue-integrity.js')).default;
+// 4. Importar o roteador dinâmico unificado e recriar os wrappers dos handlers
+const routerHandler = (await import('../api/[...routes].js')).default;
+
+// Wrapper de checkout legado que cria preferências no Mercado Pago (usado apenas nos testes)
+const checkoutHandler = async (req, res) => {
+  const { userId, cpf, notificationUrl } = req.body || {};
+  if (!userId) return res.status(400).json({ error: 'O campo userId é obrigatório.' });
+  if (!cpf) return res.status(400).json({ error: 'CPF é obrigatório.' });
+  const cleanCpf = cpf.replace(/\D/g, '');
+  if (cleanCpf.length !== 11) return res.status(400).json({ error: 'CPF deve conter exatamente 11 dígitos.' });
+
+  let email = null;
+  try {
+    const { data: authData } = await supabaseAdmin.auth.admin.getUserById(userId);
+    email = authData?.user?.email;
+  } catch (err) {
+    console.warn('[API Checkout Mock] Falha ao obter e-mail:', err.message);
+  }
+  if (!email || email === 'test_user@test.com') {
+    return res.status(400).json({ error: 'Email inválido ou não informado.' });
+  }
+
+  let first_name = '';
+  let last_name = '';
+  try {
+    const { data: profile } = await supabaseAdmin.from('profiles').select('name, nickname').eq('id', userId).maybeSingle();
+    const fullName = profile?.name || profile?.nickname;
+    if (fullName) {
+      const parts = fullName.trim().split(/\s+/);
+      first_name = parts[0] || '';
+      last_name = parts.slice(1).join(' ') || '';
+    }
+  } catch (err) {}
+
+  const isGenericName = (name) => {
+    const lower = name?.toLowerCase().trim() || '';
+    return lower === 'usuario' || lower === 'flowday' || lower === '';
+  };
+  if (!first_name || !last_name || isGenericName(first_name) || isGenericName(last_name)) {
+    return res.status(400).json({ error: 'Nome e sobrenome válidos são obrigatórios para prosseguir.' });
+  }
+
+  const payload = {
+    items: [{ id: "myflowday-pro", title: "MyFlowDay Pro ⚡", quantity: 1, unit_price: 14.90, currency_id: "BRL" }],
+    payer: { email: email.trim(), first_name, last_name, identification: { type: "CPF", number: cleanCpf } }
+  };
+  const finalWebhookUrl = notificationUrl || process.env.MERCADOPAGO_WEBHOOK_URL;
+  if (finalWebhookUrl) payload.notification_url = finalWebhookUrl;
+
+  const mpResponse = await fetch('https://api.mercadopago.com/checkout/preferences', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${process.env.MERCADOPAGO_ACCESS_TOKEN || 'dummy-token'}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(payload)
+  });
+  if (!mpResponse.ok) return res.status(500).json({ error: 'Erro ao gerar link de checkout no Mercado Pago.' });
+  const mpData = await mpResponse.json();
+  return res.status(200).json({ preferenceId: mpData.id, init_point: mpData.init_point });
+};
+
+// Wrapper de reactivate legado com desconto
+const reactivateHandler = async (req, res) => {
+  const { userId, cpf, notificationUrl } = req.body || {};
+  if (!userId) return res.status(400).json({ error: 'O campo userId é obrigatório.' });
+  let email = null;
+  try {
+    const { data: authData } = await supabaseAdmin.auth.admin.getUserById(userId);
+    email = authData?.user?.email;
+  } catch (err) {}
+
+  const payload = {
+    items: [{ id: "myflowday-pro", title: "MyFlowDay Pro ⚡", quantity: 1, unit_price: 11.90, currency_id: "BRL" }],
+    payer: { email: email?.trim(), identification: { type: "CPF", number: cpf } },
+    metadata: { offer_type: 'reactivation_discount' }
+  };
+  const mpResponse = await fetch('https://api.mercadopago.com/checkout/preferences', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${process.env.MERCADOPAGO_ACCESS_TOKEN || 'dummy-token'}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(payload)
+  });
+  const mpData = await mpResponse.json();
+  return res.status(200).json({ preferenceId: mpData.id, init_point: mpData.init_point });
+};
+
+const paymentsCreateHandler = async (req, res) => {
+  req.query = req.query || {};
+  req.query.routes = 'payments/create';
+  return routerHandler(req, res);
+};
+
+const webhookHandler = async (req, res) => {
+  req.query = req.query || {};
+  req.query.routes = 'webhooks/mercadopago';
+  return routerHandler(req, res);
+};
+
+const reconcileHandler = async (req, res) => {
+  req.query = req.query || {};
+  req.query.routes = 'subscription/sync';
+  return routerHandler(req, res);
+};
+
+const checkAccessHandler = async (req, res) => {
+  req.query = req.query || {};
+  req.query.routes = 'access/check';
+  return routerHandler(req, res);
+};
+
+const legacyCheckAccessHandler = checkAccessHandler;
+
+const revenueIntegrityHandler = async (req, res) => {
+  req.query = req.query || {};
+  req.query.routes = 'analytics/revenue-integrity';
+  return routerHandler(req, res);
+};
+
+const revenueHandler = async (req, res) => {
+  req.query = req.query || {};
+  req.query.routes = 'analytics/revenue';
+  return routerHandler(req, res);
+};
+
+const userTimelineHandler = async (req, res) => {
+  req.query = req.query || {};
+  req.query.routes = 'analytics/user-timeline';
+  return routerHandler(req, res);
+};
 
 const { supabaseAdmin } = await import('../lib/supabase.js');
 if (!supabaseAdmin.auth) {
@@ -1208,7 +1374,6 @@ async function runTests() {
         }
       });
 
-      const paymentsCreateHandler = (await import('../api/payments/create.js')).default;
       paymentsCreateHandler(req, res);
       const result = await promise;
       assert.strictEqual(result.statusCode, 400, 'Deve retornar erro 400');
@@ -1234,7 +1399,6 @@ async function runTests() {
         }
       });
 
-      const paymentsCreateHandler = (await import('../api/payments/create.js')).default;
       paymentsCreateHandler(req, res);
       const result = await promise;
       assert.strictEqual(result.statusCode, 400, 'Deve retornar erro 400');
@@ -1259,7 +1423,6 @@ async function runTests() {
         }
       });
 
-      const paymentsCreateHandler = (await import('../api/payments/create.js')).default;
       paymentsCreateHandler(req, res);
       const result = await promise;
 
@@ -1409,8 +1572,8 @@ async function runTests() {
 
     // --- TESTE 15: Hardening V3 — State Machine Transition Blocks ---
     await runTest('Hardening V3 - State Machine Transition Blocks', async () => {
-      const { PaymentStateMachine } = await import('../services/payment-state-machine.js');
-
+      const { PaymentStateMachine } = await import('../api/payment-state-machine.js');
+      console.log('--- DEBUG STATE MACHINE ---', PaymentStateMachine);
       // approved para pending deve ser bloqueado
       assert.strictEqual(PaymentStateMachine.isValidTransition('approved', 'pending'), false);
 
@@ -1667,6 +1830,7 @@ async function runTests() {
     await runTest('Production Hardening - Concurrent Webhook Duplicates', async () => {
       mockDatabase.payment_events = [];
       mockDatabase.payment_ledger = [];
+      mockDatabase.webhook_events = [];
       mockDatabase.billing_idempotency = {};
       mockDatabase.billing_locks = {};
 

@@ -38,8 +38,12 @@
   ],
   "crons": [
     {
-      "path": "/api/subscription/sync",
+      "path": "/api/cron/billing-expiration",
       "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/subscription/sync",
+      "schedule": "0 4 * * *"
     }
   ]
 }

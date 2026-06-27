@@ -32,20 +32,5 @@
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
-
-    <!-- ✅ ANTIFRAUDE: gera MP_DEVICE_SESSION_ID em todas as páginas -->
-    <script src="https://www.mercadopago.com/v2/security.js" view="checkout"></script>
-
-    <!-- ✅ SDK MercadoPago.JS V2 — checklist item "SDK do frontend" -->
-    <script src="https://sdk.mercadopago.com/js/v2"></script>
-    <script>
-      // Inicialização explícita exigida pelo checklist de qualidade do Mercado Pago
-      // "SDK do frontend" + "Identificador do dispositivo"
-      window.addEventListener('load', function () {
-        if (typeof MercadoPago !== 'undefined') {
-          window.mp = new MercadoPago('%VITE_MP_PUBLIC_KEY%', { locale: 'pt-BR' });
-        }
-      });
-    </script>
   </body>
 </html>
