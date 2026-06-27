@@ -23,7 +23,7 @@ import { eventStore } from '../services/eventStore';
 import { stateEngine } from '../services/stateEngine';
 import { eventEmitter } from '../services/eventEmitter';
 import { localDB } from '../db/localDB';
-import { isAdmin as checkIsAdmin } from '../lib/auth/adminAuth';
+import { isAdmin as checkIsAdmin } from '../../lib/auth/adminAuth.js';
 
 // ─── Helpers para Metadados de Tarefas (Horário e Recorrência) ───────────────
 export function parseTaskMetadata(description = '') {
