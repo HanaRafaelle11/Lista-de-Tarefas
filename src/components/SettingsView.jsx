@@ -598,9 +598,8 @@ export default function SettingsView() {
     // 3. Fallback: Se a Edge Function não enviou o e-mail, tenta via FormSubmit.co
     if (!emailSent) {
       try {
-        const adminEmails = ['admin@myflowday.com.br', 'rafaelle@myflowday.com.br', 'rafox@myflowday.com.br', 'suporte@myflowday.com.br'];
         const userEmail = currentUser?.email || '';
-        const recipientEmail = adminEmails.includes(userEmail) ? userEmail : 'suporte@myflowday.com.br';
+        const recipientEmail = 'suporte@myflowday.com.br';
         
         console.log(`[Feedback] Enviando e-mail de feedback via FormSubmit para: ${recipientEmail}`);
         const response = await fetch(`https://formsubmit.co/ajax/${recipientEmail}`, {
