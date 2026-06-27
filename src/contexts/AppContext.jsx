@@ -23,6 +23,7 @@ import { eventStore } from '../services/eventStore';
 import { stateEngine } from '../services/stateEngine';
 import { eventEmitter } from '../services/eventEmitter';
 import { localDB } from '../db/localDB';
+import { isAdmin as checkIsAdmin } from '../lib/auth/adminAuth';
 
 // ─── Helpers para Metadados de Tarefas (Horário e Recorrência) ───────────────
 export function parseTaskMetadata(description = '') {
@@ -315,11 +316,7 @@ export function AppProvider({ children }) {
   const [churnRisk, setChurnRisk] = useState('low');
 
   // Determina se usuário logado é administrador
-  const isAdmin = useMemo(() => {
-    if (!currentUser) return false;
-    const adminEmails = ['admin@flowday.app', 'rafaelle@flowday.app', 'rafox@flowday.app'];
-    return !!currentUser.user_metadata?.is_admin || adminEmails.includes(currentUser.email);
-  }, [currentUser]);
+  const isAdmin = useMemo(() => checkIsAdmin(currentUser), [currentUser]);
 
   const loadSubscription = useCallback(async (userId) => {
     // A assinatura agora é derivada do userProfile carregado por loadProfile e atualizado em tempo real.

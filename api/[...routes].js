@@ -1617,9 +1617,8 @@ async function checkAdmin(userId) {
     try {
         const { data: { user }, error } = await supabaseAdmin.auth.admin.getUserById(userId);
         if (error || !user) return false;
-        const email = user.email || '';
-        return ['admin@flowday.app', 'rafaelle@flowday.app', 'rafox@flowday.app'].includes(email.toLowerCase()) || 
-               user.user_metadata?.is_admin === true;
+        const { isAdmin } = await import('../lib/auth/adminAuth.js');
+        return isAdmin(user);
     } catch (_) {
         return false;
     }
