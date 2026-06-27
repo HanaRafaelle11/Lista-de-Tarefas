@@ -105,7 +105,16 @@ export function AppProvider({ children }) {
   const [userProfile, setUserProfile]       = useState(null);
 
   // ── Navegação ────────────────────────────────────────────────────────────────
-  const [activeTab, setActiveTab] = useState('home');
+  const [activeTab, setActiveTab] = useState(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const tabParam = params.get('tab');
+      if (tabParam) return tabParam;
+      const hashParam = window.location.hash.replace(/^#\/?/, '');
+      if (hashParam) return hashParam;
+    } catch (_) {}
+    return 'home';
+  });
   const [settingsTab, setSettingsTab] = useState('general'); // 'general' | 'trash'
 
   // ── Som Ambiente Global ──
