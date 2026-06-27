@@ -9,6 +9,7 @@ import { PaymentGateway } from '../lib/paymentGateway/index.js';
 import { handleAsaasWebhook } from './webhooks/asaas.js';
 import handleUnifiedAsaasWebhook from './billing/asaas-webhook.js';
 import handleBillingExpirationCron from './cron/billing-expiration.js';
+import { withAdminAuth } from '../lib/auth/withAdminAuth.js';
 
 
 // =========================================================
@@ -1612,27 +1613,7 @@ async function handleAccessCheck(req, res) {
     }
 }
 
-async function checkAdmin(userId) {
-    if (!userId) return false;
-    try {
-        const { data: { user }, error } = await supabaseAdmin.auth.admin.getUserById(userId);
-        if (error || !user) return false;
-        const { isAdmin } = await import('../lib/auth/adminAuth.js');
-        return isAdmin(user);
-    } catch (_) {
-        return false;
-    }
-}
-
-async function handleAnalyticsRevenue(req, res) {
-    const userId = req.method === 'GET' ? req.query.userId : req.body?.userId;
-    if (!userId) return res.status(400).json({ error: 'userId é obrigatório.' });
-
-    const isAdmin = await checkAdmin(userId);
-    if (!isAdmin) {
-        return res.status(403).json({ error: 'Acesso negado. Apenas administradores podem acessar este recurso.' });
-    }
-
+const handleAnalyticsRevenue = withAdminAuth(async (req, res) => {
     try {
         const { RevenueAnalyticsService } = await import('../services/revenue-analytics-service.js');
         const metrics = await RevenueAnalyticsService.getRevenueMetrics();
@@ -1640,19 +1621,11 @@ async function handleAnalyticsRevenue(req, res) {
     } catch (error) {
         return res.status(500).json({ error: 'Erro crítico interno ao carregar analytics.', message: error.message });
     }
-}
+});
 
-async function handleAnalyticsUserTimeline(req, res) {
-    const userId = req.method === 'GET' ? req.query.userId : req.body?.userId;
+const handleAnalyticsUserTimeline = withAdminAuth(async (req, res) => {
     const targetUserId = req.method === 'GET' ? req.query.targetUserId : req.body?.targetUserId;
-
-    if (!userId) return res.status(400).json({ error: 'userId é obrigatório.' });
     if (!targetUserId) return res.status(400).json({ error: 'targetUserId é obrigatório.' });
-
-    const isAdmin = await checkAdmin(userId);
-    if (!isAdmin) {
-        return res.status(403).json({ error: 'Acesso negado. Apenas administradores podem acessar este recurso.' });
-    }
 
     try {
         const { RevenueAnalyticsService } = await import('../services/revenue-analytics-service.js');
@@ -1664,17 +1637,9 @@ async function handleAnalyticsUserTimeline(req, res) {
     } catch (error) {
         return res.status(500).json({ error: 'Erro crítico interno ao carregar a timeline do usuário.', message: error.message });
     }
-}
+});
 
-async function handleAnalyticsRevenueIntegrity(req, res) {
-    const userId = req.method === 'GET' ? req.query.userId : req.body?.userId;
-    if (!userId) return res.status(400).json({ error: 'userId é obrigatório.' });
-
-    const isAdmin = await checkAdmin(userId);
-    if (!isAdmin) {
-        return res.status(403).json({ error: 'Acesso negado. Apenas administradores podem acessar este recurso.' });
-    }
-
+const handleAnalyticsRevenueIntegrity = withAdminAuth(async (req, res) => {
     try {
         const { RevenueIntegrityService } = await import('../services/revenue-integrity-service.js');
         const mrr = await RevenueIntegrityService.calculateMRR();
@@ -1696,7 +1661,7 @@ async function handleAnalyticsRevenueIntegrity(req, res) {
     } catch (error) {
         return res.status(500).json({ error: 'Erro crítico interno ao carregar faturamento e integridade.', message: error.message });
     }
-}
+});
 
 // =========================================================
 // ROUTER PRINCIPAL
