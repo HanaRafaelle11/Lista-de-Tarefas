@@ -321,15 +321,15 @@ export default function AdminDashboard() {
               </div>
               <div>
                 <span style={{ fontSize: '10.5px', color: 'var(--text-light)', textTransform: 'uppercase', fontWeight: '700' }}>Cadastro</span>
-                <strong style={{ display: 'block', color: 'var(--text-main)', fontSize: '15px', marginTop: '4px' }}>{new Date(userDetails.created_at).toLocaleString('pt-BR')}</strong>
+                <strong style={{ display: 'block', color: 'var(--text-main)', fontSize: '15px', marginTop: '4px' }}>{userDetails?.created_at ? new Date(userDetails.created_at).toLocaleString('pt-BR') : '-'}</strong>
               </div>
               <div>
                 <span style={{ fontSize: '10.5px', color: 'var(--text-light)', textTransform: 'uppercase', fontWeight: '700' }}>Último Acesso</span>
-                <strong style={{ display: 'block', color: 'var(--text-main)', fontSize: '15px', marginTop: '4px' }}>{userDetails.last_access ? new Date(userDetails.last_access).toLocaleString('pt-BR') : 'Nunca'}</strong>
+                <strong style={{ display: 'block', color: 'var(--text-main)', fontSize: '15px', marginTop: '4px' }}>{userDetails?.last_access ? new Date(userDetails.last_access).toLocaleString('pt-BR') : 'Nunca'}</strong>
               </div>
               <div>
                 <span style={{ fontSize: '10.5px', color: 'var(--text-light)', textTransform: 'uppercase', fontWeight: '700' }}>Engajamento Geral</span>
-                <strong style={{ display: 'block', color: 'var(--text-main)', fontSize: '15px', marginTop: '4px' }}>{userDetails.active_days} dias ativos ({userDetails.sessions} sessões)</strong>
+                <strong style={{ display: 'block', color: 'var(--text-main)', fontSize: '15px', marginTop: '4px' }}>{userDetails?.active_days ?? 0} dias ativos ({userDetails?.sessions ?? 0} sessões)</strong>
               </div>
             </div>
           </div>
@@ -337,13 +337,13 @@ export default function AdminDashboard() {
           {/* User Specific SaaS Metrics Grid */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '12px' }}>
             {[
-              { label: 'Objetivos Criados', val: userDetails.goals_created, color: 'var(--text-main)', icon: <Target size={16} /> },
-              { label: 'Objetivos Concluídos', val: userDetails.goals_completed, color: 'var(--primary)', icon: <CheckCircle2 size={16} /> },
-              { label: 'Tarefas Criadas', val: userDetails.tasks_created, color: 'var(--text-main)', icon: <CheckSquare size={16} /> },
-              { label: 'Tarefas Concluídas', val: userDetails.tasks_completed, color: 'var(--primary)', icon: <Award size={16} /> },
-              { label: 'Taxa Conclusão', val: `${userDetails.completion_rate}%`, color: '#C89658', icon: <Activity size={16} /> },
-              { label: 'Sessões Foco', val: userDetails.pomodoros, color: '#C06C6C', icon: <Flame size={16} /> },
-              { label: 'Planos Semanais', val: userDetails.weekly_plans, color: '#5A6B7A', icon: <Calendar size={16} /> }
+              { label: 'Objetivos Criados', val: userDetails?.goals_created ?? 0, color: 'var(--text-main)', icon: <Target size={16} /> },
+              { label: 'Objetivos Concluídos', val: userDetails?.goals_completed ?? 0, color: 'var(--primary)', icon: <CheckCircle2 size={16} /> },
+              { label: 'Tarefas Criadas', val: userDetails?.tasks_created ?? 0, color: 'var(--text-main)', icon: <CheckSquare size={16} /> },
+              { label: 'Tarefas Concluídas', val: userDetails?.tasks_completed ?? 0, color: 'var(--primary)', icon: <Award size={16} /> },
+              { label: 'Taxa Conclusão', val: `${userDetails?.completion_rate ?? 0}%`, color: '#C89658', icon: <Activity size={16} /> },
+              { label: 'Sessões Foco', val: userDetails?.pomodoros ?? 0, color: '#C06C6C', icon: <Flame size={16} /> },
+              { label: 'Planos Semanais', val: userDetails?.weekly_plans ?? 0, color: '#5A6B7A', icon: <Calendar size={16} /> }
             ].map(card => (
               <div key={card.label} style={{ backgroundColor: 'var(--bg-card)', padding: '16px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-light)', display: 'flex', flexDirection: 'column', gap: '6px', boxShadow: 'var(--shadow-sm)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-light)', fontSize: '11px', fontWeight: '600' }}>

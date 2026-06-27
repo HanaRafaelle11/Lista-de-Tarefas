@@ -10,6 +10,7 @@ import CohortHeatmap from '../components/metrics/CohortHeatmap';
 export default function RevenueDashboard() {
   const { currentUser } = useAppContext();
   const [loading, setLoading] = useState(true);
+  const [isUnauthorized, setIsUnauthorized] = useState(false);
   const [error, setError] = useState(null);
   const [data, setData] = useState(null);
 
@@ -22,26 +23,34 @@ export default function RevenueDashboard() {
   // Carregar dados analíticos
   useEffect(() => {
     async function loadData() {
-      if (!currentUser?.id) return;
+      if (!currentUser?.id) {
+        setLoading(false);
+        return;
+      }
       try {
         setLoading(true);
         setError(null);
+        setIsUnauthorized(false);
         
         const host = window.location.host;
         const protocol = window.location.protocol;
         const apiPrefix = host.includes('localhost') ? `${protocol}//${host}` : '';
         
         const res = await fetch(`${apiPrefix}/api/analytics/revenue?userId=${currentUser.id}`);
+        if (res.status === 403) {
+          setIsUnauthorized(true);
+          return;
+        }
         if (!res.ok) {
           const errData = await res.json().catch(() => ({}));
           throw new Error(errData.error || 'Falha ao carregar dados do painel financeiro.');
         }
         
         const json = await res.json();
-        setData(json);
+        setData(json || {});
       } catch (err) {
         console.error('[RevenueDashboard] Erro ao carregar métricas:', err);
-        setError(err.message);
+        setError(err.message || 'Erro inesperado ao carregar dados.');
       } finally {
         setLoading(false);
       }
@@ -62,6 +71,10 @@ export default function RevenueDashboard() {
       const apiPrefix = host.includes('localhost') ? `${protocol}//${host}` : '';
       
       const res = await fetch(`${apiPrefix}/api/analytics/user-timeline?userId=${currentUser.id}&targetUserId=${targetUserId}`);
+      if (res.status === 403) {
+        setTimelineError('Você não tem permissão para acessar a timeline deste usuário.');
+        return;
+      }
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}));
         throw new Error(errData.error || 'Falha ao carregar a timeline do usuário.');
@@ -91,6 +104,18 @@ export default function RevenueDashboard() {
     );
   }
 
+  if (isUnauthorized) {
+    return (
+      <div style={{ padding: '40px 24px', textAlign: 'center', maxWidth: '520px', margin: '40px auto', backgroundColor: 'rgba(239, 68, 68, 0.08)', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: '16px', color: '#ffffff' }}>
+        <div style={{ fontSize: '48px', marginBottom: '16px' }}>🔒</div>
+        <h3 style={{ fontSize: '20px', fontWeight: '700', color: '#ef4444', marginBottom: '8px' }}>Acesso Restrito ao Administrador</h3>
+        <p style={{ fontSize: '14px', color: 'rgba(255, 255, 255, 0.7)', lineHeight: 1.6, margin: 0 }}>
+          Você não possui permissão para acessar o painel financeiro. Se acredita que isto é um erro, verifique se está logado com a conta master autorizada.
+        </p>
+      </div>
+    );
+  }
+
   if (error) {
     return (
       <div style={{ padding: '32px', textAlign: 'center', maxWidth: '500px', margin: '40px auto', backgroundColor: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: '12px', color: '#ef4444' }}>
@@ -100,6 +125,14 @@ export default function RevenueDashboard() {
       </div>
     );
   }
+
+  const alertsList = Array.isArray(data?.alerts) ? data.alerts : [];
+  const kpisData = data?.kpis ?? { mrr: 0, arr: 0, churnRate: 0, nrr: 100, activeSubscribers: 0, reactivatedCount: 0, arpu: 0 };
+  const timelineList = Array.isArray(data?.timeline) ? data.timeline : [];
+  const churnData = data?.churn ?? { overallRate: 0, cohorts: [], riskCounts: { low: 0, medium: 0, high: 0 } };
+  const breakdownData = Array.isArray(data?.subscriptionBreakdown) ? data.subscriptionBreakdown : [];
+  const cohortsHeatmapData = Array.isArray(data?.cohortsHeatmap) ? data.cohortsHeatmap : [];
+  const customerHealthData = Array.isArray(data?.customerHealth) ? data.customerHealth : [];
 
   return (
     <div style={{ color: '#ffffff', minHeight: '100vh', padding: '20px 0' }}>
@@ -114,11 +147,11 @@ export default function RevenueDashboard() {
       </div>
 
       {/* Stripe-style Insights / Alertas */}
-      {data?.alerts && data.alerts.length > 0 && (
+      {alertsList.length > 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '30px' }}>
-          {data.alerts.map((alert) => (
+          {alertsList.map((alert) => (
             <div
-              key={alert.id}
+              key={alert.id || Math.random()}
               style={{
                 backgroundColor: alert.type === 'danger' ? 'rgba(239, 68, 68, 0.1)' : alert.type === 'success' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(245, 158, 11, 0.1)',
                 border: alert.type === 'danger' ? '1px solid rgba(239, 68, 68, 0.25)' : alert.type === 'success' ? '1px solid rgba(16, 185, 129, 0.25)' : '1px solid rgba(245, 158, 11, 0.25)',
@@ -135,9 +168,9 @@ export default function RevenueDashboard() {
               </span>
               <div>
                 <strong style={{ display: 'block', marginBottom: '4px', color: alert.type === 'danger' ? '#ef4444' : alert.type === 'success' ? '#10b981' : '#f59e0b' }}>
-                  {alert.title}
+                  {alert.title ?? 'Notificação'}
                 </strong>
-                <span style={{ opacity: 0.8 }}>{alert.message}</span>
+                <span style={{ opacity: 0.8 }}>{alert.message ?? ''}</span>
               </div>
             </div>
           ))}
@@ -145,24 +178,24 @@ export default function RevenueDashboard() {
       )}
 
       {/* Top Cards KPIs */}
-      <RevenueKPI kpis={data?.kpis} />
+      <RevenueKPI kpis={kpisData} />
 
       {/* Gráficos e Tabelas */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '20px' }}>
         {/* Gráfico Principal de MRR */}
-        <RevenueChart timeline={data?.timeline} />
+        <RevenueChart timeline={timelineList} />
 
         {/* Churn e Breakdowns em duas colunas */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
-          <ChurnChart churn={data?.churn} />
-          <SubscriptionBreakdown breakdown={data?.subscriptionBreakdown} />
+          <ChurnChart churn={churnData} />
+          <SubscriptionBreakdown breakdown={breakdownData} />
         </div>
 
         {/* Heatmap de Cohort */}
-        <CohortHeatmap cohortsData={data?.cohortsHeatmap} />
+        <CohortHeatmap cohortsData={cohortsHeatmapData} />
 
         {/* Tabela de Saúde de Clientes */}
-        <CustomerHealthTable customers={data?.customerHealth} onUserClick={handleUserClick} />
+        <CustomerHealthTable customers={customerHealthData} onUserClick={handleUserClick} />
       </div>
 
       {/* Gaveta / Modal Lateral para Timeline do Usuário */}

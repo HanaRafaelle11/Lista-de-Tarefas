@@ -804,7 +804,16 @@ export function AppProvider({ children }) {
       user_metadata: u.user_metadata || {},
     });
 
-    let active = true;
+    // Sanitize URL if OAuth error or bad_oauth_state is present to prevent redirect loops
+    if (typeof window !== 'undefined') {
+      const searchParams = new URLSearchParams(window.location.search);
+      const hashParams = new URLSearchParams(window.location.hash.substring(1));
+      if (searchParams.has('error') || searchParams.get('error_code') === 'bad_oauth_state' || hashParams.has('error')) {
+        console.warn('[AppContext] Sanitizing OAuth error in URL to prevent redirect loop.');
+        const cleanUrl = window.location.origin + window.location.pathname;
+        window.history.replaceState({}, document.title, cleanUrl);
+      }
+    }
 
     supabase.auth.getSession()
       .then(({ data: { session } }) => {
