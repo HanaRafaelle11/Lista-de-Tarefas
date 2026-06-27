@@ -106,13 +106,16 @@ export function AppProvider({ children }) {
   const [userProfile, setUserProfile]       = useState(null);
 
   // ── Navegação ────────────────────────────────────────────────────────────────
+  const VALID_TABS = new Set(['home', 'goals', 'tasks', 'focus', 'coach', 'analytics', 'performance', 'profile', 'admin', 'revenue', 'settings']);
   const [activeTab, setActiveTab] = useState(() => {
     try {
+      // Validar contra whitelist: evita que hash/params OAuth (access_token, code, type=recovery)
+      // sejam confundidos com nome de aba, causando tela em branco permanente.
       const params = new URLSearchParams(window.location.search);
       const tabParam = params.get('tab');
-      if (tabParam) return tabParam;
-      const hashParam = window.location.hash.replace(/^#\/?/, '');
-      if (hashParam) return hashParam;
+      if (tabParam && VALID_TABS.has(tabParam)) return tabParam;
+      const rawHash = window.location.hash.replace(/^#\/?/, '');
+      if (rawHash && VALID_TABS.has(rawHash)) return rawHash;
     } catch (_) {}
     return 'home';
   });

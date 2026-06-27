@@ -112,30 +112,17 @@ function AppLayout() {
     return !window.location.search.includes('app=1');
   });
 
-  // Detectar hash de recuperação de senha (fallback)
+  // Detectar hash de recuperação de senha — verificação simples via hash, sem listener duplicado de auth
   useEffect(() => {
-    const handleHash = () => {
+    const checkRecoveryHash = () => {
       if (window.location.hash.includes('type=recovery')) {
         setAuthMode('updatePassword');
       }
     };
-    handleHash();
-    window.addEventListener('hashchange', handleHash);
-    return () => window.removeEventListener('hashchange', handleHash);
+    checkRecoveryHash();
+    window.addEventListener('hashchange', checkRecoveryHash);
+    return () => window.removeEventListener('hashchange', checkRecoveryHash);
   }, []);
-
-  // Escutar eventos de autenticação do Supabase (prioritário)
-  useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'PASSWORD_RECOVERY') {
-        setAuthMode('updatePassword');
-      }
-    });
-
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, []); // Roda apenas uma vez no mount
 
   // Registrar visualizações analíticas ao mudar de aba
   useEffect(() => {
