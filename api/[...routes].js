@@ -14,6 +14,7 @@ import { runBillingSanityCheck } from '../jobs/billing-sanity-check.js';
 import { withAdminAuth } from '../lib/auth/withAdminAuth.js';
 import { logPaymentEvent } from '../lib/payment-logger.js';
 import { billingController } from '../server/modules/billing/billing.controller.js';
+import { billingControllerV2 } from '../server/modules/billing/v2/billing.controller.v2.js';
 
 
 // =========================================================
@@ -510,6 +511,10 @@ async function handlePaymentEventsLog(req, res) {
 // =========================================================
 const handleAdminBillingTimeline = withAdminAuth((req, res) => billingController.getTimeline(req, res));
 const handleAdminBillingHealth = withAdminAuth((req, res) => billingController.getHealth(req, res));
+const handleAdminBillingHealthV2 = withAdminAuth((req, res) => billingControllerV2.getHealthV2(req, res));
+const handleAdminBillingAnomaliesV2 = withAdminAuth((req, res) => billingControllerV2.getAnomaliesV2(req, res));
+const handleAdminBillingForecastV2 = withAdminAuth((req, res) => billingControllerV2.getForecastV2(req, res));
+const handleAdminBillingReplayV2 = withAdminAuth((req, res) => billingControllerV2.postReplayV2(req, res));
 
 // =========================================================
 // ROUTER PRINCIPAL
@@ -556,6 +561,14 @@ export default async function handler(req, res) {
             await handlePaymentEventsLog(req, res);
         } else if (route === 'admin/dashboard') {
             await handleAdminDashboard(req, res);
+        } else if (route === 'admin/billing/health/v2') {
+            await handleAdminBillingHealthV2(req, res);
+        } else if (route === 'admin/billing/anomalies/v2') {
+            await handleAdminBillingAnomaliesV2(req, res);
+        } else if (route === 'admin/billing/forecast/v2') {
+            await handleAdminBillingForecastV2(req, res);
+        } else if (route === 'admin/billing/replay/v2') {
+            await handleAdminBillingReplayV2(req, res);
         } else if (route === 'admin/billing/health') {
             await handleAdminBillingHealth(req, res);
         } else if (route === 'admin/payment-events' || route === 'admin/billing/timeline' || route.startsWith('admin/billing/user')) {
