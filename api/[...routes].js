@@ -165,6 +165,47 @@ async function handleSubscriptionCreate(req, res) {
         console.log('[PAYMENT_STEP_SUCCESS] ensureCustomer finalizado:', { userId, customerId });
 
         if (billingType.toUpperCase() === 'PIX') {
+            // Check de Idempotência: Se o usuário já tiver uma assinatura 'pending' gerada nos últimos 15 minutos, reutiliza
+            currentStep = 'CHECK_IDEMPOTENCY';
+            const fifteenMinsAgo = new Date(Date.now() - 15 * 60 * 1000).toISOString();
+            const { data: existingPending } = await supabaseAdmin
+                .from('subscriptions')
+                .select('*')
+                .eq('user_id', userId)
+                .eq('status', 'pending')
+                .gt('created_at', fifteenMinsAgo)
+                .order('created_at', { ascending: false })
+                .limit(1)
+                .maybeSingle();
+
+            if (existingPending && existingPending.asaas_payment_id) {
+                console.log('[PAYMENT_IDEMPOTENT_REUSE] Reutilizando cobrança Pix pendente recente:', existingPending.asaas_payment_id);
+                try {
+                    const existingPayment = await PaymentGateway.getPayment(existingPending.asaas_payment_id);
+                    if (existingPayment && existingPayment.status === 'PENDING') {
+                        let existingQr = {};
+                        try {
+                            const { safeFetchAsaas } = await import('../lib/paymentGateway/asaas.js');
+                            const baseUrl = process.env.ASAAS_ENV === 'production' ? 'https://www.asaas.com/api/v3' : 'https://sandbox.asaas.com/api/v3';
+                            existingQr = await safeFetchAsaas(`${baseUrl}/payments/${existingPending.asaas_payment_id}/pixQrCode`);
+                        } catch (_) {}
+
+                        return res.status(200).json({
+                            success: true,
+                            idempotentReused: true,
+                            paymentId: existingPending.asaas_payment_id,
+                            customerId,
+                            qrCode: existingQr.payload || null,
+                            qrCodeBase64: existingQr.encodedImage ? `data:image/png;base64,${existingQr.encodedImage}` : null,
+                            invoiceUrl: existingPayment.invoiceUrl,
+                            expirationDate: existingQr.expirationDate || existingPayment.dueDate
+                        });
+                    }
+                } catch (reuseErr) {
+                    console.warn('[PAYMENT_IDEMPOTENT_WARN] Falha ao recuperar Pix existente, gerando novo:', reuseErr.message);
+                }
+            }
+
             currentStep = 'CREATE_PIX_CHARGE';
             const pixCharge = await PaymentGateway.createPixCharge({
                 customerId,
