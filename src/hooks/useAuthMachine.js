@@ -46,7 +46,7 @@
 
 import { useReducer, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '../supabaseClient';
-import eventsService from '../services/eventsService';
+import { eventsService } from '../services/eventsService';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Helpers
