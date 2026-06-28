@@ -6,7 +6,7 @@
 import { billingRepository } from './billing.repository.js';
 import { mapBillingEvents, mapBillingLedgers } from './billing.mapper.js';
 import { billingValidator } from './billing.validator.js';
-import { billingReliability } from './billing.reliability.js';
+import { billingObservability } from './billing.observability.js';
 
 export const billingService = {
   async getBillingTimeline(userIdOrSearch) {
@@ -65,6 +65,6 @@ export const billingService = {
   },
 
   async getReliabilityHealth() {
-    return await billingReliability.getHealthStatus();
+    return await billingObservability.getSystemDiagnostics();
   }
 };
