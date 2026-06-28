@@ -181,8 +181,9 @@ export default function Checkout() {
   }, [status, currentUser?.id, logCheckoutEvent]);
 
   const handleCopyPix = () => {
-    if (checkoutData?.qr_code) {
-      navigator.clipboard.writeText(checkoutData.qr_code);
+    const code = checkoutData?.qrCode || checkoutData?.qr_code;
+    if (code) {
+      navigator.clipboard.writeText(code);
       setCopied(true);
       setTimeout(() => setCopied(false), 3000);
     }
@@ -377,18 +378,18 @@ export default function Checkout() {
           <h3 style={{ color: '#10b981', fontSize: '18px', marginBottom: '12px' }}>Pague com Pix para Ativar ⚡</h3>
           <p style={{ fontSize: '13px', color: 'rgba(255, 255, 255, 0.7)', marginBottom: '16px' }}>Abra o app do seu banco e escaneie o código abaixo ou use o Pix Copia e Cola.</p>
 
-          {checkoutData?.qr_code_base64 && (
+          {(checkoutData?.qrCodeBase64 || checkoutData?.qr_code_base64) && (
             <div style={{ backgroundColor: '#ffffff', padding: '12px', borderRadius: '12px', display: 'inline-block', marginBottom: '16px' }}>
-              <img src={checkoutData.qr_code_base64} alt="QR Code Pix" style={{ width: '180px', height: '180px', display: 'block' }} />
+              <img src={checkoutData.qrCodeBase64 || checkoutData.qr_code_base64} alt="QR Code Pix" style={{ width: '180px', height: '180px', display: 'block' }} />
             </div>
           )}
 
-          {checkoutData?.qr_code && (
+          {(checkoutData?.qrCode || checkoutData?.qr_code) && (
             <div style={{ marginBottom: '20px' }}>
               <input
                 type="text"
                 readOnly
-                value={checkoutData.qr_code}
+                value={checkoutData.qrCode || checkoutData.qr_code}
                 style={{ width: '100%', padding: '10px', backgroundColor: 'rgba(255, 255, 255, 0.05)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '8px', color: 'rgba(255, 255, 255, 0.8)', fontSize: '12px', fontFamily: 'monospace', marginBottom: '10px', textAlign: 'center' }}
               />
               <button

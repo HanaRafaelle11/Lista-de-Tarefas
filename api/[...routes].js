@@ -212,6 +212,8 @@ async function handleSubscriptionCreate(req, res) {
                 customerId,
                 qrCode: pixCharge.qr_code,
                 qrCodeBase64: pixCharge.qr_code_base64,
+                qr_code: pixCharge.qr_code,
+                qr_code_base64: pixCharge.qr_code_base64,
                 invoiceUrl: pixCharge.invoiceUrl,
                 expirationDate: pixCharge.expirationDate
             };
