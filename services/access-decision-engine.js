@@ -3,27 +3,29 @@
  * 
  * Este serviço é a única autoridade final que decide se um usuário
  * tem acesso premium ativo baseando-se estritamente na tabela subscriptions.
+ * 
+ * TAREFA 1 & 6: Decisão crítica SEMPRE consulta o banco de dados direto (SSOT).
+ * O cache local serve unicamente como telemetria secundária e nunca dita autorizações.
  */
 import { supabaseAdmin } from '../lib/supabase.js';
 
 const isProCache = new Map();
-const CACHE_TTL_MS = 30000; // TTL curto de 30 segundos para máxima performance
 
 export const AccessDecisionEngine = {
   /**
-   * Invalida o cache de um usuário imediatamente (chamado no processamento de webhooks).
+   * Invalida qualquer resíduo de estado local (disparado ao processar webhooks).
    * @param {string} userId
    */
   invalidateCache(userId) {
     if (userId) {
       isProCache.delete(userId);
-      console.log(`[AccessDecisionEngine Cache] Cache de isPro invalidado para o usuário: ${userId}`);
+      console.log(`[AccessDecisionEngine Cache] Cache desativado/limpo para o usuário: ${userId}`);
     }
   },
 
   /**
-   * Função Única e Canônica para verificar se um usuário é Pro com cache curto.
-   * SSOT: status = 'active' AND provider = 'asaas' AND current_period_end > now()
+   * Função Canônica Determinística de Validação de Acesso Pro em Escala.
+   * SSOT Direta no Banco de Dados: status = 'active' AND provider = 'asaas' AND current_period_end > now()
    * 
    * @param {string} userId
    * @returns {Promise<boolean>}
@@ -31,15 +33,10 @@ export const AccessDecisionEngine = {
   async isPro(userId) {
     if (!userId) return false;
 
-    const nowMs = Date.now();
-    const cached = isProCache.get(userId);
-    if (cached && cached.expiresAt > nowMs) {
-      return cached.isPro;
-    }
-
     const nowIso = new Date().toISOString();
     try {
-      const { data: activeSub } = await supabaseAdmin
+      // TAREFA 1 & 6: Consulta direta e determinística ao banco primário (SSOT em Escala Horizontal)
+      const { data: activeSub, error } = await supabaseAdmin
         .from('subscriptions')
         .select('id')
         .eq('user_id', userId)
@@ -50,11 +47,15 @@ export const AccessDecisionEngine = {
         .limit(1)
         .maybeSingle();
 
+      if (error) {
+        console.error(`[AccessDecisionEngine DB Error] Falha ao consultar isPro para ${userId}:`, error.message);
+        return false;
+      }
+
       const result = !!activeSub;
-      isProCache.set(userId, { isPro: result, expiresAt: nowMs + CACHE_TTL_MS });
       return result;
     } catch (err) {
-      console.error(`[AccessDecisionEngine] Erro ao consultar isPro para ${userId}:`, err.message);
+      console.error(`[AccessDecisionEngine Exception] Erro ao consultar isPro para ${userId}:`, err.message);
       return false;
     }
   },
