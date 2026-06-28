@@ -401,7 +401,7 @@ export default function Auth({ onLoginSuccess, initialMode = 'login' }) {
             <img 
               src={theme === 'dark' ? '/branding/logo-dark.svg' : '/branding/logo.svg'} 
               alt="MyFlowDay Logo" 
-              style={{ height: '64px', width: 'auto', objectFit: 'contain', marginBottom: '8px' }} 
+              style={{ height: '64px', width: 'auto', objectFit: 'contain', marginBottom: '8px', background: 'transparent', border: 'none', boxShadow: 'none', padding: 0 }} 
             />
             <p style={{ fontSize: '15px', color: 'var(--text-muted)', margin: '0 0 24px 0', letterSpacing: '0.5px', fontWeight: '500', textAlign: 'center' }}>
               {mode === 'updatePassword' ? 'Crie sua nova senha de acesso.' : 'Planeje. Execute. Evolua.'}

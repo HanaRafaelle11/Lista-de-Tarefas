@@ -42,7 +42,7 @@ export default function Navbar() {
             <img 
               src={theme === 'dark' ? '/branding/logo-dark.svg' : '/branding/logo.svg'}
               alt="MyFlowDay Logo" 
-              style={{ height: '38px', width: 'auto', objectFit: 'contain' }}
+              style={{ height: '38px', width: 'auto', objectFit: 'contain', background: 'transparent', border: 'none', boxShadow: 'none', padding: 0 }}
             />
             <span style={{ fontSize: '18px', fontWeight: 800, color: 'var(--text-main)', letterSpacing: '-0.5px', fontFamily: 'var(--font-display)' }}>
               MyFlowDay

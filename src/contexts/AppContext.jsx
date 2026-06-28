@@ -336,7 +336,29 @@ export function AppProvider({ children }) {
   }, [tasks, userState, currentUser?.id, currentUser?.user_metadata?.onboarding_completed]);
 
   // ── Feature Flags & Assinatura (SaaS) ───────────────────────────────────────
-  const [isPro, setIsPro] = useState(false);
+  const [isPro, setIsProState] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('flowday_is_pro') === 'true';
+    }
+    return false;
+  });
+  const [isAccessChecked, setIsAccessChecked] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('flowday_access_checked') === 'true';
+    }
+    return false;
+  });
+
+  const setIsPro = useCallback((valOrFn) => {
+    setIsProState((prev) => {
+      const next = typeof valOrFn === 'function' ? valOrFn(prev) : valOrFn;
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('flowday_is_pro', next ? 'true' : 'false');
+      }
+      return next;
+    });
+  }, []);
+
   const [isPaywallOpen, setIsPaywallOpen] = useState(false);
   const [paywallSource, setPaywallSource] = useState('');
   const [subscriptionStatus, setSubscriptionStatus] = useState('free'); // 'ACTIVE', 'CANCELED', 'PAST_DUE', 'TRIALING'
@@ -836,6 +858,8 @@ export function AppProvider({ children }) {
       setSubscriptionPlan('free');
       setChurnScore(0);
       setChurnRisk('low');
+      setIsAccessChecked(true);
+      if (typeof window !== 'undefined') localStorage.setItem('flowday_access_checked', 'true');
       return false;
     }
     try {
@@ -854,13 +878,17 @@ export function AppProvider({ children }) {
           setChurnRisk(prev => prev !== data.churn.risk ? data.churn.risk : prev);
         }
 
+        setIsAccessChecked(true);
+        if (typeof window !== 'undefined') localStorage.setItem('flowday_access_checked', 'true');
         return active;
       }
     } catch (err) {
       console.warn('[AppContext] Erro ao verificar acesso no servidor:', err.message);
     }
+    setIsAccessChecked(true);
+    if (typeof window !== 'undefined') localStorage.setItem('flowday_access_checked', 'true');
     return false;
-  }, []);
+  }, [setIsPro]);
 
   // 2. Efeito central de carga de dados baseado em currentUser?.id
   useEffect(() => {
@@ -888,6 +916,8 @@ export function AppProvider({ children }) {
     if (currentUser.isDemo) {
       initDemoData();
       loadNotifications(userId);
+      setIsAccessChecked(true);
+      if (typeof window !== 'undefined') localStorage.setItem('flowday_access_checked', 'true');
       return;
     }
 
@@ -909,6 +939,9 @@ export function AppProvider({ children }) {
         ]);
       } catch (err) {
         console.error('[AppContext] Erro ao carregar dados do usuário:', err);
+      } finally {
+        setIsAccessChecked(true);
+        if (typeof window !== 'undefined') localStorage.setItem('flowday_access_checked', 'true');
       }
     };
 
@@ -917,7 +950,7 @@ export function AppProvider({ children }) {
     return () => {
       active = false;
     };
-  }, [currentUser?.id, loadTasks, loadGoals, loadAchievements, loadHabits, loadProfile, loadSubscription, loadNotifications, rehydrateUserState, purgeTrash, checkServerAccess]);
+  }, [currentUser?.id, loadTasks, loadGoals, loadAchievements, loadHabits, loadProfile, loadSubscription, loadNotifications, rehydrateUserState, purgeTrash, checkServerAccess, setIsPro]);
 
   // ── Projeção do Estado de Assinatura a partir do Perfil do Usuário ──
   useEffect(() => {
@@ -935,12 +968,13 @@ export function AppProvider({ children }) {
       setIsPro(prev => prev !== active ? active : prev);
       setSubscriptionStatus(prev => prev !== status ? status : prev);
       setSubscriptionPlan(prev => prev !== plano ? plano : prev);
-    } else {
-      setIsPro(prev => prev !== false ? false : prev);
-      setSubscriptionStatus(prev => prev !== 'free' ? 'free' : prev);
-      setSubscriptionPlan(prev => prev !== 'free' ? 'free' : prev);
+      setIsAccessChecked(true);
+      if (typeof window !== 'undefined') localStorage.setItem('flowday_access_checked', 'true');
+    } else if (currentUser) {
+      setIsAccessChecked(true);
+      if (typeof window !== 'undefined') localStorage.setItem('flowday_access_checked', 'true');
     }
-  }, [userProfile]);
+  }, [userProfile, currentUser, setIsPro]);
 
   // ── Temporizador de Expiração em Background para Revalidação Automática (Validade Real) ──
   useEffect(() => {
@@ -2697,6 +2731,7 @@ export function AppProvider({ children }) {
 
     // SaaS additions
     isPro,
+    isAccessChecked,
     isAdmin,
     categories,
     handleAddCategory,

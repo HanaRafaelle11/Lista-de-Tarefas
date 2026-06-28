@@ -161,9 +161,23 @@ export default function HomeView() {
   const streakDays = currentStreak;
   const auraAnalysis = useAuraAssistant(tasks, goals, goalTasks, currentStreak, unlockedCount);
 
-  // ─── Estado de Onboarding (Bloco 3 - Seção 7) ───
+  // ─── Estado de Onboarding & Pet de Crescimento ───
   const [onboardingStep, setOnboardingStep] = useState(0);
   const [activeHomeTab, setActiveHomeTab] = useState('progresso');
+  const [growthPet, setGrowthPet] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('flowday_growth_pet') || 'plant';
+    }
+    return 'plant';
+  });
+
+  const handleSelectGrowthPet = (pet) => {
+    setGrowthPet(pet);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('flowday_growth_pet', pet);
+    }
+  };
+
   const ONBOARDING_TOTAL_STEPS = 5;
 
   const localOnboardingCompletedKey = `flowday_onboarding_completed_${currentUser?.id || 'guest'}`;
@@ -615,57 +629,113 @@ export default function HomeView() {
               )}
             </section>
 
-            {/* Ritmo de Crescimento com Sistema de Evolução da Planta */}
+            {/* Ritmo de Crescimento com Escolha de Pet / Tipo de Crescimento */}
             {(() => {
               const weeklyTotal = ritmoSemanal.reduce((acc, d) => acc + d.count, 0);
-              let plantStage = {
-                level: 1,
-                title: 'Broto Inicial',
-                emoji: '🌱',
-                badge: 'Nível 1 • Início de Jornada',
-                color: '#3b82f6',
-                desc: 'De acordo com a sua constância e conclusão de objetivos, sua plantinha vai evoluindo!'
+              
+              const PET_EVOLUTIONS = {
+                plant: {
+                  name: 'Plantinha',
+                  icon: '🌱',
+                  stages: [
+                    { level: 1, title: 'Broto Inicial', emoji: '🌱', badge: 'Nível 1 • Início', color: '#3b82f6', desc: 'De acordo com a sua constância e conclusão de tarefas e objetivos, sua plantinha vai evoluindo!' },
+                    { level: 2, title: 'Planta em Crescimento', emoji: '🌿', badge: 'Nível 2 • Em Evolução', color: 'var(--primary)', desc: 'Sua constância está dando frutos! Mantenha a sequência de tarefas para fazer sua árvore crescer.' },
+                    { level: 3, title: 'Árvore Frondosa', emoji: '🌳', badge: 'Nível 3 • Alta Performance', color: '#10b981', desc: 'Excelente progresso! Suas metas e constância diária fortaleceram suas raízes.' },
+                    { level: 4, title: 'Árvore Florida Master', emoji: '🌸', badge: 'Nível 4 • Consistência Lendária', color: '#ec4899', desc: 'Sua dedicação é extraordinária! Sua árvore floresceu totalmente com o seu foco e metas alcançadas.' }
+                  ]
+                },
+                baby: {
+                  name: 'Bebê',
+                  icon: '👶',
+                  stages: [
+                    { level: 1, title: 'Recém-nascido', emoji: '👶', badge: 'Nível 1 • Primeiros Passos', color: '#3b82f6', desc: 'Sua jornada de foco começou! Conclua tarefas para ajudar seu bebê a crescer forte e saudável.' },
+                    { level: 2, title: 'Bebê Engatinhando', emoji: '🍼', badge: 'Nível 2 • Aprendendo', color: 'var(--primary)', desc: 'Ganhando mobilidade e foco! Continue a sequência diária para comemorar cada nova conquista.' },
+                    { level: 3, title: 'Criança Ativa', emoji: '🧒', badge: 'Nível 3 • Curiosa & Forte', color: '#10b981', desc: 'Seus objetivos concluídos deram muita energia para aprender e explorar novos hábitos!' },
+                    { level: 4, title: 'Jovem Campeão', emoji: '🌟', badge: 'Nível 4 • Brilhante Master', color: '#f59e0b', desc: 'Consistência incrível! Seu jovem campeão está no topo do desenvolvimento e autoconhecimento!' }
+                  ]
+                },
+                dog: {
+                  name: 'Cachorrinho',
+                  icon: '🐶',
+                  stages: [
+                    { level: 1, title: 'Filhotinho', emoji: '🐶', badge: 'Nível 1 • Novo Amigo', color: '#3b82f6', desc: 'Seu filhotinho chegou! Complete tarefas e objetivos diários para dar energia e carinho a ele.' },
+                    { level: 2, title: 'Cão Brincalhão', emoji: '🐕', badge: 'Nível 2 • Ativo & Feliz', color: 'var(--primary)', desc: 'Sua constância deixa seu pet cheio de saúde! Continue realizando seus compromissos.' },
+                    { level: 3, title: 'Cão Leal & Forte', emoji: '🦮', badge: 'Nível 3 • Companheiro', color: '#10b981', desc: 'Foco impecável! Seu cão se tornou um verdadeiro protetor e parceiro da sua rotina produtiva.' },
+                    { level: 4, title: 'Cão Campeão', emoji: '👑', badge: 'Nível 4 • Nobreza & Foco', color: '#8b5cf6', desc: 'Desempenho espetacular! Seu pet alcançou o nível máximo de lealdade e vitórias diárias!' }
+                  ]
+                },
+                cat: {
+                  name: 'Gatinho',
+                  icon: '🐱',
+                  stages: [
+                    { level: 1, title: 'Filhote Curioso', emoji: '🐱', badge: 'Nível 1 • Despertando', color: '#3b82f6', desc: 'Seu gatinho está curioso! Crie e cumpra metas para desenvolver a agilidade e sabedoria dele.' },
+                    { level: 2, title: 'Gato Ágil', emoji: '🐈', badge: 'Nível 2 • Em Movimento', color: 'var(--primary)', desc: 'Movimentos precisos e rotina em dia! Mantenha seus hábitos para preservar o equilíbrio.' },
+                    { level: 3, title: 'Gato Majestoso', emoji: '🦁', badge: 'Nível 3 • Presença Forte', color: '#10b981', desc: 'Sua constância deu um porte majestoso ao seu pet. Foco e elegância total no seu dia a dia!' },
+                    { level: 4, title: 'Gato Rei Master', emoji: '👑', badge: 'Nível 4 • Soberano Master', color: '#ec4899', desc: 'Foco supremo! Seu gatinho reina sobre a sua produtividade e paz de espírito.' }
+                  ]
+                }
               };
+
+              const currentPetData = PET_EVOLUTIONS[growthPet] || PET_EVOLUTIONS.plant;
+              let stageIndex = 0;
               if (weeklyTotal >= 15 || currentStreak >= 7 || completedGoalsCount >= 2) {
-                plantStage = {
-                  level: 4,
-                  title: 'Árvore Florida Master',
-                  emoji: '🌸',
-                  badge: 'Nível 4 • Consistência Lendária',
-                  color: '#ec4899',
-                  desc: 'Sua dedicação é extraordinária! Sua árvore floresceu totalmente com o seu foco e metas alcançadas.'
-                };
+                stageIndex = 3;
               } else if (weeklyTotal >= 7 || currentStreak >= 4 || completedGoalsCount >= 1) {
-                plantStage = {
-                  level: 3,
-                  title: 'Árvore Frondosa',
-                  emoji: '🌳',
-                  badge: 'Nível 3 • Alta Performance',
-                  color: '#10b981',
-                  desc: 'Excelente progresso! Suas metas e constância diária fortaleceram suas raízes. Continue evoluindo!'
-                };
+                stageIndex = 2;
               } else if (weeklyTotal >= 2 || currentStreak >= 2) {
-                plantStage = {
-                  level: 2,
-                  title: 'Planta em Crescimento',
-                  emoji: '🌿',
-                  badge: 'Nível 2 • Em Evolução',
-                  color: 'var(--primary)',
-                  desc: 'Sua constância está dando frutos! Mantenha a sequência de tarefas diárias para fazer sua árvore crescer.'
-                };
+                stageIndex = 1;
               }
+              const currentStage = currentPetData.stages[stageIndex];
 
               return (
                 <section className="home-ritmo-section">
                   <div className="home-ritmo-content-side">
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', marginBottom: '6px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', marginBottom: '12px' }}>
                       <h4 className="home-ritmo-title" style={{ margin: 0 }}>Seu ritmo de crescimento</h4>
-                      <span style={{ fontSize: '11px', fontWeight: '700', padding: '3px 10px', borderRadius: '20px', backgroundColor: `${plantStage.color}15`, color: plantStage.color, border: `1px solid ${plantStage.color}30` }}>
-                        {plantStage.badge}
+                      
+                      {/* Seleção de Pet / Tipo de Crescimento */}
+                      <div style={{ display: 'flex', gap: '6px', backgroundColor: 'var(--bg-app)', padding: '3px', borderRadius: '20px', border: '1px solid var(--border-light)' }}>
+                        {[
+                          { id: 'plant', label: 'Plantinha', icon: '🌱' },
+                          { id: 'baby', label: 'Bebê', icon: '👶' },
+                          { id: 'dog', label: 'Cachorrinho', icon: '🐶' },
+                          { id: 'cat', label: 'Gatinho', icon: '🐱' }
+                        ].map(pet => (
+                          <button
+                            key={pet.id}
+                            onClick={() => handleSelectGrowthPet(pet.id)}
+                            style={{
+                              border: 'none',
+                              backgroundColor: growthPet === pet.id ? 'var(--primary)' : 'transparent',
+                              color: growthPet === pet.id ? '#ffffff' : 'var(--text-light)',
+                              borderRadius: '16px',
+                              padding: '4px 10px',
+                              fontSize: '11.5px',
+                              fontWeight: '700',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              transition: 'all 0.2s ease',
+                              boxShadow: growthPet === pet.id ? '0 2px 8px rgba(0,0,0,0.15)' : 'none'
+                            }}
+                            title={`Escolher ${pet.label}`}
+                          >
+                            <span>{pet.icon}</span>
+                            <span>{pet.label}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                      <span style={{ fontSize: '11px', fontWeight: '700', padding: '3px 10px', borderRadius: '20px', backgroundColor: `${currentStage.color}15`, color: currentStage.color, border: `1px solid ${currentStage.color}30` }}>
+                        {currentStage.badge}
                       </span>
                     </div>
+
                     <p className="home-ritmo-desc">
-                      {plantStage.desc}
+                      {currentStage.desc}
                     </p>
 
                     <div className="home-ritmo-map-container">
@@ -691,14 +761,14 @@ export default function HomeView() {
                           }}
                         >
                           <div className="home-ritmo-empty-illustration" style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '56px', height: '56px', borderRadius: '50%', background: 'rgba(74, 101, 78, 0.1)', color: 'var(--primary)', marginBottom: '4px' }}>
-                            <span style={{ fontSize: '28px', zIndex: 2 }}>{plantStage.emoji}</span>
+                            <span style={{ fontSize: '28px', zIndex: 2 }}>{currentStage.emoji}</span>
                             <div style={{ position: 'absolute', width: '100%', height: '100%', borderRadius: '50%', border: '1px solid rgba(74, 101, 78, 0.2)', animation: 'ping-animation 2s cubic-bezier(0, 0, 0.2, 1) infinite' }} />
                           </div>
                           <h4 style={{ fontSize: '15px', color: 'var(--text-main)', margin: 0, fontWeight: '700', fontFamily: 'var(--font-display)' }}>
                             Comece hoje sua sequência
                           </h4>
                           <p style={{ fontSize: '12px', color: 'var(--text-light)', margin: '0 0 8px 0', maxWidth: '280px', lineHeight: '1.4' }}>
-                            De acordo com a sua constância na conclusão de tarefas e objetivos, a sua plantinha vai evoluindo!
+                            De acordo com a sua constância na conclusão de tarefas e objetivos, seu {currentPetData.name.toLowerCase()} vai evoluindo!
                           </p>
                           <button 
                             onClick={() => setActiveTab('tasks')}
@@ -754,8 +824,8 @@ export default function HomeView() {
                       <div className="wave wave-2" />
                       <div className="wave wave-3" />
                       <div style={{ fontSize: '40px', zIndex: 2, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
-                        <span>{plantStage.emoji}</span>
-                        <span style={{ fontSize: '10px', fontWeight: '800', color: 'var(--text-main)', backgroundColor: 'var(--bg-card)', padding: '2px 8px', borderRadius: '10px', boxShadow: 'var(--shadow-sm)', border: '1px solid var(--border-light)' }}>{plantStage.title}</span>
+                        <span>{currentStage.emoji}</span>
+                        <span style={{ fontSize: '10px', fontWeight: '800', color: 'var(--text-main)', backgroundColor: 'var(--bg-card)', padding: '2px 8px', borderRadius: '10px', boxShadow: 'var(--shadow-sm)', border: '1px solid var(--border-light)' }}>{currentStage.title}</span>
                       </div>
                     </div>
                   </div>

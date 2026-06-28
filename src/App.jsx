@@ -71,6 +71,7 @@ function AppLayout() {
     supabaseConfigError,
     logEvent,
     isPro,
+    isAccessChecked,
     isAdmin,
     undoAction,
     triggerUndo,
@@ -233,7 +234,7 @@ function AppLayout() {
           <button className="demo-banner-btn" onClick={handleLogout}>Criar Conta</button>
         </div>
       )}
-      {!isPro && (
+      {isAccessChecked && !isPro && (
         <div className="pro-upgrade-banner" style={{
           backgroundColor: 'rgba(16, 185, 129, 0.15)',
           borderBottom: '1px solid rgba(16, 185, 129, 0.25)',
