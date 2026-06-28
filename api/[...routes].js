@@ -165,91 +165,27 @@ async function handleSubscriptionCreate(req, res) {
         console.log('[PAYMENT_STEP_SUCCESS] ensureCustomer finalizado:', { userId, customerId });
 
         if (billingType.toUpperCase() === 'PIX') {
-            // Check de Idempotência Determinística (Stripe-level):
-            // Usa idempotencyKey enviado pelo client ou gera chave compósita determinística por dia (mfd_pix_USERID_YYYY-MM-DD)
-            currentStep = 'CHECK_IDEMPOTENCY';
+            currentStep = 'CREATE_PIX_CHARGE';
             const todayStr = new Date().toISOString().slice(0, 10);
             const deterministicRef = body.idempotencyKey ? String(body.idempotencyKey).trim() : `mfd_pix_${userId}_${todayStr}`;
 
-            let pendingSub = null;
-            try {
-                const { data: existingPending, error: pendingErr } = await supabaseAdmin
-                    .from('subscriptions')
-                    .select('*')
-                    .eq('user_id', userId)
-                    .eq('status', 'pending')
-                    .or(`idempotency_key.eq.${deterministicRef},provider_id.eq.${deterministicRef}`)
-                    .order('created_at', { ascending: false })
-                    .limit(1)
-                    .maybeSingle();
-
-                if (pendingErr) {
-                    console.warn('[PAYMENT_IDEMPOTENCY_QUERY_WARN] Erro ao buscar idempotência compósita:', pendingErr.message);
-                }
-
-                pendingSub = existingPending;
-
-                if (!pendingSub) {
-                    const { data: fallbackPending } = await supabaseAdmin
-                        .from('subscriptions')
-                        .select('*')
-                        .eq('user_id', userId)
-                        .eq('status', 'pending')
-                        .order('created_at', { ascending: false })
-                        .limit(1)
-                        .maybeSingle();
-
-                    pendingSub = fallbackPending;
-                }
-            } catch (queryEx) {
-                console.warn('[PAYMENT_IDEMPOTENCY_EXCEPTION]', queryEx.message);
-            }
-
-            if (pendingSub && pendingSub.asaas_payment_id) {
-                console.log('[PAYMENT_DETERMINISTIC_IDEMPOTENT] Reutilizando cobrança Pix pendente determinística:', pendingSub.asaas_payment_id);
-                try {
-                    const existingPayment = await PaymentGateway.getPayment(pendingSub.asaas_payment_id);
-                    if (existingPayment && existingPayment.status === 'PENDING') {
-                        let existingQr = {};
-                        try {
-                            const { safeFetchAsaas } = await import('../lib/paymentGateway/asaas.js');
-                            const baseUrl = process.env.ASAAS_ENV === 'production' ? 'https://www.asaas.com/api/v3' : 'https://sandbox.asaas.com/api/v3';
-                            existingQr = await safeFetchAsaas(`${baseUrl}/payments/${pendingSub.asaas_payment_id}/pixQrCode`);
-                        } catch (_) {}
-
-                        return res.status(200).json({
-                            success: true,
-                            idempotentReused: true,
-                            idempotencyKey: deterministicRef,
-                            paymentId: pendingSub.asaas_payment_id,
-                            customerId,
-                            qrCode: existingQr.payload || null,
-                            qrCodeBase64: existingQr.encodedImage ? `data:image/png;base64,${existingQr.encodedImage}` : null,
-                            invoiceUrl: existingPayment.invoiceUrl,
-                            expirationDate: existingQr.expirationDate || existingPayment.dueDate
-                        });
-                    }
-                } catch (reuseErr) {
-                    console.warn('[PAYMENT_IDEMPOTENT_WARN] Falha ao recuperar Pix existente, gerando novo:', reuseErr.message);
-                }
-            }
-
-            currentStep = 'CREATE_PIX_CHARGE';
             const pixCharge = await PaymentGateway.createPixCharge({
                 customerId,
                 amount: PLAN_PREMIUM_MONTHLY_PRICE,
                 description: 'Plano MyFlowDay Premium ⚡',
                 externalReference: deterministicRef
             });
-            console.log('[PAYMENT_STEP_SUCCESS] createPixCharge finalizado com ref determinística:', { paymentId: pixCharge.id, externalReference: deterministicRef });
+            console.log('[PAYMENT_STEP_SUCCESS] createPixCharge finalizado:', { paymentId: pixCharge.id, externalReference: deterministicRef });
 
-            currentStep = 'CREATE_PENDING_SUBSCRIPTION';
-            await BillingEngine.createPendingSubscription(userId, {
+            // REGRA DE OURO: Registra a intenção pending no Supabase em background de forma assíncrona (FIRE-AND-FORGET).
+            // O checkout NUNCA é bloqueado nem falha por oscilação ou indisponibilidade de banco secundário.
+            BillingEngine.createPendingSubscription(userId, {
                 providerId: pixCharge.id,
                 customerId,
                 billingType: 'pix'
+            }).catch(err => {
+                console.warn('[PAYMENT_ASYNC_PENDING_WARN] Erro ao gravar registro pending em background (não-bloqueante):', err.message);
             });
-            console.log('[PAYMENT_STEP_SUCCESS] createPendingSubscription finalizado.');
 
             const responseObj = {
                 success: true,
@@ -287,21 +223,19 @@ async function handleSubscriptionCreate(req, res) {
 
             const statusUpper = (cardCharge.status || '').toUpperCase();
             if (statusUpper === 'CONFIRMED' || statusUpper === 'RECEIVED') {
-                currentStep = 'PROCESS_PAYMENT_SUCCESS';
-                await BillingEngine.processPaymentSuccess({
+                BillingEngine.processPaymentSuccess({
                     userId,
                     customerId,
                     paymentId: cardCharge.id,
                     billingType: 'credit_card',
                     value: cardCharge.value
-                });
+                }).catch(err => console.warn('[PAYMENT_ASYNC_CC_SUCCESS_WARN]', err.message));
             } else {
-                currentStep = 'CREATE_PENDING_SUBSCRIPTION';
-                await BillingEngine.createPendingSubscription(userId, {
+                BillingEngine.createPendingSubscription(userId, {
                     providerId: cardCharge.id,
                     customerId,
                     billingType: 'credit_card'
-                });
+                }).catch(err => console.warn('[PAYMENT_ASYNC_CC_PENDING_WARN]', err.message));
             }
 
             const responseObj = {
