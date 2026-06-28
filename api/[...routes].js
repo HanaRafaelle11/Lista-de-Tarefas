@@ -468,11 +468,18 @@ const handleAnalyticsRevenueIntegrity = withAdminAuth(async (req, res) => {
     }
 const handleAdminDashboard = withAdminAuth(async (req, res) => {
     try {
+        console.log('[ADMIN DASHBOARD API] Endpoint iniciado por admin autenticado.');
         const { AdminDashboardService } = await import('../services/admin-dashboard-service.js');
         const dashboardData = await AdminDashboardService.getDashboard();
         return res.status(200).json(dashboardData);
     } catch (error) {
-        return res.status(500).json({ error: 'Erro crítico ao gerar admin dashboard.', message: error.message });
+        console.error('[ADMIN DASHBOARD API ERROR 500]', error.message, error.stack);
+        return res.status(500).json({ 
+            error: 'Erro crítico ao gerar admin dashboard.', 
+            message: error.message, 
+            stack: error.stack,
+            name: error.name
+        });
     }
 });
 

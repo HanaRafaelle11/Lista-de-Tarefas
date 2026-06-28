@@ -32,33 +32,48 @@ export const AdminDashboardService = {
     console.log('[ADMIN DASHBOARD] Cache MISS — Gerando métricas consolidando DB via service_role...');
 
     try {
-      // Execução paralela de todas as consultas para máxima performance
-      const [
-        subsRes,
-        profilesRes,
-        usersCountRes,
-        eventsRes,
-        tasksRes,
-        goalsRes,
-        habitsRes
-      ] = await Promise.all([
-        supabaseAdmin.from('subscriptions').select('*'),
-        supabaseAdmin.from('profiles').select('id, name, nickname, plano, assinatura_status, created_at, updated_at'),
-        supabaseAdmin.from('profiles').select('id', { count: 'exact', head: true }),
-        supabaseAdmin.from('events').select('user_id, event_type, created_at').order('created_at', { ascending: false }).limit(5000),
-        supabaseAdmin.from('tasks').select('id, completed'),
-        supabaseAdmin.from('goals').select('id, completed'),
-        supabaseAdmin.from('habits').select('id', { count: 'exact', head: true })
-      ]);
+      console.log('[ADMIN DASHBOARD] step 1: Querying subscriptions...');
+      const subsRes = await supabaseAdmin.from('subscriptions').select('*');
+      if (subsRes.error) throw new Error(`[step 1 - subscriptions error] ${subsRes.error.message} (code: ${subsRes.error.code})`);
+      console.log('[ADMIN DASHBOARD] step 1 done. Rows:', subsRes.data?.length);
 
-      if (subsRes.error) console.error('[ADMIN DASHBOARD ERROR subsRes]', subsRes.error.message);
-      if (profilesRes.error) console.error('[ADMIN DASHBOARD ERROR profilesRes]', profilesRes.error.message);
+      console.log('[ADMIN DASHBOARD] step 2: Querying profiles...');
+      const profilesRes = await supabaseAdmin.from('profiles').select('id, name, nickname, plano, assinatura_status, created_at, updated_at');
+      if (profilesRes.error) throw new Error(`[step 2 - profiles error] ${profilesRes.error.message} (code: ${profilesRes.error.code})`);
+      console.log('[ADMIN DASHBOARD] step 2 done. Rows:', profilesRes.data?.length);
+
+      console.log('[ADMIN DASHBOARD] step 3: Querying profiles count...');
+      const usersCountRes = await supabaseAdmin.from('profiles').select('id', { count: 'exact', head: true });
+      if (usersCountRes.error) throw new Error(`[step 3 - profiles count error] ${usersCountRes.error.message} (code: ${usersCountRes.error.code})`);
+      console.log('[ADMIN DASHBOARD] step 3 done. Count:', usersCountRes.count);
+
+      console.log('[ADMIN DASHBOARD] step 4: Querying events...');
+      const eventsRes = await supabaseAdmin.from('events').select('user_id, event_type, created_at').order('created_at', { ascending: false }).limit(5000);
+      if (eventsRes.error) throw new Error(`[step 4 - events error] ${eventsRes.error.message} (code: ${eventsRes.error.code})`);
+      console.log('[ADMIN DASHBOARD] step 4 done. Rows:', eventsRes.data?.length);
+
+      console.log('[ADMIN DASHBOARD] step 5: Querying tasks...');
+      const tasksRes = await supabaseAdmin.from('tasks').select('id, completed');
+      if (tasksRes.error) throw new Error(`[step 5 - tasks error] ${tasksRes.error.message} (code: ${tasksRes.error.code})`);
+      console.log('[ADMIN DASHBOARD] step 5 done. Rows:', tasksRes.data?.length);
+
+      console.log('[ADMIN DASHBOARD] step 6: Querying goals...');
+      const goalsRes = await supabaseAdmin.from('goals').select('id, completed');
+      if (goalsRes.error) throw new Error(`[step 6 - goals error] ${goalsRes.error.message} (code: ${goalsRes.error.code})`);
+      console.log('[ADMIN DASHBOARD] step 6 done. Rows:', goalsRes.data?.length);
+
+      console.log('[ADMIN DASHBOARD] step 7: Querying habits...');
+      const habitsRes = await supabaseAdmin.from('habits').select('id', { count: 'exact', head: true });
+      if (habitsRes.error) throw new Error(`[step 7 - habits error] ${habitsRes.error.message} (code: ${habitsRes.error.code})`);
+      console.log('[ADMIN DASHBOARD] step 7 done. Count:', habitsRes.count);
 
       const rawSubscriptions = subsRes.data || [];
       const profiles = profilesRes.data || [];
       const events = eventsRes.data || [];
       const tasks = tasksRes.data || [];
       const goals = goalsRes.data || [];
+
+      console.log('[ADMIN DASHBOARD] step 8: Processing business metrics...');
 
       // Normalizar assinaturas via BillingAdapter
       const subscriptions = rawSubscriptions.map(s => BillingAdapter.normalizeSubscription(s));
@@ -173,7 +188,6 @@ export const AdminDashboardService = {
       // Resposta Consolidada em Objeto Único JSON com Suporte Retcompatível ao React
       const compiledData = {
         success: true,
-        // Propriedades Diretas compatíveis com a renderização legado do React
         mrr: Math.round(mrr * 100) / 100,
         arr: Math.round(arr * 100) / 100,
         arpu: arpuCalculated,
@@ -206,7 +220,6 @@ export const AdminDashboardService = {
         onboarding_step4: onboardingStep4,
         onboarding_completed: onboardingCompleted,
 
-        // Estrutura rica Enterprise de Métricas
         metrics: {
           revenue: {
             mrr: Math.round(mrr * 100) / 100,
@@ -256,11 +269,11 @@ export const AdminDashboardService = {
       dashboardCacheTimestamp = Date.now();
 
       const exeTime = Date.now() - startTime;
-      console.log(`[ADMIN DASHBOARD] Dashboard generated | MRR: R$ ${compiledData.metrics.revenue.mrr} | ARR: R$ ${compiledData.metrics.revenue.arr} | Premium Users: ${premiumCount} | ExeTime: ${exeTime}ms | Cache MISS`);
+      console.log(`[ADMIN DASHBOARD] step 9 complete. Dashboard generated | MRR: R$ ${compiledData.metrics.revenue.mrr} | ARR: R$ ${compiledData.metrics.revenue.arr} | Premium Users: ${premiumCount} | ExeTime: ${exeTime}ms`);
 
       return compiledData;
     } catch (err) {
-      console.error('[ADMIN DASHBOARD ERROR] Exceção ao gerar dashboard:', err.message);
+      console.error('[ADMIN DASHBOARD ERROR] Exceção capturada no service:', err.message, err.stack);
       throw err;
     }
   }
