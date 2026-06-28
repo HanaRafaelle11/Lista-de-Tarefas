@@ -50,7 +50,7 @@ export default function Navbar() {
           </div>
 
           {/* Navegação */}
-          <nav className="desktop-nav-links hide-on-mobile" style={{ display: 'flex', gap: '24px', height: '100%' }}>
+          <nav className="desktop-nav-links hide-on-mobile" style={{ display: 'flex', gap: '16px', height: '100%' }}>
             {navItems.map(({ key, icon, label }) => (
               <button
                 key={key}
@@ -79,7 +79,7 @@ export default function Navbar() {
           </nav>
 
           {/* Ações */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginLeft: '24px' }}>
             <NotificationCenter />
             <button
               onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
