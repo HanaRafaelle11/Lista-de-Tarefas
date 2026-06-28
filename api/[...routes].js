@@ -328,6 +328,7 @@ async function handleAccessCheck(req, res) {
             .select('*')
             .eq('user_id', userId)
             .eq('status', 'active')
+            .not('current_period_end', 'is', null)
             .gt('current_period_end', now)
             .order('updated_at', { ascending: false })
             .limit(1)
@@ -340,6 +341,27 @@ async function handleAccessCheck(req, res) {
 
         const isPro = !!subscription;
         const reason = isPro ? 'ACTIVE' : 'FREE';
+
+        if (!isPro) {
+            // Log detalhado de debug explicando por que o usuário NÃO é PRO
+            const { data: anySub } = await supabaseAdmin
+                .from('subscriptions')
+                .select('status, current_period_end, updated_at')
+                .eq('user_id', userId)
+                .order('updated_at', { ascending: false })
+                .limit(1)
+                .maybeSingle();
+
+            console.log(`[ACCESS CHECK DEBUG] User ${userId} NÃO é PRO. Razão:`, {
+                hasSubscriptionRow: !!anySub,
+                latestStatus: anySub?.status || 'no_row',
+                currentPeriodEnd: anySub?.current_period_end || 'null',
+                evaluatedAt: now,
+                expired: anySub?.current_period_end ? anySub.current_period_end <= now : 'no_date'
+            });
+        } else {
+            console.log(`[ACCESS CHECK SUCCESS] User ${userId} É PRO ATIVO até ${subscription.current_period_end}`);
+        }
 
         // 3. Registrar logs estruturados de auditoria (Observabilidade)
         try {

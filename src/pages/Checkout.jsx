@@ -77,7 +77,7 @@ function formatDate(dateStr) {
 }
 
 export default function Checkout() {
-  const { currentUser, isPro, userProfile } = useAppContext();
+  const { currentUser, isPro, userProfile, checkServerAccess } = useAppContext();
 
   // ID de sessão único gerado no mount para correlacionar eventos deste checkout
   const sessionIdRef = useRef(Math.random().toString(36).substring(2) + Date.now().toString(36));
@@ -164,6 +164,9 @@ export default function Checkout() {
             const data = await res.json();
             if (data.isPro) {
               setStatus('success');
+              if (typeof checkServerAccess === 'function') {
+                checkServerAccess(currentUser.id);
+              }
               logCheckoutEvent('subscription_updated', 'success', {
                 payload: { method: status === 'pix_generated' ? 'pix_polling_success' : 'card_polling_success', checkResult: data }
               });
@@ -178,7 +181,7 @@ export default function Checkout() {
     return () => {
       if (timer) clearInterval(timer);
     };
-  }, [status, currentUser?.id, logCheckoutEvent]);
+  }, [status, currentUser?.id, checkServerAccess, logCheckoutEvent]);
 
   const handleCopyPix = () => {
     const code = checkoutData?.qrCode || checkoutData?.qr_code;
