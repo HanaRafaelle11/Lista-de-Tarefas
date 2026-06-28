@@ -31,13 +31,25 @@ setInterval(() => {
       const notifId = `sw_task_due_${task.id}`;
       if (!notifiedTaskIds.has(notifId)) {
         notifiedTaskIds.add(notifId);
-        self.registration.showNotification('Tarefa Próxima do Vencimento ⏰', {
-          body: `"${task.title}" vence em breve no MyFlowDay.`,
+        const title = 'Tarefa Próxima do Vencimento ⏰';
+        const body = `"${task.title}" vence em breve no MyFlowDay.`;
+        self.registration.showNotification(title, {
+          body,
           icon: '/branding/icon-192.png',
-          badge: '/favicon.ico',
+          badge: '/branding/notification-badge.png',
           vibrate: [200, 100, 200],
           requireInteraction: true,
           data: { url: '/tasks' }
+        });
+        
+        // Broadcast para atualizar o sininho no app em tempo real
+        self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clients => {
+          clients.forEach(client => {
+            client.postMessage({
+              type: 'INJECT_NOTIFICATION_TO_APP',
+              payload: { notifType: 'task', title, description: body, metadata: { actionTab: 'tasks' } }
+            });
+          });
         });
       }
     }
@@ -52,7 +64,7 @@ self.addEventListener('push', (event) => {
     const options = {
       body: data.body,
       icon: '/branding/icon-192.png',
-      badge: '/favicon.ico',
+      badge: '/branding/notification-badge.png',
       vibrate: [200, 100, 200],
       requireInteraction: true,
       data: {
@@ -61,7 +73,17 @@ self.addEventListener('push', (event) => {
     };
 
     event.waitUntil(
-      self.registration.showNotification(data.title, options)
+      Promise.all([
+        self.registration.showNotification(data.title, options),
+        self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clients => {
+          clients.forEach(client => {
+            client.postMessage({
+              type: 'INJECT_NOTIFICATION_TO_APP',
+              payload: { notifType: data.type || 'system', title: data.title, description: data.body, metadata: data.metadata || {} }
+            });
+          });
+        })
+      ])
     );
   } catch (err) {
     console.error('[SW] Error showing push notification:', err);

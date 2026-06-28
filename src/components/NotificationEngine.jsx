@@ -3,9 +3,24 @@ import { useAppContext } from '../contexts/AppContext';
 import { useNotifications } from '../hooks/useNotifications';
 
 export default function NotificationEngine() {
-  const { tasks, goals, currentUser, isPro, hiddenTasksCount, hiddenGoalsCount, userState } = useAppContext();
+  const { tasks, goals, currentUser, isPro, hiddenTasksCount, hiddenGoalsCount, userState, addNotification } = useAppContext();
   const { isSupported, isEnabled, permission, sendNotification } = useNotifications();
   const notifiedSet = useRef(new Set());
+
+  // Listen for Service Worker background notifications to sync with internal bell icon
+  useEffect(() => {
+    if (!('serviceWorker' in navigator)) return;
+    const handleSWMessage = (event) => {
+      if (event.data && event.data.type === 'INJECT_NOTIFICATION_TO_APP') {
+        const { notifType, title, description, metadata } = event.data.payload || {};
+        if (title && addNotification) {
+          addNotification(notifType || 'system', title, description || '', metadata || {});
+        }
+      }
+    };
+    navigator.serviceWorker.addEventListener('message', handleSWMessage);
+    return () => navigator.serviceWorker.removeEventListener('message', handleSWMessage);
+  }, [addNotification]);
 
   useEffect(() => {
     // Only run if notifications are enabled and permission is granted
@@ -27,11 +42,17 @@ export default function NotificationEngine() {
         if (timeDiffMinutes > 0 && timeDiffMinutes <= 15) {
           const notifId = `task_due_${task.id}`;
           if (!notifiedSet.current.has(notifId)) {
-            sendNotification('Tarefa Próxima do Vencimento', {
-              body: `"${task.title}" vence em breve.`,
-              icon: '/icon-192x192.png',
+            const title = 'Tarefa Próxima do Vencimento ⏰';
+            const body = `"${task.title}" vence em breve.`;
+            sendNotification(title, {
+              body,
+              icon: '/branding/icon-192.png',
+              badge: '/branding/notification-badge.png',
               tag: notifId
             });
+            if (addNotification) {
+              addNotification('task', title, body, { actionTab: 'tasks' });
+            }
             notifiedSet.current.add(notifId);
           }
         }

@@ -6,6 +6,7 @@ import ChurnChart from '../components/metrics/ChurnChart';
 import SubscriptionBreakdown from '../components/metrics/SubscriptionBreakdown';
 import CustomerHealthTable from '../components/metrics/CustomerHealthTable';
 import CohortHeatmap from '../components/metrics/CohortHeatmap';
+import Skeleton from '../components/Skeleton';
 
 export default function RevenueDashboard() {
   const { currentUser } = useAppContext();
@@ -97,9 +98,22 @@ export default function RevenueDashboard() {
 
   if (loading) {
     return (
-      <div className="app-loading-container" style={{ minHeight: '60vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-        <div className="app-loading-spinner" />
-        <span className="app-loading-text" style={{ marginTop: '12px', color: 'rgba(255, 255, 255, 0.6)' }}>Carregando dados financeiros e de Churn...</span>
+      <div style={{ color: '#ffffff', minHeight: '100vh', padding: '20px 0' }}>
+        <div style={{ marginBottom: '32px' }}>
+          <Skeleton height="32px" width="300px" />
+          <Skeleton height="18px" width="450px" style={{ marginTop: '8px' }} />
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginBottom: '30px' }}>
+          <Skeleton height="120px" width="100%" borderRadius="12px" />
+          <Skeleton height="120px" width="100%" borderRadius="12px" />
+          <Skeleton height="120px" width="100%" borderRadius="12px" />
+          <Skeleton height="120px" width="100%" borderRadius="12px" />
+        </div>
+        <Skeleton height="280px" width="100%" borderRadius="12px" style={{ marginBottom: '20px' }} />
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px', marginBottom: '20px' }}>
+          <Skeleton height="220px" width="100%" borderRadius="12px" />
+          <Skeleton height="220px" width="100%" borderRadius="12px" />
+        </div>
       </div>
     );
   }
@@ -180,26 +194,28 @@ export default function RevenueDashboard() {
       {/* Top Cards KPIs */}
       <RevenueKPI kpis={kpisData} />
 
-      {/* Gráficos e Tabelas */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '20px' }}>
-        {/* Gráfico Principal de MRR */}
-        <RevenueChart timeline={timelineList} />
+      {/* Gráficos e Tabelas Responsivos */}
+      <div style={{ width: '100%', overflowX: 'auto', WebkitOverflowScrolling: 'touch', paddingBottom: '12px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '20px', minWidth: '360px' }}>
+          {/* Gráfico Principal de MRR */}
+          <RevenueChart timeline={timelineList} />
 
-        {/* Churn e Breakdowns em duas colunas com scroll responsivo em mobile */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px', maxWidth: '100%' }}>
-          <div style={{ width: '100%', overflowX: 'auto' }}>
-            <ChurnChart churn={churnData} />
+          {/* Churn e Breakdowns em duas colunas com scroll responsivo em mobile */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '20px', width: '100%' }}>
+            <div style={{ width: '100%', minWidth: '340px' }}>
+              <ChurnChart churn={churnData} />
+            </div>
+            <div style={{ width: '100%', minWidth: '340px' }}>
+              <SubscriptionBreakdown breakdown={breakdownData} />
+            </div>
           </div>
-          <div style={{ width: '100%', overflowX: 'auto' }}>
-            <SubscriptionBreakdown breakdown={breakdownData} />
-          </div>
+
+          {/* Heatmap de Cohort */}
+          <CohortHeatmap cohortsData={cohortsHeatmapData} />
+
+          {/* Tabela de Saúde de Clientes */}
+          <CustomerHealthTable customers={customerHealthData} onUserClick={handleUserClick} />
         </div>
-
-        {/* Heatmap de Cohort */}
-        <CohortHeatmap cohortsData={cohortsHeatmapData} />
-
-        {/* Tabela de Saúde de Clientes */}
-        <CustomerHealthTable customers={customerHealthData} onUserClick={handleUserClick} />
       </div>
 
       {/* Gaveta / Modal Lateral para Timeline do Usuário */}
