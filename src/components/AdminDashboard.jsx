@@ -1059,32 +1059,48 @@ export default function AdminDashboard() {
 
               {paymentHierarchyTab === 'overview' && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                  {/* Executive Score & Status Line */}
-                  <div style={{ backgroundColor: 'var(--bg-card)', padding: '24px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-medium)', boxShadow: 'var(--shadow-sm)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
-                    <div>
-                      <span style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-light)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>SAÚDE GLOBAL DE BILLING</span>
-                      <h2 style={{ fontSize: '32px', fontWeight: '900', color: '#10b981', margin: '4px 0 0 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        98 / 100 <span style={{ fontSize: '12px', fontWeight: '700', padding: '4px 12px', borderRadius: '99px', backgroundColor: '#def7ec', color: '#03543f' }}>🟢 SAUDÁVEL</span>
-                      </h2>
+                  {/* CEO / Mobile View (3-Second Dashboard Card) */}
+                  <div style={{
+                    backgroundColor: 'var(--bg-card)',
+                    padding: '24px',
+                    borderRadius: 'var(--radius-lg)',
+                    border: '2px solid var(--primary)',
+                    boxShadow: 'var(--shadow-md)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '20px'
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+                      <div>
+                        <span style={{ fontSize: '11px', fontWeight: '800', color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>📱 CEO / MOBILE VIEW (3 SECONDS)</span>
+                        <h2 style={{ fontSize: '28px', fontWeight: '900', color: '#10b981', margin: '4px 0 0 0', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          🟢 Billing Status: <span style={{ color: '#10b981' }}>98 / 100 — Saudável</span>
+                        </h2>
+                      </div>
+                      <div style={{ textAlign: 'right' }}>
+                        <span style={{ fontSize: '12px', fontWeight: '700', padding: '6px 14px', borderRadius: '99px', backgroundColor: '#def7ec', color: '#03543f', border: '1px solid #34d399' }}>
+                          ⚡ RESPOSTA EXECUTIVA INSTANTÂNEA
+                        </span>
+                      </div>
                     </div>
-                    <div style={{ padding: '12px 16px', backgroundColor: 'var(--bg-app)', border: '1px solid var(--border-light)', borderRadius: 'var(--radius-md)', fontSize: '13.5px', fontWeight: '600', color: 'var(--text-main)' }}>
-                      ⚡ Status Imediato: <span style={{ color: '#10b981' }}>Sistema operando normalmente com pagamentos e webhooks estáveis.</span>
-                    </div>
-                  </div>
 
-                  {/* Big Executive Financial Numbers */}
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
-                    <div style={{ backgroundColor: 'var(--bg-card)', padding: '20px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-light)' }}>
-                      <span style={{ fontSize: '11px', color: 'var(--text-light)', fontWeight: '700', textTransform: 'uppercase' }}>MRR Atual</span>
-                      <strong style={{ display: 'block', fontSize: '24px', color: 'var(--primary)', marginTop: '6px' }}>R$ {metrics?.mrr || '20,40'}</strong>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', backgroundColor: 'var(--bg-app)', padding: '20px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-light)' }}>
+                      <div>
+                        <span style={{ fontSize: '11px', color: 'var(--text-light)', fontWeight: '700', textTransform: 'uppercase' }}>💰 MRR ATUAL</span>
+                        <strong style={{ display: 'block', fontSize: '26px', color: 'var(--primary)', marginTop: '4px' }}>R$ {metrics?.mrr || '20,40'}</strong>
+                      </div>
+                      <div>
+                        <span style={{ fontSize: '11px', color: 'var(--text-light)', fontWeight: '700', textTransform: 'uppercase' }}>📈 HOJE / MÊS</span>
+                        <strong style={{ display: 'block', fontSize: '26px', color: 'var(--text-main)', marginTop: '4px' }}>+R$ {metrics?.month_revenue || '417,20'}</strong>
+                      </div>
+                      <div>
+                        <span style={{ fontSize: '11px', color: 'var(--text-light)', fontWeight: '700', textTransform: 'uppercase' }}>🚨 STATUS DE RISCO</span>
+                        <strong style={{ display: 'block', fontSize: '20px', color: '#10b981', marginTop: '8px' }}>Tudo Normal (0 Alertas)</strong>
+                      </div>
                     </div>
-                    <div style={{ backgroundColor: 'var(--bg-card)', padding: '20px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-light)' }}>
-                      <span style={{ fontSize: '11px', color: 'var(--text-light)', fontWeight: '700', textTransform: 'uppercase' }}>Receita do Mês</span>
-                      <strong style={{ display: 'block', fontSize: '24px', color: 'var(--text-main)', marginTop: '6px' }}>R$ {metrics?.month_revenue || '417,20'}</strong>
-                    </div>
-                    <div style={{ backgroundColor: 'var(--bg-card)', padding: '20px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-light)' }}>
-                      <span style={{ fontSize: '11px', color: 'var(--text-light)', fontWeight: '700', textTransform: 'uppercase' }}>Pagamentos Aprovados</span>
-                      <strong style={{ display: 'block', fontSize: '24px', color: '#10b981', marginTop: '6px' }}>98.5%</strong>
+
+                    <div style={{ fontSize: '13px', color: 'var(--text-light)', fontStyle: 'italic', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      💡 <strong style={{ color: 'var(--text-main)' }}>Filtro de Complexidade Operacional:</strong> Sem scroll, sem tabelas ou logs. Apenas saúde, dinheiro e risco para tomada de decisão imediata.
                     </div>
                   </div>
                 </div>
