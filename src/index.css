@@ -1199,7 +1199,8 @@ button[title="Sair do MyFlowDay"]:hover {
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border-bottom: 1px solid var(--border-light);
-  padding: 16px 0;
+  padding: 0;
+  box-sizing: border-box;
 }
 
 .app-top-header-container {
@@ -1209,7 +1210,9 @@ button[title="Sair do MyFlowDay"]:hover {
   width: 100%;
   max-width: 1200px;
   margin: 0 auto;
-  padding: 0 var(--space-6);
+  padding: 0 16px;
+  height: 60px;
+  box-sizing: border-box;
 }
 
 .app-top-profile {
@@ -1344,16 +1347,27 @@ button[title="Sair do MyFlowDay"]:hover {
 @media (max-width: 600px) {
   .app-bottom-nav {
     width: 96%;
-    padding: 6px 4px;
+    max-width: 100%;
+    padding: 6px 8px;
     bottom: 12px;
+    overflow-x: auto;
+    justify-content: flex-start;
+    gap: 4px;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+  .app-bottom-nav::-webkit-scrollbar {
+    display: none;
   }
   .app-bottom-nav-btn {
-    padding: 6px 6px;
-    gap: 1px;
+    padding: 6px 10px;
+    gap: 2px;
+    flex-shrink: 0;
   }
   .app-bottom-nav-btn .nav-text {
-    font-size: 8.5px;
+    font-size: 9px;
     font-weight: 500;
+    white-space: nowrap;
   }
   .app-bottom-nav-btn .nav-icon {
     font-size: 18px;
