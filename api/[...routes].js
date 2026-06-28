@@ -165,35 +165,49 @@ async function handleSubscriptionCreate(req, res) {
         console.log('[PAYMENT_STEP_SUCCESS] ensureCustomer finalizado:', { userId, customerId });
 
         if (billingType.toUpperCase() === 'PIX') {
-            // Check de Idempotência: Se o usuário já tiver uma assinatura 'pending' gerada nos últimos 15 minutos, reutiliza
+            // Check de Idempotência Determinística (Stripe-level):
+            // Usa idempotencyKey enviado pelo client ou gera chave compósita determinística por dia (mfd_pix_USERID_YYYY-MM-DD)
             currentStep = 'CHECK_IDEMPOTENCY';
-            const fifteenMinsAgo = new Date(Date.now() - 15 * 60 * 1000).toISOString();
+            const todayStr = new Date().toISOString().slice(0, 10);
+            const deterministicRef = body.idempotencyKey ? String(body.idempotencyKey).trim() : `mfd_pix_${userId}_${todayStr}`;
+
             const { data: existingPending } = await supabaseAdmin
                 .from('subscriptions')
                 .select('*')
                 .eq('user_id', userId)
                 .eq('status', 'pending')
-                .gt('created_at', fifteenMinsAgo)
+                .or(`idempotency_key.eq.${deterministicRef},provider_id.eq.${deterministicRef}`)
                 .order('created_at', { ascending: false })
                 .limit(1)
-                .maybeSingle();
+                .maybeSingle().catch(() => ({ data: null }));
 
-            if (existingPending && existingPending.asaas_payment_id) {
-                console.log('[PAYMENT_IDEMPOTENT_REUSE] Reutilizando cobrança Pix pendente recente:', existingPending.asaas_payment_id);
+            // Fallback de busca por assinatura pendente determinística do usuário
+            const pendingSub = existingPending || (await supabaseAdmin
+                .from('subscriptions')
+                .select('*')
+                .eq('user_id', userId)
+                .eq('status', 'pending')
+                .order('created_at', { ascending: false })
+                .limit(1)
+                .maybeSingle()).data;
+
+            if (pendingSub && pendingSub.asaas_payment_id) {
+                console.log('[PAYMENT_DETERMINISTIC_IDEMPOTENT] Reutilizando cobrança Pix pendente determinística:', pendingSub.asaas_payment_id);
                 try {
-                    const existingPayment = await PaymentGateway.getPayment(existingPending.asaas_payment_id);
+                    const existingPayment = await PaymentGateway.getPayment(pendingSub.asaas_payment_id);
                     if (existingPayment && existingPayment.status === 'PENDING') {
                         let existingQr = {};
                         try {
                             const { safeFetchAsaas } = await import('../lib/paymentGateway/asaas.js');
                             const baseUrl = process.env.ASAAS_ENV === 'production' ? 'https://www.asaas.com/api/v3' : 'https://sandbox.asaas.com/api/v3';
-                            existingQr = await safeFetchAsaas(`${baseUrl}/payments/${existingPending.asaas_payment_id}/pixQrCode`);
+                            existingQr = await safeFetchAsaas(`${baseUrl}/payments/${pendingSub.asaas_payment_id}/pixQrCode`);
                         } catch (_) {}
 
                         return res.status(200).json({
                             success: true,
                             idempotentReused: true,
-                            paymentId: existingPending.asaas_payment_id,
+                            idempotencyKey: deterministicRef,
+                            paymentId: pendingSub.asaas_payment_id,
                             customerId,
                             qrCode: existingQr.payload || null,
                             qrCodeBase64: existingQr.encodedImage ? `data:image/png;base64,${existingQr.encodedImage}` : null,
@@ -211,9 +225,9 @@ async function handleSubscriptionCreate(req, res) {
                 customerId,
                 amount: PLAN_PREMIUM_MONTHLY_PRICE,
                 description: 'Plano MyFlowDay Premium ⚡',
-                externalReference: `mfd_premium_${userId}`
+                externalReference: deterministicRef
             });
-            console.log('[PAYMENT_STEP_SUCCESS] createPixCharge finalizado:', { paymentId: pixCharge.id });
+            console.log('[PAYMENT_STEP_SUCCESS] createPixCharge finalizado com ref determinística:', { paymentId: pixCharge.id, externalReference: deterministicRef });
 
             currentStep = 'CREATE_PENDING_SUBSCRIPTION';
             await BillingEngine.createPendingSubscription(userId, {
