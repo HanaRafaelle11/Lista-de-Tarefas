@@ -2,10 +2,11 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { 
   BarChart, Users, Star, BarChart3, TrendingUp, ShieldAlert, CheckCircle2, 
   ChevronRight, Download, Filter, Calendar, Award, CheckSquare, Target, Flame, 
-  Activity, ArrowLeft, ArrowRight, UserCheck, DollarSign, Clock, HelpCircle
+  Activity, ArrowLeft, ArrowRight, UserCheck, DollarSign, Clock, HelpCircle, Bell, RefreshCw
 } from 'lucide-react';
 import { useAppContext } from '../contexts/AppContext';
 import { supabase } from '../supabaseClient';
+import { processNotificationQueue } from '../../services/push-worker-engine.js';
 
 export default function AdminDashboard() {
   const { isAdmin, currentUser } = useAppContext();
@@ -21,8 +22,13 @@ export default function AdminDashboard() {
   const [error, setError] = useState(null);
   
   // Navigation tabs for the admin dashboard
-  const [activeAdminTab, setActiveAdminTab] = useState('metrics'); // 'metrics' | 'users' | 'funnels' | 'payments'
+  const [activeAdminTab, setActiveAdminTab] = useState('metrics'); // 'metrics' | 'users' | 'funnels' | 'payments' | 'notifications'
   const [paymentHierarchyTab, setPaymentHierarchyTab] = useState('overview'); // 'overview' | 'diagnostics' | 'raw'
+
+  // Push Notifications Queue Console States
+  const [pushQueueItems, setPushQueueItems] = useState([]);
+  const [loadingPushQueue, setLoadingPushQueue] = useState(false);
+  const [pushStatusFilter, setPushStatusFilter] = useState('all'); // 'all' | 'pending' | 'sent' | 'failed'
 
   // Payment Debug Console states
   const [selectedPaymentUserId, setSelectedPaymentUserId] = useState('');
@@ -160,9 +166,43 @@ export default function AdminDashboard() {
     }
   }, [selectedPaymentUserId]);
 
+  const fetchPushQueue = async () => {
+    setLoadingPushQueue(true);
+    try {
+      const { data, error } = await supabase
+        .from('notification_queue')
+        .select('*')
+        .order('scheduled_for', { ascending: false })
+        .limit(100);
+      if (!error && data) {
+        setPushQueueItems(data);
+      }
+    } catch (err) {
+      console.error('Erro ao buscar fila de notificações:', err);
+    } finally {
+      setLoadingPushQueue(false);
+    }
+  };
+
+  const handleTriggerPushWorker = async () => {
+    setLoadingPushQueue(true);
+    try {
+      const res = await processNotificationQueue(supabase);
+      alert(`Worker executado com sucesso!\nProcessados: ${res.processed}\nEnviados com Sucesso: ${res.success || 0}\nFalhas: ${res.failed || 0}`);
+      await fetchPushQueue();
+    } catch (err) {
+      alert('Erro ao disparar worker: ' + err.message);
+    } finally {
+      setLoadingPushQueue(false);
+    }
+  };
+
   useEffect(() => {
     if (activeAdminTab === 'payments' && isAdmin) {
       fetchAllLatestEvents();
+    }
+    if (activeAdminTab === 'notifications' && isAdmin) {
+      fetchPushQueue();
     }
   }, [activeAdminTab, isAdmin]);
 
@@ -622,7 +662,8 @@ export default function AdminDashboard() {
               { id: 'metrics', label: '📊 Métricas SaaS', icon: <BarChart size={16} /> },
               { id: 'users', label: '👥 Diretório de Usuários', icon: <Users size={16} /> },
               { id: 'funnels', label: '🎯 Funis de Conversão', icon: <Target size={16} /> },
-              { id: 'payments', label: '💳 Debug de Pagamentos', icon: <DollarSign size={16} /> }
+              { id: 'payments', label: '💳 Debug de Pagamentos', icon: <DollarSign size={16} /> },
+              { id: 'notifications', label: '🔔 Notificações Push', icon: <Bell size={16} /> }
             ].map(tab => (
               <button
                 key={tab.id}
@@ -1618,6 +1659,128 @@ export default function AdminDashboard() {
                 </div>
               </div>
             )}
+            </div>
+          )}
+
+          {activeAdminTab === 'notifications' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              {/* Header com Ação do Worker */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', backgroundColor: 'var(--bg-card)', padding: '20px 24px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-light)' }}>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '800', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Bell size={20} style={{ color: 'var(--primary)' }} /> Fila de Disparos Web Push (Production Grade)
+                  </h3>
+                  <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: 'var(--text-muted)' }}>
+                    Monitoramento da fila idenfutável de notificações agendadas e status dos envios VAPID.
+                  </p>
+                </div>
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  <button onClick={fetchPushQueue} className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px' }}>
+                    <RefreshCw size={14} /> Atualizar Fila
+                  </button>
+                  <button onClick={handleTriggerPushWorker} className="btn-primary-glow" style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', padding: '8px 16px', fontWeight: '700' }}>
+                    ⚡ Simular Disparo do Worker
+                  </button>
+                </div>
+              </div>
+
+              {/* KPIs de Notificação */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
+                <div style={{ backgroundColor: 'var(--bg-card)', padding: '16px 20px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-light)' }}>
+                  <span style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Total em Fila</span>
+                  <h4 style={{ margin: '4px 0 0', fontSize: '24px', fontWeight: '800', color: 'var(--text-main)' }}>{pushQueueItems.length}</h4>
+                </div>
+                <div style={{ backgroundColor: 'var(--bg-card)', padding: '16px 20px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-light)' }}>
+                  <span style={{ fontSize: '11px', fontWeight: '700', color: '#f59e0b', textTransform: 'uppercase' }}>Pendentes</span>
+                  <h4 style={{ margin: '4px 0 0', fontSize: '24px', fontWeight: '800', color: '#f59e0b' }}>{pushQueueItems.filter(i => i.status === 'pending' || i.status === 'processing').length}</h4>
+                </div>
+                <div style={{ backgroundColor: 'var(--bg-card)', padding: '16px 20px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-light)' }}>
+                  <span style={{ fontSize: '11px', fontWeight: '700', color: '#10b981', textTransform: 'uppercase' }}>Enviadas com Sucesso</span>
+                  <h4 style={{ margin: '4px 0 0', fontSize: '24px', fontWeight: '800', color: '#10b981' }}>{pushQueueItems.filter(i => i.status === 'sent').length}</h4>
+                </div>
+                <div style={{ backgroundColor: 'var(--bg-card)', padding: '16px 20px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-light)' }}>
+                  <span style={{ fontSize: '11px', fontWeight: '700', color: '#ef4444', textTransform: 'uppercase' }}>Falhas de Envio</span>
+                  <h4 style={{ margin: '4px 0 0', fontSize: '24px', fontWeight: '800', color: '#ef4444' }}>{pushQueueItems.filter(i => i.status === 'failed').length}</h4>
+                </div>
+              </div>
+
+              {/* Tabela de Disparos */}
+              <div style={{ backgroundColor: 'var(--bg-card)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-light)', overflow: 'hidden' }}>
+                <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-light)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <h4 style={{ margin: 0, fontSize: '15px', fontWeight: '700', color: 'var(--text-main)' }}>Últimos Registros de Disparo</h4>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    {['all', 'pending', 'sent', 'failed'].map(st => (
+                      <button
+                        key={st}
+                        onClick={() => setPushStatusFilter(st)}
+                        style={{
+                          padding: '4px 12px', borderRadius: '12px', fontSize: '12px', fontWeight: '600', cursor: 'pointer', border: 'none',
+                          backgroundColor: pushStatusFilter === st ? 'var(--primary)' : 'rgba(255,255,255,0.05)',
+                          color: pushStatusFilter === st ? '#fff' : 'var(--text-muted)'
+                        }}
+                      >
+                        {st === 'all' ? 'Todos' : st === 'pending' ? 'Pendentes' : st === 'sent' ? 'Enviados' : 'Falhas'}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {loadingPushQueue ? (
+                  <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-muted)' }}>Carregando fila...</div>
+                ) : pushQueueItems.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-muted)', fontSize: '13px' }}>Nenhum registro encontrado na fila de notificações.</div>
+                ) : (
+                  <div style={{ overflowX: 'auto' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
+                      <thead>
+                        <tr style={{ borderBottom: '1px solid var(--border-light)', color: 'var(--text-muted)', backgroundColor: 'rgba(255,255,255,0.02)' }}>
+                          <th style={{ padding: '12px 16px' }}>Entidade</th>
+                          <th style={{ padding: '12px 16px' }}>Título & Mensagem</th>
+                          <th style={{ padding: '12px 16px' }}>Agendado Para</th>
+                          <th style={{ padding: '12px 16px' }}>Status</th>
+                          <th style={{ padding: '12px 16px' }}>Tentativas</th>
+                          <th style={{ padding: '12px 16px' }}>Detalhes / Erro</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {pushQueueItems
+                          .filter(i => pushStatusFilter === 'all' || i.status === pushStatusFilter)
+                          .map(item => (
+                            <tr key={item.id} style={{ borderBottom: '1px solid var(--border-light)' }}>
+                              <td style={{ padding: '12px 16px' }}>
+                                <span style={{ padding: '2px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: '700', backgroundColor: 'rgba(255,255,255,0.08)', textTransform: 'uppercase' }}>
+                                  {item.entity_type || 'task'}
+                                </span>
+                              </td>
+                              <td style={{ padding: '12px 16px' }}>
+                                <strong style={{ color: 'var(--text-main)', display: 'block' }}>{item.title}</strong>
+                                <span style={{ color: 'var(--text-muted)', fontSize: '12px' }}>{item.body}</span>
+                              </td>
+                              <td style={{ padding: '12px 16px', color: 'var(--text-main)', whiteSpace: 'nowrap' }}>
+                                {new Date(item.scheduled_for).toLocaleString('pt-BR')}
+                              </td>
+                              <td style={{ padding: '12px 16px' }}>
+                                <span style={{
+                                  padding: '4px 10px', borderRadius: '12px', fontSize: '11px', fontWeight: '700', textTransform: 'uppercase',
+                                  backgroundColor: item.status === 'sent' ? 'rgba(16,185,129,0.15)' : item.status === 'failed' ? 'rgba(239,68,68,0.15)' : 'rgba(245,158,11,0.15)',
+                                  color: item.status === 'sent' ? '#10b981' : item.status === 'failed' ? '#ef4444' : '#f59e0b'
+                                }}>
+                                  {item.status}
+                                </span>
+                              </td>
+                              <td style={{ padding: '12px 16px', color: 'var(--text-muted)' }}>
+                                {item.attempts} / {item.max_attempts}
+                              </td>
+                              <td style={{ padding: '12px 16px', color: item.last_error ? '#f87171' : 'var(--text-muted)', fontSize: '12px' }}>
+                                {item.last_error || (item.sent_at ? `Enviado em ${new Date(item.sent_at).toLocaleTimeString('pt-BR')}` : '-')}
+                              </td>
+                            </tr>
+                          ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
             </div>
           )}
 

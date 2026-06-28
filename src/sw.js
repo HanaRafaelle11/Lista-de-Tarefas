@@ -3,110 +3,92 @@ import { precacheAndRoute } from 'workbox-precaching';
 // Precaching files injected by workbox
 precacheAndRoute(self.__WB_MANIFEST || []);
 
-// Armazenamento em memória do SW para agendamentos em segundo plano
-let scheduledTasks = [];
-const notifiedTaskIds = new Set();
+console.log('[SW] Service Worker Production Grade registrado e ativo.');
 
-// Escutar sincronização de tarefas enviadas do app
-self.addEventListener('message', (event) => {
-  if (event.data && event.data.type === 'SYNC_TASKS_FOR_NOTIFICATIONS') {
-    scheduledTasks = event.data.payload?.tasks || [];
-    console.log('[SW] Tarefas sincronizadas para notificações em segundo plano:', scheduledTasks.length);
-  }
-});
-
-// Verificação periódica no Service Worker (roda em segundo plano mesmo com app fechado)
-setInterval(() => {
-  if (!scheduledTasks.length) return;
-  const now = new Date();
-
-  scheduledTasks.forEach(task => {
-    if (!task.dueDate) return;
-    const dueTime = new Date(task.dueDate);
-    const timeDiffMs = dueTime.getTime() - now.getTime();
-    const timeDiffMinutes = timeDiffMs / (1000 * 60);
-
-    // Se vence em 15 min ou menos e ainda não notificado
-    if (timeDiffMinutes > 0 && timeDiffMinutes <= 15) {
-      const notifId = `sw_task_due_${task.id}`;
-      if (!notifiedTaskIds.has(notifId)) {
-        notifiedTaskIds.add(notifId);
-        const title = 'Tarefa Próxima do Vencimento ⏰';
-        const body = `"${task.title}" vence em breve no MyFlowDay.`;
-        self.registration.showNotification(title, {
-          body,
-          icon: '/branding/icon-192.png',
-          badge: '/branding/notification-badge.png',
-          vibrate: [200, 100, 200],
-          requireInteraction: true,
-          data: { url: '/tasks' }
-        });
-        
-        // Broadcast para atualizar o sininho no app em tempo real
-        self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clients => {
-          clients.forEach(client => {
-            client.postMessage({
-              type: 'INJECT_NOTIFICATION_TO_APP',
-              payload: { notifType: 'task', title, description: body, metadata: { actionTab: 'tasks' } }
-            });
-          });
-        });
-      }
-    }
-  });
-}, 60000);
-
-// Escutar Web Push notification (Servidor VAPID → SO do usuário)
+// ── 1. Evento Push Nativo (Servidor VAPID / FCM / APNs → Celular Fechado) ──
 self.addEventListener('push', (event) => {
   try {
-    const data = event.data ? event.data.json() : { title: 'MyFlowDay ⚡', body: 'Você tem uma nova atualização!' };
-    
+    let data = {
+      title: 'MyFlowDay ⚡',
+      body: 'Você possui um novo compromisso agendado!',
+      url: '/tasks',
+      tag: `flowday_push_${Date.now()}`
+    };
+
+    if (event.data) {
+      try {
+        data = event.data.json();
+      } catch (e) {
+        data.body = event.data.text();
+      }
+    }
+
+    const title = data.title || 'MyFlowDay ⚡';
     const options = {
-      body: data.body,
+      body: data.body || '',
       icon: '/branding/icon-192.png',
       badge: '/branding/notification-badge.png',
       vibrate: [200, 100, 200],
       requireInteraction: true,
+      renotify: true,
+      tag: data.tag || `notif_${Date.now()}`,
       data: {
-        url: data.url || '/'
+        url: data.url || '/',
+        entity_id: data.entity_id,
+        entity_type: data.entity_type,
+        timestamp: data.timestamp || new Date().toISOString()
       }
     };
 
     event.waitUntil(
       Promise.all([
-        self.registration.showNotification(data.title, options),
+        // Exibe a notificação na tela de bloqueio do sistema operacional
+        self.registration.showNotification(title, options),
+        
+        // Transmite para janelas abertas para atualizar o sininho interno em tempo real
         self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clients => {
           clients.forEach(client => {
             client.postMessage({
               type: 'INJECT_NOTIFICATION_TO_APP',
-              payload: { notifType: data.type || 'system', title: data.title, description: data.body, metadata: data.metadata || {} }
+              payload: {
+                notifType: data.entity_type || 'system',
+                title: title,
+                description: data.body || '',
+                metadata: { actionTab: data.entity_type === 'goal' ? 'goals' : 'tasks', url: data.url }
+              }
             });
           });
         })
       ])
     );
   } catch (err) {
-    console.error('[SW] Error showing push notification:', err);
+    console.error('[SW] Erro ao processar evento Push nativo:', err);
   }
 });
 
-// Click notification handler (abre ou foca o app)
+// ── 2. Clique na Notificação Nativa (Deep Linking Exato) ──
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   
+  const targetUrl = event.notification.data?.url || '/';
+
   event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
-      const targetUrl = event.notification.data?.url || '/';
-      
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
+      // Se já houver uma aba aberta com o app, foca nela e navega
       for (let i = 0; i < windowClients.length; i++) {
         const client = windowClients[i];
-        if (client.url.includes(targetUrl) && 'focus' in client) {
+        if ('focus' in client) {
+          client.postMessage({
+            type: 'NAVIGATE_TO_ROUTE',
+            payload: { url: targetUrl }
+          });
           return client.focus();
         }
       }
       
-      if (clients.openWindow) {
-        return clients.openWindow(targetUrl);
+      // Se o app estiver completamente fechado, abre uma nova janela na rota exata
+      if (self.clients.openWindow) {
+        return self.clients.openWindow(targetUrl);
       }
     })
   );
