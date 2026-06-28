@@ -798,17 +798,43 @@ export function AppProvider({ children }) {
   // ═══════════════════════════════════════════════════════════════════════════
   // AUTH — inicialização e listener
   // ═══════════════════════════════════════════════════════════════════════════
+
+  // Ref de init: garante execução ÚNICA de finishInit() independente de StrictMode,
+  // remounts, race conditions entre getSession/onAuthStateChange/timeout.
+  const initDoneRef = useRef(false);
+
+  // Timer de fallback em ref: sobrevive ao cleanup do useEffect.
+  // Só é cancelado quando finishInit() executa — nunca pelo cleanup.
+  const initTimerRef = useRef(null);
+
+  // finishInit() — Single Source of Truth de inicialização.
+  // Garante: executa no máximo 1 vez, independente de qual caminho chegar primeiro.
+  const finishInit = useCallback((user) => {
+    if (initDoneRef.current) return; // já inicializado — ignora chamadas extras
+    initDoneRef.current = true;
+    clearTimeout(initTimerRef.current);
+    initTimerRef.current = null;
+    if (user) setCurrentUser(user);
+    setIsInitializing(false);
+  }, []);
+
   // 1. Efeito para Auth State (getSession e onAuthStateChange)
   useEffect(() => {
-    let active = true;
+    // Se já foi inicializado (ex: StrictMode remount), não reinicia.
+    if (initDoneRef.current) return;
 
-    // Fallback de segurança: Garante 100% que a tela de carregamento inicial é desativada em no máximo 3 segundos
-    const initFallbackTimer = setTimeout(() => {
-      if (active) {
-        console.warn('[AppContext] Fallback de inicialização acionado para destravar renderização.');
-        setIsInitializing(false);
-      }
-    }, 3000);
+    let effectActive = true;
+
+    // Fallback garantido: timer em REF (não em variável local do effect).
+    // O cleanup do effect NÃO cancela este timer — ele só é cancelado por finishInit().
+    // Isso garante que mesmo se o effect for desmontado antes de getSession() resolver,
+    // o timer ainda dispara e libera o loading.
+    if (!initTimerRef.current) {
+      initTimerRef.current = setTimeout(() => {
+        console.warn('[AppContext] finishInit() acionado via fallback (3s). Destravando loading.');
+        finishInit(null);
+      }, 3000);
+    }
 
     const buildUser = (u) => ({
       id: u.id,
@@ -817,40 +843,41 @@ export function AppProvider({ children }) {
       user_metadata: u.user_metadata || {},
     });
 
-    // Sanitize URL if OAuth error or bad_oauth_state is present to prevent redirect loops
+    // Sanitize URL se contiver erro OAuth para prevenir redirect loops
     if (typeof window !== 'undefined') {
       const searchParams = new URLSearchParams(window.location.search);
       const hashParams = new URLSearchParams(window.location.hash.substring(1));
       if (searchParams.has('error') || searchParams.get('error_code') === 'bad_oauth_state' || hashParams.has('error')) {
-        console.warn('[AppContext] Sanitizing OAuth error in URL to prevent redirect loop.');
+        console.warn('[AppContext] Sanitizing OAuth error in URL.');
         const cleanUrl = window.location.origin + window.location.pathname;
         window.history.replaceState({}, document.title, cleanUrl);
       }
     }
 
+    // getSession(): inicializa com sessão existente (cookie/localStorage).
+    // NÃO depende de onAuthStateChange — é independente.
     supabase.auth.getSession()
       .then(({ data: { session } }) => {
-        if (!active) return;
-        const userId = session?.user?.id || null;
-        runSilentHealthCheck(userId);
+        if (!effectActive) return;
         if (session?.user) {
-          const u = buildUser(session.user);
-          setCurrentUser(u);
-          eventsService.logEvent(u.id, 'login', { method: 'session_restore' }).catch(() => {});
+          runSilentHealthCheck(session.user.id);
+          eventsService.logEvent(session.user.id, 'login', { method: 'session_restore' }).catch(() => {});
+          finishInit(buildUser(session.user));
+        } else {
+          finishInit(null);
         }
-        clearTimeout(initFallbackTimer);
-        setIsInitializing(false);
       })
       .catch((err) => {
         console.error('[AppContext] Erro ao verificar sessão:', err);
-        if (active) {
-          clearTimeout(initFallbackTimer);
-          setIsInitializing(false);
-        }
+        if (effectActive) finishInit(null);
       });
 
+    // onAuthStateChange(): escuta mudanças de estado APÓS o init.
+    // Também chama finishInit() para o caso de PKCE onde INITIAL_SESSION
+    // chega antes de getSession() resolver.
     const { data: { subscription } } = supabase.auth.onAuthStateChange((e, session) => {
-      if (!active) return;
+      if (!effectActive) return;
+
       if (session?.user) {
         const u = buildUser(session.user);
         if (e === 'USER_UPDATED') {
@@ -866,22 +893,27 @@ export function AppProvider({ children }) {
               }
             };
           });
+          // USER_UPDATED não finaliza init — apenas atualiza dados do usuário
         } else {
-          setCurrentUser(u);
+          // SIGNED_IN, INITIAL_SESSION, TOKEN_REFRESHED, etc.
+          finishInit(u);
         }
-      } else {
+      } else if (e === 'SIGNED_OUT') {
         setCurrentUser(null);
+        // SIGNED_OUT após init: reseta user mas não reinicia loading
+      } else {
+        // Estado sem sessão no init (ex: usuário não logado)
+        finishInit(null);
       }
-      clearTimeout(initFallbackTimer);
-      setIsInitializing(false);
     });
 
     return () => {
-      active = false;
-      clearTimeout(initFallbackTimer);
+      effectActive = false;
       subscription?.unsubscribe?.();
+      // NÃO cancela initTimerRef — ele é global e sobrevive ao remount (StrictMode).
+      // Só finishInit() o cancela.
     };
-  }, [runSilentHealthCheck]);
+  }, [finishInit, runSilentHealthCheck]);
 
   // ── Verificação centralizada server-side do plano (Zero Trust) ──
   const checkServerAccess = useCallback(async (userId) => {
