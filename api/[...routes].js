@@ -509,6 +509,7 @@ async function handlePaymentEventsLog(req, res) {
 // Protegido por withAdminAuth. Retorna timeline + consistência.
 // =========================================================
 const handleAdminBillingTimeline = withAdminAuth((req, res) => billingController.getTimeline(req, res));
+const handleAdminBillingHealth = withAdminAuth((req, res) => billingController.getHealth(req, res));
 
 // =========================================================
 // ROUTER PRINCIPAL
@@ -555,6 +556,8 @@ export default async function handler(req, res) {
             await handlePaymentEventsLog(req, res);
         } else if (route === 'admin/dashboard') {
             await handleAdminDashboard(req, res);
+        } else if (route === 'admin/billing/health') {
+            await handleAdminBillingHealth(req, res);
         } else if (route === 'admin/payment-events' || route === 'admin/billing/timeline' || route.startsWith('admin/billing/user')) {
             await handleAdminBillingTimeline(req, res);
         } else if (route === '' || route === 'health') {

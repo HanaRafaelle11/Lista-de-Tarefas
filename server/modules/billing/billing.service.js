@@ -5,11 +5,13 @@
  */
 import { billingRepository } from './billing.repository.js';
 import { mapBillingEvents, mapBillingLedgers } from './billing.mapper.js';
+import { billingValidator } from './billing.validator.js';
+import { billingReliability } from './billing.reliability.js';
 
 export const billingService = {
   async getBillingTimeline(userIdOrSearch) {
     if (!userIdOrSearch) {
-      return {
+      const emptyResult = {
         userId: null,
         user: null,
         subscription: null,
@@ -22,6 +24,8 @@ export const billingService = {
         amount: 0,
         value: 0
       };
+      billingValidator.validateTimeline(emptyResult);
+      return emptyResult;
     }
 
     // 1. Resolver usuário via repositório
@@ -40,7 +44,7 @@ export const billingService = {
     const ledger = mapBillingLedgers(rawLedger);
     const history = [...events, ...ledger].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
-    return {
+    const payload = {
       userId: targetUserId,
       user: resolvedUser,
       subscription: rawSub,
@@ -53,5 +57,14 @@ export const billingService = {
       amount: Number(rawSub?.amount ?? rawSub?.price ?? 0),
       value: Number(rawSub?.amount ?? rawSub?.price ?? 0)
     };
+
+    // Contract Enforcement Validation
+    billingValidator.validateTimeline(payload);
+
+    return payload;
+  },
+
+  async getReliabilityHealth() {
+    return await billingReliability.getHealthStatus();
   }
 };

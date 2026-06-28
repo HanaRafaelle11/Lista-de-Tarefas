@@ -25,5 +25,15 @@ export const billingController = {
         error: err.message
       });
     }
+  },
+
+  async getHealth(req, res) {
+    try {
+      const healthData = await billingService.getReliabilityHealth();
+      return res.status(200).json(healthData);
+    } catch (err) {
+      console.error('[BillingController] getHealth Exception:', err.message);
+      return res.status(500).json({ status: 'ERROR', message: err.message });
+    }
   }
 };
