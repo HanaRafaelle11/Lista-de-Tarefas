@@ -208,16 +208,13 @@ export default function Checkout() {
         throw new Error('Usuário não autenticado. Faça login novamente.');
       }
 
-      // Sincronizar perfil no Supabase
-      try {
-        await profilesService.updateProfile(currentUser.id, {
-          name: `${firstName.trim()} ${lastName.trim()}`,
-          nickname: firstName.toLowerCase().trim()
-        });
-      } catch (_) {}
+      // Fire-and-forget de sincronização de perfil e log de checkout (não-bloqueante)
+      profilesService.updateProfile(currentUser.id, {
+        name: `${firstName.trim()} ${lastName.trim()}`,
+        nickname: firstName.toLowerCase().trim()
+      }).catch(() => {});
 
-      // Log: Iniciou o checkout
-      await logCheckoutEvent('checkout_started', 'pending', {
+      logCheckoutEvent('checkout_started', 'pending', {
         payload: {
           firstName,
           lastName,
@@ -250,8 +247,8 @@ export default function Checkout() {
         setCheckoutData(data);
         setStatus('pix_generated');
 
-        // Log: Pix gerado com sucesso
-        await logCheckoutEvent('checkout_completed', 'success', {
+        // Log: Pix gerado com sucesso (não-bloqueante)
+        logCheckoutEvent('checkout_completed', 'success', {
           referenceId: data.paymentId || data.subscriptionId || data.id,
           payload: { asaasResponse: data }
         });
@@ -299,8 +296,8 @@ export default function Checkout() {
         setCheckoutData(data);
         setStatus('card_pending');
 
-        // Log: Assinatura de cartão concluída
-        await logCheckoutEvent('checkout_completed', 'success', {
+        // Log: Assinatura de cartão concluída (não-bloqueante)
+        logCheckoutEvent('checkout_completed', 'success', {
           referenceId: data.paymentId || data.subscriptionId || data.id,
           payload: { asaasResponse: data }
         });
@@ -310,8 +307,8 @@ export default function Checkout() {
       setError(err.message);
       setStatus('error');
 
-      // Log: Erro no checkout
-      await logCheckoutEvent('checkout_error', 'error', {
+      // Log: Erro no checkout (não-bloqueante)
+      logCheckoutEvent('checkout_error', 'error', {
         errorMessage: err.message
       });
     }
