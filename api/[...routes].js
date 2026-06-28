@@ -13,6 +13,7 @@ import handleBillingExpirationCron from './cron/billing-expiration.js';
 import { runBillingSanityCheck } from '../jobs/billing-sanity-check.js';
 import { withAdminAuth } from '../lib/auth/withAdminAuth.js';
 import { logPaymentEvent } from '../lib/payment-logger.js';
+import { billingController } from '../server/modules/billing/billing.controller.js';
 
 
 // =========================================================
@@ -507,119 +508,7 @@ async function handlePaymentEventsLog(req, res) {
 // GET /api/admin/payment-events?userId=xxx
 // Protegido por withAdminAuth. Retorna timeline + consistência.
 // =========================================================
-const handleAdminPaymentEvents = withAdminAuth(async (req, res) => {
-    if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
-    try {
-        const { userId, search, limit = 50 } = req.query;
-        let targetUserId = userId;
-        let matchedUserObj = null;
-
-        if (!targetUserId && search) {
-            const term = String(search).trim().toLowerCase();
-            try {
-                const { data: authData } = await supabaseAdmin.auth.admin.listUsers({ perPage: 1000 });
-                const matchedUser = authData?.users?.find(u => u.email?.toLowerCase().trim() === term || u.id === term);
-                if (matchedUser) {
-                    targetUserId = matchedUser.id;
-                    matchedUserObj = { id: matchedUser.id, email: matchedUser.email, created_at: matchedUser.created_at };
-                }
-            } catch (authErr) {
-                console.warn('[ADMIN PAYMENT EVENTS WARN auth.users]', authErr.message);
-            }
-
-            if (!targetUserId) {
-                const { data: sub } = await supabaseAdmin.from('subscriptions').select('user_id').or(`asaas_subscription_id.eq.${term},asaas_customer_id.eq.${term},user_id.eq.${term}`).limit(1).maybeSingle();
-                if (sub) targetUserId = sub.user_id;
-            }
-        }
-
-        if (!targetUserId) {
-            return res.status(200).json({
-                user: null,
-                subscription: null,
-                events: [],
-                ledger: [],
-                history: [],
-                lastError: null,
-                consistency: { ok: true, warnings: [] }
-            });
-        }
-
-        // 1. Busca eventos na tabela oficial billing_events
-        let billingEvents = [];
-        try {
-            const { data: bEvts, error: bEvtsErr } = await supabaseAdmin
-                .from('billing_events')
-                .select('*')
-                .eq('user_id', targetUserId)
-                .order('created_at', { ascending: false })
-                .limit(Number(limit));
-            if (!bEvtsErr && bEvts) billingEvents = bEvts;
-        } catch (err) {
-            console.warn('[ADMIN PAYMENT EVENTS WARN billing_events]', err.message);
-        }
-
-        // 2. Busca lançamentos na tabela oficial billing_ledger
-        let billingLedger = [];
-        try {
-            const { data: bLed, error: bLedErr } = await supabaseAdmin
-                .from('billing_ledger')
-                .select('*')
-                .eq('user_id', targetUserId)
-                .order('created_at', { ascending: false })
-                .limit(Number(limit));
-            if (!bLedErr && bLed) billingLedger = bLed;
-        } catch (err) {
-            console.warn('[ADMIN PAYMENT EVENTS WARN billing_ledger]', err.message);
-        }
-
-        // 3. Estado atual da assinatura em subscriptions
-        let sub = null;
-        try {
-            const { data: subData, error: subErr } = await supabaseAdmin
-                .from('subscriptions')
-                .select('*')
-                .eq('user_id', targetUserId)
-                .maybeSingle();
-            if (!subErr && subData) sub = subData;
-        } catch (err) {
-            console.warn('[ADMIN PAYMENT EVENTS WARN sub]', err.message);
-        }
-
-        // 4. Verificação de consistência e erros
-        const lastError = billingEvents.find(e => e.status === 'error' || e.type === 'error');
-        const consistencyWarnings = [];
-
-        return res.status(200).json({
-            userId: targetUserId,
-            user: matchedUserObj,
-            subscription: sub,
-            events: billingEvents,
-            ledger: billingLedger,
-            history: [...billingEvents, ...billingLedger],
-            gateway: sub?.gateway || sub?.provider || 'asaas',
-            provider: sub?.provider || sub?.gateway || 'asaas',
-            status: sub?.status || 'free',
-            amount: sub?.amount || sub?.price || 0,
-            value: sub?.amount || sub?.price || 0,
-            lastError: lastError || null,
-            consistency: {
-                ok: consistencyWarnings.length === 0,
-                warnings: consistencyWarnings
-            }
-        });
-
-    } catch (err) {
-        console.error("[ADMIN PAYMENT EVENTS EXCEÇÃO]", err);
-        return res.status(500).json({
-            message: err.message || String(err),
-            code: err.code || 'UNKNOWN_ERROR',
-            details: err.details || null,
-            hint: err.hint || null,
-            stack: err.stack || null
-        });
-    }
-});
+const handleAdminBillingTimeline = withAdminAuth((req, res) => billingController.getTimeline(req, res));
 
 // =========================================================
 // ROUTER PRINCIPAL
@@ -666,8 +555,8 @@ export default async function handler(req, res) {
             await handlePaymentEventsLog(req, res);
         } else if (route === 'admin/dashboard') {
             await handleAdminDashboard(req, res);
-        } else if (route === 'admin/payment-events') {
-            await handleAdminPaymentEvents(req, res);
+        } else if (route === 'admin/payment-events' || route === 'admin/billing/timeline' || route.startsWith('admin/billing/user')) {
+            await handleAdminBillingTimeline(req, res);
         } else if (route === '' || route === 'health') {
             res.status(200).json({ 
                 status: 'online', 
