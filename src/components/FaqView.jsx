@@ -1,93 +1,34 @@
-import React, { useState } from 'react';
-import { ChevronDown, ChevronUp, HelpCircle, ArrowLeft } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { 
+  ChevronDown, ChevronUp, HelpCircle, ArrowLeft, Search, 
+  Rocket, CheckSquare, Target, Flame, Clock, Sparkles, 
+  Award, CreditCard, User, Wifi, BookOpen, AlertCircle, CheckCircle2, XCircle
+} from 'lucide-react';
+import { HELP_CATEGORIES, HELP_ARTICLES } from '../data/helpCenterData';
 
+const ICON_MAP = {
+  Rocket, CheckSquare, Target, Flame, Clock, Sparkles, 
+  Award, CreditCard, User, Wifi, BookOpen
+};
 
-const faqs = [
-  {
-    id: 1,
-    question: 'O MyFlowDay é gratuito?',
-    answer: 'Sim! O MyFlowDay oferece um plano gratuito completo com tarefas, hábitos, objetivos e insights de produtividade. Um plano Pro com recursos avançados estará disponível em breve para quem quiser ir além.',
-  },
-  {
-    id: 2,
-    question: 'Meus dados ficam seguros?',
-    answer: 'Absolutamente. Seus dados são armazenados com segurança no Supabase, uma plataforma de banco de dados em nuvem com criptografia em trânsito e em repouso. Você pode exportar ou excluir seus dados a qualquer momento. Para saber mais, consulte nossa Política de Privacidade.',
-  },
-  {
-    id: 3,
-    question: 'O que é o "Score de Consistência"?',
-    answer: 'Uma pontuação de 0 a 100 que reflete a regularidade das suas atividades nos últimos 7 dias. Ela considera tarefas concluídas, hábitos mantidos e a progressão dos seus objetivos. Quanto mais consistente você for, mais alto é o score, e isso se reflete em insights mais precisos sobre seus padrões de produtividade.',
-  },
-  {
-    id: 4,
-    question: 'Como funcionam os Objetivos e as Tarefas vinculadas?',
-    answer: 'Objetivos são metas de médio e longo prazo. Você pode vincular tarefas a cada objetivo para acompanhar o progresso automaticamente. Quando você conclui um objetivo com tarefas vinculadas, o MyFlowDay pergunta se deseja marcá-las como concluídas também, evitando inconsistências entre as seções.',
-  },
-  {
-    id: 5,
-    question: 'O que são os Insights do MyFlowDay?',
-    answer: 'São análises inteligentes geradas automaticamente com base nos seus dados. Eles identificam padrões como seu melhor horário de foco, dias mais produtivos, hábitos em risco e sequências de consistência. Quanto mais você usa o app, mais precisos ficam os insights.',
-  },
-  {
-    id: 6,
-    question: 'O app funciona offline?',
-    answer: 'Sim! O MyFlowDay é um Progressive Web App (PWA) e pode ser instalado no seu celular ou computador. Você consegue criar tarefas e registrar hábitos mesmo sem conexão, e os dados são sincronizados automaticamente quando a internet volta.',
-  },
-  {
-    id: 7,
-    question: 'Posso usar o MyFlowDay no celular?',
-    answer: 'Sim! O MyFlowDay é responsivo e funciona no navegador do celular. Além disso, você pode instalá-lo como um app nativo via PWA: no Android, acesse o site pelo Chrome e toque em "Adicionar à tela inicial". No iPhone, use o Safari e toque em "Compartilhar" > "Adicionar à Tela Inicial".',
-  },
-  {
-    id: 8,
-    question: 'Como posso enviar um feedback ou reportar um problema?',
-    answer: 'Vá em Configurações e toque em "Compartilhe com o MyFlowDay" para enviar sua mensagem diretamente pelo app. Você também pode abrir uma issue no repositório público no GitHub. Toda sugestão é bem-vinda e lida com atenção.',
-  },
-  {
-    id: 9,
-    question: 'O MyFlowDay vai ter mais recursos no futuro?',
-    answer: 'Definitivamente! Funcionalidades como relatórios avançados, integração com Google Calendar e modo colaborativo estão no radar. Acompanhe as atualizações pelo app e compartilhe suas ideias. O roadmap do MyFlowDay é construído junto com a comunidade.',
-  },
-  {
-    id: 10,
-    question: 'O que são os "Modelos Prontos"?',
-    answer: 'Modelos Prontos são estruturas de tarefas e objetivos pré-configuradas para diferentes áreas (como planejamento semanal, rotinas saudáveis e estudos). Eles servem como ponto de partida prático para você não ter que organizar tudo do zero.',
-  },
-  {
-    id: 11,
-    question: 'O que é o Método Eisenhower?',
-    answer: 'É um método de priorização que organiza tarefas em quatro quadrantes com base em Urgência e Importância: Fazer, Agendar, Delegar e Eliminar. No MyFlowDay, você conta com uma visualização exclusiva de matriz para organizar seu dia com foco no que realmente importa.',
-  },
-  {
-    id: 12,
-    question: 'Qual o diferencial do MyFlowDay em relação aos outros apps de produtividade?',
-    answer: 'O MyFlowDay é focado em produtividade consciente e autoconhecimento pessoal. Mais do que apenas gerenciar listas de afazeres, a plataforma integra o acompanhamento de hábitos saudáveis, o nível de energia e um score de consistência gradual, incentivando o progresso diário contínuo e sustentável, sem pressões ou cobranças excessivas.',
-  },
-  {
-    id: 13,
-    question: 'O MyFlowDay utiliza Inteligência Artificial?',
-    answer: 'O MyFlowDay conta com recursos de análise inteligente para gerar insights comportamentais a partir do seu histórico de uso, ajudando você a descobrir seus melhores horários de foco e ritmo de consistência. Todo esse processamento é feito de forma segura e local para garantir sua total privacidade.',
-  },
-  {
-    id: 14,
-    question: 'Posso exportar meus dados?',
-    answer: 'Sim! Valorizamos a portabilidade dos seus dados. Você pode exportar suas tarefas agendadas diretamente em formato de calendário (.ics) para sincronizar com Google Calendar e outras plataformas pelo Planejador Semanal, ou solicitar a exportação completa nas Configurações do seu perfil.',
-  },
-];
+function RenderCategoryIcon({ name, size = 18, color = 'currentColor' }) {
+  const IconComponent = ICON_MAP[name] || HelpCircle;
+  return <IconComponent size={size} style={{ color }} />;
+}
 
-function FaqItem({ item }) {
+function ArticleCard({ article }) {
   const [open, setOpen] = useState(false);
 
   return (
     <div
-      className="faq-item"
       style={{
-        borderRadius: 'var(--radius-md)',
-        border: `1px solid ${open ? 'var(--primary-light)' : 'var(--border-light)'}`,
-        backgroundColor: open ? 'var(--bg-card)' : 'var(--bg-card)',
+        borderRadius: 'var(--radius-md, 12px)',
+        border: `1px solid ${open ? 'var(--primary, #10b981)' : 'var(--border-light, rgba(255,255,255,0.08))'}`,
+        backgroundColor: 'var(--bg-card, rgba(30,30,38,0.95))',
         overflow: 'hidden',
-        transition: 'border-color 0.25s, box-shadow 0.25s',
-        boxShadow: open ? 'var(--shadow-md)' : 'var(--shadow-xs)',
+        transition: 'all 0.25s ease',
+        boxShadow: open ? '0 8px 24px rgba(0,0,0,0.3)' : 'none',
+        marginBottom: '12px'
       }}
     >
       <button
@@ -103,23 +44,101 @@ function FaqItem({ item }) {
           border: 'none',
           cursor: 'pointer',
           textAlign: 'left',
+          color: '#ffffff'
         }}
         aria-expanded={open}
       >
-        <span style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-main)', lineHeight: '1.4' }}>
-          {item.question}
+        <span style={{ fontSize: '16px', fontWeight: '700', fontFamily: 'var(--font-display, sans-serif)', lineHeight: '1.4' }}>
+          {article.title}
         </span>
-        <span style={{ color: 'var(--primary)', flexShrink: 0 }}>
-          {open ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+        <span style={{ color: 'var(--primary, #10b981)', flexShrink: 0 }}>
+          {open ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
         </span>
       </button>
 
       {open && (
-        <div
-          className="animate-fade-in"
-          style={{ padding: '0 20px 18px', fontSize: '14px', color: 'var(--text-muted)', lineHeight: '1.7', borderTop: '1px solid var(--border-light)' }}
-        >
-          <p style={{ margin: '14px 0 0' }}>{item.answer}</p>
+        <div style={{ padding: '0 20px 24px', fontSize: '14px', color: 'rgba(255,255,255,0.8)', lineHeight: '1.7', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+          
+          {/* O que é */}
+          <div style={{ marginTop: '16px', marginBottom: '16px' }}>
+            <h4 style={{ fontSize: '13px', textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--primary, #10b981)', marginBottom: '4px', fontWeight: '700' }}>
+              💡 O que é
+            </h4>
+            <p style={{ margin: 0, opacity: 0.9 }}>{article.whatIs}</p>
+          </div>
+
+          {/* Para que serve */}
+          <div style={{ marginBottom: '16px' }}>
+            <h4 style={{ fontSize: '13px', textTransform: 'uppercase', letterSpacing: '0.5px', color: '#3b82f6', marginBottom: '4px', fontWeight: '700' }}>
+              🎯 Para que serve
+            </h4>
+            <p style={{ margin: 0, opacity: 0.9 }}>{article.purpose}</p>
+          </div>
+
+          {/* Como acessar & usar */}
+          <div style={{ marginBottom: '16px', backgroundColor: 'rgba(255,255,255,0.03)', padding: '14px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)' }}>
+            <h4 style={{ fontSize: '13px', textTransform: 'uppercase', letterSpacing: '0.5px', color: '#f59e0b', marginBottom: '6px', fontWeight: '700' }}>
+              📍 Como Acessar e Utilizar
+            </h4>
+            <p style={{ margin: '0 0 6px 0', fontSize: '13px' }}><strong>Acesso:</strong> {article.howToAccess}</p>
+            <p style={{ margin: 0, fontSize: '13px' }}><strong>Como usar:</strong> {article.howToUse}</p>
+          </div>
+
+          {/* Guia de Campos */}
+          {article.fieldGuide && article.fieldGuide.length > 0 && (
+            <div style={{ marginBottom: '16px' }}>
+              <h4 style={{ fontSize: '13px', textTransform: 'uppercase', letterSpacing: '0.5px', color: '#a855f7', marginBottom: '8px', fontWeight: '700' }}>
+                📝 Guia de Preenchimento Correto
+              </h4>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {article.fieldGuide.map((f, idx) => (
+                  <div key={idx} style={{ fontSize: '13px', padding: '8px 12px', backgroundColor: 'rgba(168, 85, 247, 0.08)', borderRadius: '6px', borderLeft: '3px solid #a855f7' }}>
+                    <strong style={{ color: '#ffffff' }}>Campo {f.field}:</strong> {f.tip}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Exemplos Práticos */}
+          {article.examples && (
+            <div style={{ marginBottom: '16px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '10px' }}>
+              <div style={{ padding: '10px 14px', backgroundColor: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: '8px', fontSize: '13px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#ef4444', fontWeight: '700', marginBottom: '4px' }}>
+                  <XCircle size={16} /> Exemplo Inadequado
+                </div>
+                <span style={{ opacity: 0.9 }}>{article.examples.bad}</span>
+              </div>
+              <div style={{ padding: '10px 14px', backgroundColor: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.2)', borderRadius: '8px', fontSize: '13px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#10b981', fontWeight: '700', marginBottom: '4px' }}>
+                  <CheckCircle2 size={16} /> Exemplo Recomendado
+                </div>
+                <span style={{ opacity: 0.9 }}>{article.examples.good}</span>
+              </div>
+            </div>
+          )}
+
+          {/* Dicas e Erros Comuns */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '10px', marginTop: '12px' }}>
+            {article.bestPractices && (
+              <div style={{ fontSize: '12px', opacity: 0.8, fontStyle: 'italic' }}>
+                💡 <strong>Boa Prática:</strong> {article.bestPractices}
+              </div>
+            )}
+            {article.commonErrors && (
+              <div style={{ fontSize: '12px', opacity: 0.8, fontStyle: 'italic' }}>
+                ⚠️ <strong>Erro Comum:</strong> {article.commonErrors}
+              </div>
+            )}
+          </div>
+
+          {/* FAQ Específica */}
+          {article.faq && (
+            <div style={{ marginTop: '14px', paddingTop: '10px', borderTop: '1px stroke rgba(255,255,255,0.05)', fontSize: '13px', color: 'var(--primary, #10b981)' }}>
+              ❓ <strong>Dúvida Frequente:</strong> {article.faq}
+            </div>
+          )}
+
         </div>
       )}
     </div>
@@ -127,6 +146,9 @@ function FaqItem({ item }) {
 }
 
 export default function FaqView({ onGoBack }) {
+  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
+
   const goBack = () => {
     if (onGoBack) {
       onGoBack();
@@ -138,102 +160,164 @@ export default function FaqView({ onGoBack }) {
     }
   };
 
+  const filteredArticles = useMemo(() => {
+    return HELP_ARTICLES.filter(art => {
+      const matchesCat = selectedCategory === 'all' || art.categoryId === selectedCategory;
+      const q = searchQuery.toLowerCase().trim();
+      const matchesSearch = !q || 
+        art.title.toLowerCase().includes(q) || 
+        art.whatIs.toLowerCase().includes(q) || 
+        art.purpose.toLowerCase().includes(q) ||
+        (art.faq && art.faq.toLowerCase().includes(q));
+      return matchesCat && matchesSearch;
+    });
+  }, [selectedCategory, searchQuery]);
+
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-app)' }}>
-      {/* Top nav com botão voltar */}
+    <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-app, #0f172a)', color: '#ffffff' }}>
+      {/* Top Header */}
       <div style={{
         position: 'sticky', top: 0, zIndex: 100,
-        backgroundColor: 'var(--bg-card)',
-        borderBottom: '1px solid var(--border-light)',
-        padding: '12px 20px',
-        display: 'flex', alignItems: 'center', gap: '12px',
+        backgroundColor: 'rgba(24, 28, 26, 0.95)',
+        backdropFilter: 'blur(12px)',
+        borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+        padding: '14px 24px',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       }}>
-        <button
-          onClick={goBack}
-          aria-label="Voltar"
-          style={{
-            display: 'inline-flex', alignItems: 'center', gap: '6px',
-            padding: '7px 14px', fontSize: '13px', fontWeight: '600',
-            borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-medium)',
-            background: 'var(--bg-app)', color: 'var(--text-main)',
-            cursor: 'pointer', transition: 'background 0.15s'
-          }}
-          onMouseEnter={e => e.currentTarget.style.background = 'var(--primary-glow)'}
-          onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-app)'}
-        >
-          <ArrowLeft size={15} /> Voltar
-        </button>
-        <span style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-main)' }}>Perguntas Frequentes</span>
-      </div>
-
-    <div
-      style={{
-        maxWidth: '760px',
-        margin: '0 auto',
-        padding: '40px 24px 80px',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '40px',
-      }}
-    >
-      {/* Header */}
-      <div style={{ textAlign: 'center' }}>
-        <div
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            width: '56px',
-            height: '56px',
-            borderRadius: '16px',
-            background: 'var(--primary-glow)',
-            marginBottom: '20px',
-          }}
-        >
-          <HelpCircle size={28} style={{ color: 'var(--primary)' }} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <button
+            onClick={goBack}
+            aria-label="Voltar"
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: '6px',
+              padding: '8px 14px', fontSize: '13px', fontWeight: '600',
+              borderRadius: '8px', border: '1px solid rgba(255, 255, 255, 0.12)',
+              background: 'rgba(255, 255, 255, 0.05)', color: '#ffffff',
+              cursor: 'pointer', transition: 'all 0.15s ease'
+            }}
+          >
+            <ArrowLeft size={16} /> Voltar
+          </button>
+          <span style={{ fontSize: '16px', fontWeight: '700', fontFamily: 'var(--font-display, sans-serif)' }}>
+            Central de Ajuda & FAQ 📘
+          </span>
         </div>
-        <h1
-          style={{
-            fontSize: '28px',
-            fontWeight: '800',
-            color: 'var(--text-main)',
-            marginBottom: '10px',
-            fontFamily: 'var(--font-display)',
-          }}
-        >
-          Perguntas Frequentes
-        </h1>
-        <p style={{ fontSize: '15px', color: 'var(--text-muted)', maxWidth: '520px', margin: '0 auto', lineHeight: '1.6' }}>
-          Tudo que você precisa saber para aproveitar ao máximo o MyFlowDay.
-          Não encontrou o que procurava? Use a seção de feedback nas Configurações.
-        </p>
       </div>
 
-      {/* FAQ List */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-        {faqs.map(faq => (
-          <FaqItem key={faq.id} item={faq} />
-        ))}
-      </div>
+      <div style={{ maxWidth: '900px', margin: '0 auto', padding: '32px 20px 80px' }}>
+        
+        {/* Banner de Boas-Vindas */}
+        <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+          <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '60px', height: '60px', borderRadius: '18px', backgroundColor: 'rgba(16, 185, 129, 0.15)', marginBottom: '16px' }}>
+            <HelpCircle size={32} style={{ color: 'var(--primary, #10b981)' }} />
+          </div>
+          <h1 style={{ fontSize: '30px', fontWeight: '800', margin: '0 0 10px 0', fontFamily: 'var(--font-display, sans-serif)' }}>
+            Como podemos ajudar você hoje?
+          </h1>
+          <p style={{ fontSize: '15px', color: 'rgba(255, 255, 255, 0.6)', maxWidth: '580px', margin: '0 auto', lineHeight: '1.6' }}>
+            Explore o guia completo de funcionalidades, tutoriais de uso, dicas de produtividade e solução para dúvidas de pagamento.
+          </p>
+        </div>
 
-      {/* Footer CTA */}
-      <div
-        style={{
-          textAlign: 'center',
-          padding: '32px 24px',
-          borderRadius: 'var(--radius-lg)',
-          background: 'linear-gradient(135deg, var(--primary-glow) 0%, transparent 100%)',
-          border: '1px solid var(--primary-light)',
-        }}
-      >
-        <p style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-main)', marginBottom: '6px' }}>
-          Ainda tem dúvidas?
-        </p>
-        <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '0' }}>
-          Vá em <strong>Configurações → Compartilhe com o MyFlowDay</strong> e manda sua mensagem. Toda dúvida é respondida pessoalmente! 🙌
-        </p>
+        {/* Busca Inteligente */}
+        <div style={{ position: 'relative', marginBottom: '28px' }}>
+          <Search size={20} style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: 'rgba(255,255,255,0.4)' }} />
+          <input 
+            type="text"
+            placeholder="Digite sua dúvida (ex: Pix, Tarefas, Cancelamento, IA, Mascotes)..."
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            style={{
+              width: '100%',
+              padding: '14px 16px 14px 48px',
+              backgroundColor: 'rgba(30, 30, 38, 0.95)',
+              border: '1px solid rgba(255, 255, 255, 0.12)',
+              borderRadius: '12px',
+              color: '#ffffff',
+              fontSize: '15px',
+              outline: 'none',
+              boxSizing: 'border-box'
+            }}
+          />
+        </div>
+
+        {/* Navegação por Categorias (Filtros em Carrossel / Grid) */}
+        <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '12px', marginBottom: '32px', scrollbarWidth: 'none' }}>
+          <button
+            onClick={() => setSelectedCategory('all')}
+            style={{
+              padding: '8px 16px',
+              borderRadius: '20px',
+              fontSize: '13px',
+              fontWeight: '600',
+              whiteSpace: 'nowrap',
+              cursor: 'pointer',
+              border: '1px solid',
+              backgroundColor: selectedCategory === 'all' ? 'var(--primary, #10b981)' : 'rgba(255, 255, 255, 0.05)',
+              borderColor: selectedCategory === 'all' ? 'var(--primary, #10b981)' : 'rgba(255, 255, 255, 0.1)',
+              color: selectedCategory === 'all' ? '#ffffff' : 'rgba(255, 255, 255, 0.7)'
+            }}
+          >
+            🌟 Todas as Categorias
+          </button>
+          {HELP_CATEGORIES.map(cat => {
+            const isSel = selectedCategory === cat.id;
+            return (
+              <button
+                key={cat.id}
+                onClick={() => setSelectedCategory(cat.id)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '8px 16px',
+                  borderRadius: '20px',
+                  fontSize: '13px',
+                  fontWeight: '600',
+                  whiteSpace: 'nowrap',
+                  cursor: 'pointer',
+                  border: '1px solid',
+                  backgroundColor: isSel ? 'var(--primary, #10b981)' : 'rgba(255, 255, 255, 0.05)',
+                  borderColor: isSel ? 'var(--primary, #10b981)' : 'rgba(255, 255, 255, 0.1)',
+                  color: isSel ? '#ffffff' : 'rgba(255, 255, 255, 0.7)',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                <RenderCategoryIcon name={cat.icon} size={16} color={isSel ? '#ffffff' : 'var(--primary, #10b981)'} />
+                <span>{cat.title}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Lista de Artigos */}
+        <div>
+          {filteredArticles.length > 0 ? (
+            filteredArticles.map(art => (
+              <ArticleCard key={art.id} article={art} />
+            ))
+          ) : (
+            <div style={{ textAlign: 'center', padding: '40px 20px', backgroundColor: 'rgba(255, 255, 255, 0.02)', borderRadius: '12px', border: '1px solid rgba(255, 255, 255, 0.05)' }}>
+              <AlertCircle size={36} style={{ color: '#f59e0b', marginBottom: '12px' }} />
+              <h3 style={{ fontSize: '16px', fontWeight: '700', margin: '0 0 6px 0' }}>Nenhum artigo encontrado</h3>
+              <p style={{ fontSize: '13px', color: 'rgba(255, 255, 255, 0.5)', margin: 0 }}>
+                Tente buscar por termos mais genéricos ou selecione outra categoria acima.
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* Footer CTA de Suporte Directo */}
+        <div style={{ marginTop: '48px', textAlign: 'center', padding: '32px 24px', borderRadius: '16px', backgroundColor: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
+          <h3 style={{ fontSize: '16px', fontWeight: '700', margin: '0 0 6px 0', color: '#10b981' }}>
+            Ainda precisa de ajuda?
+          </h3>
+          <p style={{ fontSize: '13px', color: 'rgba(255, 255, 255, 0.7)', margin: '0 0 16px 0', lineHeight: '1.5' }}>
+            Nossa equipe de suporte responde diretamente pelo aplicativo. Vá em <strong>Configurações → Compartilhe com o MyFlowDay</strong> e envie sua mensagem!
+          </p>
+        </div>
+
       </div>
-    </div>
     </div>
   );
 }
