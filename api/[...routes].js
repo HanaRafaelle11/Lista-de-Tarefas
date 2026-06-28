@@ -121,8 +121,115 @@ async function handleSubscriptionSync(req, res) {
 }
 
 // =========================================================
-// HANDLER: handleAccessCheck
+// HANDLER: handleSubscriptionCreate
 // =========================================================
+async function handleSubscriptionCreate(req, res) {
+    if (req.method !== 'POST') {
+        return res.status(405).json({ error: 'Método não permitido. Utilize POST.' });
+    }
+
+    try {
+        const body = req.body || {};
+        const { billingType = 'PIX', userId, email, cpf, firstName, lastName, creditCard, creditCardHolderInfo } = body;
+
+        if (!userId || !email || !cpf) {
+            return res.status(400).json({ error: 'Campos obrigatórios (userId, email, cpf) não fornecidos.' });
+        }
+
+        const cleanCpf = cpf.replace(/\D/g, '');
+        if (!validateCpf(cleanCpf)) {
+            return res.status(400).json({ error: 'CPF inválido.' });
+        }
+
+        const fullName = `${firstName || ''} ${lastName || ''}`.trim() || 'Usuário MyFlowDay';
+
+        // 1. Garantir cliente no Asaas
+        const customerId = await PaymentGateway.ensureCustomer({ id: userId, nome: fullName }, email, cleanCpf);
+
+        if (billingType.toUpperCase() === 'PIX') {
+            const pixCharge = await PaymentGateway.createPixCharge({
+                customerId,
+                amount: PLAN_PREMIUM_MONTHLY_PRICE,
+                description: 'Plano MyFlowDay Premium ⚡',
+                externalReference: `mfd_premium_${userId}`
+            });
+
+            await BillingEngine.createPendingSubscription(userId, {
+                providerId: pixCharge.id,
+                customerId,
+                billingType: 'pix'
+            });
+
+            return res.status(200).json({
+                success: true,
+                paymentId: pixCharge.id,
+                customerId,
+                qrCode: pixCharge.qr_code,
+                qrCodeBase64: pixCharge.qr_code_base64,
+                invoiceUrl: pixCharge.invoiceUrl,
+                expirationDate: pixCharge.expirationDate
+            });
+        } else {
+            // Cartão de crédito
+            if (!creditCard || !creditCard.number || !creditCard.holderName) {
+                return res.status(400).json({ error: 'Dados do cartão de crédito incompletos.' });
+            }
+
+            const cardCharge = await PaymentGateway.createCreditCardCharge({
+                customerId,
+                amount: PLAN_PREMIUM_MONTHLY_PRICE,
+                creditCard,
+                creditCardHolderInfo: creditCardHolderInfo || { name: creditCard.holderName, email, cpfCnpj: cleanCpf },
+                description: 'Plano MyFlowDay Premium ⚡',
+                externalReference: `mfd_premium_${userId}`
+            });
+
+            const statusUpper = (cardCharge.status || '').toUpperCase();
+            if (statusUpper === 'CONFIRMED' || statusUpper === 'RECEIVED') {
+                await BillingEngine.processPaymentSuccess({
+                    userId,
+                    customerId,
+                    paymentId: cardCharge.id,
+                    billingType: 'credit_card',
+                    value: cardCharge.value
+                });
+            } else {
+                await BillingEngine.createPendingSubscription(userId, {
+                    providerId: cardCharge.id,
+                    customerId,
+                    billingType: 'credit_card'
+                });
+            }
+
+            return res.status(200).json({
+                success: true,
+                paymentId: cardCharge.id,
+                status: cardCharge.status,
+                invoiceUrl: cardCharge.invoiceUrl
+            });
+        }
+    } catch (error) {
+        console.error('[API Subscription Create Error]', error);
+        return res.status(500).json({ error: 'Falha ao processar pagamento.', message: error.message });
+    }
+}
+
+async function handleSubscriptionStatus(req, res) {
+    const userId = req.method === 'GET' ? req.query.userId : req.body?.userId;
+    if (!userId) return res.status(400).json({ error: 'userId é obrigatório.' });
+
+    try {
+        const { data: sub } = await supabaseAdmin
+            .from('subscriptions')
+            .select('*')
+            .eq('user_id', userId)
+            .maybeSingle();
+
+        return res.status(200).json({ success: true, subscription: sub });
+    } catch (error) {
+        return res.status(500).json({ error: error.message });
+    }
+}
 
 async function handleAccessCheck(req, res) {
     const userId = req.method === 'GET' ? req.query.userId : req.body?.userId;
