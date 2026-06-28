@@ -2,6 +2,11 @@ import { supabaseAdmin } from '../../lib/supabase.js';
 import { BillingEngine } from '../../lib/billing/engine.js';
 import { logPaymentEvent } from '../../lib/payment-logger.js';
 import { PLAN_PREMIUM_MONTHLY_PRICE } from '../../lib/billing/config.js';
+import { RateLimiter } from '../../server/modules/rpl/rate-limiter.js';
+import { CircuitBreakerFactory } from '../../server/modules/rpl/circuit-breaker.js';
+import { WebhookQueue } from '../../server/modules/rpl/webhook-queue.js';
+
+const webhookBreaker = CircuitBreakerFactory.getBreaker('asaas-webhook-db', { failureThreshold: 0.3, cooldownMs: 30000 });
 
 export default async function handler(req, res) {
   // CORS & Headers
@@ -15,6 +20,14 @@ export default async function handler(req, res) {
 
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Método não permitido. Utilize POST.' });
+  }
+
+  // 0. RPL LAYER: RATE LIMITING (Max 30 reqs/min por IP)
+  const clientIp = req.headers['x-forwarded-for'] || req.socket?.remoteAddress || 'unknown';
+  const rlCheck = RateLimiter.check(`webhook_${clientIp}`, { maxRequests: 30, windowMs: 60000 });
+  if (!rlCheck.allowed) {
+    res.setHeader('Retry-After', Math.ceil(rlCheck.resetMs / 1000));
+    return res.status(429).json({ error: true, message: 'Too Many Requests. Limite de requisições excedido.' });
   }
 
   const startTime = Date.now();

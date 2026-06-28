@@ -9,7 +9,7 @@
  * ❌ NÃO pode bloquear o sistema ou alterar estado
  * ✔ Apenas observa, diagnostica e sinaliza telemetria interna
  */
-import { supabaseAdmin } from '../../lib/supabase.js';
+import { supabaseAdmin } from '../../../lib/supabase.js';
 
 export const billingObservability = {
   async getSystemDiagnostics() {

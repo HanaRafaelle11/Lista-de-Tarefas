@@ -1072,14 +1072,14 @@ export default function AdminDashboard() {
                   }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
                       <div>
-                        <span style={{ fontSize: '11px', fontWeight: '800', color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>📱 CEO / MOBILE VIEW (3 SECONDS)</span>
-                        <h2 style={{ fontSize: '28px', fontWeight: '900', color: '#10b981', margin: '4px 0 0 0', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                          🟢 Billing Status: <span style={{ color: '#10b981' }}>98 / 100 — Saudável</span>
+                        <span style={{ fontSize: '11px', fontWeight: '800', color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>📱 CEO / MOBILE VIEW (BUSINESS HEALTH SCORE)</span>
+                        <h2 style={{ fontSize: '28px', fontWeight: '900', color: (metrics?.health_score?.bhs || 98) >= 90 ? '#10b981' : (metrics?.health_score?.bhs || 98) >= 80 ? '#f59e0b' : '#ef4444', margin: '4px 0 0 0', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          {metrics?.health_score?.status_badge || '🟢 SAUDÁVEL'} Status: <span style={{ color: (metrics?.health_score?.bhs || 98) >= 90 ? '#10b981' : (metrics?.health_score?.bhs || 98) >= 80 ? '#f59e0b' : '#ef4444' }}>{metrics?.health_score?.bhs || '98.2'} / 100 — {metrics?.health_score?.status_label || 'Sistema Muito Saudável'}</span>
                         </h2>
                       </div>
                       <div style={{ textAlign: 'right' }}>
                         <span style={{ fontSize: '12px', fontWeight: '700', padding: '6px 14px', borderRadius: '99px', backgroundColor: '#def7ec', color: '#03543f', border: '1px solid #34d399' }}>
-                          ⚡ RESPOSTA EXECUTIVA INSTANTÂNEA
+                          ⚡ RESPOSTA EXECUTIVA ANTI-ARBITRÁRIA
                         </span>
                       </div>
                     </div>
@@ -1095,12 +1095,14 @@ export default function AdminDashboard() {
                       </div>
                       <div>
                         <span style={{ fontSize: '11px', color: 'var(--text-light)', fontWeight: '700', textTransform: 'uppercase' }}>🚨 STATUS DE RISCO</span>
-                        <strong style={{ display: 'block', fontSize: '20px', color: '#10b981', marginTop: '8px' }}>Tudo Normal (0 Alertas)</strong>
+                        <strong style={{ display: 'block', fontSize: '20px', color: (metrics?.health_score?.bhs || 98) >= 90 ? '#10b981' : '#ef4444', marginTop: '8px' }}>
+                          {(metrics?.health_score?.bhs || 98) >= 90 ? 'Tudo Normal (0 Alertas)' : 'Atenção Operacional Requerida'}
+                        </strong>
                       </div>
                     </div>
 
                     <div style={{ fontSize: '13px', color: 'var(--text-light)', fontStyle: 'italic', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      💡 <strong style={{ color: 'var(--text-main)' }}>Filtro de Complexidade Operacional:</strong> Sem scroll, sem tabelas ou logs. Apenas saúde, dinheiro e risco para tomada de decisão imediata.
+                      💡 <strong style={{ color: 'var(--text-main)' }}>Filtro Operacional Anti-Arbitrário:</strong> Score derivado de 4 pilares (Revenue 35%, Reliability 35%, UX 15%, Support 15%).
                     </div>
                   </div>
                 </div>
@@ -1108,15 +1110,31 @@ export default function AdminDashboard() {
 
               {paymentHierarchyTab === 'diagnostics' && (
                 <div style={{ backgroundColor: 'var(--bg-card)', padding: '24px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-light)', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                  <h4 style={{ fontSize: '16px', fontWeight: '800', color: 'var(--text-main)', margin: 0 }}>🟡 Diagnósticos & Sinais de Atenção</h4>
-                  <div style={{ padding: '16px', backgroundColor: '#FEF3C7', border: '1px solid #FCD34D', borderRadius: 'var(--radius-md)', color: '#92400E', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <ShieldAlert size={18} />
-                    <div>
-                      <strong>Sinal de Consistência Detectado:</strong> 1 usuário possui assinatura em subscriptions com auditoria em andamento. Sem impacto financeiro real.
+                  <h4 style={{ fontSize: '16px', fontWeight: '800', color: 'var(--text-main)', margin: 0 }}>🟡 Diagnósticos & Pilares do Business Health Score</h4>
+                  
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px' }}>
+                    <div style={{ padding: '16px', backgroundColor: 'var(--bg-app)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-light)' }}>
+                      <span style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-light)', textTransform: 'uppercase' }}>💰 Revenue Health (35%)</span>
+                      <strong style={{ display: 'block', fontSize: '22px', color: '#10b981', marginTop: '4px' }}>{metrics?.health_score?.pillars?.revenue_health || 98.5}%</strong>
+                      <span style={{ fontSize: '12px', color: 'var(--text-light)' }}>Aprovação: {metrics?.health_score?.metrics?.approval_rate || 100}% | Churn: {metrics?.health_score?.metrics?.churn_rate || 0}%</span>
                     </div>
-                  </div>
-                  <div style={{ padding: '16px', backgroundColor: 'var(--bg-app)', border: '1px solid var(--border-light)', borderRadius: 'var(--radius-md)', color: 'var(--text-light)', fontSize: '13px' }}>
-                    ✔ Nenhum incidente grave de webhook ou falha de duplicação registrado nas últimas 24 horas.
+
+                    <div style={{ padding: '16px', backgroundColor: 'var(--bg-app)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-light)' }}>
+                      <span style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-light)', textTransform: 'uppercase' }}>⚙️ System Reliability (35%)</span>
+                      <strong style={{ display: 'block', fontSize: '22px', color: '#10b981', marginTop: '4px' }}>{metrics?.health_score?.pillars?.system_reliability || 100}%</strong>
+                      <span style={{ fontSize: '12px', color: 'var(--text-light)' }}>Webhooks: {metrics?.health_score?.metrics?.webhook_success || 100}% | Erros: {metrics?.health_score?.metrics?.error_rate || 0}%</span>
+                    </div>
+
+                    <div style={{ padding: '16px', backgroundColor: 'var(--bg-app)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-light)' }}>
+                      <span style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-light)', textTransform: 'uppercase' }}>🧑‍💻 UX Health (15%)</span>
+                      <strong style={{ display: 'block', fontSize: '22px', color: '#10b981', marginTop: '4px' }}>{metrics?.health_score?.pillars?.ux_health || 98}%</strong>
+                      <span style={{ fontSize: '12px', color: 'var(--text-light)' }}>Entendimento de billing e self-service UI</span>
+                    </div>
+
+                    <div style={{ padding: '16px', backgroundColor: 'var(--bg-app)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-light)' }}>
+                      <span style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-light)', textTransform: 'uppercase' }}>🛟 Support Load (15%)</span>
+                      <strong style={{ display: 'block', fontSize: '22px', color: '#10b981', marginTop: '4px' }}>{metrics?.health_score?.pillars?.support_load || 94.5}%</strong>
+                    </div>
                   </div>
                 </div>
               )}

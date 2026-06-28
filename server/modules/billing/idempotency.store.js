@@ -4,7 +4,7 @@
  * Garante fisicamente que cada evento financeiro externo (ex: Asaas paymentId)
  * seja processado exatamente UMA VEZ no billing_ledger. Impedimento absoluto de duplicação.
  */
-import { supabaseAdmin } from '../../lib/supabase.js';
+import { supabaseAdmin } from '../../../lib/supabase.js';
 
 const memoryIdempotencySet = new Set();
 
