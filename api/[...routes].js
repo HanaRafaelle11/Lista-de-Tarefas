@@ -328,7 +328,6 @@ async function handleAccessCheck(req, res) {
             .select('*')
             .eq('user_id', userId)
             .eq('status', 'active')
-            .eq('provider', 'asaas')
             .gt('current_period_end', now)
             .order('updated_at', { ascending: false })
             .limit(1)

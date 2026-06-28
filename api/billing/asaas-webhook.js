@@ -204,9 +204,13 @@ export default async function handler(req, res) {
         }
       }
 
-      if (userId) {
-        const normalizedBillingType = String(billingType).toLowerCase() === 'credit_card' ? 'credit_card' : 'pix';
-        const finalValue = Number(payment.value) || PLAN_PREMIUM_MONTHLY_PRICE;
+      if (!userId) {
+        console.error('[WEBHOOK LOST USER MAPPING]', body);
+        return res.status(200).json({ error: true, message: 'WEBHOOK_LOST_USER_MAPPING' });
+      }
+
+      const normalizedBillingType = String(billingType).toLowerCase() === 'credit_card' ? 'credit_card' : 'pix';
+      const finalValue = Number(payment.value) || PLAN_PREMIUM_MONTHLY_PRICE;
 
         await BillingEngine.processPaymentSuccess({
           userId,
