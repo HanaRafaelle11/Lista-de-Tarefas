@@ -515,9 +515,8 @@ const handleAdminPaymentEvents = withAdminAuth(async (req, res) => {
 
         if (!targetUserId && search) {
             const term = String(search).trim().toLowerCase();
-            // Resolver por e-mail no auth.users
             try {
-                const { data: authData } = await supabaseAdmin.auth.admin.listUsers();
+                const { data: authData } = await supabaseAdmin.auth.admin.listUsers({ perPage: 1000 });
                 const matchedUser = authData?.users?.find(u => u.email?.toLowerCase().includes(term) || u.id === term);
                 if (matchedUser) targetUserId = matchedUser.id;
             } catch (authErr) {
@@ -525,7 +524,6 @@ const handleAdminPaymentEvents = withAdminAuth(async (req, res) => {
             }
 
             if (!targetUserId) {
-                // Resolver por ID na tabela subscriptions ou payment_events
                 const { data: sub } = await supabaseAdmin.from('subscriptions').select('user_id').or(`asaas_subscription_id.eq.${term},asaas_customer_id.eq.${term},user_id.eq.${term}`).limit(1).maybeSingle();
                 if (sub) targetUserId = sub.user_id;
             }
@@ -534,14 +532,12 @@ const handleAdminPaymentEvents = withAdminAuth(async (req, res) => {
         if (!targetUserId) return res.status(400).json({ error: 'userId ou termo de busca válido é obrigatório.' });
 
         // 1. Busca eventos da tabela payment_events
-        const { data: events, error: eventsErr } = await supabaseAdmin
+        const { data: events } = await supabaseAdmin
             .from('payment_events')
             .select('*')
             .eq('user_id', targetUserId)
             .order('timestamp', { ascending: false })
             .limit(Number(limit));
-
-        if (eventsErr) throw new Error(eventsErr.message);
 
         // 2. Estado atual da subscription
         const { data: sub } = await supabaseAdmin
@@ -565,6 +561,7 @@ const handleAdminPaymentEvents = withAdminAuth(async (req, res) => {
         const lastError = (events || []).find(e => e.status === 'error');
 
         return res.status(200).json({
+            userId: targetUserId,
             events: events || [],
             subscription: sub || null,
             consistency: {

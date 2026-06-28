@@ -127,8 +127,8 @@ export default function AdminDashboard() {
       const res = await fetch(`/api/admin/payment-events?search=${encodeURIComponent(term)}`, { headers });
       if (res.ok) {
         const data = await res.json();
-        if (data && data.events && data.events.length > 0) {
-          const resolvedId = data.events[0].user_id;
+        const resolvedId = data.userId || (data.events && data.events.length > 0 ? data.events[0].user_id : null);
+        if (resolvedId) {
           setSelectedPaymentUserId(resolvedId);
           setPaymentEvents(data.events || []);
           setPaymentSubscription(data.subscription || null);
