@@ -1,6 +1,7 @@
 import { supabaseAdmin } from '../lib/supabase.js';
 import { BillingEngine } from '../lib/billing/engine.js';
 import { PaymentGateway } from '../lib/paymentGateway/index.js';
+import { PLAN_PREMIUM_MONTHLY_PRICE } from '../lib/billing/config.js';
 
 /**
  * Billing Cycle Engine
@@ -41,7 +42,7 @@ export async function runBillingCycle() {
           status_raw: 'pending',
           status_normalized: 'pending',
           user_id: sub.user_id,
-          payload: { subscription_id: sub.id, price: sub.price || 14.90 }
+          payload: { subscription_id: sub.id, price: sub.price || PLAN_PREMIUM_MONTHLY_PRICE }
         }]);
 
         const { data: profileRow } = await supabaseAdmin.from('profiles').select('*').eq('id', sub.user_id).maybeSingle();
@@ -50,7 +51,7 @@ export async function runBillingCycle() {
         // Cobrança recorrente no Asaas
         const pixCharge = await PaymentGateway.createPixCharge({
           customerId,
-          amount: Number(sub.price) || 14.90,
+          amount: Number(sub.price) || PLAN_PREMIUM_MONTHLY_PRICE,
           description: "Recorrência MyFlowDay Premium ⚡",
           externalReference: `mfd_premium_${sub.user_id}`
         });
@@ -64,7 +65,7 @@ export async function runBillingCycle() {
           customerId,
           paymentId: pixCharge.id,
           billingType: 'pix',
-          value: Number(sub.price) || 14.90,
+          value: Number(sub.price) || PLAN_PREMIUM_MONTHLY_PRICE,
           periodDays: 30
         });
 

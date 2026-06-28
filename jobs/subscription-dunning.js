@@ -1,6 +1,7 @@
 import { supabaseAdmin } from '../lib/supabase.js';
 import { BillingEngine } from '../lib/billing/engine.js';
 import { PaymentGateway } from '../lib/paymentGateway/index.js';
+import { PLAN_PREMIUM_MONTHLY_PRICE } from '../lib/billing/config.js';
 
 /**
  * Dunning System
@@ -60,7 +61,7 @@ export async function runDunning() {
 
         const pixCharge = await PaymentGateway.createPixCharge({
           customerId,
-          amount: Number(sub.price) || 14.90,
+          amount: Number(sub.price) || PLAN_PREMIUM_MONTHLY_PRICE,
           description: "Retentativa Recorrência MyFlowDay Premium ⚡",
           externalReference: `mfd_premium_${sub.user_id}`
         });
@@ -71,7 +72,7 @@ export async function runDunning() {
           customerId,
           paymentId: pixCharge.id,
           billingType: 'pix',
-          value: Number(sub.price) || 14.90
+          value: Number(sub.price) || PLAN_PREMIUM_MONTHLY_PRICE
         });
 
         await BillingEngine.updateSubscriptionMetadata(sub.user_id, { retry_attempts: 0, recovered_at: now.toISOString() });

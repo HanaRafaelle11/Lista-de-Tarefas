@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useAppContext } from '../contexts/AppContext';
 import { profilesService } from '../services/profilesService';
+import { PLAN_PREMIUM_MONTHLY_PRICE } from '../../lib/billing/config';
 
 // ─────────────────────────────────────────────
 // Funções de validação de formulário
@@ -341,7 +342,7 @@ export default function Checkout() {
           <span style={{ fontSize: '15px', fontWeight: '700', display: 'block' }}>Assinatura Pro</span>
           <span style={{ fontSize: '12px', color: 'rgba(255, 255, 255, 0.5)' }}>Cobrança recorrente mensal</span>
         </div>
-        <span style={{ fontSize: '18px', fontWeight: '800', color: '#10b981' }}>R$ 14,90 / mês</span>
+        <span style={{ fontSize: '18px', fontWeight: '800', color: '#10b981' }}>R$ {PLAN_PREMIUM_MONTHLY_PRICE.toFixed(2).replace('.', ',')} / mês</span>
       </div>
 
       {/* ESTADO: Já é Pro */}
