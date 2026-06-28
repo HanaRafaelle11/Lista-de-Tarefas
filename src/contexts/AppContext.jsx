@@ -24,6 +24,7 @@ import { stateEngine } from '../services/stateEngine';
 import { eventEmitter } from '../services/eventEmitter';
 import { localDB } from '../db/localDB';
 import { isAdmin as checkIsAdmin } from '../../lib/auth/adminAuth.js';
+import { useAuthMachine } from '../hooks/useAuthMachine.js';
 
 // ─── Helpers para Metadados de Tarefas (Horário e Recorrência) ───────────────
 export function parseTaskMetadata(description = '') {
@@ -94,9 +95,34 @@ export const useAppContext = () => {
 // ─── Provider ─────────────────────────────────────────────────────────────────
 export function AppProvider({ children }) {
 
-  // ── Auth ────────────────────────────────────────────────────────────────────
-  const [currentUser, setCurrentUser]       = useState(null);
-  const [isInitializing, setIsInitializing] = useState(true);
+  // ── Auth State Machine (Single Source of Truth) ───────────────────────────
+  // Toda lógica de auth vive em useAuthMachine — AppContext é apenas consumidor.
+  const authMachine = useAuthMachine();
+
+  // Derivados da machine — usados pelo restante do contexto e componentes.
+  const currentUser    = authMachine.user;
+  const isInitializing = authMachine.isLoading;
+
+  // setCurrentUser: shim de compatibilidade para código legado que ainda chama
+  // setCurrentUser diretamente (handleLoginSuccess, handleLogout, etc.).
+  // Roteia via dispatch da machine para manter SSoT.
+  const setCurrentUser = useCallback((userOrUpdaterFn) => {
+    if (typeof userOrUpdaterFn === 'function') {
+      // Suporte a updates funcionais (ex: USER_UPDATED com weekly_plan)
+      // A machine já trata USER_UPDATED via onAuthStateChange — este path
+      // é mantido apenas para retrocompatibilidade com código legado.
+      const next = userOrUpdaterFn(authMachine.user);
+      if (next) {
+        authMachine.dispatch({ type: 'SIGNED_IN', rawUser: { ...next, user_metadata: next.user_metadata || {} }, session: authMachine.session });
+      } else {
+        authMachine.dispatch({ type: 'SIGNED_OUT' });
+      }
+    } else if (userOrUpdaterFn) {
+      authMachine.dispatch({ type: 'SIGNED_IN', rawUser: { ...userOrUpdaterFn, user_metadata: userOrUpdaterFn.user_metadata || {} }, session: authMachine.session });
+    } else {
+      authMachine.dispatch({ type: 'SIGNED_OUT' });
+    }
+  }, [authMachine]);
 
   // ── Sync Status (resilience) ─────────────────────────────────────────────────
   const [syncStatus, setSyncStatus] = useState('healthy'); // 'healthy' | 'degraded' | 'offline'
@@ -796,124 +822,11 @@ export function AppProvider({ children }) {
   }, []);
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // AUTH — inicialização e listener
+  // AUTH — gerenciado pela Auth State Machine (useAuthMachine)
+  // Toda lógica de auth (getSession, onAuthStateChange, fallback, PKCE) vive
+  // no hook. O AppContext é apenas um consumidor — não há lógica de auth aqui.
   // ═══════════════════════════════════════════════════════════════════════════
-
-  // Ref de init: garante execução ÚNICA de finishInit() independente de StrictMode,
-  // remounts, race conditions entre getSession/onAuthStateChange/timeout.
-  const initDoneRef = useRef(false);
-
-  // Timer de fallback em ref: sobrevive ao cleanup do useEffect.
-  // Só é cancelado quando finishInit() executa — nunca pelo cleanup.
-  const initTimerRef = useRef(null);
-
-  // finishInit() — Single Source of Truth de inicialização.
-  // Garante: executa no máximo 1 vez, independente de qual caminho chegar primeiro.
-  const finishInit = useCallback((user) => {
-    if (initDoneRef.current) return; // já inicializado — ignora chamadas extras
-    initDoneRef.current = true;
-    clearTimeout(initTimerRef.current);
-    initTimerRef.current = null;
-    if (user) setCurrentUser(user);
-    setIsInitializing(false);
-  }, []);
-
-  // 1. Efeito para Auth State (getSession e onAuthStateChange)
-  useEffect(() => {
-    // Se já foi inicializado (ex: StrictMode remount), não reinicia.
-    if (initDoneRef.current) return;
-
-    let effectActive = true;
-
-    // Fallback garantido: timer em REF (não em variável local do effect).
-    // O cleanup do effect NÃO cancela este timer — ele só é cancelado por finishInit().
-    // Isso garante que mesmo se o effect for desmontado antes de getSession() resolver,
-    // o timer ainda dispara e libera o loading.
-    if (!initTimerRef.current) {
-      initTimerRef.current = setTimeout(() => {
-        console.warn('[AppContext] finishInit() acionado via fallback (3s). Destravando loading.');
-        finishInit(null);
-      }, 3000);
-    }
-
-    const buildUser = (u) => ({
-      id: u.id,
-      email: u.email,
-      name: u.user_metadata?.name || u.email.split('@')[0],
-      user_metadata: u.user_metadata || {},
-    });
-
-    // Sanitize URL se contiver erro OAuth para prevenir redirect loops
-    if (typeof window !== 'undefined') {
-      const searchParams = new URLSearchParams(window.location.search);
-      const hashParams = new URLSearchParams(window.location.hash.substring(1));
-      if (searchParams.has('error') || searchParams.get('error_code') === 'bad_oauth_state' || hashParams.has('error')) {
-        console.warn('[AppContext] Sanitizing OAuth error in URL.');
-        const cleanUrl = window.location.origin + window.location.pathname;
-        window.history.replaceState({}, document.title, cleanUrl);
-      }
-    }
-
-    // getSession(): inicializa com sessão existente (cookie/localStorage).
-    // NÃO depende de onAuthStateChange — é independente.
-    supabase.auth.getSession()
-      .then(({ data: { session } }) => {
-        if (!effectActive) return;
-        if (session?.user) {
-          runSilentHealthCheck(session.user.id);
-          eventsService.logEvent(session.user.id, 'login', { method: 'session_restore' }).catch(() => {});
-          finishInit(buildUser(session.user));
-        } else {
-          finishInit(null);
-        }
-      })
-      .catch((err) => {
-        console.error('[AppContext] Erro ao verificar sessão:', err);
-        if (effectActive) finishInit(null);
-      });
-
-    // onAuthStateChange(): escuta mudanças de estado APÓS o init.
-    // Também chama finishInit() para o caso de PKCE onde INITIAL_SESSION
-    // chega antes de getSession() resolver.
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((e, session) => {
-      if (!effectActive) return;
-
-      if (session?.user) {
-        const u = buildUser(session.user);
-        if (e === 'USER_UPDATED') {
-          setCurrentUser(prev => {
-            if (!prev) return u;
-            const localWeeklyPlan = prev.user_metadata?.weekly_plan;
-            const updatedWeeklyPlan = u.user_metadata?.weekly_plan;
-            return {
-              ...u,
-              user_metadata: {
-                ...u.user_metadata,
-                weekly_plan: localWeeklyPlan === null ? null : updatedWeeklyPlan
-              }
-            };
-          });
-          // USER_UPDATED não finaliza init — apenas atualiza dados do usuário
-        } else {
-          // SIGNED_IN, INITIAL_SESSION, TOKEN_REFRESHED, etc.
-          finishInit(u);
-        }
-      } else if (e === 'SIGNED_OUT') {
-        setCurrentUser(null);
-        // SIGNED_OUT após init: reseta user mas não reinicia loading
-      } else {
-        // Estado sem sessão no init (ex: usuário não logado)
-        finishInit(null);
-      }
-    });
-
-    return () => {
-      effectActive = false;
-      subscription?.unsubscribe?.();
-      // NÃO cancela initTimerRef — ele é global e sobrevive ao remount (StrictMode).
-      // Só finishInit() o cancela.
-    };
-  }, [finishInit, runSilentHealthCheck]);
+  // (auth state já inicializado no topo do provider via useAuthMachine)
 
   // ── Verificação centralizada server-side do plano (Zero Trust) ──
   const checkServerAccess = useCallback(async (userId) => {
