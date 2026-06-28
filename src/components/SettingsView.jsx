@@ -1372,9 +1372,6 @@ export default function SettingsView() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '13px', color: 'var(--text-light)' }}>
             <p>Plataforma de Progresso Pessoal</p>
             <p>Construído para clareza, evolução e consistência.</p>
-            <p style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '8px' }}>
-              Desenvolvido por Hana Oliveira.
-            </p>
           </div>
 
           <div style={{ display: 'flex', gap: '12px', marginTop: '24px', flexWrap: 'wrap' }}>

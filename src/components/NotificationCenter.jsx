@@ -88,7 +88,7 @@ export default function NotificationCenter() {
   };
 
   return (
-    <div className="notification-container" ref={containerRef}>
+    <div className="notification-container" ref={containerRef} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '38px' }}>
       <button
         onClick={handleToggle}
         className="header-btn"

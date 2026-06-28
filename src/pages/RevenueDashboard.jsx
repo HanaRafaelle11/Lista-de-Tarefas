@@ -185,10 +185,14 @@ export default function RevenueDashboard() {
         {/* Gráfico Principal de MRR */}
         <RevenueChart timeline={timelineList} />
 
-        {/* Churn e Breakdowns em duas colunas */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
-          <ChurnChart churn={churnData} />
-          <SubscriptionBreakdown breakdown={breakdownData} />
+        {/* Churn e Breakdowns em duas colunas com scroll responsivo em mobile */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px', maxWidth: '100%' }}>
+          <div style={{ width: '100%', overflowX: 'auto' }}>
+            <ChurnChart churn={churnData} />
+          </div>
+          <div style={{ width: '100%', overflowX: 'auto' }}>
+            <SubscriptionBreakdown breakdown={breakdownData} />
+          </div>
         </div>
 
         {/* Heatmap de Cohort */}

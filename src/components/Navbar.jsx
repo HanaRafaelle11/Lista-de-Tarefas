@@ -78,14 +78,15 @@ export default function Navbar() {
             ))}
           </nav>
 
-          {/* Ações */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginLeft: '24px' }}>
+          {/* Ações com Alinhamento Perfeito */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginLeft: 'auto', height: '100%' }}>
             <NotificationCenter />
             <button
               onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
               className="header-btn"
               title={theme === 'dark' ? 'Modo Claro' : 'Modo Escuro'}
               aria-label={theme === 'dark' ? 'Ativar modo claro' : 'Ativar modo escuro'}
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '38px', height: '38px', padding: 0, margin: 0 }}
             >
               {theme === 'dark'
                 ? <Sun size={20} aria-hidden="true" />
@@ -95,7 +96,7 @@ export default function Navbar() {
               onClick={() => setActiveTab('settings')}
               className="header-btn"
               title="Configurações"
-              style={{ color: activeTab === 'settings' ? 'var(--primary)' : 'var(--text-muted)' }}
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '38px', height: '38px', padding: 0, margin: 0, color: activeTab === 'settings' ? 'var(--primary)' : 'var(--text-muted)' }}
             >
               <MFIcon name="profile" size={20} />
             </button>
@@ -103,9 +104,9 @@ export default function Navbar() {
             <div 
               className={`app-top-profile ${activeTab === 'profile' ? 'active' : ''}`}
               onClick={() => setActiveTab('profile')}
-              style={{ cursor: 'pointer', marginLeft: '8px' }}
+              style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '38px', height: '38px', margin: 0 }}
             >
-              <div className="app-top-avatar" title={userProfile?.name || currentUser?.name} style={{ width: '38px', height: '38px', borderRadius: '50%', overflow: 'hidden', border: '1px solid var(--border)' }}>
+              <div className="app-top-avatar" title={userProfile?.name || currentUser?.name} style={{ width: '38px', height: '38px', borderRadius: '50%', overflow: 'hidden', border: '1px solid var(--border-medium)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 {userProfile?.avatar_url ? (
                   <img src={userProfile.avatar_url} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 ) : (

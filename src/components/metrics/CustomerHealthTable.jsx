@@ -3,6 +3,7 @@ import React from 'react';
 export default function CustomerHealthTable({ customers, onUserClick }) {
   const tableStyle = {
     width: '100%',
+    minWidth: '650px',
     borderCollapse: 'collapse',
     textAlign: 'left',
     fontSize: '14px',
