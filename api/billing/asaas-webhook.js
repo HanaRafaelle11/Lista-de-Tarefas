@@ -98,29 +98,46 @@ export default async function handler(req, res) {
       console.error('[ASAAS WEBHOOK EXCEPTION Check Idempotency]', checkEx);
     }
 
-    // 3. IDENTIFICAÇÃO DO USUÁRIO
+    // 3. IDENTIFICAÇÃO DO USUÁRIO (Multi-Layer Resolution)
     let userId = null;
-    if (externalReference && externalReference.startsWith('mfd_premium_')) {
-      userId = externalReference.replace('mfd_premium_', '');
-    } else if (externalReference && externalReference.startsWith('order_')) {
-      const parts = externalReference.split('_');
-      if (parts.length >= 2) userId = parts[1];
+    if (externalReference) {
+      if (externalReference.startsWith('mfd_pix_')) {
+        // Formato: mfd_pix_USERID_YYYY-MM-DD
+        const parts = externalReference.split('_');
+        if (parts.length >= 3) userId = parts[2];
+      } else if (externalReference.startsWith('mfd_premium_')) {
+        userId = externalReference.replace('mfd_premium_', '');
+      } else if (externalReference.startsWith('mfd_')) {
+        const parts = externalReference.split('_');
+        if (parts.length >= 2) userId = parts[1];
+      } else if (externalReference.startsWith('order_')) {
+        const parts = externalReference.split('_');
+        if (parts.length >= 2) userId = parts[1];
+      }
     }
 
-    if (!userId && subscriptionId) {
+    // Fallback 1: Busca na tabela de assinaturas por subscriptionId, paymentId ou externalReference
+    if (!userId) {
       try {
-        const { data: subRow, error: subErr } = await supabaseAdmin
-          .from('subscriptions')
-          .select('user_id')
-          .eq('asaas_subscription_id', subscriptionId)
-          .maybeSingle();
-        if (subErr) console.error('[ASAAS WEBHOOK DB ERROR Find Sub User]', subErr);
-        userId = subRow?.user_id || null;
+        const targetRef = externalReference || paymentId || subscriptionId;
+        if (targetRef) {
+          const { data: subRow, error: subErr } = await supabaseAdmin
+            .from('subscriptions')
+            .select('user_id')
+            .or(`asaas_subscription_id.eq.${targetRef},provider_id.eq.${targetRef},idempotency_key.eq.${targetRef}`)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+          if (subErr) console.error('[ASAAS WEBHOOK DB ERROR Find Sub User]', subErr);
+          userId = subRow?.user_id || null;
+        }
       } catch (subEx) {
         console.error('[ASAAS WEBHOOK EXCEPTION Find Sub User]', subEx);
       }
     }
 
+    // Fallback 2: Busca na tabela de perfis por asaas_customer_id
     if (!userId && customerId) {
       try {
         const { data: profRow, error: profErr } = await supabaseAdmin
@@ -235,7 +252,6 @@ export default async function handler(req, res) {
           processed: true,
           source: 'webhook'
         }).catch(() => {});
-      }
     } else if (event === 'PAYMENT_OVERDUE') {
       if (userId) {
         await BillingEngine.processPaymentOverdue({ userId, paymentId });
