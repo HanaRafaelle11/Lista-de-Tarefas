@@ -10,6 +10,7 @@ import { supabaseAdmin } from '../lib/supabase.js';
 import { PaymentGateway } from '../lib/paymentGateway/index.js';
 import handleUnifiedAsaasWebhook from './billing/asaas-webhook.js';
 import handleBillingExpirationCron from './cron/billing-expiration.js';
+import { runBillingSanityCheck } from '../jobs/billing-sanity-check.js';
 import { withAdminAuth } from '../lib/auth/withAdminAuth.js';
 import { logPaymentEvent } from '../lib/payment-logger.js';
 
@@ -134,11 +135,16 @@ async function handleAccessCheck(req, res) {
         const { AccessDecisionEngine } = await import('../services/access-decision-engine.js');
         const { ChurnEngine } = await import('../services/churn-engine.js');
 
-        // 1. Buscar assinatura do usuário no Supabase
+        const now = new Date().toISOString();
         const { data: subscription, error } = await supabaseAdmin
             .from('subscriptions')
-            .select('status, current_period_end, plan')
+            .select('*')
             .eq('user_id', userId)
+            .eq('status', 'active')
+            .eq('provider', 'asaas')
+            .gt('current_period_end', now)
+            .order('updated_at', { ascending: false })
+            .limit(1)
             .maybeSingle();
 
         if (error) {
@@ -146,8 +152,8 @@ async function handleAccessCheck(req, res) {
             return res.status(200).json({ isPro: false, reason: 'INVALID', error: 'Erro ao carregar dados da assinatura.' });
         }
 
-        // 2. Determinar o veredito via AccessDecisionEngine (Fonte Absoluta de Verdade)
-        const decision = AccessDecisionEngine.evaluateAccess(subscription);
+        const isPro = !!subscription;
+        const reason = isPro ? 'ACTIVE' : 'FREE';
 
         // 3. Registrar logs estruturados de auditoria (Observabilidade)
         try {
@@ -155,24 +161,24 @@ async function handleAccessCheck(req, res) {
                 user_id: userId,
                 event_type: 'access_decision_evaluated',
                 metadata: {
-                    isPro: decision.isPro,
-                    reason: decision.reason,
-                    plano: subscription?.plan || 'free',
+                    isPro,
+                    reason,
+                    plano: isPro ? 'premium' : 'free',
                     status: subscription?.status || 'free',
                     expiresAt: subscription?.current_period_end || null,
-                    timestamp: new Date().toISOString()
+                    timestamp: now
                 }
             }]);
         } catch (err) {}
 
-        const auditEvent = decision.isPro ? 'access_granted' : 'access_denied_reason';
+        const auditEvent = isPro ? 'access_granted' : 'access_denied_reason';
         try {
             await supabaseAdmin.from('events').insert([{
                 user_id: userId,
                 event_type: auditEvent,
                 metadata: {
-                    reason: decision.reason,
-                    timestamp: new Date().toISOString()
+                    reason,
+                    timestamp: now
                 }
             }]);
         } catch (err) {}
@@ -184,9 +190,9 @@ async function handleAccessCheck(req, res) {
         } catch (_) {}
 
         return res.status(200).json({ 
-            isPro: decision.isPro,
-            plano: subscription?.plan || 'free',
-            status: decision.reason,
+            isPro,
+            plano: isPro ? 'premium' : 'free',
+            status: reason,
             expiresAt: subscription?.current_period_end || null,
             churn: churnData ? {
                 score: churnData.score,
@@ -358,6 +364,9 @@ export default async function handler(req, res) {
             await handleUnifiedAsaasWebhook(req, res);
         } else if (route === 'cron/billing-expiration') {
             await handleBillingExpirationCron(req, res);
+        } else if (route === 'cron/billing-sanity-check') {
+            const result = await runBillingSanityCheck();
+            return res.status(200).json(result);
 
         } else if (route === 'access/check' || route === 'auth/check-access') {
             await handleAccessCheck(req, res);
