@@ -510,14 +510,34 @@ async function handlePaymentEventsLog(req, res) {
 const handleAdminPaymentEvents = withAdminAuth(async (req, res) => {
     if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
     try {
-        const { userId, limit = 50 } = req.query;
-        if (!userId) return res.status(400).json({ error: 'userId é obrigatório' });
+        const { userId, search, limit = 50 } = req.query;
+        let targetUserId = userId;
+
+        if (!targetUserId && search) {
+            const term = String(search).trim().toLowerCase();
+            // Resolver por e-mail no auth.users
+            try {
+                const { data: authData } = await supabaseAdmin.auth.admin.listUsers();
+                const matchedUser = authData?.users?.find(u => u.email?.toLowerCase().includes(term) || u.id === term);
+                if (matchedUser) targetUserId = matchedUser.id;
+            } catch (authErr) {
+                console.warn('[ADMIN PAYMENT EVENTS WARN]', authErr.message);
+            }
+
+            if (!targetUserId) {
+                // Resolver por ID na tabela subscriptions ou payment_events
+                const { data: sub } = await supabaseAdmin.from('subscriptions').select('user_id').or(`asaas_subscription_id.eq.${term},asaas_customer_id.eq.${term},user_id.eq.${term}`).limit(1).maybeSingle();
+                if (sub) targetUserId = sub.user_id;
+            }
+        }
+
+        if (!targetUserId) return res.status(400).json({ error: 'userId ou termo de busca válido é obrigatório.' });
 
         // 1. Busca eventos da tabela payment_events
         const { data: events, error: eventsErr } = await supabaseAdmin
             .from('payment_events')
             .select('*')
-            .eq('user_id', userId)
+            .eq('user_id', targetUserId)
             .order('timestamp', { ascending: false })
             .limit(Number(limit));
 
@@ -527,7 +547,7 @@ const handleAdminPaymentEvents = withAdminAuth(async (req, res) => {
         const { data: sub } = await supabaseAdmin
             .from('subscriptions')
             .select('status, plan, current_period_end, asaas_subscription_id, last_payment_id')
-            .eq('user_id', userId)
+            .eq('user_id', targetUserId)
             .maybeSingle();
 
         // 3. Verificação de consistência: payment_approved sem subscription_updated próximo

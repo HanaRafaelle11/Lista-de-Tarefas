@@ -68,55 +68,28 @@ export default function AdminDashboard() {
     }
   };
 
-  // Fetch payment details directly from Supabase (Zero Trust & Direct client integration)
+  // Fetch payment details directly from Backend API (service_role)
   const fetchPaymentEvents = async (userId) => {
     if (!userId) return;
     setLoadingPayments(true);
     try {
-      // 1. Fetch payment_events
-      const { data: events, error: eventsErr } = await supabase
-        .from('payment_events')
-        .select('*')
-        .eq('user_id', userId)
-        .order('timestamp', { ascending: false });
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token || '';
+      const headers = {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      if (currentUser?.id) headers['x-user-id'] = currentUser.id;
 
-      if (eventsErr) throw eventsErr;
+      const res = await fetch(`/api/admin/payment-events?userId=${userId}`, { headers });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
 
-      // 2. Fetch subscription details
-      const { data: sub, error: subErr } = await supabase
-        .from('subscriptions')
-        .select('status, plan, current_period_end, asaas_subscription_id, last_payment_id')
-        .eq('user_id', userId)
-        .maybeSingle();
+      setPaymentEvents(data.events || []);
+      setPaymentSubscription(data.subscription || null);
 
-      if (subErr) throw subErr;
-
-      setPaymentEvents(events || []);
-      setPaymentSubscription(sub || null);
-
-      // 3. Consistency checks
-      const approvedEvents = (events || []).filter(e => (e.event || e.event_type) === 'payment_approved');
-      const consistencyWarnings = approvedEvents.filter(approved => {
-        const approvedTs = new Date(approved.timestamp || approved.created_at).getTime();
-        const hasSubUpdate = (events || []).some(e =>
-          (e.event || e.event_type) === 'subscription_updated' &&
-          Math.abs(new Date(e.timestamp || e.created_at).getTime() - approvedTs) < 90000 // 90s window
-        );
-        return !hasSubUpdate;
-      });
-
-      setPaymentConsistency({
-        ok: consistencyWarnings.length === 0,
-        warnings: consistencyWarnings.map(w => ({
-          referenceId: w.payment_id || w.subscription_id || w.reference_id,
-          approvedAt: w.timestamp || w.created_at,
-          message: 'payment_approved sem subscription_updated correspondente nos próximos 90s'
-        }))
-      });
-
-      const lastError = (events || []).find(e => e.status === 'error');
-      setPaymentLastError(lastError || null);
-
+      if (data.consistency) {
+        setPaymentConsistency(data.consistency);
+      }
+      setPaymentLastError(data.lastError || null);
     } catch (e) {
       console.error('Error fetching payment events:', e);
     } finally {
@@ -131,10 +104,11 @@ export default function AdminDashboard() {
 
     setLoadingSearch(true);
     try {
-      // 1. Busca local nos usuários
+      // 1. Busca local nos usuários carregados
       const matchedUser = adminUsers.find(u =>
         u.email?.toLowerCase().includes(term.toLowerCase()) ||
-        u.nickname?.toLowerCase().includes(term.toLowerCase())
+        u.nickname?.toLowerCase().includes(term.toLowerCase()) ||
+        u.id === term
       );
 
       if (matchedUser) {
@@ -143,28 +117,29 @@ export default function AdminDashboard() {
         return;
       }
 
-      // 2. Busca remota no banco por ID de pagamento, ID de assinatura ou ID de cliente
-      const { data: eventMatch, error: eventErr } = await supabase
-        .from('payment_events')
-        .select('user_id')
-        .or(`payment_id.eq.${term},subscription_id.eq.${term},customer_id.eq.${term}`)
-        .limit(1);
+      // 2. Busca remota via API backend segura com service_role
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token || '';
+      const headers = {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      if (currentUser?.id) headers['x-user-id'] = currentUser.id;
 
-      if (!eventErr && eventMatch && eventMatch.length > 0) {
-        setSelectedPaymentUserId(eventMatch[0].user_id);
-      } else {
-        const { data: subMatch, error: subErr } = await supabase
-          .from('subscriptions')
-          .select('user_id')
-          .eq('asaas_subscription_id', term)
-          .maybeSingle();
-
-        if (subMatch) {
-          setSelectedPaymentUserId(subMatch.user_id);
-        } else {
-          alert('Nenhum usuário, pagamento ou assinatura encontrado para: ' + term);
+      const res = await fetch(`/api/admin/payment-events?search=${encodeURIComponent(term)}`, { headers });
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.events && data.events.length > 0) {
+          const resolvedId = data.events[0].user_id;
+          setSelectedPaymentUserId(resolvedId);
+          setPaymentEvents(data.events || []);
+          setPaymentSubscription(data.subscription || null);
+          if (data.consistency) setPaymentConsistency(data.consistency);
+          setPaymentLastError(data.lastError || null);
+          setLoadingSearch(false);
+          return;
         }
       }
+
+      alert('Nenhum usuário, pagamento ou assinatura encontrado para: ' + term);
     } catch (err) {
       console.error('Error during admin payment search:', err);
     } finally {
@@ -221,11 +196,13 @@ export default function AdminDashboard() {
   const processedUsers = useMemo(() => {
     let result = [...adminUsers];
 
-    // Search by email, id, plan or registration date
+    // Search by email, nickname, name, id, plan or registration date
     if (userSearchQuery.trim()) {
       const q = userSearchQuery.toLowerCase().trim();
       result = result.filter(u => 
         (u.email && u.email.toLowerCase().includes(q)) ||
+        (u.nickname && u.nickname.toLowerCase().includes(q)) ||
+        (u.name && u.name.toLowerCase().includes(q)) ||
         (u.id && u.id.toLowerCase().includes(q)) ||
         (u.plan && u.plan.toLowerCase().includes(q)) ||
         (u.created_at && new Date(u.created_at).toLocaleDateString('pt-BR').includes(q))
@@ -283,14 +260,16 @@ export default function AdminDashboard() {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token || '';
+      const headers = {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      if (currentUser?.id) headers['x-user-id'] = currentUser.id;
       
-      const res = await fetch('/api/admin/dashboard', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
+      const queryParam = currentUser?.id ? `?userId=${currentUser.id}` : '';
+      const res = await fetch(`/api/admin/dashboard${queryParam}`, { headers });
       
       if (!res.ok) {
         const errJson = await res.json().catch(() => ({}));
-        throw new Error(errJson.error || `HTTP ${res.status}`);
+        throw new Error(errJson.error || errJson.message || `HTTP ${res.status}`);
       }
 
       const data = await res.json();
@@ -804,15 +783,20 @@ export default function AdminDashboard() {
               {/* Search and Filters Controls */}
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', marginBottom: '20px', backgroundColor: 'var(--bg-app)', padding: '16px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-medium)' }}>
                 {/* Search Bar */}
-                <div style={{ flex: '1 1 240px' }}>
+                <div style={{ flex: '1 1 300px' }}>
                   <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: 'var(--text-light)', marginBottom: '6px', textTransform: 'uppercase' }}>Buscar Usuários</label>
-                  <input
-                    type="text"
-                    placeholder="Buscar por email, id, plano, data..."
-                    value={userSearchQuery}
-                    onChange={e => setUserSearchQuery(e.target.value)}
-                    style={{ width: '100%', padding: '8px 12px', fontSize: '13px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-medium)', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)' }}
-                  />
+                  <form onSubmit={e => { e.preventDefault(); setCurrentPage(1); }} style={{ display: 'flex', gap: '8px' }}>
+                    <input
+                      type="text"
+                      placeholder="Buscar por email, id, plano, nome..."
+                      value={userSearchQuery}
+                      onChange={e => setUserSearchQuery(e.target.value)}
+                      style={{ flex: 1, padding: '8px 12px', fontSize: '13px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-medium)', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)' }}
+                    />
+                    <button type="submit" style={{ backgroundColor: 'var(--primary)', color: '#fff', border: 'none', borderRadius: 'var(--radius-sm)', padding: '0 14px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>
+                      🔍 Buscar
+                    </button>
+                  </form>
                 </div>
 
                 {/* Plan Filter */}
