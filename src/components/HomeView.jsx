@@ -615,106 +615,153 @@ export default function HomeView() {
               )}
             </section>
 
-            {/* Ritmo de Crescimento */}
-            <section className="home-ritmo-section">
-              <div className="home-ritmo-content-side">
-                <h4 className="home-ritmo-title">Seu ritmo de crescimento</h4>
-                <p className="home-ritmo-desc">
-                  Você tem mantido uma consistência excepcional na sua lista de afazeres.
-                  Concluir pequenas tarefas diárias ativa o ciclo de foco contínuo.
-                </p>
+            {/* Ritmo de Crescimento com Sistema de Evolução da Planta */}
+            {(() => {
+              const weeklyTotal = ritmoSemanal.reduce((acc, d) => acc + d.count, 0);
+              let plantStage = {
+                level: 1,
+                title: 'Broto Inicial',
+                emoji: '🌱',
+                badge: 'Nível 1 • Início de Jornada',
+                color: '#3b82f6',
+                desc: 'De acordo com a sua constância e conclusão de objetivos, sua plantinha vai evoluindo!'
+              };
+              if (weeklyTotal >= 15 || currentStreak >= 7 || completedGoalsCount >= 2) {
+                plantStage = {
+                  level: 4,
+                  title: 'Árvore Florida Master',
+                  emoji: '🌸',
+                  badge: 'Nível 4 • Consistência Lendária',
+                  color: '#ec4899',
+                  desc: 'Sua dedicação é extraordinária! Sua árvore floresceu totalmente com o seu foco e metas alcançadas.'
+                };
+              } else if (weeklyTotal >= 7 || currentStreak >= 4 || completedGoalsCount >= 1) {
+                plantStage = {
+                  level: 3,
+                  title: 'Árvore Frondosa',
+                  emoji: '🌳',
+                  badge: 'Nível 3 • Alta Performance',
+                  color: '#10b981',
+                  desc: 'Excelente progresso! Suas metas e constância diária fortaleceram suas raízes. Continue evoluindo!'
+                };
+              } else if (weeklyTotal >= 2 || currentStreak >= 2) {
+                plantStage = {
+                  level: 2,
+                  title: 'Planta em Crescimento',
+                  emoji: '🌿',
+                  badge: 'Nível 2 • Em Evolução',
+                  color: 'var(--primary)',
+                  desc: 'Sua constância está dando frutos! Mantenha a sequência de tarefas diárias para fazer sua árvore crescer.'
+                };
+              }
 
-                <div className="home-ritmo-map-container">
-                  <span className="ritmo-map-label">Últimos 7 dias:</span>
-                  {ritmoSemanal.every(day => day.count === 0) ? (
-                    <div 
-                      className="home-ritmo-empty-state" 
-                      style={{ 
-                        display: 'flex', 
-                        flexDirection: 'column', 
-                        alignItems: 'center', 
-                        justifyContent: 'center',
-                        gap: '12px', 
-                        padding: '32px 20px', 
-                        background: 'linear-gradient(135deg, rgba(74,101,78,0.05) 0%, rgba(255,255,255,0.02) 100%)',
-                        borderRadius: 'var(--radius-lg)', 
-                        border: '1px dashed var(--border-medium)', 
-                        marginTop: '12px',
-                        textAlign: 'center',
-                        width: '100%',
-                        position: 'relative',
-                        overflow: 'hidden'
-                      }}
-                    >
-                      <div className="home-ritmo-empty-illustration" style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '56px', height: '56px', borderRadius: '50%', background: 'rgba(74, 101, 78, 0.1)', color: 'var(--primary)', marginBottom: '4px' }}>
-                        <span style={{ fontSize: '24px', zIndex: 2 }}>🌱</span>
-                        <div style={{ position: 'absolute', width: '100%', height: '100%', borderRadius: '50%', border: '1px solid rgba(74, 101, 78, 0.2)', animation: 'ping-animation 2s cubic-bezier(0, 0, 0.2, 1) infinite' }} />
-                      </div>
-                      <h4 style={{ fontSize: '15px', color: 'var(--text-main)', margin: 0, fontWeight: '700', fontFamily: 'var(--font-display)' }}>
-                        Comece hoje sua sequência
-                      </h4>
-                      <p style={{ fontSize: '12px', color: 'var(--text-light)', margin: '0 0 8px 0', maxWidth: '280px', lineHeight: '1.4' }}>
-                        Conclua tarefas por alguns dias consecutivos para desbloquear seus insights de evolução.
-                      </p>
-                      <button 
-                        onClick={() => setActiveTab('tasks')}
-                        style={{
-                          background: 'var(--primary)',
-                          color: '#ffffff',
-                          border: 'none',
-                          padding: '8px 16px',
-                          borderRadius: '20px',
-                          fontSize: '12px',
-                          fontWeight: '600',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '6px',
-                          transition: 'transform 0.2s, filter 0.2s',
-                          boxShadow: '0 4px 12px rgba(74, 101, 78, 0.2)'
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.transform = 'translateY(-1px)';
-                          e.currentTarget.style.filter = 'brightness(1.1)';
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.transform = 'none';
-                          e.currentTarget.style.filter = 'none';
-                        }}
-                      >
-                        Ver Minhas Tarefas
-                      </button>
+              return (
+                <section className="home-ritmo-section">
+                  <div className="home-ritmo-content-side">
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', marginBottom: '6px' }}>
+                      <h4 className="home-ritmo-title" style={{ margin: 0 }}>Seu ritmo de crescimento</h4>
+                      <span style={{ fontSize: '11px', fontWeight: '700', padding: '3px 10px', borderRadius: '20px', backgroundColor: `${plantStage.color}15`, color: plantStage.color, border: `1px solid ${plantStage.color}30` }}>
+                        {plantStage.badge}
+                      </span>
                     </div>
-                  ) : (
-                    <div className="home-ritmo-dots-row">
-                      {ritmoSemanal.map(day => {
-                        let colorClass = 'dot-level-0';
-                        if (day.count === 1) colorClass = 'dot-level-1';
-                        else if (day.count === 2) colorClass = 'dot-level-2';
-                        else if (day.count >= 3) colorClass = 'dot-level-3';
-                        return (
-                          <div key={day.dateStr} className="home-ritmo-dot-item" title={`${day.count} tarefas em ${day.dayName}`}>
-                            <div className={`ritmo-dot ${colorClass} ${day.isToday ? 'today-dot' : ''}`} />
-                            <span className="ritmo-dot-day-name">{day.dayName}</span>
+                    <p className="home-ritmo-desc">
+                      {plantStage.desc}
+                    </p>
+
+                    <div className="home-ritmo-map-container">
+                      <span className="ritmo-map-label">Últimos 7 dias:</span>
+                      {ritmoSemanal.every(day => day.count === 0) ? (
+                        <div 
+                          className="home-ritmo-empty-state" 
+                          style={{ 
+                            display: 'flex', 
+                            flexDirection: 'column', 
+                            alignItems: 'center', 
+                            justifyContent: 'center',
+                            gap: '12px', 
+                            padding: '32px 20px', 
+                            background: 'linear-gradient(135deg, rgba(74,101,78,0.05) 0%, rgba(255,255,255,0.02) 100%)',
+                            borderRadius: 'var(--radius-lg)', 
+                            border: '1px dashed var(--border-medium)', 
+                            marginTop: '12px',
+                            textAlign: 'center',
+                            width: '100%',
+                            position: 'relative',
+                            overflow: 'hidden'
+                          }}
+                        >
+                          <div className="home-ritmo-empty-illustration" style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '56px', height: '56px', borderRadius: '50%', background: 'rgba(74, 101, 78, 0.1)', color: 'var(--primary)', marginBottom: '4px' }}>
+                            <span style={{ fontSize: '28px', zIndex: 2 }}>{plantStage.emoji}</span>
+                            <div style={{ position: 'absolute', width: '100%', height: '100%', borderRadius: '50%', border: '1px solid rgba(74, 101, 78, 0.2)', animation: 'ping-animation 2s cubic-bezier(0, 0, 0.2, 1) infinite' }} />
                           </div>
-                        );
-                      })}
+                          <h4 style={{ fontSize: '15px', color: 'var(--text-main)', margin: 0, fontWeight: '700', fontFamily: 'var(--font-display)' }}>
+                            Comece hoje sua sequência
+                          </h4>
+                          <p style={{ fontSize: '12px', color: 'var(--text-light)', margin: '0 0 8px 0', maxWidth: '280px', lineHeight: '1.4' }}>
+                            De acordo com a sua constância na conclusão de tarefas e objetivos, a sua plantinha vai evoluindo!
+                          </p>
+                          <button 
+                            onClick={() => setActiveTab('tasks')}
+                            style={{
+                              background: 'var(--primary)',
+                              color: '#ffffff',
+                              border: 'none',
+                              padding: '8px 16px',
+                              borderRadius: '20px',
+                              fontSize: '12px',
+                              fontWeight: '600',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              transition: 'transform 0.2s, filter 0.2s',
+                              boxShadow: '0 4px 12px rgba(74, 101, 78, 0.2)'
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.transform = 'translateY(-1px)';
+                              e.currentTarget.style.filter = 'brightness(1.1)';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.transform = 'none';
+                              e.currentTarget.style.filter = 'none';
+                            }}
+                          >
+                            Ver Minhas Tarefas
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="home-ritmo-dots-row">
+                          {ritmoSemanal.map(day => {
+                            let colorClass = 'dot-level-0';
+                            if (day.count === 1) colorClass = 'dot-level-1';
+                            else if (day.count === 2) colorClass = 'dot-level-2';
+                            else if (day.count >= 3) colorClass = 'dot-level-3';
+                            return (
+                              <div key={day.dateStr} className="home-ritmo-dot-item" title={`${day.count} tarefas em ${day.dayName}`}>
+                                <div className={`ritmo-dot ${colorClass} ${day.isToday ? 'today-dot' : ''}`} />
+                                <span className="ritmo-dot-day-name">{day.dayName}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="home-ritmo-graphic-side">
-                <div className="home-ritmo-wave-container">
-                  <div className="wave wave-1" />
-                  <div className="wave wave-2" />
-                  <div className="wave wave-3" />
-                  <div style={{ fontSize: '32px', zIndex: 2, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    {ritmoSemanal.every(day => day.count === 0) ? '🌱' : '⚡'}
                   </div>
-                </div>
-              </div>
-            </section>
+
+                  <div className="home-ritmo-graphic-side">
+                    <div className="home-ritmo-wave-container">
+                      <div className="wave wave-1" />
+                      <div className="wave wave-2" />
+                      <div className="wave wave-3" />
+                      <div style={{ fontSize: '40px', zIndex: 2, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
+                        <span>{plantStage.emoji}</span>
+                        <span style={{ fontSize: '10px', fontWeight: '800', color: 'var(--text-main)', backgroundColor: 'var(--bg-card)', padding: '2px 8px', borderRadius: '10px', boxShadow: 'var(--shadow-sm)', border: '1px solid var(--border-light)' }}>{plantStage.title}</span>
+                      </div>
+                    </div>
+                  </div>
+                </section>
+              );
+            })()}
 
           </div>
         )}
