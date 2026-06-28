@@ -171,25 +171,39 @@ async function handleSubscriptionCreate(req, res) {
             const todayStr = new Date().toISOString().slice(0, 10);
             const deterministicRef = body.idempotencyKey ? String(body.idempotencyKey).trim() : `mfd_pix_${userId}_${todayStr}`;
 
-            const { data: existingPending } = await supabaseAdmin
-                .from('subscriptions')
-                .select('*')
-                .eq('user_id', userId)
-                .eq('status', 'pending')
-                .or(`idempotency_key.eq.${deterministicRef},provider_id.eq.${deterministicRef}`)
-                .order('created_at', { ascending: false })
-                .limit(1)
-                .maybeSingle().catch(() => ({ data: null }));
+            let pendingSub = null;
+            try {
+                const { data: existingPending, error: pendingErr } = await supabaseAdmin
+                    .from('subscriptions')
+                    .select('*')
+                    .eq('user_id', userId)
+                    .eq('status', 'pending')
+                    .or(`idempotency_key.eq.${deterministicRef},provider_id.eq.${deterministicRef}`)
+                    .order('created_at', { ascending: false })
+                    .limit(1)
+                    .maybeSingle();
 
-            // Fallback de busca por assinatura pendente determinística do usuário
-            const pendingSub = existingPending || (await supabaseAdmin
-                .from('subscriptions')
-                .select('*')
-                .eq('user_id', userId)
-                .eq('status', 'pending')
-                .order('created_at', { ascending: false })
-                .limit(1)
-                .maybeSingle()).data;
+                if (pendingErr) {
+                    console.warn('[PAYMENT_IDEMPOTENCY_QUERY_WARN] Erro ao buscar idempotência compósita:', pendingErr.message);
+                }
+
+                pendingSub = existingPending;
+
+                if (!pendingSub) {
+                    const { data: fallbackPending } = await supabaseAdmin
+                        .from('subscriptions')
+                        .select('*')
+                        .eq('user_id', userId)
+                        .eq('status', 'pending')
+                        .order('created_at', { ascending: false })
+                        .limit(1)
+                        .maybeSingle();
+
+                    pendingSub = fallbackPending;
+                }
+            } catch (queryEx) {
+                console.warn('[PAYMENT_IDEMPOTENCY_EXCEPTION]', queryEx.message);
+            }
 
             if (pendingSub && pendingSub.asaas_payment_id) {
                 console.log('[PAYMENT_DETERMINISTIC_IDEMPOTENT] Reutilizando cobrança Pix pendente determinística:', pendingSub.asaas_payment_id);
