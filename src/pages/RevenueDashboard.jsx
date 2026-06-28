@@ -198,23 +198,29 @@ export default function RevenueDashboard() {
       <div style={{ width: '100%', overflowX: 'auto', WebkitOverflowScrolling: 'touch', paddingBottom: '12px' }}>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '20px', minWidth: '360px' }}>
           {/* Gráfico Principal de MRR */}
-          <RevenueChart timeline={timelineList} />
+          <div id="mrr-chart-section">
+            <RevenueChart timeline={timelineList} />
+          </div>
 
           {/* Churn e Breakdowns em duas colunas com scroll responsivo em mobile */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '20px', width: '100%' }}>
-            <div style={{ width: '100%', minWidth: '340px' }}>
+            <div id="churn-chart-section" style={{ width: '100%', minWidth: '340px' }}>
               <ChurnChart churn={churnData} />
             </div>
-            <div style={{ width: '100%', minWidth: '340px' }}>
+            <div id="breakdown-chart-section" style={{ width: '100%', minWidth: '340px' }}>
               <SubscriptionBreakdown breakdown={breakdownData} />
             </div>
           </div>
 
           {/* Heatmap de Cohort */}
-          <CohortHeatmap cohortsData={cohortsHeatmapData} />
+          <div id="cohort-heatmap-section">
+            <CohortHeatmap cohortsData={cohortsHeatmapData} />
+          </div>
 
           {/* Tabela de Saúde de Clientes */}
-          <CustomerHealthTable customers={customerHealthData} onUserClick={handleUserClick} />
+          <div id="customer-health-section">
+            <CustomerHealthTable customers={customerHealthData} onUserClick={handleUserClick} />
+          </div>
         </div>
       </div>
 

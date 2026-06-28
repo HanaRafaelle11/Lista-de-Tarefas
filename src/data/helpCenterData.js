@@ -5,7 +5,7 @@ export const HELP_CATEGORIES = [
   { id: 'goals', title: '🎯 Metas & Objetivos', icon: 'Target' },
   { id: 'habits', title: '🔥 Hábitos & Streaks', icon: 'Flame' },
   { id: 'focus', title: '🍅 Foco Pomodoro & Lo-Fi', icon: 'Clock' },
-  { id: 'ai', title: '🤖 IA (Coach Aura)', icon: 'Sparkles' },
+  { id: 'ai', title: '🤖 IA (Coach MyFlowDay)', icon: 'Sparkles' },
   { id: 'gamification', title: '🐶 Gamificação & Mascotes', icon: 'Award' },
   { id: 'billing', title: '💳 Assinaturas & Pagamentos', icon: 'CreditCard' },
   { id: 'account', title: '👤 Conta & Privacidade', icon: 'User' },
@@ -23,7 +23,7 @@ export const HELP_ARTICLES = [
     howToAccess: 'Acesse a página inicial (myflowday.com.br) e clique em "Criar Conta Gratuita".',
     howToUse: 'Preencha seu Nome Completo, E-mail válido e crie uma Senha forte com no mínimo 6 caracteres.',
     fieldGuide: [
-      { field: 'Nome Completo', tip: 'Informe como gosta de ser chamado. O Coach Aura usará este nome nas interações diárias.' },
+      { field: 'Nome Completo', tip: 'Informe como gosta de ser chamado. O Coach MyFlowDay usará este nome nas interações diárias.' },
       { field: 'E-mail', tip: 'Use seu e-mail principal para receber confirmações e links de recuperação de senha.' },
       { field: 'Senha', tip: 'Crie uma combinação com letras e números para maior segurança.' }
     ],
@@ -144,15 +144,15 @@ export const HELP_ARTICLES = [
     faq: 'O som continua tocando se eu mudar de aba? Sim, o reprodutor de áudio foi otimizado para rodar em segundo plano.'
   },
 
-  // 🤖 IA (COACH AURA)
+  // 🤖 IA (COACH MYFLOWDAY)
   {
     id: 'ai-guide',
     categoryId: 'ai',
-    title: 'Tudo sobre o Coach Aura: Seu assistente de produtividade com IA',
+    title: 'Tudo sobre o Coach MyFlowDay: Seu assistente de produtividade com IA',
     whatIs: 'Um motor de inteligência comportamental exclusivo do Plano Pro que analisa sua rotina.',
     purpose: 'Oferece insights valiosos e sugestões personalizadas sobre como otimizar seu tempo e energia.',
     howToAccess: 'Acesse a aba "Coach" no menu (exclusivo assinantes Pro⚡).',
-    howToUse: 'Converse diretamente com o Coach Aura ou clique nos botões de análise rápida para obter relatórios comportamentais.',
+    howToUse: 'Converse diretamente com o Coach MyFlowDay ou clique nos botões de análise rápida para obter relatórios comportamentais.',
     fieldGuide: [
       { field: 'Caixa de Mensagem / Prompt', tip: 'Seja específico sobre o que deseja analisar ou melhorar na sua rotina.' }
     ],

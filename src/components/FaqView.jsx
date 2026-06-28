@@ -204,7 +204,7 @@ export default function FaqView({ onGoBack }) {
         </div>
       </div>
 
-      <div style={{ maxWidth: '900px', margin: '0 auto', padding: '32px 20px 80px' }}>
+      <div style={{ width: '100%', maxWidth: '1200px', margin: '0 auto', padding: '32px 16px 80px', boxSizing: 'border-box' }}>
         
         {/* Banner de Boas-Vindas */}
         <div style={{ textAlign: 'center', marginBottom: '32px' }}>
@@ -312,8 +312,8 @@ export default function FaqView({ onGoBack }) {
           <h3 style={{ fontSize: '16px', fontWeight: '700', margin: '0 0 6px 0', color: '#10b981' }}>
             Ainda precisa de ajuda?
           </h3>
-          <p style={{ fontSize: '13px', color: 'rgba(255, 255, 255, 0.7)', margin: '0 0 16px 0', lineHeight: '1.5' }}>
-            Nossa equipe de suporte responde diretamente pelo aplicativo. Vá em <strong>Configurações → Compartilhe com o MyFlowDay</strong> e envie sua mensagem!
+          <p style={{ fontSize: '13px', color: 'rgba(255, 255, 255, 0.8)', margin: 0, lineHeight: '1.5' }}>
+            Vá em Configurações → Compartilhe com o MyFlowDay e envie sua mensagem que teremos prazer em responder o quanto antes :)
           </p>
         </div>
 

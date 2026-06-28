@@ -13,7 +13,13 @@ export default function RevenueKPI({ kpis }) {
     display: 'flex',
     flexDirection: 'column',
     justifyContent: 'space-between',
-    minHeight: '120px'
+    minHeight: '120px',
+    cursor: 'pointer'
+  };
+
+  const scrollTo = (id) => {
+    const el = document.getElementById(id);
+    if (el) el.scrollIntoView({ behavior: 'smooth' });
   };
 
   const labelStyle = {
@@ -46,6 +52,7 @@ export default function RevenueKPI({ kpis }) {
       {/* Card 1: MRR */}
       <div 
         style={cardStyle} 
+        onClick={() => scrollTo('mrr-chart-section')}
         onMouseEnter={(e) => {
           e.currentTarget.style.transform = 'translateY(-2px)';
           e.currentTarget.style.borderColor = 'var(--primary, #10b981)';
@@ -67,6 +74,7 @@ export default function RevenueKPI({ kpis }) {
       {/* Card 2: ARR */}
       <div 
         style={cardStyle}
+        onClick={() => scrollTo('mrr-chart-section')}
         onMouseEnter={(e) => {
           e.currentTarget.style.transform = 'translateY(-2px)';
           e.currentTarget.style.borderColor = 'var(--primary, #10b981)';
@@ -88,6 +96,7 @@ export default function RevenueKPI({ kpis }) {
       {/* Card 3: Churn Rate */}
       <div 
         style={cardStyle}
+        onClick={() => scrollTo('churn-chart-section')}
         onMouseEnter={(e) => {
           e.currentTarget.style.transform = 'translateY(-2px)';
           e.currentTarget.style.borderColor = churnRate > 10 ? '#ef4444' : '#f59e0b';
@@ -111,6 +120,7 @@ export default function RevenueKPI({ kpis }) {
       {/* Card 4: NRR */}
       <div 
         style={cardStyle}
+        onClick={() => scrollTo('cohort-heatmap-section')}
         onMouseEnter={(e) => {
           e.currentTarget.style.transform = 'translateY(-2px)';
           e.currentTarget.style.borderColor = nrr >= 100 ? '#10b981' : '#f59e0b';
@@ -134,6 +144,7 @@ export default function RevenueKPI({ kpis }) {
       {/* Card 5: Subscribers */}
       <div 
         style={cardStyle}
+        onClick={() => scrollTo('customer-health-section')}
         onMouseEnter={(e) => {
           e.currentTarget.style.transform = 'translateY(-2px)';
           e.currentTarget.style.borderColor = 'var(--primary, #10b981)';
@@ -155,6 +166,7 @@ export default function RevenueKPI({ kpis }) {
       {/* Card 6: ARPU */}
       <div 
         style={cardStyle}
+        onClick={() => scrollTo('breakdown-chart-section')}
         onMouseEnter={(e) => {
           e.currentTarget.style.transform = 'translateY(-2px)';
           e.currentTarget.style.borderColor = 'var(--primary, #10b981)';

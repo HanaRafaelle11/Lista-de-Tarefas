@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sun, Moon } from 'lucide-react';
+import { Sun, Moon, User } from 'lucide-react';
 import { useAppContext } from '../contexts/AppContext';
 import MFIcon from './MFIcon';
 import DefaultAvatar from './DefaultAvatar';
@@ -86,7 +86,7 @@ export default function Navbar() {
               className="header-btn"
               title={theme === 'dark' ? 'Modo Claro' : 'Modo Escuro'}
               aria-label={theme === 'dark' ? 'Ativar modo claro' : 'Ativar modo escuro'}
-              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '38px', height: '38px', padding: 0, margin: 0 }}
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '38px', height: '38px', padding: 0, margin: 0, flexShrink: 0 }}
             >
               {theme === 'dark'
                 ? <Sun size={20} aria-hidden="true" />
@@ -96,19 +96,19 @@ export default function Navbar() {
               onClick={() => setActiveTab('settings')}
               className="header-btn"
               title="Configurações"
-              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '38px', height: '38px', padding: 0, margin: 0, color: activeTab === 'settings' ? 'var(--primary)' : 'var(--text-muted)' }}
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '38px', height: '38px', padding: 0, margin: 0, flexShrink: 0, color: activeTab === 'settings' ? 'var(--primary)' : 'var(--text-muted)' }}
             >
-              <MFIcon name="profile" size={20} />
+              <User size={22} strokeWidth={2} className="header-btn-icon" />
             </button>
             
             <div 
               className={`app-top-profile ${activeTab === 'profile' ? 'active' : ''}`}
               onClick={() => setActiveTab('profile')}
-              style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '38px', height: '38px', margin: 0 }}
+              style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '38px', height: '38px', margin: 0, flexShrink: 0 }}
             >
-              <div className="app-top-avatar" title={userProfile?.name || currentUser?.name} style={{ width: '38px', height: '38px', borderRadius: '50%', overflow: 'hidden', border: '1px solid var(--border-medium)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div className="app-top-avatar" title={userProfile?.name || currentUser?.name} style={{ width: '38px', height: '38px', borderRadius: '50%', overflow: 'hidden', border: '1px solid var(--border-medium)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                 {userProfile?.avatar_url ? (
-                  <img src={userProfile.avatar_url} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <img src={userProfile.avatar_url} alt="Avatar" style={{ width: '38px', height: '38px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
                 ) : (
                   <DefaultAvatar size={38} />
                 )}
