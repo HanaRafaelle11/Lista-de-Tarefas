@@ -513,51 +513,106 @@ const handleAdminPaymentEvents = withAdminAuth(async (req, res) => {
         const { userId, search, limit = 50 } = req.query;
         let targetUserId = userId;
 
+        console.log("[PAYMENT EVENTS] Passo 5: Analisando parâmetros de busca:", { userId, search });
+
         if (!targetUserId && search) {
             const term = String(search).trim().toLowerCase();
             try {
-                const { data: authData } = await supabaseAdmin.auth.admin.listUsers({ perPage: 1000 });
+                const { data: authData, error: authErr } = await supabaseAdmin.auth.admin.listUsers({ perPage: 1000 });
+                if (authErr) console.warn('[PAYMENT EVENTS] Erro listUsers:', authErr.message);
                 const matchedUser = authData?.users?.find(u => u.email?.toLowerCase().includes(term) || u.id === term);
-                if (matchedUser) targetUserId = matchedUser.id;
+                if (matchedUser) {
+                    targetUserId = matchedUser.id;
+                    console.log("[PAYMENT EVENTS] Passo 5: 1. Usuário encontrado em auth.users:", matchedUser.email);
+                    console.log("[PAYMENT EVENTS] Passo 5: 2. ID encontrado:", targetUserId);
+                }
             } catch (authErr) {
-                console.warn('[ADMIN PAYMENT EVENTS WARN]', authErr.message);
+                console.warn('[ADMIN PAYMENT EVENTS WARN auth.users]', authErr.message);
             }
 
             if (!targetUserId) {
                 const { data: sub } = await supabaseAdmin.from('subscriptions').select('user_id').or(`asaas_subscription_id.eq.${term},asaas_customer_id.eq.${term},user_id.eq.${term}`).limit(1).maybeSingle();
-                if (sub) targetUserId = sub.user_id;
+                if (sub) {
+                    targetUserId = sub.user_id;
+                    console.log("[PAYMENT EVENTS] Passo 5: ID resolvido via subscriptions:", targetUserId);
+                }
             }
         }
 
-        if (!targetUserId) return res.status(400).json({ error: 'userId ou termo de busca válido é obrigatório.' });
+        // Passo 6: Se a busca/id não for fornecido ou tabela vazia, retorna objeto padronizado sem HTTP 500
+        if (!targetUserId) {
+            console.log("[PAYMENT EVENTS] Passo 6: Nenhum userId fornecido ou encontrado. Retornando objeto vazio com HTTP 200.");
+            return res.status(200).json({
+                events: [],
+                subscription: null,
+                consistency: {
+                    ok: true,
+                    warnings: []
+                },
+                lastError: null
+            });
+        }
 
-        // 1. Busca eventos da tabela payment_events
-        const { data: events } = await supabaseAdmin
+        // Passo 1 & 4: Consulta a payment_events com logs detalhados
+        console.log("[PAYMENT EVENTS] iniciando consulta na tabela payment_events para user_id:", targetUserId);
+        
+        const queryResult = await supabaseAdmin
             .from('payment_events')
             .select('*')
             .eq('user_id', targetUserId)
             .order('timestamp', { ascending: false })
             .limit(Number(limit));
 
-        // 2. Estado atual da subscription
-        const { data: sub } = await supabaseAdmin
-            .from('subscriptions')
-            .select('status, plan, current_period_end, asaas_subscription_id, last_payment_id')
-            .eq('user_id', targetUserId)
-            .maybeSingle();
+        const { data: events, error, count } = queryResult;
 
-        // 3. Verificação de consistência: payment_approved sem subscription_updated próximo
+        console.log("[PAYMENT EVENTS] Resultado bruto da consulta:", {
+            data: events,
+            error,
+            count
+        });
+
+        if (error) {
+            console.error("[PAYMENT EVENTS ERRO DETALHADO]", {
+                message: error.message,
+                code: error.code,
+                details: error.details,
+                hint: error.hint
+            });
+            return res.status(500).json({
+                message: error.message,
+                code: error.code,
+                details: error.details,
+                hint: error.hint,
+                stack: new Error().stack
+            });
+        }
+
+        console.log("[PAYMENT EVENTS] Passo 5: 3. Consulta executada em payment_events | 4. Linhas retornadas:", events ? events.length : 0);
+
+        // 2. Estado atual da subscription
+        let sub = null;
+        try {
+            const subRes = await supabaseAdmin
+                .from('subscriptions')
+                .select('status, plan, current_period_end, asaas_subscription_id, last_payment_id')
+                .eq('user_id', targetUserId)
+                .maybeSingle();
+            if (!subRes.error) sub = subRes.data;
+        } catch (subErr) {
+            console.warn('[PAYMENT EVENTS WARN sub]', subErr.message);
+        }
+
+        // 3. Verificação de consistência
         const approvedEvents = (events || []).filter(e => e.event === 'payment_approved');
         const consistencyWarnings = approvedEvents.filter(approved => {
-            const approvedTs = new Date(approved.timestamp).getTime();
+            const approvedTs = new Date(approved.timestamp || approved.created_at).getTime();
             const hasSubUpdate = (events || []).some(e =>
                 e.event === 'subscription_updated' &&
-                Math.abs(new Date(e.timestamp).getTime() - approvedTs) < 90000 // 90s window
+                Math.abs(new Date(e.timestamp || e.created_at).getTime() - approvedTs) < 90000
             );
             return !hasSubUpdate;
         });
 
-        // 4. Último erro
         const lastError = (events || []).find(e => e.status === 'error');
 
         return res.status(200).json({
@@ -568,14 +623,23 @@ const handleAdminPaymentEvents = withAdminAuth(async (req, res) => {
                 ok: consistencyWarnings.length === 0,
                 warnings: consistencyWarnings.map(w => ({
                     referenceId: w.payment_id || w.subscription_id,
-                    approvedAt: w.timestamp,
+                    approvedAt: w.timestamp || w.created_at,
                     message: 'payment_approved sem subscription_updated correspondente nos próximos 90s'
                 }))
             },
             lastError: lastError || null,
         });
+
     } catch (err) {
-        return res.status(500).json({ error: 'Erro interno ao buscar payment events.', message: err.message });
+        console.error("[PAYMENT EVENTS EXCEÇÃO CAPTURADA]", err);
+        // Passo 7: Retornar o erro completo no JSON
+        return res.status(500).json({
+            message: err.message || String(err),
+            code: err.code || 'UNKNOWN_ERROR',
+            details: err.details || null,
+            hint: err.hint || null,
+            stack: err.stack || null
+        });
     }
 });
 
