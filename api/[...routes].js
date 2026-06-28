@@ -128,39 +128,61 @@ async function handleSubscriptionCreate(req, res) {
         return res.status(405).json({ error: 'Método não permitido. Utilize POST.' });
     }
 
+    const isDebug = process.env.NODE_ENV === 'development' || req.query?.debug === 'true' || req.query?.debug === '1';
+    let currentStep = 'PAYMENT_INIT';
+
     try {
         const body = req.body || {};
+        console.log('[PAYMENT_REQUEST_RECEIVED]', {
+            timestamp: new Date().toISOString(),
+            route: 'subscription/create',
+            body: { ...body, creditCard: body.creditCard ? '[MASKED]' : undefined }
+        });
+
         const { billingType = 'PIX', userId, email, cpf, firstName, lastName, creditCard, creditCardHolderInfo } = body;
 
+        currentStep = 'VALIDATE_INPUTS';
         if (!userId || !email || !cpf) {
-            return res.status(400).json({ error: 'Campos obrigatórios (userId, email, cpf) não fornecidos.' });
+            const missing = [];
+            if (!userId) missing.push('userId');
+            if (!email) missing.push('email');
+            if (!cpf) missing.push('cpf');
+            console.error('[PAYMENT_VALIDATION_ERROR] Campos obrigatórios ausentes:', missing.join(', '));
+            return res.status(400).json({ error: `Campos obrigatórios (${missing.join(', ')}) não fornecidos.` });
         }
 
         const cleanCpf = cpf.replace(/\D/g, '');
         if (!validateCpf(cleanCpf)) {
+            console.error('[PAYMENT_VALIDATION_ERROR] CPF inválido:', cpf);
             return res.status(400).json({ error: 'CPF inválido.' });
         }
 
         const fullName = `${firstName || ''} ${lastName || ''}`.trim() || 'Usuário MyFlowDay';
 
         // 1. Garantir cliente no Asaas
+        currentStep = 'ENSURE_CUSTOMER';
         const customerId = await PaymentGateway.ensureCustomer({ id: userId, nome: fullName }, email, cleanCpf);
+        console.log('[PAYMENT_STEP_SUCCESS] ensureCustomer finalizado:', { userId, customerId });
 
         if (billingType.toUpperCase() === 'PIX') {
+            currentStep = 'CREATE_PIX_CHARGE';
             const pixCharge = await PaymentGateway.createPixCharge({
                 customerId,
                 amount: PLAN_PREMIUM_MONTHLY_PRICE,
                 description: 'Plano MyFlowDay Premium ⚡',
                 externalReference: `mfd_premium_${userId}`
             });
+            console.log('[PAYMENT_STEP_SUCCESS] createPixCharge finalizado:', { paymentId: pixCharge.id });
 
+            currentStep = 'CREATE_PENDING_SUBSCRIPTION';
             await BillingEngine.createPendingSubscription(userId, {
                 providerId: pixCharge.id,
                 customerId,
                 billingType: 'pix'
             });
+            console.log('[PAYMENT_STEP_SUCCESS] createPendingSubscription finalizado.');
 
-            return res.status(200).json({
+            const responseObj = {
                 success: true,
                 paymentId: pixCharge.id,
                 customerId,
@@ -168,13 +190,22 @@ async function handleSubscriptionCreate(req, res) {
                 qrCodeBase64: pixCharge.qr_code_base64,
                 invoiceUrl: pixCharge.invoiceUrl,
                 expirationDate: pixCharge.expirationDate
-            });
+            };
+
+            if (isDebug) {
+                responseObj.debug = { step: 'SUCCESS', customerId, paymentId: pixCharge.id };
+            }
+
+            return res.status(200).json(responseObj);
         } else {
             // Cartão de crédito
+            currentStep = 'VALIDATE_CARD_INPUTS';
             if (!creditCard || !creditCard.number || !creditCard.holderName) {
+                console.error('[PAYMENT_VALIDATION_ERROR] Dados do cartão incompletos:', creditCard);
                 return res.status(400).json({ error: 'Dados do cartão de crédito incompletos.' });
             }
 
+            currentStep = 'CREATE_CREDIT_CARD_CHARGE';
             const cardCharge = await PaymentGateway.createCreditCardCharge({
                 customerId,
                 amount: PLAN_PREMIUM_MONTHLY_PRICE,
@@ -183,9 +214,11 @@ async function handleSubscriptionCreate(req, res) {
                 description: 'Plano MyFlowDay Premium ⚡',
                 externalReference: `mfd_premium_${userId}`
             });
+            console.log('[PAYMENT_STEP_SUCCESS] createCreditCardCharge finalizado:', { paymentId: cardCharge.id, status: cardCharge.status });
 
             const statusUpper = (cardCharge.status || '').toUpperCase();
             if (statusUpper === 'CONFIRMED' || statusUpper === 'RECEIVED') {
+                currentStep = 'PROCESS_PAYMENT_SUCCESS';
                 await BillingEngine.processPaymentSuccess({
                     userId,
                     customerId,
@@ -194,6 +227,7 @@ async function handleSubscriptionCreate(req, res) {
                     value: cardCharge.value
                 });
             } else {
+                currentStep = 'CREATE_PENDING_SUBSCRIPTION';
                 await BillingEngine.createPendingSubscription(userId, {
                     providerId: cardCharge.id,
                     customerId,
@@ -201,16 +235,38 @@ async function handleSubscriptionCreate(req, res) {
                 });
             }
 
-            return res.status(200).json({
+            const responseObj = {
                 success: true,
                 paymentId: cardCharge.id,
                 status: cardCharge.status,
                 invoiceUrl: cardCharge.invoiceUrl
-            });
+            };
+
+            if (isDebug) {
+                responseObj.debug = { step: 'SUCCESS', customerId, paymentId: cardCharge.id, status: cardCharge.status };
+            }
+
+            return res.status(200).json(responseObj);
         }
     } catch (error) {
-        console.error('[API Subscription Create Error]', error);
-        return res.status(500).json({ error: 'Falha ao processar pagamento.', message: error.message });
+        console.error('[PAYMENT_ERROR_FULL_STACK]', error.stack || error);
+        
+        const errorMsg = error.message || 'Falha ao processar pagamento.';
+        const errResponse = {
+            error: errorMsg.includes('Asaas') || errorMsg.includes('Configuração') || errorMsg.includes('CPF') || errorMsg.includes('Dados') ? errorMsg : 'Falha ao processar pagamento.',
+            message: errorMsg
+        };
+
+        if (isDebug) {
+            errResponse.debug = {
+                step: currentStep,
+                stack: error.stack,
+                asaasDetails: error.asaasDetails || null,
+                rawResponseBody: error.rawResponseBody || null
+            };
+        }
+
+        return res.status(500).json(errResponse);
     }
 }
 
