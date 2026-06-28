@@ -165,10 +165,29 @@ async function handleSubscriptionCreate(req, res) {
         console.log('[PAYMENT_STEP_SUCCESS] ensureCustomer finalizado:', { userId, customerId });
 
         if (billingType.toUpperCase() === 'PIX') {
-            currentStep = 'CREATE_PIX_CHARGE';
             const todayStr = new Date().toISOString().slice(0, 10);
             const deterministicRef = body.idempotencyKey ? String(body.idempotencyKey).trim() : `mfd_pix_${userId}_${todayStr}`;
 
+            // STRIPE-LIKE PATTERN: Write-First (Registra intenção preliminar no DB antes do Gateway)
+            currentStep = 'WRITE_INITIAL_INTENT';
+            try {
+                await supabaseAdmin
+                    .from('subscriptions')
+                    .upsert({
+                        user_id: userId,
+                        status: 'pending',
+                        provider: 'asaas',
+                        asaas_customer_id: customerId,
+                        idempotency_key: deterministicRef,
+                        updated_at: new Date().toISOString()
+                    }, { onConflict: 'user_id' });
+                console.log('[PAYMENT_WRITE_FIRST_SUCCESS] Intenção de pagamento gravada no DB antes do Gateway.');
+            } catch (intentErr) {
+                console.warn('[PAYMENT_WRITE_FIRST_WARN] Falha ao gravar intenção preliminar (prossecução resiliente):', intentErr.message);
+            }
+
+            // Chamada ao Gateway (Asaas)
+            currentStep = 'CREATE_PIX_CHARGE';
             const pixCharge = await PaymentGateway.createPixCharge({
                 customerId,
                 amount: PLAN_PREMIUM_MONTHLY_PRICE,
@@ -177,14 +196,14 @@ async function handleSubscriptionCreate(req, res) {
             });
             console.log('[PAYMENT_STEP_SUCCESS] createPixCharge finalizado:', { paymentId: pixCharge.id, externalReference: deterministicRef });
 
-            // REGRA DE OURO: Registra a intenção pending no Supabase em background de forma assíncrona (FIRE-AND-FORGET).
-            // O checkout NUNCA é bloqueado nem falha por oscilação ou indisponibilidade de banco secundário.
+            // Atualização do registro com o paymentId real do gateway (não-bloqueante / resiliente)
+            currentStep = 'UPDATE_PENDING_SUBSCRIPTION';
             BillingEngine.createPendingSubscription(userId, {
                 providerId: pixCharge.id,
                 customerId,
                 billingType: 'pix'
             }).catch(err => {
-                console.warn('[PAYMENT_ASYNC_PENDING_WARN] Erro ao gravar registro pending em background (não-bloqueante):', err.message);
+                console.warn('[PAYMENT_ASYNC_PENDING_WARN] Erro ao atualizar providerId no DB em background:', err.message);
             });
 
             const responseObj = {
