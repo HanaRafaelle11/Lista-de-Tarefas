@@ -26,7 +26,7 @@ const { PLAN_PREMIUM_MONTHLY_PRICE, PLAN_FREE_PRICE } = await import('../lib/bil
 const mockDatabase = {
   profiles: {},
   subscriptions: {},
-  payment_events: [],
+  billing_events: [],
   webhook_events: [],
   events: []
 };
@@ -79,14 +79,14 @@ globalThis.fetch = async (url, options) => {
       }
     }
 
-    if (table === 'payment_events') {
+    if (table === 'billing_events') {
       if (method === 'GET') {
-        let filtered = mockDatabase.payment_events;
+        let filtered = mockDatabase.billing_events;
         if (userIdEq) filtered = filtered.filter(e => e.user_id === userIdEq);
         return new Response(JSON.stringify(filtered), { status: 200 });
       } else if (method === 'POST') {
         const insertBody = Array.isArray(body) ? body[0] : body;
-        mockDatabase.payment_events.push(insertBody);
+        mockDatabase.billing_events.push(insertBody);
         return new Response(JSON.stringify([insertBody]), { status: 200 });
       }
     }
@@ -160,7 +160,7 @@ async function executeHomologation() {
   console.log('\n--- 3. BANCO ANTES DO WEBHOOK (CARTÃO) ---');
   console.log('SELECT * FROM profiles WHERE id =', userIdCC, ':\n', JSON.stringify(mockDatabase.profiles[userIdCC], null, 2));
   console.log('SELECT * FROM subscriptions WHERE user_id =', userIdCC, ':\n', JSON.stringify(mockDatabase.subscriptions[userIdCC], null, 2));
-  console.log('SELECT * FROM payment_events WHERE user_id =', userIdCC, ':\n', JSON.stringify(mockDatabase.payment_events.filter(e => e.user_id === userIdCC), null, 2));
+  console.log('SELECT * FROM billing_events WHERE user_id =', userIdCC, ':\n', JSON.stringify(mockDatabase.billing_events.filter(e => e.user_id === userIdCC), null, 2));
 
   // 2. WEBHOOK RECEBIDO
   console.log('\n--- 2. WEBHOOK RECEBIDO (CARTÃO) ---');
@@ -210,7 +210,7 @@ async function executeHomologation() {
   console.log('\n--- BANCO DEPOIS DO WEBHOOK (CARTÃO) ---');
   console.log('SELECT * FROM profiles WHERE id =', userIdCC, ':\n', JSON.stringify(mockDatabase.profiles[userIdCC], null, 2));
   console.log('SELECT * FROM subscriptions WHERE user_id =', userIdCC, ':\n', JSON.stringify(mockDatabase.subscriptions[userIdCC], null, 2));
-  console.log('SELECT * FROM payment_events WHERE user_id =', userIdCC, ':\n', JSON.stringify(mockDatabase.payment_events.filter(e => e.user_id === userIdCC), null, 2));
+  console.log('SELECT * FROM billing_events WHERE user_id =', userIdCC, ':\n', JSON.stringify(mockDatabase.billing_events.filter(e => e.user_id === userIdCC), null, 2));
   console.log('SELECT * FROM webhook_events WHERE event_id =', webhookPayloadCC.id, ':\n', JSON.stringify(mockDatabase.webhook_events.filter(e => e.event_id === webhookPayloadCC.id), null, 2));
 
   // 4. ACCESS CHECK

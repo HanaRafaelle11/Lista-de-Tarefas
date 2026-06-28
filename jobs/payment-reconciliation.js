@@ -8,7 +8,7 @@ export async function runReconciliation() {
 
   try {
     const { data: pendingPayments, error: dbError } = await supabaseAdmin
-      .from('payment_events')
+      .from('billing_events')
       .select('payment_id, status, user_id')
       .in('status', ['created', 'pending', 'in_process']);
 

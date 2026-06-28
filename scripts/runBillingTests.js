@@ -33,7 +33,7 @@ const { PLAN_PREMIUM_MONTHLY_PRICE, PLAN_FREE_PRICE } = await import('../lib/bil
 const mockDatabase = {
   profiles: {},
   subscriptions: {},
-  payment_events: [],
+  billing_events: [],
   webhook_events: [],
   events: []
 };
@@ -91,14 +91,14 @@ globalThis.fetch = async (url, options) => {
       }
     }
 
-    if (table === 'payment_events') {
+    if (table === 'billing_events') {
       if (method === 'GET') {
-        let filtered = mockDatabase.payment_events;
+        let filtered = mockDatabase.billing_events;
         if (userIdEq) filtered = filtered.filter(e => e.user_id === userIdEq);
         return new Response(JSON.stringify(filtered), { status: 200 });
       } else if (method === 'POST') {
         const insertBody = Array.isArray(body) ? body[0] : body;
-        mockDatabase.payment_events.push(insertBody);
+        mockDatabase.billing_events.push(insertBody);
         return new Response(JSON.stringify([insertBody]), { status: 200 });
       }
     }

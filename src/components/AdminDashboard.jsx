@@ -43,28 +43,29 @@ export default function AdminDashboard() {
   const fetchAllLatestEvents = async () => {
     try {
       const { data, error } = await supabase
-        .from('payment_events')
-        .select('user_id, event, status, timestamp')
-        .order('timestamp', { ascending: false });
+        .from('billing_events')
+        .select('user_id, type, event_type, status, created_at')
+        .order('created_at', { ascending: false });
 
       if (error) throw error;
 
       const map = {};
       (data || []).forEach(evt => {
         if (evt.user_id && !map[evt.user_id]) {
+          const eventName = evt.type || evt.event_type || 'event';
           map[evt.user_id] = {
             user_id: evt.user_id,
-            event_type: evt.event, // compatibilidade retroativa
-            event: evt.event,
+            event_type: eventName,
+            event: eventName,
             status: evt.status,
-            created_at: evt.timestamp, // compatibilidade retroativa
-            timestamp: evt.timestamp
+            created_at: evt.created_at,
+            timestamp: evt.created_at
           };
         }
       });
       setLatestEventsMap(map);
     } catch (e) {
-      console.error('Error fetching all latest payment events:', e);
+      console.error('Error fetching all latest billing events:', e);
     }
   };
 
