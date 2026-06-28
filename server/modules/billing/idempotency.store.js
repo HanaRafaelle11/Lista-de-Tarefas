@@ -1,10 +1,10 @@
 /**
- * Idempotency Store Module (V2)
+ * Idempotency Store Module (Infraestrutura Interna)
  * 
  * Garante fisicamente que cada evento financeiro externo (ex: Asaas paymentId)
  * seja processado exatamente UMA VEZ no billing_ledger. Impedimento absoluto de duplicação.
  */
-import { supabaseAdmin } from '../../../../lib/supabase.js';
+import { supabaseAdmin } from '../../lib/supabase.js';
 
 const memoryIdempotencySet = new Set();
 
@@ -18,7 +18,6 @@ export const idempotencyStore = {
     }
 
     try {
-      // Verificar se já existe no ledger por reference_id ou em billing_events por payment_id
       const { data: ledgerMatch } = await supabaseAdmin
         .from('billing_ledger')
         .select('id')
