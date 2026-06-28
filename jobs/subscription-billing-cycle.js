@@ -1,5 +1,5 @@
 import { supabaseAdmin } from '../lib/supabase.js';
-import { BillingEngine } from '../api/billing-engine.js';
+import { BillingEngine } from '../lib/billing/engine.js';
 import { PaymentGateway } from '../lib/paymentGateway/index.js';
 
 /**
@@ -59,12 +59,14 @@ export async function runBillingCycle() {
         const nextExpiry = new Date();
         nextExpiry.setDate(now.getDate() + 30);
 
-        await BillingEngine.setUserPremium(
-          sub.user_id,
+        await BillingEngine.processPaymentSuccess({
+          userId: sub.user_id,
           customerId,
-          nextExpiry.toISOString(),
-          pixCharge.id
-        );
+          paymentId: pixCharge.id,
+          billingType: 'pix',
+          value: Number(sub.price) || 14.90,
+          periodDays: 30
+        });
 
         await supabaseAdmin.from('payment_ledger').insert([{
           payment_id: String(pixCharge.id),
@@ -78,7 +80,7 @@ export async function runBillingCycle() {
       } catch (err) {
         failures++;
         console.error(`[Billing Cycle] Erro ao processar cobrança da assinatura ${sub.id}:`, err.message);
-        await BillingEngine.handlePaymentPastDue(sub.user_id);
+        await BillingEngine.processPaymentOverdue({ userId: sub.user_id });
       }
     }
 

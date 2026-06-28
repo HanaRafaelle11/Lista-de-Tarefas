@@ -1,5 +1,5 @@
 import { supabaseAdmin } from '../lib/supabase.js';
-import { BillingEngine } from '../api/billing-engine.js';
+import { BillingEngine } from '../lib/billing/engine.js';
 import { PaymentGateway } from '../lib/paymentGateway/index.js';
 
 export async function runReconciliation() {
@@ -21,7 +21,13 @@ export async function runReconciliation() {
       try {
         const asaasPayment = await PaymentGateway.getPayment(p.payment_id);
         if (asaasPayment && (asaasPayment.status === 'RECEIVED' || asaasPayment.status === 'CONFIRMED')) {
-          await BillingEngine.setUserPremium(p.user_id, asaasPayment.customer, null, p.payment_id);
+          await BillingEngine.processPaymentSuccess({
+            userId: p.user_id,
+            customerId: asaasPayment.customer,
+            paymentId: p.payment_id,
+            billingType: asaasPayment.billingType || 'pix',
+            value: asaasPayment.value
+          });
           fixedCount++;
         }
       } catch (_) {}

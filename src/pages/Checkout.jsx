@@ -152,10 +152,10 @@ export default function Checkout() {
     }
   }, [userProfile, firstName, lastName]);
 
-  // Polling automático de confirmação Pix
+  // Polling automático de confirmação de Pagamento (Pix ou Cartão)
   useEffect(() => {
     let timer = null;
-    if (status === 'pix_generated' && currentUser?.id) {
+    if ((status === 'pix_generated' || status === 'card_pending') && currentUser?.id) {
       timer = setInterval(async () => {
         try {
           const res = await fetch(`/api/access/check?userId=${currentUser.id}`);
@@ -164,7 +164,7 @@ export default function Checkout() {
             if (data.isPro) {
               setStatus('success');
               logCheckoutEvent('subscription_updated', 'success', {
-                payload: { method: 'pix_polling_success', checkResult: data }
+                payload: { method: status === 'pix_generated' ? 'pix_polling_success' : 'card_polling_success', checkResult: data }
               });
               clearInterval(timer);
             }
@@ -296,7 +296,7 @@ export default function Checkout() {
         }
 
         setCheckoutData(data);
-        setStatus('success');
+        setStatus('card_pending');
 
         // Log: Assinatura de cartão concluída
         await logCheckoutEvent('checkout_completed', 'success', {
@@ -359,6 +359,19 @@ export default function Checkout() {
           <h3 style={{ color: '#10b981', margin: '16px 0 8px' }}>Assinatura Ativada com Sucesso!</h3>
           <p style={{ fontSize: '14px', color: 'rgba(255, 255, 255, 0.7)', lineHeight: '1.5', marginBottom: '20px' }}>Seu pagamento foi confirmado pelo Asaas e o plano Premium já está pronto para uso.</p>
           <button onClick={() => window.location.href = '/?app=1'} style={{ width: '100%', backgroundColor: '#10b981', color: '#ffffff', border: 'none', borderRadius: '10px', padding: '14px', fontWeight: '700', cursor: 'pointer' }}>Entrar no App Pro ⚡</button>
+        </div>
+      ) : status === 'card_pending' ? (
+        /* ESTADO: Cartão Enviado / Pendente webhook */
+        <div style={{ textAlign: 'center', padding: '24px 0' }}>
+          <span style={{ fontSize: '48px', display: 'inline-block', animation: 'pulse 1.5s infinite' }}>💳</span>
+          <h3 style={{ color: '#f59e0b', margin: '16px 0 8px' }}>Processando seu Pagamento...</h3>
+          <p style={{ fontSize: '14px', color: 'rgba(255, 255, 255, 0.7)', lineHeight: '1.5', marginBottom: '20px' }}>
+            Seus dados foram enviados de forma segura para o Asaas. Aguardando a liberação da operadora do cartão...
+          </p>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontSize: '13px', color: '#f59e0b', backgroundColor: 'rgba(245, 158, 11, 0.1)', padding: '10px', borderRadius: '8px' }}>
+            <span className="spinner" style={{ display: 'inline-block', animation: 'spin 1s linear infinite' }}>⏳</span>
+            <span>Aguardando liberação em tempo real...</span>
+          </div>
         </div>
       ) : status === 'pix_generated' ? (
         /* ESTADO: Pix Gerado */

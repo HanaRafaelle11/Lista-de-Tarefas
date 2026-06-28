@@ -146,25 +146,25 @@ async function seed() {
       status = "active";
       subStart = dateOffsetDays(-30);
       subEnd = dateOffsetDays(30);
-      customerId = `mp_${randomUUID()}`;
+      customerId = `cus_${randomUUID()}`;
     } else if (lifecycle === "active") {
       plan = "premium";
       status = "active";
       subStart = dateOffsetDays(-15);
       subEnd = dateOffsetDays(15);
-      customerId = `mp_${randomUUID()}`;
+      customerId = `cus_${randomUUID()}`;
     } else if (lifecycle === "churned") {
       plan = "free";
       status = "canceled";
       subStart = dateOffsetDays(-45);
       subEnd = dateOffsetDays(-15);
-      customerId = `mp_${randomUUID()}`;
+      customerId = `cus_${randomUUID()}`;
     } else if (lifecycle === "reactivated") {
       plan = "premium";
       status = "active";
       subStart = dateOffsetDays(-5);
       subEnd = dateOffsetDays(25);
-      customerId = `mp_${randomUUID()}`;
+      customerId = `cus_${randomUUID()}`;
     }
 
     // Atualizar perfil no Supabase
@@ -175,7 +175,7 @@ async function seed() {
         assinatura_status: status,
         assinatura_inicio: subStart,
         assinatura_expira_em: subEnd,
-        mercadopago_customer_id: customerId,
+        asaas_customer_id: customerId,
         updated_at: new Date().toISOString()
       })
       .eq("id", userId);

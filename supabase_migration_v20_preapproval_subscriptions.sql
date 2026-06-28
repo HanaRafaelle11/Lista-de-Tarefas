@@ -16,7 +16,7 @@
 
 -- Identificador da assinatura no Mercado Pago (preapproval id)
 ALTER TABLE public.subscriptions
-  ADD COLUMN IF NOT EXISTS mp_subscription_id TEXT;
+  ADD COLUMN IF NOT EXISTS asaas_subscription_id TEXT;
 
 -- Data da próxima cobrança automática
 ALTER TABLE public.subscriptions
@@ -62,18 +62,18 @@ ALTER TABLE public.subscriptions
 
 
 -- ─────────────────────────────────────────────────────────────────────
--- 2. UNIQUE em mp_subscription_id (para upsert no webhook)
+-- 2. UNIQUE em asaas_subscription_id (para upsert no webhook)
 -- ─────────────────────────────────────────────────────────────────────
 
 DO $$
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM pg_constraint
-    WHERE conname = 'subscriptions_mp_subscription_id_key'
+    WHERE conname = 'subscriptions_asaas_subscription_id_key'
       AND conrelid = 'public.subscriptions'::regclass
   ) THEN
     ALTER TABLE public.subscriptions
-      ADD CONSTRAINT subscriptions_mp_subscription_id_key UNIQUE (mp_subscription_id);
+      ADD CONSTRAINT subscriptions_asaas_subscription_id_key UNIQUE (asaas_subscription_id);
   END IF;
 END $$;
 
@@ -82,8 +82,8 @@ END $$;
 -- 3. ÍNDICES em subscriptions
 -- ─────────────────────────────────────────────────────────────────────
 
-CREATE INDEX IF NOT EXISTS idx_subscriptions_mp_subscription_id
-  ON public.subscriptions(mp_subscription_id);
+CREATE INDEX IF NOT EXISTS idx_subscriptions_asaas_subscription_id
+  ON public.subscriptions(asaas_subscription_id);
 
 CREATE INDEX IF NOT EXISTS idx_subscriptions_status
   ON public.subscriptions(status);
@@ -159,8 +159,8 @@ ALTER TABLE public.profiles
 
 CREATE TABLE IF NOT EXISTS public.subscription_logs (
   id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  subscription_id TEXT,                     -- mp_subscription_id (pode ser null em erros iniciais)
-  event_type     TEXT NOT NULL,             -- ex: preapproval.authorized, payment.approved
+  subscription_id TEXT,                     -- asaas_subscription_id
+  event_type     TEXT NOT NULL,             -- ex: payment_approved
   payload        JSONB DEFAULT '{}'::jsonb, -- payload completo do evento
   created_at     TIMESTAMPTZ DEFAULT now()
 );
@@ -169,7 +169,7 @@ COMMENT ON TABLE public.subscription_logs
   IS 'Log de auditoria de todos os eventos de assinatura recorrente (webhook + engine)';
 
 COMMENT ON COLUMN public.subscription_logs.subscription_id
-  IS 'ID da assinatura no Mercado Pago (preapproval.id). Pode ser null em falhas iniciais.';
+  IS 'ID da assinatura no Asaas.';
 
 COMMENT ON COLUMN public.subscription_logs.event_type
   IS 'Tipo do evento: preapproval.authorized, preapproval.paused, payment.approved, etc.';
@@ -252,8 +252,8 @@ CREATE POLICY "Allow admins to read all subscriptions"
 -- 9. COMENTÁRIOS DE DOCUMENTAÇÃO EM subscriptions
 -- ─────────────────────────────────────────────────────────────────────
 
-COMMENT ON COLUMN public.subscriptions.mp_subscription_id
-  IS 'ID da assinatura no Mercado Pago (preapproval.id)';
+COMMENT ON COLUMN public.subscriptions.asaas_subscription_id
+  IS 'ID da assinatura no Asaas';
 
 COMMENT ON COLUMN public.subscriptions.status
   IS 'Status da assinatura: authorized, paused, cancelled, expired, payment_required, pending, past_due, active';

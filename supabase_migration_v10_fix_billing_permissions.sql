@@ -8,7 +8,7 @@ ALTER TABLE public.profiles
   ADD COLUMN IF NOT EXISTS assinatura_status TEXT DEFAULT 'free' CHECK (assinatura_status IN ('active', 'canceled', 'past_due', 'free')),
   ADD COLUMN IF NOT EXISTS assinatura_inicio TIMESTAMPTZ,
   ADD COLUMN IF NOT EXISTS assinatura_expira_em TIMESTAMPTZ,
-  ADD COLUMN IF NOT EXISTS mercadopago_customer_id TEXT;
+  ADD COLUMN IF NOT EXISTS asaas_customer_id TEXT;
 
 -- 2. Concede permissões explícitas de SELECT e UPDATE para as roles públicas do Supabase
 -- Isso corrige o erro onde o PostgREST (API) retorna que a coluna "não existe"

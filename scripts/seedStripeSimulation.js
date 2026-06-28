@@ -153,19 +153,19 @@ async function seed() {
       status = "ACTIVE";
       subStart = dateOffsetDays(-15);
       subEnd = dateOffsetDays(15);
-      customerId = `mp_${randomUUID()}`;
+      customerId = `cus_${randomUUID()}`;
     } else if (type === "canceled") {
       plan = "free";
       status = "CANCELED";
       subStart = dateOffsetDays(-45);
       subEnd = dateOffsetDays(-15);
-      customerId = `mp_${randomUUID()}`;
+      customerId = `cus_${randomUUID()}`;
     } else if (type === "reactivated") {
       plan = "premium";
       status = "ACTIVE";
       subStart = dateOffsetDays(-5);
       subEnd = dateOffsetDays(25);
-      customerId = `mp_${randomUUID()}`;
+      customerId = `cus_${randomUUID()}`;
     }
 
     const { error: profileError } = await supabase
@@ -175,7 +175,7 @@ async function seed() {
         assinatura_status: status,
         assinatura_inicio: subStart,
         assinatura_expira_em: subEnd,
-        mercadopago_customer_id: customerId,
+        asaas_customer_id: customerId,
         updated_at: new Date().toISOString()
       })
       .eq("id", userId);

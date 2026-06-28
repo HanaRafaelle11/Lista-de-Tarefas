@@ -32,6 +32,7 @@ export default function AdminDashboard() {
   const [loadingPayments, setLoadingPayments] = useState(false);
   const [latestEventsMap, setLatestEventsMap] = useState({});
   const [paymentUserSearch, setPaymentUserSearch] = useState('');
+  const [loadingSearch, setLoadingSearch] = useState(false);
 
   // Filters for payment console
   const [paymentStatusFilter, setPaymentStatusFilter] = useState('all'); // 'all' | 'success' | 'pending' | 'error'
@@ -43,15 +44,22 @@ export default function AdminDashboard() {
     try {
       const { data, error } = await supabase
         .from('payment_events')
-        .select('user_id, event_type, status, created_at')
-        .order('created_at', { ascending: false });
+        .select('user_id, event, status, timestamp')
+        .order('timestamp', { ascending: false });
 
       if (error) throw error;
 
       const map = {};
       (data || []).forEach(evt => {
         if (evt.user_id && !map[evt.user_id]) {
-          map[evt.user_id] = evt;
+          map[evt.user_id] = {
+            user_id: evt.user_id,
+            event_type: evt.event, // compatibilidade retroativa
+            event: evt.event,
+            status: evt.status,
+            created_at: evt.timestamp, // compatibilidade retroativa
+            timestamp: evt.timestamp
+          };
         }
       });
       setLatestEventsMap(map);
@@ -70,7 +78,7 @@ export default function AdminDashboard() {
         .from('payment_events')
         .select('*')
         .eq('user_id', userId)
-        .order('created_at', { ascending: false });
+        .order('timestamp', { ascending: false });
 
       if (eventsErr) throw eventsErr;
 
@@ -87,12 +95,12 @@ export default function AdminDashboard() {
       setPaymentSubscription(sub || null);
 
       // 3. Consistency checks
-      const approvedEvents = (events || []).filter(e => e.event_type === 'payment_approved');
+      const approvedEvents = (events || []).filter(e => (e.event || e.event_type) === 'payment_approved');
       const consistencyWarnings = approvedEvents.filter(approved => {
-        const approvedTs = new Date(approved.created_at).getTime();
+        const approvedTs = new Date(approved.timestamp || approved.created_at).getTime();
         const hasSubUpdate = (events || []).some(e =>
-          e.event_type === 'subscription_updated' &&
-          Math.abs(new Date(e.created_at).getTime() - approvedTs) < 90000 // 90s window
+          (e.event || e.event_type) === 'subscription_updated' &&
+          Math.abs(new Date(e.timestamp || e.created_at).getTime() - approvedTs) < 90000 // 90s window
         );
         return !hasSubUpdate;
       });
@@ -100,8 +108,8 @@ export default function AdminDashboard() {
       setPaymentConsistency({
         ok: consistencyWarnings.length === 0,
         warnings: consistencyWarnings.map(w => ({
-          referenceId: w.reference_id,
-          approvedAt: w.created_at,
+          referenceId: w.payment_id || w.subscription_id || w.reference_id,
+          approvedAt: w.timestamp || w.created_at,
           message: 'payment_approved sem subscription_updated correspondente nos próximos 90s'
         }))
       });
@@ -113,6 +121,54 @@ export default function AdminDashboard() {
       console.error('Error fetching payment events:', e);
     } finally {
       setLoadingPayments(false);
+    }
+  };
+
+  const handlePaymentSearch = async (e) => {
+    if (e) e.preventDefault();
+    const term = paymentUserSearch.trim();
+    if (!term) return;
+
+    setLoadingSearch(true);
+    try {
+      // 1. Busca local nos usuários
+      const matchedUser = adminUsers.find(u =>
+        u.email?.toLowerCase().includes(term.toLowerCase()) ||
+        u.nickname?.toLowerCase().includes(term.toLowerCase())
+      );
+
+      if (matchedUser) {
+        setSelectedPaymentUserId(matchedUser.id);
+        setLoadingSearch(false);
+        return;
+      }
+
+      // 2. Busca remota no banco por ID de pagamento, ID de assinatura ou ID de cliente
+      const { data: eventMatch, error: eventErr } = await supabase
+        .from('payment_events')
+        .select('user_id')
+        .or(`payment_id.eq.${term},subscription_id.eq.${term},customer_id.eq.${term}`)
+        .limit(1);
+
+      if (!eventErr && eventMatch && eventMatch.length > 0) {
+        setSelectedPaymentUserId(eventMatch[0].user_id);
+      } else {
+        const { data: subMatch, error: subErr } = await supabase
+          .from('subscriptions')
+          .select('user_id')
+          .eq('asaas_subscription_id', term)
+          .maybeSingle();
+
+        if (subMatch) {
+          setSelectedPaymentUserId(subMatch.user_id);
+        } else {
+          alert('Nenhum usuário, pagamento ou assinatura encontrado para: ' + term);
+        }
+      }
+    } catch (err) {
+      console.error('Error during admin payment search:', err);
+    } finally {
+      setLoadingSearch(false);
     }
   };
 
@@ -1022,25 +1078,50 @@ export default function AdminDashboard() {
                   flexDirection: 'column',
                   gap: '16px'
                 }}>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: 'var(--text-light)', marginBottom: '8px', textTransform: 'uppercase' }}>Pesquisar Usuário</label>
-                    <input
-                      type="text"
-                      placeholder="Buscar por e-mail ou nome..."
-                      value={paymentUserSearch}
-                      onChange={e => setPaymentUserSearch(e.target.value)}
+                  <form onSubmit={handlePaymentSearch} style={{ display: 'flex', gap: '8px', alignItems: 'flex-end' }}>
+                    <div style={{ flex: 1 }}>
+                      <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: 'var(--text-light)', marginBottom: '8px', textTransform: 'uppercase' }}>Pesquisar (E-mail ou ID)</label>
+                      <input
+                        type="text"
+                        placeholder="Buscar e-mail, pagamento, sub, customer..."
+                        value={paymentUserSearch}
+                        onChange={e => setPaymentUserSearch(e.target.value)}
+                        style={{
+                          width: '100%',
+                          padding: '10px 12px',
+                          fontSize: '13px',
+                          borderRadius: 'var(--radius-sm)',
+                          border: '1px solid var(--border-medium)',
+                          backgroundColor: 'var(--bg-app)',
+                          color: 'var(--text-main)',
+                          boxSizing: 'border-box'
+                        }}
+                      />
+                    </div>
+                    <button
+                      type="submit"
+                      disabled={loadingSearch}
                       style={{
-                        width: '100%',
-                        padding: '10px 12px',
+                        padding: '10px 14px',
                         fontSize: '13px',
+                        fontWeight: '700',
+                        backgroundColor: 'var(--primary)',
+                        color: 'var(--bg-card)',
+                        border: 'none',
                         borderRadius: 'var(--radius-sm)',
-                        border: '1px solid var(--border-medium)',
-                        backgroundColor: 'var(--bg-app)',
-                        color: 'var(--text-main)',
-                        boxSizing: 'border-box'
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '6px',
+                        opacity: loadingSearch ? 0.7 : 1,
+                        whiteSpace: 'nowrap',
+                        height: '38px'
                       }}
-                    />
-                  </div>
+                    >
+                      {loadingSearch ? '...' : 'Buscar'}
+                    </button>
+                  </form>
 
                   <div style={{
                     display: 'flex',
@@ -1051,7 +1132,7 @@ export default function AdminDashboard() {
                     paddingRight: '6px'
                   }}>
                     {adminUsers
-                      .filter(u => !paymentUserSearch || u.email?.toLowerCase().includes(paymentUserSearch.toLowerCase()) || u.nickname?.toLowerCase().includes(paymentUserSearch.toLowerCase()))
+                      .filter(u => u.id === selectedPaymentUserId || !paymentUserSearch || u.email?.toLowerCase().includes(paymentUserSearch.toLowerCase()) || u.nickname?.toLowerCase().includes(paymentUserSearch.toLowerCase()))
                       .map(u => {
                         const isSelected = selectedPaymentUserId === u.id;
                         const lastEvent = latestEventsMap[u.id];
@@ -1244,7 +1325,11 @@ export default function AdminDashboard() {
                         ) : (
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', borderLeft: '2px solid var(--border-medium)', paddingLeft: '24px', marginLeft: '12px' }}>
                             {filteredPaymentEvents.map(evt => {
-                              const isError = evt.status === 'error' || evt.event_type.includes('error');
+                              const eventName = evt.event || evt.event_type || 'unknown_event';
+                              const eventTime = evt.timestamp || evt.created_at || new Date().toISOString();
+                              const refId = evt.payment_id || evt.subscription_id || evt.reference_id;
+
+                              const isError = evt.status === 'error' || eventName.includes('error');
                               const isSuccess = evt.status === 'success';
                               const dotColor = isError ? '#ef4444' : isSuccess ? '#10b981' : '#f59e0b';
                               return (
@@ -1264,10 +1349,10 @@ export default function AdminDashboard() {
 
                                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px', marginBottom: '6px' }}>
                                     <strong style={{ fontSize: '14px', color: 'var(--text-main)' }}>
-                                      {evt.event_type.toUpperCase()}
+                                      {eventName.toUpperCase()}
                                     </strong>
                                     <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                                      {new Date(evt.created_at).toLocaleString('pt-BR')}
+                                      {new Date(eventTime).toLocaleString('pt-BR')}
                                     </span>
                                   </div>
 
@@ -1284,7 +1369,7 @@ export default function AdminDashboard() {
                                   }}>
                                     <div style={{ fontSize: '12px', color: 'var(--text-light)' }}>
                                       Status: <strong style={{ color: dotColor }}>{evt.status.toUpperCase()}</strong>
-                                      {evt.reference_id && ` | Ref: ${evt.reference_id}`}
+                                      {refId && ` | Ref: ${refId}`}
                                     </div>
                                     <button
                                       onClick={() => setActivePayloadEvent(evt)}
@@ -1342,10 +1427,10 @@ export default function AdminDashboard() {
                 <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-light)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div>
                     <h4 style={{ margin: 0, fontSize: '16px', fontWeight: '800', color: 'var(--text-main)' }}>
-                      Inspecionar Evento: {activePayloadEvent.event_type.toUpperCase()}
+                      Inspecionar Evento: {(activePayloadEvent.event || activePayloadEvent.event_type || '').toUpperCase()}
                     </h4>
                     <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                      ID: {activePayloadEvent.id} | Ocorrido em: {new Date(activePayloadEvent.created_at).toLocaleString('pt-BR')}
+                      ID: {activePayloadEvent.id} | Ocorrido em: {new Date(activePayloadEvent.timestamp || activePayloadEvent.created_at || new Date()).toLocaleString('pt-BR')}
                     </span>
                   </div>
                   <button
@@ -1372,11 +1457,11 @@ export default function AdminDashboard() {
                     </div>
                   </div>
 
-                  {activePayloadEvent.error_message && (
+                  {(activePayloadEvent.error || activePayloadEvent.error_message) && (
                     <div>
                       <span style={{ fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', color: '#f87171' }}>Descrição do Erro</span>
                       <pre style={{ margin: '4px 0 0 0', padding: '12px', backgroundColor: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: '6px', color: '#fca5a5', fontSize: '12px', whiteSpace: 'pre-wrap', fontFamily: 'monospace' }}>
-                        {activePayloadEvent.error_message}
+                        {activePayloadEvent.error || activePayloadEvent.error_message}
                       </pre>
                     </div>
                   )}

@@ -1,6 +1,6 @@
 {
   "tables": {
-    "profiles": ["id", "name", "nickname", "profession", "bio", "avatar_url", "plano", "assinatura_status", "assinatura_inicio", "assinatura_expira_em", "mercadopago_customer_id"],
+    "profiles": ["id", "name", "nickname", "profession", "bio", "avatar_url", "plano", "assinatura_status", "assinatura_inicio", "assinatura_expira_em", "asaas_customer_id"],
     "billing_events": ["id", "payment_id", "user_id", "status", "created_at"],
     "events": ["id", "user_id", "event_type", "metadata", "created_at"],
     "tasks": ["id", "user_id", "title", "completed", "completed_at"],

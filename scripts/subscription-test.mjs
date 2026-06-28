@@ -1,6 +1,6 @@
 /**
  * subscription:test — Script de testes automatizados para o fluxo de assinaturas
- * MyFlowDay Premium (Mercado Pago Preapproval)
+ * MyFlowDay Premium (Asaas Engine)
  *
  * Uso:
  *   npm run subscription:test
@@ -114,11 +114,11 @@ async function testCheckPremiumAccessDirectly() {
     // Cria registro authorized
     await supabase.from('subscriptions').upsert({
         user_id: testUserId,
-        mp_subscription_id: `test_sub_${Date.now()}`,
-        status: 'authorized',
+        asaas_subscription_id: `test_sub_${Date.now()}`,
+        status: 'active',
         plan: 'premium',
         amount: 14.90,
-        provider: 'mercado_pago',
+        provider: 'asaas',
         updated_at: new Date().toISOString()
     }, { onConflict: 'user_id' }).catch(() => {});
 
@@ -171,25 +171,24 @@ async function testIdempotency() {
     const testSubId = `sub_idempotency_${Date.now()}`;
     await supabase.from('subscriptions').upsert({
         user_id: testUserId,
-        mp_subscription_id: testSubId,
-        status: 'authorized',
+        asaas_subscription_id: testSubId,
+        status: 'active',
         plan: 'premium',
         amount: 14.90,
-        provider: 'mercado_pago',
+        provider: 'asaas',
         updated_at: new Date().toISOString()
     }, { onConflict: 'user_id' }).catch(() => {});
 
     const r = await apiPost('subscription/create', {
         userId: testUserId,
-        card_token_id: 'fake-token-for-idempotency',
         email: 'test@test.com',
-        cpf: '52998224725', // CPF de teste válido (algoritmo)
+        cpf: '52998224725',
         firstName: 'João',
         lastName: 'Silva'
     });
 
     assert('Assinatura existente → retorna alreadyExists:true', r.body.alreadyExists === true, JSON.stringify(r.body));
-    assert('Retorna mp_subscription_id existente', r.body.mp_subscription_id === testSubId);
+    assert('Retorna asaas_subscription_id existente', r.body.asaas_subscription_id === testSubId);
 
     // Limpa
     await supabase.from('subscriptions').delete().eq('user_id', testUserId).catch(() => {});

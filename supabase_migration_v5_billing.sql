@@ -8,14 +8,14 @@ ALTER TABLE public.profiles
   ADD COLUMN IF NOT EXISTS assinatura_status TEXT DEFAULT 'free' CHECK (assinatura_status IN ('active', 'canceled', 'past_due', 'free')),
   ADD COLUMN IF NOT EXISTS assinatura_inicio TIMESTAMPTZ,
   ADD COLUMN IF NOT EXISTS assinatura_expira_em TIMESTAMPTZ,
-  ADD COLUMN IF NOT EXISTS mercadopago_customer_id TEXT;
+  ADD COLUMN IF NOT EXISTS asaas_customer_id TEXT;
 
 -- 2. Create index on billing columns for fast search and updates
 CREATE INDEX IF NOT EXISTS idx_profiles_plano_status 
   ON public.profiles(plano, assinatura_status);
 
-CREATE INDEX IF NOT EXISTS idx_profiles_mercadopago_customer_id 
-  ON public.profiles(mercadopago_customer_id);
+CREATE INDEX IF NOT EXISTS idx_profiles_asaas_customer_id 
+  ON public.profiles(asaas_customer_id);
 
 -- 3. Create billing_events table for idempotency check
 CREATE TABLE IF NOT EXISTS public.billing_events (
@@ -55,5 +55,5 @@ COMMENT ON COLUMN public.profiles.plano IS 'User plan: free or premium';
 COMMENT ON COLUMN public.profiles.assinatura_status IS 'Mercado Pago subscription status: active, canceled, past_due, or free';
 COMMENT ON COLUMN public.profiles.assinatura_inicio IS 'Start timestamp of active subscription';
 COMMENT ON COLUMN public.profiles.assinatura_expira_em IS 'Expiration timestamp of subscription';
-COMMENT ON COLUMN public.profiles.mercadopago_customer_id IS 'Mercado Pago Customer ID mapped to this user';
+COMMENT ON COLUMN public.profiles.asaas_customer_id IS 'Asaas Customer ID mapped to this user';
 COMMENT ON TABLE public.billing_events IS 'Idempotency registry for Mercado Pago processed payments';

@@ -1,5 +1,5 @@
 import { supabaseAdmin } from '../lib/supabase.js';
-import { BillingEngine } from '../api/billing-engine.js';
+import { BillingEngine } from '../lib/billing/engine.js';
 import { PaymentGateway } from '../lib/paymentGateway/index.js';
 
 /**
@@ -37,10 +37,8 @@ export async function runDunning() {
         expired++;
         console.log(`[Dunning] Limite de retentativas atingido (${attempts}) para usuário ${sub.user_id}. Expirando acesso.`);
 
-        await BillingEngine.setUserFree(sub.user_id, 'expired');
-        await supabaseAdmin.from('subscriptions').update({
-          metadata: { ...meta, expired_at: now.toISOString(), retry_attempts: attempts }
-        }).eq('id', sub.id);
+        await BillingEngine.processSubscriptionCanceled({ userId: sub.user_id, reason: 'expired' });
+        await BillingEngine.updateSubscriptionMetadata(sub.user_id, { expired_at: now.toISOString(), retry_attempts: attempts });
 
         await supabaseAdmin.from('payment_ledger').insert([{
           payment_id: sub.last_payment_id || `exp_${sub.id}_${Date.now()}`,
@@ -68,17 +66,19 @@ export async function runDunning() {
         });
 
         recovered++;
-        await BillingEngine.setUserPremium(sub.user_id, customerId, null, pixCharge.id);
+        await BillingEngine.processPaymentSuccess({
+          userId: sub.user_id,
+          customerId,
+          paymentId: pixCharge.id,
+          billingType: 'pix',
+          value: Number(sub.price) || 14.90
+        });
 
-        await supabaseAdmin.from('subscriptions').update({
-          metadata: { ...meta, retry_attempts: 0, recovered_at: now.toISOString() }
-        }).eq('id', sub.id);
+        await BillingEngine.updateSubscriptionMetadata(sub.user_id, { retry_attempts: 0, recovered_at: now.toISOString() });
 
       } catch (err) {
         console.error(`[Dunning] Retentativa ${newAttempts} falhou para usuário ${sub.user_id}:`, err.message);
-        await supabaseAdmin.from('subscriptions').update({
-          metadata: { ...meta, retry_attempts: newAttempts, last_retry_at: now.toISOString() }
-        }).eq('id', sub.id);
+        await BillingEngine.updateSubscriptionMetadata(sub.user_id, { retry_attempts: newAttempts, last_retry_at: now.toISOString() });
       }
     }
 
