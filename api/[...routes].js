@@ -466,6 +466,14 @@ const handleAnalyticsRevenueIntegrity = withAdminAuth(async (req, res) => {
     } catch (error) {
         return res.status(500).json({ error: 'Erro crítico interno ao carregar faturamento e integridade.', message: error.message });
     }
+const handleAdminDashboard = withAdminAuth(async (req, res) => {
+    try {
+        const { AdminDashboardService } = await import('../services/admin-dashboard-service.js');
+        const dashboardData = await AdminDashboardService.getDashboard();
+        return res.status(200).json(dashboardData);
+    } catch (error) {
+        return res.status(500).json({ error: 'Erro crítico ao gerar admin dashboard.', message: error.message });
+    }
 });
 
 // =========================================================
@@ -588,6 +596,8 @@ export default async function handler(req, res) {
             await handleAnalyticsRevenueIntegrity(req, res);
         } else if (route === 'payment-events/log') {
             await handlePaymentEventsLog(req, res);
+        } else if (route === 'admin/dashboard') {
+            await handleAdminDashboard(req, res);
         } else if (route === 'admin/payment-events') {
             await handleAdminPaymentEvents(req, res);
         } else if (route === '' || route === 'health') {

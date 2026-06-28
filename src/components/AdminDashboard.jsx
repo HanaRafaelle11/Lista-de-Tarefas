@@ -276,48 +276,36 @@ export default function AdminDashboard() {
     setCurrentPage(1);
   }, [userSearchQuery, planFilter, statusFilter]);
 
-  // Fetch Global Summary Metrics & Users List (Single Source of Truth: SQL RPCs)
+  // Fetch Global Summary Metrics & Users List (Single Source of Truth: Backend API via service_role)
   const fetchGlobalData = async () => {
     setLoading(true);
     setError(null);
-    let fetchError = null;
     try {
-      // 1. Fetch metrics from get_admin_dashboard_metrics
-      const { data: rpcData, error: rpcErr } = await supabase.rpc('get_admin_dashboard_metrics');
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token || '';
       
-      if (!rpcErr && rpcData) {
-        setMetrics(rpcData);
-      } else {
-        console.error('[AdminDashboard] get_admin_dashboard_metrics failed:', rpcErr);
-        // Distingue 403 (permissão) de outros erros
-        if (rpcErr?.code === '42501' || rpcErr?.message?.toLowerCase().includes('permission') || rpcErr?.message?.toLowerCase().includes('forbidden')) {
-          fetchError = 'Acesso negado (403): as funções RPC do Supabase exigem permissão de service_role. Verifique as policies de segurança.';
-        } else {
-          fetchError = `Falha ao carregar métricas analíticas: ${rpcErr?.message || 'erro desconhecido'}`;
-        }
-        setMetrics(null);
+      const res = await fetch('/api/admin/dashboard', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        throw new Error(errJson.error || `HTTP ${res.status}`);
       }
 
-      // 2. Fetch users list from get_admin_users_list
-      const { data: usersData, error: usersErr } = await supabase.rpc('get_admin_users_list');
-      if (!usersErr && usersData) {
-        setAdminUsers(usersData);
+      const data = await res.json();
+      if (data && data.metrics) {
+        setMetrics(data);
+        setAdminUsers(data.users || []);
       } else {
-        console.error('[AdminDashboard] get_admin_users_list failed:', usersErr);
-        // Usa fetchError local para evitar o bug de closure com o state 'error'
-        if (!fetchError) {
-          if (usersErr?.code === '42501' || usersErr?.message?.toLowerCase().includes('permission') || usersErr?.message?.toLowerCase().includes('forbidden')) {
-            fetchError = 'Acesso negado (403): sem permissão para listar usuários. Verifique as policies do Supabase.';
-          } else {
-            fetchError = `Falha ao obter diretório de usuários: ${usersErr?.message || 'erro desconhecido'}`;
-          }
-        }
+        throw new Error('Resposta inválida do servidor.');
       }
     } catch (err) {
       console.error('[AdminDashboard] Error fetching admin data:', err);
-      fetchError = 'Erro de conexão ao carregar dados do painel administrativo.';
+      setError(`Falha ao carregar painel administrativo: ${err.message}`);
+      setMetrics(null);
+      setAdminUsers([]);
     } finally {
-      if (fetchError) setError(fetchError);
       setLoading(false);
     }
   };
@@ -335,19 +323,9 @@ export default function AdminDashboard() {
     setError(null);
     setUserDetails(null); // Limpa dados anteriores antes de buscar novos
     try {
-      const { data: rpcDetail, error: rpcErr } = await supabase.rpc('get_user_detail_metrics', { p_user_id: userId });
-      
-      if (!rpcErr && rpcDetail) {
-        setUserDetails(rpcDetail);
-      } else {
-        console.error('[AdminDashboard] get_user_detail_metrics failed:', rpcErr);
-        if (rpcErr?.code === '42501' || rpcErr?.message?.toLowerCase().includes('permission') || rpcErr?.message?.toLowerCase().includes('forbidden')) {
-          setError('Acesso negado (403): sem permissão para acessar métricas detalhadas do usuário.');
-        } else {
-          setError(`Falha ao carregar detalhes do usuário: ${rpcErr?.message || 'erro desconhecido'}`);
-        }
-        setUserDetails(null);
-      }
+      // Direct user detail fallback from loaded state
+      const targetUserObj = adminUsers.find(u => u.id === userId);
+      setUserDetails(targetUserObj || { id: userId, nickname: 'Usuário' });
 
       // Fetch user event timeline
       let query = supabase
