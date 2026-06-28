@@ -99,6 +99,7 @@ export default function AdminDashboard() {
   const fetchGlobalData = async () => {
     setLoading(true);
     setError(null);
+    let fetchError = null;
     try {
       // 1. Fetch metrics from get_admin_dashboard_metrics
       const { data: rpcData, error: rpcErr } = await supabase.rpc('get_admin_dashboard_metrics');
@@ -107,7 +108,12 @@ export default function AdminDashboard() {
         setMetrics(rpcData);
       } else {
         console.error('[AdminDashboard] get_admin_dashboard_metrics failed:', rpcErr);
-        setError('Falha ao carregar as métricas analíticas consolidada do banco de dados.');
+        // Distingue 403 (permissão) de outros erros
+        if (rpcErr?.code === '42501' || rpcErr?.message?.toLowerCase().includes('permission') || rpcErr?.message?.toLowerCase().includes('forbidden')) {
+          fetchError = 'Acesso negado (403): as funções RPC do Supabase exigem permissão de service_role. Verifique as policies de segurança.';
+        } else {
+          fetchError = `Falha ao carregar métricas analíticas: ${rpcErr?.message || 'erro desconhecido'}`;
+        }
         setMetrics(null);
       }
 
@@ -117,14 +123,20 @@ export default function AdminDashboard() {
         setAdminUsers(usersData);
       } else {
         console.error('[AdminDashboard] get_admin_users_list failed:', usersErr);
-        if (!error) {
-          setError('Falha ao obter o diretório de usuários do banco.');
+        // Usa fetchError local para evitar o bug de closure com o state 'error'
+        if (!fetchError) {
+          if (usersErr?.code === '42501' || usersErr?.message?.toLowerCase().includes('permission') || usersErr?.message?.toLowerCase().includes('forbidden')) {
+            fetchError = 'Acesso negado (403): sem permissão para listar usuários. Verifique as policies do Supabase.';
+          } else {
+            fetchError = `Falha ao obter diretório de usuários: ${usersErr?.message || 'erro desconhecido'}`;
+          }
         }
       }
     } catch (err) {
       console.error('[AdminDashboard] Error fetching admin data:', err);
-      setError('Erro de conexão ao carregar dados do painel administrativo.');
+      fetchError = 'Erro de conexão ao carregar dados do painel administrativo.';
     } finally {
+      if (fetchError) setError(fetchError);
       setLoading(false);
     }
   };
@@ -140,6 +152,7 @@ export default function AdminDashboard() {
     setSelectedUser(userId);
     setLoadingUser(true);
     setError(null);
+    setUserDetails(null); // Limpa dados anteriores antes de buscar novos
     try {
       const { data: rpcDetail, error: rpcErr } = await supabase.rpc('get_user_detail_metrics', { p_user_id: userId });
       
@@ -147,7 +160,11 @@ export default function AdminDashboard() {
         setUserDetails(rpcDetail);
       } else {
         console.error('[AdminDashboard] get_user_detail_metrics failed:', rpcErr);
-        setError('Falha ao carregar detalhes do usuário do banco de dados.');
+        if (rpcErr?.code === '42501' || rpcErr?.message?.toLowerCase().includes('permission') || rpcErr?.message?.toLowerCase().includes('forbidden')) {
+          setError('Acesso negado (403): sem permissão para acessar métricas detalhadas do usuário.');
+        } else {
+          setError(`Falha ao carregar detalhes do usuário: ${rpcErr?.message || 'erro desconhecido'}`);
+        }
         setUserDetails(null);
       }
 
@@ -167,6 +184,9 @@ export default function AdminDashboard() {
       const { data: evts, error: evtsErr } = await query;
       if (!evtsErr && evts) {
         setUserEvents(evts);
+      } else if (evtsErr) {
+        console.warn('[AdminDashboard] events query failed:', evtsErr);
+        setUserEvents([]);
       }
     } catch (e) {
       console.error('[AdminDashboard] Error loading user details:', e);
@@ -287,6 +307,11 @@ export default function AdminDashboard() {
         <div style={{ textAlign: 'center', padding: '64px 0' }}>
           <div className="app-loading-spinner" style={{ margin: '0 auto 16px' }} />
           <span style={{ fontSize: '13px', color: 'var(--text-light)' }}>Calculando métricas SaaS no Supabase...</span>
+        </div>
+      ) : loadingUser ? (
+        <div style={{ textAlign: 'center', padding: '64px 0' }}>
+          <div className="app-loading-spinner" style={{ margin: '0 auto 16px' }} />
+          <span style={{ fontSize: '13px', color: 'var(--text-light)' }}>Carregando perfil do usuário...</span>
         </div>
       ) : selectedUser && userDetails ? (
         // --- INDIVIDUAL USER VIEW ---
@@ -509,7 +534,7 @@ export default function AdminDashboard() {
 
                   <div style={{ backgroundColor: 'var(--bg-card)', padding: '20px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-light)', boxShadow: 'var(--shadow-sm)' }}>
                     <span style={{ fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', color: 'var(--text-light)', display: 'block' }}>Taxa de Evasão (Churn)</span>
-                    <strong style={{ fontSize: '26px', fontWeight: '800', color: '#DC2626', display: 'block', margin: '6px 0' }}>{metrics?.churn !== null ? `${metrics.churn}%` : '0%'}</strong>
+                    <strong style={{ fontSize: '26px', fontWeight: '800', color: '#DC2626', display: 'block', margin: '6px 0' }}>{metrics?.churn != null ? `${metrics.churn}%` : '0%'}</strong>
                     <span style={{ fontSize: '11.5px', color: 'var(--text-muted)' }}>Cancelamento total acumulado</span>
                   </div>
                 </div>
@@ -838,7 +863,7 @@ export default function AdminDashboard() {
                       </div>
                     ))}
                     <div style={{ marginTop: '12px', padding: '12px', backgroundColor: 'var(--bg-app)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-medium)', fontSize: '12.5px', color: 'var(--text-light)' }}>
-                      Taxa de Conversão do Funil (Assinatura/Paywall): <strong>{metrics.monetization_conversion}%</strong>
+                      Taxa de Conversão do Funil (Assinatura/Paywall): <strong>{metrics?.monetization_conversion ?? 0}%</strong>
                     </div>
                   </div>
                 )}
