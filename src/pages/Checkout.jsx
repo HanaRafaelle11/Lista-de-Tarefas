@@ -78,6 +78,9 @@ function formatDate(dateStr) {
 export default function Checkout() {
   const { currentUser, isPro, userProfile } = useAppContext();
 
+  // ID de sessão único gerado no mount para correlacionar eventos deste checkout
+  const sessionIdRef = useRef(Math.random().toString(36).substring(2) + Date.now().toString(36));
+
   // Aba selecionada: 'pix' | 'card'
   const [paymentMethod, setPaymentMethod] = useState('pix');
 
@@ -101,6 +104,33 @@ export default function Checkout() {
   const [cardHolderName, setCardHolderName] = useState('');
   const [cardExpiry, setCardExpiry] = useState('');
   const [cardCcv, setCardCcv] = useState('');
+
+  // Logger de observabilidade no frontend
+  const logCheckoutEvent = useCallback(async (eventType, statusVal, extra = {}) => {
+    if (!currentUser?.id) return;
+    try {
+      await fetch('/api/payment-events/log', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: currentUser.id,
+          eventType,
+          status: statusVal,
+          sessionId: sessionIdRef.current,
+          referenceId: extra.referenceId || null,
+          payload: {
+            paymentMethod,
+            email: email || currentUser.email,
+            ...extra.payload
+          },
+          errorMessage: extra.errorMessage || null,
+          provider: 'asaas'
+        })
+      });
+    } catch (e) {
+      console.warn('[Checkout Log Error]', e);
+    }
+  }, [currentUser?.id, paymentMethod, email]);
 
   // Sincronização de usuário logado
   useEffect(() => {
@@ -133,6 +163,9 @@ export default function Checkout() {
             const data = await res.json();
             if (data.isPro) {
               setStatus('success');
+              logCheckoutEvent('subscription_updated', 'success', {
+                payload: { method: 'pix_polling_success', checkResult: data }
+              });
               clearInterval(timer);
             }
           }
@@ -144,7 +177,7 @@ export default function Checkout() {
     return () => {
       if (timer) clearInterval(timer);
     };
-  }, [status, currentUser?.id]);
+  }, [status, currentUser?.id, logCheckoutEvent]);
 
   const handleCopyPix = () => {
     if (checkoutData?.qr_code) {
@@ -182,6 +215,16 @@ export default function Checkout() {
         });
       } catch (_) {}
 
+      // Log: Iniciou o checkout
+      await logCheckoutEvent('checkout_started', 'pending', {
+        payload: {
+          firstName,
+          lastName,
+          email,
+          cpfMasked: `${cleanCpf.substring(0, 3)}.***.***-${cleanCpf.substring(9)}`
+        }
+      });
+
       if (paymentMethod === 'pix') {
         const payload = {
           billingType: 'PIX',
@@ -205,6 +248,12 @@ export default function Checkout() {
 
         setCheckoutData(data);
         setStatus('pix_generated');
+
+        // Log: Pix gerado com sucesso
+        await logCheckoutEvent('checkout_completed', 'success', {
+          referenceId: data.paymentId || data.subscriptionId || data.id,
+          payload: { asaasResponse: data }
+        });
       } else {
         // Cartão de Crédito
         const cleanCard = cardNumber.replace(/\D/g, '');
@@ -248,11 +297,22 @@ export default function Checkout() {
 
         setCheckoutData(data);
         setStatus('success');
+
+        // Log: Assinatura de cartão concluída
+        await logCheckoutEvent('checkout_completed', 'success', {
+          referenceId: data.paymentId || data.subscriptionId || data.id,
+          payload: { asaasResponse: data }
+        });
       }
     } catch (err) {
       console.error('[Checkout Error]', err);
       setError(err.message);
       setStatus('error');
+
+      // Log: Erro no checkout
+      await logCheckoutEvent('checkout_error', 'error', {
+        errorMessage: err.message
+      });
     }
   };
 

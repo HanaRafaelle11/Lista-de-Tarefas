@@ -1,5 +1,6 @@
 import { supabaseAdmin } from '../../lib/supabase.js';
 import { BillingEngine } from '../../lib/billing/engine.js';
+import { logPaymentEvent } from '../../lib/payment-logger.js';
 
 export default async function handler(req, res) {
   // CORS & Headers
@@ -52,6 +53,16 @@ export default async function handler(req, res) {
       externalReference,
       timestamp: new Date().toISOString()
     });
+
+    // Observability: log do recebimento do webhook (antes de qualquer processamento)
+    // Não aguarda (fire-and-forget) para não atrasar o handler
+    logPaymentEvent({
+      userId: null, // userId ainda não resolvido aqui
+      eventType: 'webhook_received',
+      status: 'pending',
+      referenceId: paymentId || subscriptionId || null,
+      payload: { event, paymentId, subscriptionId, customerId, billingType, externalReference },
+    }).catch(() => {});
 
     if (!event) {
       return res.status(200).json({ message: 'Evento ignorado por falta de tipo de evento.' });
@@ -121,6 +132,17 @@ export default async function handler(req, res) {
     // 4. TRATAMENTO DE USUÁRIO NÃO IDENTIFICADO
     if (!userId && (event === 'PAYMENT_RECEIVED' || event === 'PAYMENT_CONFIRMED' || event === 'PAYMENT_OVERDUE')) {
       console.warn('[ASAAS WEBHOOK UNRESOLVED USER] Usuário não identificado para o pagamento:', { event, paymentId, customerId, externalReference });
+
+      // Observability: log de erro por usuário não identificado
+      logPaymentEvent({
+        userId: null,
+        eventType: 'error',
+        status: 'error',
+        referenceId: paymentId || subscriptionId || null,
+        errorMessage: `Usuário não identificado. event=${event} customerId=${customerId} externalRef=${externalReference}`,
+        payload: { event, paymentId, subscriptionId, customerId, externalReference },
+      }).catch(() => {});
+
       try {
         const { error: insertUnresolvedErr } = await supabaseAdmin.from('webhook_events').insert([{
           event_id: eventId,
@@ -182,6 +204,21 @@ export default async function handler(req, res) {
           value: payment.value || 14.90
         });
 
+        // Observability: log de pagamento aprovado
+        logPaymentEvent({
+          userId,
+          eventType: 'payment_approved',
+          status: 'success',
+          referenceId: paymentId || null,
+          payload: {
+            event,
+            billingType,
+            value: payment.value || 14.90,
+            subscriptionId: subscriptionId || null,
+            customerId: customerId || null,
+          },
+        }).catch(() => {});
+
         // Gravar Auditoria Financeira em billing_events (com type='payment_success' para satisfazer o CHECK constraint) e billing_ledger
         try {
           const payVal = Number(payment.value) || 14.90;
@@ -215,10 +252,24 @@ export default async function handler(req, res) {
     } else if (event === 'PAYMENT_OVERDUE') {
       if (userId) {
         await BillingEngine.processPaymentOverdue({ userId, paymentId });
+        logPaymentEvent({
+          userId,
+          eventType: 'payment_overdue',
+          status: 'error',
+          referenceId: paymentId || null,
+          payload: { event, paymentId, billingType },
+        }).catch(() => {});
       }
     } else if (event === 'PAYMENT_DELETED' || event === 'SUBSCRIPTION_DELETED') {
       if (userId) {
         await BillingEngine.processSubscriptionCanceled({ userId, reason: 'canceled' });
+        logPaymentEvent({
+          userId,
+          eventType: 'subscription_canceled',
+          status: 'success',
+          referenceId: subscriptionId || paymentId || null,
+          payload: { event, subscriptionId, customerId },
+        }).catch(() => {});
       }
     }
 
@@ -241,6 +292,14 @@ export default async function handler(req, res) {
     return res.status(200).json({ success: true, event, paymentId, processed: true });
   } catch (error) {
     console.error('[ERROR] [ASAAS WEBHOOK UNHANDLED EXCEPTION]', error);
+    // Observability: log de exceção não tratada
+    logPaymentEvent({
+      userId: null,
+      eventType: 'error',
+      status: 'error',
+      errorMessage: error?.message || 'Excessão não tratada no webhook Asaas',
+      payload: { stack: error?.stack?.substring(0, 500) },
+    }).catch(() => {});
     return res.status(200).json({ error: true, message: error.message || 'Erro interno no processamento do webhook.' });
   }
 }

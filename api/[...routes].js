@@ -10,6 +10,7 @@ import { handleAsaasWebhook } from './webhooks/asaas.js';
 import handleUnifiedAsaasWebhook from './billing/asaas-webhook.js';
 import handleBillingExpirationCron from './cron/billing-expiration.js';
 import { withAdminAuth } from '../lib/auth/withAdminAuth.js';
+import { logPaymentEvent } from '../lib/payment-logger.js';
 
 
 // =========================================================
@@ -1664,6 +1665,83 @@ const handleAnalyticsRevenueIntegrity = withAdminAuth(async (req, res) => {
 });
 
 // =========================================================
+// PAYMENT OBSERVABILITY — LOG (frontend → backend)
+// POST /api/payment-events/log
+// Recebe eventos de checkout do frontend (sem auth extra: userId vem no body)
+// =========================================================
+async function handlePaymentEventsLog(req, res) {
+    if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+    try {
+        const { userId, eventType, status, referenceId, sessionId, payload, errorMessage, provider } = req.body || {};
+        if (!eventType) return res.status(400).json({ error: 'eventType é obrigatório' });
+        await logPaymentEvent({ userId, provider: provider || 'asaas', eventType, status: status || 'pending', referenceId, sessionId, payload, errorMessage });
+        return res.status(200).json({ ok: true });
+    } catch (err) {
+        return res.status(500).json({ error: err.message });
+    }
+}
+
+// =========================================================
+// PAYMENT OBSERVABILITY — QUERY (admin)
+// GET /api/admin/payment-events?userId=xxx
+// Protegido por withAdminAuth. Retorna timeline + consistência.
+// =========================================================
+const handleAdminPaymentEvents = withAdminAuth(async (req, res) => {
+    if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
+    try {
+        const { userId, limit = 50 } = req.query;
+        if (!userId) return res.status(400).json({ error: 'userId é obrigatório' });
+
+        // 1. Busca eventos da tabela payment_events
+        const { data: events, error: eventsErr } = await supabaseAdmin
+            .from('payment_events')
+            .select('*')
+            .eq('user_id', userId)
+            .order('created_at', { ascending: false })
+            .limit(Number(limit));
+
+        if (eventsErr) throw new Error(eventsErr.message);
+
+        // 2. Estado atual da subscription
+        const { data: sub } = await supabaseAdmin
+            .from('subscriptions')
+            .select('status, plan, current_period_end, asaas_subscription_id, last_payment_id')
+            .eq('user_id', userId)
+            .maybeSingle();
+
+        // 3. Verificação de consistência: payment_approved sem subscription_updated próximo
+        const approvedEvents = (events || []).filter(e => e.event_type === 'payment_approved');
+        const consistencyWarnings = approvedEvents.filter(approved => {
+            const approvedTs = new Date(approved.created_at).getTime();
+            const hasSubUpdate = (events || []).some(e =>
+                e.event_type === 'subscription_updated' &&
+                Math.abs(new Date(e.created_at).getTime() - approvedTs) < 90000 // 90s window
+            );
+            return !hasSubUpdate;
+        });
+
+        // 4. Último erro
+        const lastError = (events || []).find(e => e.status === 'error');
+
+        return res.status(200).json({
+            events: events || [],
+            subscription: sub || null,
+            consistency: {
+                ok: consistencyWarnings.length === 0,
+                warnings: consistencyWarnings.map(w => ({
+                    referenceId: w.reference_id,
+                    approvedAt: w.created_at,
+                    message: 'payment_approved sem subscription_updated correspondente nos próximos 90s'
+                }))
+            },
+            lastError: lastError || null,
+        });
+    } catch (err) {
+        return res.status(500).json({ error: 'Erro interno ao buscar payment events.', message: err.message });
+    }
+});
+
+// =========================================================
 // ROUTER PRINCIPAL
 // =========================================================
 
@@ -1702,6 +1780,10 @@ export default async function handler(req, res) {
             await handleAnalyticsUserTimeline(req, res);
         } else if (route === 'analytics/revenue-integrity') {
             await handleAnalyticsRevenueIntegrity(req, res);
+        } else if (route === 'payment-events/log') {
+            await handlePaymentEventsLog(req, res);
+        } else if (route === 'admin/payment-events') {
+            await handleAdminPaymentEvents(req, res);
         } else if (route === '' || route === 'health') {
             res.status(200).json({ 
                 status: 'online', 

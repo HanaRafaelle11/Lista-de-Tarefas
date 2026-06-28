@@ -21,7 +21,47 @@ export default function AdminDashboard() {
   const [error, setError] = useState(null);
   
   // Navigation tabs for the admin dashboard
-  const [activeAdminTab, setActiveAdminTab] = useState('metrics'); // 'metrics' | 'users' | 'funnels'
+  const [activeAdminTab, setActiveAdminTab] = useState('metrics'); // 'metrics' | 'users' | 'funnels' | 'payments'
+
+  // Payment Debug Console states
+  const [selectedPaymentUserId, setSelectedPaymentUserId] = useState('');
+  const [paymentEvents, setPaymentEvents] = useState([]);
+  const [paymentSubscription, setPaymentSubscription] = useState(null);
+  const [paymentConsistency, setPaymentConsistency] = useState(null);
+  const [paymentLastError, setPaymentLastError] = useState(null);
+  const [loadingPayments, setLoadingPayments] = useState(false);
+
+  const fetchPaymentEvents = async (userId) => {
+    if (!userId) return;
+    setLoadingPayments(true);
+    try {
+      const res = await fetch(`/api/admin/payment-events?userId=${userId}`);
+      if (res.ok) {
+        const data = await res.json();
+        setPaymentEvents(data.events || []);
+        setPaymentSubscription(data.subscription || null);
+        setPaymentConsistency(data.consistency || null);
+        setPaymentLastError(data.lastError || null);
+      } else {
+        console.error('Failed to fetch payment events:', res.statusText);
+      }
+    } catch (e) {
+      console.error('Error fetching payment events:', e);
+    } finally {
+      setLoadingPayments(false);
+    }
+  };
+
+  useEffect(() => {
+    if (selectedPaymentUserId) {
+      fetchPaymentEvents(selectedPaymentUserId);
+    } else {
+      setPaymentEvents([]);
+      setPaymentSubscription(null);
+      setPaymentConsistency(null);
+      setPaymentLastError(null);
+    }
+  }, [selectedPaymentUserId]);
   
   // Filters for individual user timeline
   const [timeFilter, setTimeFilter] = useState('all'); // '7d' | '30d' | 'all'
@@ -481,7 +521,8 @@ export default function AdminDashboard() {
             {[
               { id: 'metrics', label: '📊 Métricas SaaS', icon: <BarChart size={16} /> },
               { id: 'users', label: '👥 Diretório de Usuários', icon: <Users size={16} /> },
-              { id: 'funnels', label: '🎯 Funis de Conversão', icon: <Target size={16} /> }
+              { id: 'funnels', label: '🎯 Funis de Conversão', icon: <Target size={16} /> },
+              { id: 'payments', label: '💳 Debug de Pagamentos', icon: <DollarSign size={16} /> }
             ].map(tab => (
               <button
                 key={tab.id}
@@ -869,6 +910,170 @@ export default function AdminDashboard() {
                 )}
               </div>
 
+            </div>
+          )}
+
+          {activeAdminTab === 'payments' && (
+            <div style={{ backgroundColor: 'var(--bg-card)', padding: '24px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-light)', boxShadow: 'var(--shadow-sm)', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              <div>
+                <h3 style={{ fontSize: '16px', fontWeight: '800', color: 'var(--text-main)', margin: 0 }}>Payment Debug & Observability Console</h3>
+                <span style={{ fontSize: '12.5px', color: 'var(--text-light)' }}>Rastreamento de intents de pagamento, webhook events e sincronização de assinaturas.</span>
+              </div>
+
+              {/* Seletor de Usuário */}
+              <div>
+                <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: 'var(--text-light)', marginBottom: '8px', textTransform: 'uppercase' }}>Selecionar Beta Tester para Debugar</label>
+                <select
+                  value={selectedPaymentUserId}
+                  onChange={e => setSelectedPaymentUserId(e.target.value)}
+                  style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid var(--border-medium)', backgroundColor: 'var(--bg-app)', color: 'var(--text-main)', fontSize: '13.5px', fontWeight: '600' }}
+                >
+                  <option value="">-- Escolha um usuário da lista --</option>
+                  {adminUsers.map(u => (
+                    <option key={u.id} value={u.id}>
+                      {u.email} ({u.nickname || 'Sem apelido'}) | Plano: {u.plan?.toUpperCase() || 'FREE'} | Status: {u.status?.toUpperCase() || 'N/A'}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {loadingPayments ? (
+                <div style={{ textAlign: 'center', padding: '40px 0' }}>
+                  <div className="app-loading-spinner" style={{ margin: '0 auto 12px' }} />
+                  <span style={{ fontSize: '13px', color: 'var(--text-light)' }}>Consultando logs de pagamento no Supabase...</span>
+                </div>
+              ) : selectedPaymentUserId ? (
+                <>
+                  {/* Estado da assinatura e consistência */}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
+                    <div style={{ backgroundColor: 'var(--bg-app)', padding: '16px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-light)' }}>
+                      <span style={{ fontSize: '11px', color: 'var(--text-light)', fontWeight: '600', textTransform: 'uppercase' }}>Plano de Assinatura</span>
+                      <strong style={{ fontSize: '20px', color: paymentSubscription?.plan === 'premium' ? 'var(--primary)' : 'var(--text-main)', display: 'block', marginTop: '4px' }}>
+                        {paymentSubscription?.plan?.toUpperCase() || 'FREE'}
+                      </strong>
+                    </div>
+
+                    <div style={{ backgroundColor: 'var(--bg-app)', padding: '16px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-light)' }}>
+                      <span style={{ fontSize: '11px', color: 'var(--text-light)', fontWeight: '600', textTransform: 'uppercase' }}>Status de Assinatura</span>
+                      <strong style={{ fontSize: '20px', color: paymentSubscription?.status === 'active' ? '#10b981' : '#ef4444', display: 'block', marginTop: '4px' }}>
+                        {paymentSubscription?.status?.toUpperCase() || 'INATIVO'}
+                      </strong>
+                    </div>
+
+                    <div style={{ backgroundColor: 'var(--bg-app)', padding: '16px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-light)' }}>
+                      <span style={{ fontSize: '11px', color: 'var(--text-light)', fontWeight: '600', textTransform: 'uppercase' }}>Data de Expiração</span>
+                      <strong style={{ fontSize: '15px', color: 'var(--text-main)', display: 'block', marginTop: '6px' }}>
+                        {paymentSubscription?.current_period_end ? new Date(paymentSubscription.current_period_end).toLocaleString('pt-BR') : 'Sem expiração'}
+                      </strong>
+                    </div>
+
+                    <div style={{ backgroundColor: 'var(--bg-app)', padding: '16px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-light)' }}>
+                      <span style={{ fontSize: '11px', color: 'var(--text-light)', fontWeight: '600', textTransform: 'uppercase' }}>ID da Assinatura Asaas</span>
+                      <span style={{ fontSize: '12px', fontFamily: 'monospace', wordBreak: 'break-all', display: 'block', marginTop: '6px', color: 'var(--text-main)' }}>
+                        {paymentSubscription?.asaas_subscription_id || 'Não registrado'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Alerta de Consistência */}
+                  {paymentConsistency && (
+                    <div style={{
+                      padding: '16px',
+                      borderRadius: 'var(--radius-md)',
+                      fontSize: '13px',
+                      backgroundColor: paymentConsistency.ok ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                      border: '1px solid ' + (paymentConsistency.ok ? '#10b981' : '#ef4444'),
+                      color: paymentConsistency.ok ? '#a7f3d0' : '#fca5a5'
+                    }}>
+                      <strong style={{ display: 'block', marginBottom: '4px', fontSize: '14px' }}>
+                        {paymentConsistency.ok ? '✅ Integridade do Fluxo Garantida' : '⚠️ Erro de Consistência Detectado!'}
+                      </strong>
+                      {paymentConsistency.ok ? (
+                        <span>Nenhuma divergência ou gap no fluxo de ativação foi identificado para este usuário.</span>
+                      ) : (
+                        <ul style={{ margin: '8px 0 0 0', paddingLeft: '20px' }}>
+                          {paymentConsistency.warnings.map((w, idx) => (
+                            <li key={idx} style={{ marginBottom: '4px' }}>
+                              {w.message} (Aprovado em: {new Date(w.approvedAt).toLocaleString('pt-BR')})
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Timeline de Eventos */}
+                  <div>
+                    <h4 style={{ fontSize: '14px', fontWeight: '800', color: 'var(--text-main)', marginBottom: '16px', textTransform: 'uppercase', letterSpacing: '0.03em' }}>Timeline End-to-End</h4>
+                    
+                    {paymentEvents.length === 0 ? (
+                      <p style={{ color: 'var(--text-light)', fontStyle: 'italic', fontSize: '13px' }}>Nenhum evento registrado para este usuário.</p>
+                    ) : (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', borderLeft: '2px solid var(--border-medium)', paddingLeft: '24px', marginLeft: '12px' }}>
+                        {paymentEvents.map((evt) => {
+                          const isError = evt.status === 'error' || evt.event_type.includes('error');
+                          const isSuccess = evt.status === 'success';
+                          const dotColor = isError ? '#ef4444' : isSuccess ? '#10b981' : '#f59e0b';
+                          return (
+                            <div key={evt.id} style={{ position: 'relative' }}>
+                              {/* Dot */}
+                              <div style={{
+                                position: 'absolute',
+                                left: '-33px',
+                                top: '4px',
+                                width: '16px',
+                                height: '16px',
+                                borderRadius: '50%',
+                                backgroundColor: dotColor,
+                                border: '4px solid var(--bg-card)',
+                                boxShadow: '0 0 0 2px ' + dotColor
+                              }} />
+                              
+                              {/* Event Info */}
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px', flexWrap: 'wrap', gap: '8px' }}>
+                                <strong style={{ fontSize: '13.5px', color: 'var(--text-main)' }}>
+                                  {evt.event_type.toUpperCase()}
+                                </strong>
+                                <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                                  {new Date(evt.created_at).toLocaleString('pt-BR')}
+                                </span>
+                              </div>
+
+                              {/* Details */}
+                              <div style={{ backgroundColor: 'var(--bg-app)', padding: '12px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-light)' }}>
+                                <div style={{ fontSize: '11.5px', color: 'var(--text-light)' }}>
+                                  Status: <span style={{ fontWeight: '700', color: dotColor }}>{evt.status.toUpperCase()}</span>
+                                  {evt.reference_id && ` | Ref ID: ${evt.reference_id}`}
+                                  {evt.session_id && ` | Session ID: ${evt.session_id}`}
+                                </div>
+                                {evt.error_message && (
+                                  <div style={{ color: '#f87171', fontSize: '12px', fontWeight: '600', marginTop: '6px' }}>
+                                    Erro: {evt.error_message}
+                                  </div>
+                                )}
+                                {evt.payload && Object.keys(evt.payload).length > 0 && (
+                                  <details style={{ marginTop: '8px' }}>
+                                    <summary style={{ cursor: 'pointer', fontSize: '11px', color: 'var(--primary)', fontWeight: '600', outline: 'none' }}>
+                                      Visualizar Payload JSON
+                                    </summary>
+                                    <pre style={{ margin: '8px 0 0 0', fontSize: '11px', color: 'var(--text-muted)', whiteSpace: 'pre-wrap', fontFamily: 'monospace', backgroundColor: 'var(--bg-card)', padding: '8px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-light)', overflowX: 'auto' }}>
+                                      {JSON.stringify(evt.payload, null, 2)}
+                                    </pre>
+                                  </details>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </>
+              ) : (
+                <div style={{ textAlign: 'center', padding: '24px 0', border: '1px dashed var(--border-medium)', borderRadius: '8px' }}>
+                  <span style={{ fontSize: '13px', color: 'var(--text-light)', fontStyle: 'italic' }}>Selecione um testador acima para inspecionar os eventos de pagamento.</span>
+                </div>
+              )}
             </div>
           )}
 
