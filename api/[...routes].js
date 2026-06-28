@@ -466,6 +466,8 @@ const handleAnalyticsRevenueIntegrity = withAdminAuth(async (req, res) => {
     } catch (error) {
         return res.status(500).json({ error: 'Erro crítico interno ao carregar faturamento e integridade.', message: error.message });
     }
+});
+
 const handleAdminDashboard = withAdminAuth(async (req, res) => {
     try {
         console.log('[ADMIN DASHBOARD API] Endpoint iniciado por admin autenticado.');
