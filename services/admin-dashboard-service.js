@@ -42,10 +42,17 @@ export const AdminDashboardService = {
       if (profilesRes.error) throw new Error(`[step 2 - profiles error] ${profilesRes.error.message} (code: ${profilesRes.error.code})`);
       console.log('[ADMIN DASHBOARD] step 2 done. Rows:', profilesRes.data?.length);
 
-      console.log('[ADMIN DASHBOARD] step 3: Querying profiles count...');
-      const usersCountRes = await supabaseAdmin.from('profiles').select('id', { count: 'exact', head: true });
-      if (usersCountRes.error) throw new Error(`[step 3 - profiles count error] ${usersCountRes.error.message} (code: ${usersCountRes.error.code})`);
-      console.log('[ADMIN DASHBOARD] step 3 done. Count:', usersCountRes.count);
+      console.log('[ADMIN DASHBOARD] step 3: Querying auth users for email resolution...');
+      let emailMap = new Map();
+      try {
+        const { data: authData, error: authErr } = await supabaseAdmin.auth.admin.listUsers();
+        if (!authErr && authData?.users) {
+          authData.users.forEach(u => emailMap.set(u.id, u.email));
+        }
+      } catch (authException) {
+        console.warn('[ADMIN DASHBOARD WARN] Não foi possível carregar auth.users:', authException.message);
+      }
+      console.log('[ADMIN DASHBOARD] step 3 done. Emails mapped:', emailMap.size);
 
       console.log('[ADMIN DASHBOARD] step 4: Querying events...');
       const eventsRes = await supabaseAdmin.from('events').select('user_id, event_type, created_at').order('created_at', { ascending: false }).limit(5000);
@@ -87,7 +94,7 @@ export const AdminDashboardService = {
       const mrr = activeSubs.reduce((acc, sub) => acc + Number(sub.price || 0), 0);
       const arr = mrr * 12;
 
-      // Calculando Receitas Históricas
+      // Calculando Receitas Históricas (Qualquer cobrança paga: active, canceled, expired, past_due)
       const todayStr = nowIso.slice(0, 10);
       const startOfMonthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
       const thirtyDaysAgoIso = new Date(now.getTime() - (30 * 24 * 60 * 60 * 1000)).toISOString();
@@ -99,7 +106,8 @@ export const AdminDashboardService = {
 
       subscriptions.forEach(s => {
         const amt = Number(s.amount || s.price || 0);
-        if (s.status === 'active') {
+        // Toda cobrança paga compõe a receita histórica total
+        if (s.status !== 'pending' && s.plan !== 'free') {
           totalRevenue += amt;
           const createdDate = (s.createdAt || '').slice(0, 10);
           if (createdDate === todayStr) dailyRevenue += amt;
@@ -109,7 +117,7 @@ export const AdminDashboardService = {
       });
 
       // 2. USERS METRICS
-      const totalUsers = usersCountRes.count || profiles.length;
+      const totalUsers = profiles.length;
       const premiumCount = activeSubs.length;
       const freeCount = Math.max(totalUsers - premiumCount, 0);
 
@@ -164,16 +172,19 @@ export const AdminDashboardService = {
       const onboardingStep4 = events.filter(e => e.event_type === 'onboarding_step4').length;
       const onboardingCompleted = events.filter(e => e.event_type === 'onboarding_completed').length;
 
-      // 5. DIRETÓRIO COMPLETO DE USUÁRIOS (Para tabela do Admin)
+      // 5. DIRETÓRIO COMPLETO DE USUÁRIOS (Para tabela do Admin - Resolução por userId & user_id)
       const subMap = new Map();
-      subscriptions.forEach(s => subMap.set(s.userId, s));
+      subscriptions.forEach(s => {
+        const uid = s.userId || s.user_id;
+        if (uid) subMap.set(uid, s);
+      });
 
       const usersList = profiles.map(p => {
         const sub = subMap.get(p.id);
         return {
           id: p.id,
           nickname: p.nickname || p.name || 'Usuário',
-          email: p.email || 'N/A',
+          email: emailMap.get(p.id) || 'N/A',
           created_at: p.created_at,
           last_login: p.updated_at || p.created_at,
           plan: sub ? sub.plan : 'free',
