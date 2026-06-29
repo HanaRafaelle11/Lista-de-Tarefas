@@ -318,7 +318,7 @@ export default function TodoView() {
   const [isTemplatesOpen, setIsTemplatesOpen] = useState(false);
   const [customizingTemplate, setCustomizingTemplate] = useState(null);
   const [isSyncModalOpen, setIsSyncModalOpen] = useState(false);
-  const [showCompletedKanban, setShowCompletedKanban] = useState(false);
+  const [showCompletedKanban, setShowCompletedKanban] = useState(true);
   const [showBulkConfirm, setShowBulkConfirm] = useState(false);
 
   // Estados para AchievementModal
@@ -653,6 +653,19 @@ export default function TodoView() {
     });
   }, [tasks, filter, searchQuery, categoryFilter]);
 
+  // Filtragem exclusiva para o Kanban que ignora o filtro de status superior (all/active/completed)
+  const kanbanFiltered = useMemo(() => {
+    return tasks.filter(task => {
+      const q = searchQuery.toLowerCase();
+      const matchesSearch = task.title.toLowerCase().includes(q) ||
+        (task.description && task.description.toLowerCase().includes(q));
+
+      const matchesCat = categoryFilter === 'all' || task.category === categoryFilter;
+
+      return matchesSearch && matchesCat;
+    });
+  }, [tasks, searchQuery, categoryFilter]);
+
   const sections = useMemo(() => categorizeTasks(baseFiltered, goals, goalTasks), [baseFiltered, goals, goalTasks]);
 
   // Estatísticas rápidas
@@ -664,7 +677,7 @@ export default function TodoView() {
   // Lógica Kanban
   const kanbanTasks = useMemo(() => {
     const list = { todo: [], inProgress: [], completed: [] };
-    baseFiltered.forEach(task => {
+    kanbanFiltered.forEach(task => {
       if (task.completed) {
         list.completed.push(task);
       } else {
@@ -677,7 +690,7 @@ export default function TodoView() {
       }
     });
     return list;
-  }, [baseFiltered]);
+  }, [kanbanFiltered]);
 
   const handleMoveKanban = (task, nextCol) => {
     const isCompleted = nextCol === 'completed';
