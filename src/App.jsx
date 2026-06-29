@@ -31,8 +31,8 @@ const GuidedTour = lazy(() => import('./components/GuidedTour'));
 const NotificationEngine = lazy(() => import('./components/NotificationEngine'));
 const PwaInstallPrompt = lazy(() => import('./components/PwaInstallPrompt'));
 
-// Classe Error Boundary para resiliência total de interface
-class ViewErrorBoundary extends React.Component {
+// Classe Global Error Boundary para resiliência total e imunidade a telas brancas
+class GlobalErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
     this.state = { hasError: false, error: null };
@@ -41,20 +41,78 @@ class ViewErrorBoundary extends React.Component {
     return { hasError: true, error };
   }
   componentDidCatch(error, errorInfo) {
-    console.error('[ViewErrorBoundary] Erro de renderizacao capturado:', error, errorInfo);
+    console.error('[GlobalErrorBoundary] Erro global capturado:', error, errorInfo);
   }
+  handleReset = async () => {
+    try {
+      if ('caches' in window) {
+        const names = await caches.keys();
+        await Promise.all(names.map(name => caches.delete(name)));
+      }
+      if ('serviceWorker' in navigator) {
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        for (let registration of registrations) {
+          await registration.unregister();
+        }
+      }
+      localStorage.clear();
+      sessionStorage.clear();
+    } catch (e) {
+      console.warn('Erro ao restaurar cache local:', e);
+    } finally {
+      window.location.href = '/';
+    }
+  };
+
   render() {
     if (this.state.hasError) {
       return (
-        <div style={{ padding: '2rem', textAlign: 'center', background: 'var(--bg-card, #1e293b)', color: 'var(--text-main, #f8fafc)', borderRadius: '12px', margin: '2rem 0', border: '1px solid var(--border-light, #334155)' }}>
-          <h3 style={{ marginTop: 0 }}>⚠️ Ocorreu um problema ao carregar esta tela</h3>
-          <p style={{ fontSize: '0.9rem', color: '#94a3b8' }}>{this.state.error?.message || 'Falha ao renderizar componente.'}</p>
-          <button 
-            onClick={() => { this.setState({ hasError: false, error: null }); window.location.reload(); }}
-            style={{ padding: '0.6rem 1.2rem', background: 'var(--primary, #3b82f6)', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 600 }}
-          >
-            Recarregar Aplicativo
-          </button>
+        <div style={{
+          minHeight: '100vh',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: '#0f172a',
+          color: '#f8fafc',
+          padding: '24px',
+          fontFamily: 'system-ui, -apple-system, sans-serif'
+        }}>
+          <div style={{
+            backgroundColor: '#1e293b',
+            border: '1px solid #334155',
+            borderRadius: '16px',
+            padding: '32px',
+            maxWidth: '480px',
+            width: '100%',
+            textAlign: 'center',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.5)'
+          }}>
+            <div style={{ fontSize: '48px', marginBottom: '16px' }}>⚡</div>
+            <h2 style={{ margin: '0 0 12px', fontSize: '22px', fontWeight: '700', color: '#f8fafc' }}>
+              MyFlowDay
+            </h2>
+            <p style={{ fontSize: '14.5px', color: '#94a3b8', lineHeight: '1.6', margin: '0 0 24px' }}>
+              O sistema foi atualizado para uma versão mais recente ou identificou uma oscilação temporária de cache no seu navegador.
+            </p>
+            <button 
+              onClick={this.handleReset}
+              style={{
+                width: '100%',
+                padding: '14px 24px',
+                backgroundColor: '#3b82f6',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '10px',
+                fontWeight: '600',
+                fontSize: '15px',
+                cursor: 'pointer',
+                boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)',
+                transition: 'transform 0.1s ease'
+              }}
+            >
+              Atualizar e Carregar Aplicativo 🚀
+            </button>
+          </div>
         </div>
       );
     }
@@ -305,7 +363,7 @@ function AppLayout() {
 
       <main className="app-main-content">
         <div className="container">
-          <ViewErrorBoundary>
+          <GlobalErrorBoundary>
             <Suspense fallback={
               <div className="app-loading-container">
                 <div className="app-loading-spinner" />
@@ -324,7 +382,7 @@ function AppLayout() {
               {activeTab === 'revenue' && <RevenueDashboard />}
               {activeTab === 'settings' && <SettingsView />}
             </Suspense>
-          </ViewErrorBoundary>
+          </GlobalErrorBoundary>
         </div>
       </main>
 
@@ -362,11 +420,13 @@ function AppLayout() {
   );
 }
 
-// ─── App raiz — apenas providers + layout ────────────────────────────────────
+// ─── App raiz — apenas providers + layout com imunidade a falhas ────────────
 export default function App() {
   return (
-    <AppProvider>
-      <AppLayout />
-    </AppProvider>
+    <GlobalErrorBoundary>
+      <AppProvider>
+        <AppLayout />
+      </AppProvider>
+    </GlobalErrorBoundary>
   );
 }

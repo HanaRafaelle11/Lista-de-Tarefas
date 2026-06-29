@@ -167,7 +167,7 @@ export default function PaywallModal() {
           </button>
 
           <span style={{ fontSize: '11.5px', color: '#9ca3af', textAlign: 'center', display: 'block', fontStyle: 'italic' }}>
-            Pagamento seguro processado via Mercado Pago. Cancele a qualquer momento.
+            Pagamento seguro processado via Asaas. Cancele a qualquer momento.
           </span>
         </div>
       </div>
@@ -180,10 +180,10 @@ export default function PaywallModal() {
         <Loader2 className="animate-spin" size={44} style={{ color: '#3b82f6' }} />
         <div style={{ textAlign: 'center' }}>
           <h3 style={{ fontSize: '17px', fontWeight: '700', color: '#ffffff', margin: '0 0 8px' }}>
-            Conectando ao Mercado Pago
+            Conectando ao Asaas
           </h3>
           <p style={{ fontSize: '13.5px', color: '#d1d5db', margin: 0, maxWidth: '320px', lineHeight: '1.5' }}>
-            Criando sua preferência segura de checkout. Você será redirecionado em instantes...
+            Criando seu faturamento seguro no checkout. Você será redirecionado em instantes...
           </p>
         </div>
       </div>

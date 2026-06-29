@@ -552,13 +552,14 @@ async function trySend(item) {
       try {
         const { data: serverTask } = await supabase
           .from('tasks')
-          .select('id')
+          .select('id, created_at')
           .eq('id', taskId || idempotency_key)
           .single();
 
-        if (serverTask && serverTask.updated_at) {
-          const serverTime = new Date(serverTask.updated_at).getTime();
-          const localTime = new Date(taskData.updated_at || item.enqueuedAt).getTime();
+        const serverTimestamp = serverTask?.updated_at || serverTask?.created_at;
+        if (serverTask && serverTimestamp) {
+          const serverTime = new Date(serverTimestamp).getTime();
+          const localTime = new Date(taskData.updated_at || taskData.createdAt || item.enqueuedAt).getTime();
           if (serverTime > localTime) {
             console.log(`[syncQueue] Conflito em task_create para ${taskId}. Servidor possui versão mais recente.`);
             logConflict('task_create', taskId || idempotency_key, taskData, serverTask, 'Server Wins (Criação obsoleta)');
@@ -597,9 +598,10 @@ async function trySend(item) {
           .eq('id', id)
           .single();
 
-        if (serverTask && serverTask.updated_at) {
-          const serverTime = new Date(serverTask.updated_at).getTime();
-          const localTime = new Date(updates.updated_at || item.enqueuedAt).getTime();
+        const serverTimestamp = serverTask?.updated_at || serverTask?.created_at;
+        if (serverTask && serverTimestamp) {
+          const serverTime = new Date(serverTimestamp).getTime();
+          const localTime = new Date(updates.updated_at || updates.createdAt || item.enqueuedAt).getTime();
           
           if (serverTime > localTime) {
             console.log(`[syncQueue] Conflito detectado para task ${id} (Server: ${serverTask.updated_at} > Local: ${updates.updated_at || item.enqueuedAt})`);
@@ -645,7 +647,7 @@ async function trySend(item) {
                 completed:   serverTask.completed,
                 createdAt:   serverTask.created_at,
                 completedAt: serverTask.completed_at || null,
-                updatedAt:   serverTask.updated_at
+                updatedAt:   serverTask.updated_at || serverTask.created_at
               };
               await localDB.put('tasks', updatedLocalTask);
             }

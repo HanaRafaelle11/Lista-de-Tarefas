@@ -23,14 +23,17 @@ export default function AdminNotificationDashboard() {
   const fetchNotificationMetrics = async () => {
     setLoading(true);
     try {
-      // Fetch status counts from notification_queue
-      const { data: queueData, error: qErr } = await supabase
-        .from('notification_queue')
-        .select('id, event_type, entity_type, scheduled_for, status, attempts, last_error, created_at, sent_at, clicked_at')
-        .order('created_at', { ascending: false })
-        .limit(200);
-
-      if (!qErr && queueData) {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token || '';
+      
+      const res = await fetch('/api/admin/notifications', {
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+      });
+      
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const queueData = await res.json();
+      
+      if (queueData) {
         const counts = { pending: 0, processing: 0, success: 0, failed: 0, cancelled: 0 };
         let retries = 0;
         let clicked = 0;

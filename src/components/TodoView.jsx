@@ -320,6 +320,7 @@ export default function TodoView() {
   const [isSyncModalOpen, setIsSyncModalOpen] = useState(false);
   const [showCompletedKanban, setShowCompletedKanban] = useState(true);
   const [showBulkConfirm, setShowBulkConfirm] = useState(false);
+  const [taskToDelete, setTaskToDelete] = useState(null);
 
   // Estados para AchievementModal
   const [showAchievementModal, setShowAchievementModal] = useState(false);
@@ -1140,7 +1141,7 @@ export default function TodoView() {
                 accent="overdue"
                 tasks={sections.overdue}
                 onEdit={openEditTaskModal}
-                onDelete={onDeleteTask}
+                onDelete={setTaskToDelete}
                 onToggle={handleToggleCompleteWithAchievement} // Usar a função com lógica de conquista
                 defaultOpen={true}
                 isOverdue={true}
@@ -1150,7 +1151,7 @@ export default function TodoView() {
                 icon={<Sun size={15} style={{ color: 'var(--primary)' }} />}
                 tasks={sections.today}
                 onEdit={openEditTaskModal}
-                onDelete={onDeleteTask}
+                onDelete={setTaskToDelete}
                 onToggle={handleToggleCompleteWithAchievement} // Usar a função com lógica de conquista
                 defaultOpen={true}
               />
@@ -1159,7 +1160,7 @@ export default function TodoView() {
                 icon={<Moon size={15} style={{ color: '#818cf8' }} />}
                 tasks={sections.tomorrow}
                 onEdit={openEditTaskModal}
-                onDelete={onDeleteTask}
+                onDelete={setTaskToDelete}
                 onToggle={handleToggleCompleteWithAchievement} // Usar a função com lógica de conquista
                 defaultOpen={true}
               />
@@ -1168,7 +1169,7 @@ export default function TodoView() {
                 icon={<Calendar size={15} />}
                 tasks={sections.thisWeek}
                 onEdit={openEditTaskModal}
-                onDelete={onDeleteTask}
+                onDelete={setTaskToDelete}
                 onToggle={handleToggleCompleteWithAchievement} // Usar a função com lógica de conquista
                 defaultOpen={true}
               />
@@ -1177,7 +1178,7 @@ export default function TodoView() {
                 icon={<Zap size={15} style={{ color: '#eab308' }} />}
                 tasks={sections.future}
                 onEdit={openEditTaskModal}
-                onDelete={onDeleteTask}
+                onDelete={setTaskToDelete}
                 onToggle={handleToggleCompleteWithAchievement} // Usar a função com lógica de conquista
                 defaultOpen={false}
               />
@@ -1186,7 +1187,7 @@ export default function TodoView() {
                 icon={<Pin size={15} />}
                 tasks={sections.noDueDate}
                 onEdit={openEditTaskModal}
-                onDelete={onDeleteTask}
+                onDelete={setTaskToDelete}
                 onToggle={handleToggleCompleteWithAchievement} // Usar a função com lógica de conquista
                 defaultOpen={false}
               />
@@ -1199,7 +1200,7 @@ export default function TodoView() {
                     icon={goal ? <span style={{ fontSize: '14px' }}>{getGoalIconEmoji(goal.icon)}</span> : <Sparkles size={15} style={{ color: 'var(--primary)' }} />}
                     tasks={templateTasks}
                     onEdit={openEditTaskModal}
-                    onDelete={onDeleteTask}
+                    onDelete={setTaskToDelete}
                     onToggle={handleToggleCompleteWithAchievement}
                     defaultOpen={true}
                     goalId={goal?.id}
@@ -1212,7 +1213,7 @@ export default function TodoView() {
                 icon={<CheckCircle size={15} style={{ color: '#22c55e' }} />}
                 tasks={sections.completed}
                 onEdit={openEditTaskModal}
-                onDelete={onDeleteTask}
+                onDelete={setTaskToDelete}
                 onToggle={handleToggleCompleteWithAchievement} // Usar a função com lógica de conquista
                 defaultOpen={false}
               />
@@ -1245,11 +1246,11 @@ export default function TodoView() {
                         <span className="kanban-card-title">{task.title}</span>
                         {cleanDesc && <span style={{ fontSize: '11px', color: 'var(--text-light)' }}>{cleanDesc}</span>}
                         <div className="kanban-card-meta">
-                          <span className={`badge-category ${task.category.toLowerCase()}`} style={{ fontSize: '9px', padding: '2px 6px' }}>
-                            {task.category}
+                          <span className={`badge-category ${(task.category || 'Trabalho').toLowerCase()}`} style={{ fontSize: '9px', padding: '2px 6px' }}>
+                            {task.category || 'Trabalho'}
                           </span>
-                          <span className={`badge-priority ${task.priority.toLowerCase()}`} style={{ fontSize: '9px', padding: '2px 6px' }}>
-                            {task.priority}
+                          <span className={`badge-priority ${(task.priority || 'Média').toLowerCase()}`} style={{ fontSize: '9px', padding: '2px 6px' }}>
+                            {task.priority || 'Média'}
                           </span>
                         </div>
                         {task.dueDate && (
@@ -1269,7 +1270,7 @@ export default function TodoView() {
                           <div style={{ display: 'flex', gap: '4px' }}>
                             <button onClick={() => onDuplicateTask(task.id)} className="todo-item-action-btn duplicate-btn" title="Duplicar"><Copy size={13} /></button>
                             <button onClick={() => openEditTaskModal(task)} className="todo-item-action-btn edit-btn"><Edit2 size={13} /></button>
-                            <button onClick={() => onDeleteTask(task.id)} className="todo-item-action-btn delete-btn"><Trash2 size={13} /></button>
+                            <button onClick={() => setTaskToDelete(task)} className="todo-item-action-btn delete-btn"><Trash2 size={13} /></button>
                           </div>
                         </div>
                       </div>
@@ -1295,11 +1296,11 @@ export default function TodoView() {
                         <span className="kanban-card-title">{task.title}</span>
                         {cleanDesc && <span style={{ fontSize: '11px', color: 'var(--text-light)' }}>{cleanDesc}</span>}
                         <div className="kanban-card-meta">
-                          <span className={`badge-category ${task.category.toLowerCase()}`} style={{ fontSize: '9px', padding: '2px 6px' }}>
-                            {task.category}
+                          <span className={`badge-category ${(task.category || 'Trabalho').toLowerCase()}`} style={{ fontSize: '9px', padding: '2px 6px' }}>
+                            {task.category || 'Trabalho'}
                           </span>
-                          <span className={`badge-priority ${task.priority.toLowerCase()}`} style={{ fontSize: '9px', padding: '2px 6px' }}>
-                            {task.priority}
+                          <span className={`badge-priority ${(task.priority || 'Média').toLowerCase()}`} style={{ fontSize: '9px', padding: '2px 6px' }}>
+                            {task.priority || 'Média'}
                           </span>
                         </div>
                         {task.dueDate && (
@@ -1320,7 +1321,7 @@ export default function TodoView() {
                           <div style={{ display: 'flex', gap: '4px' }}>
                             <button onClick={() => onDuplicateTask(task.id)} className="todo-item-action-btn duplicate-btn" title="Duplicar"><Copy size={13} /></button>
                             <button onClick={() => openEditTaskModal(task)} className="todo-item-action-btn edit-btn"><Edit2 size={13} /></button>
-                            <button onClick={() => onDeleteTask(task.id)} className="todo-item-action-btn delete-btn"><Trash2 size={13} /></button>
+                            <button onClick={() => setTaskToDelete(task)} className="todo-item-action-btn delete-btn"><Trash2 size={13} /></button>
                           </div>
                         </div>
                       </div>
@@ -1367,8 +1368,8 @@ export default function TodoView() {
                           <span className="kanban-card-title" style={{ textDecoration: 'line-through' }}>{task.title}</span>
                           {cleanDesc && <span style={{ fontSize: '11px', color: 'var(--text-light)' }}>{cleanDesc}</span>}
                           <div className="kanban-card-meta">
-                            <span className={`badge-category ${task.category.toLowerCase()}`} style={{ fontSize: '9px', padding: '2px 6px' }}>
-                              {task.category}
+                            <span className={`badge-category ${(task.category || 'Trabalho').toLowerCase()}`} style={{ fontSize: '9px', padding: '2px 6px' }}>
+                              {task.category || 'Trabalho'}
                             </span>
                           </div>
                           <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '6px', alignItems: 'center' }}>
@@ -1377,7 +1378,7 @@ export default function TodoView() {
                             </button>
                             <div style={{ display: 'flex', gap: '4px' }}>
                               <button onClick={() => onDuplicateTask(task.id)} className="todo-item-action-btn duplicate-btn" title="Duplicar"><Copy size={13} /></button>
-                              <button onClick={() => onDeleteTask(task.id)} className="todo-item-action-btn delete-btn"><Trash2 size={13} /></button>
+                              <button onClick={() => setTaskToDelete(task)} className="todo-item-action-btn delete-btn"><Trash2 size={13} /></button>
                             </div>
                           </div>
                         </div>
@@ -2013,6 +2014,47 @@ export default function TodoView() {
           </div>
         </div>
       </div>
+      
+      {/* Modal Global de Confirmação de Deleção (Lixeira / Soft Delete) */}
+      {taskToDelete && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', justifyContent: 'center', alignItems: 'center',
+          zIndex: 999999, padding: '16px'
+        }}>
+          <div style={{
+            backgroundColor: 'var(--bg-card)', padding: '24px', borderRadius: 'var(--radius-lg)',
+            maxWidth: '400px', width: '100%', border: '1px solid var(--border-light)', boxShadow: 'var(--shadow-lg)'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--danger)', marginBottom: '12px' }}>
+              <AlertCircle size={24} />
+              <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '700', color: 'var(--text-main)' }}>Excluir tarefa?</h3>
+            </div>
+            <p style={{ fontSize: '13.5px', color: 'var(--text-muted)', lineHeight: '1.5', marginBottom: '20px' }}>
+              Tem certeza que deseja mover a tarefa <strong>"{taskToDelete.title}"</strong> para a lixeira? Ela poderá ser restaurada a qualquer momento a partir da aba Lixeira.
+            </p>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+              <button 
+                onClick={() => setTaskToDelete(null)}
+                className="btn-secondary"
+                style={{ padding: '8px 16px', borderRadius: '6px', cursor: 'pointer', border: '1px solid var(--border-medium)', background: 'transparent', color: 'var(--text-main)' }}
+              >
+                Cancelar
+              </button>
+              <button 
+                onClick={() => {
+                  onDeleteTask(taskToDelete.id);
+                  setTaskToDelete(null);
+                }}
+                className="btn-primary"
+                style={{ backgroundColor: 'var(--danger)', color: 'white', padding: '8px 16px', borderRadius: '6px', cursor: 'pointer', border: 'none', fontWeight: '600' }}
+              >
+                Mover para Lixeira
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -123,11 +123,13 @@ const apiDevServerPlugin = () => ({
   }
 });
 
-const hasCertificates = fs.existsSync('key.pem') && fs.existsSync('cert.pem');
+const certPathKey = fs.existsSync('.certs/key.pem') ? '.certs/key.pem' : fs.existsSync('key.pem') ? 'key.pem' : null;
+const certPathCert = fs.existsSync('.certs/cert.pem') ? '.certs/cert.pem' : fs.existsSync('cert.pem') ? 'cert.pem' : null;
+const hasCertificates = certPathKey && certPathCert;
 const serverConfig = hasCertificates ? {
   https: {
-    key: fs.readFileSync('key.pem'),
-    cert: fs.readFileSync('cert.pem')
+    key: fs.readFileSync(certPathKey),
+    cert: fs.readFileSync(certPathCert)
   },
   host: true
 } : undefined;

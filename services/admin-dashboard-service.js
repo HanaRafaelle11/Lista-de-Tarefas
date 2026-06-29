@@ -83,7 +83,7 @@ export const AdminDashboardService = {
     // 6. Execução Segura e Isolada de Goals
     let goals = [];
     try {
-      const goalsRes = await supabaseAdmin.from('goals').select('id, completed');
+      const goalsRes = await supabaseAdmin.from('goals').select('id, status');
       if (!goalsRes.error && goalsRes.data) goals = goalsRes.data;
     } catch (e) {
       console.warn('[ADMIN DASHBOARD WARN goals]', e.message);
@@ -216,7 +216,7 @@ export const AdminDashboardService = {
     const taskCreatedCount = tasks.length;
     const taskCompletedCount = tasks.filter(t => t.completed).length;
     const goalCreatedCount = goals.length;
-    const goalCompletedCount = goals.filter(g => g.completed).length;
+    const goalCompletedCount = goals.filter(g => g.status === 'completed').length;
 
     const pomodoroEvents = events.filter(e => e.event_type === 'focus_session_completed' || e.event_type === 'pomodoro_completed').length;
     const weeklyPlanEvents = events.filter(e => e.event_type === 'weekly_plan_created').length;

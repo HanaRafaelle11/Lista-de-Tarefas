@@ -305,6 +305,25 @@ export const HELP_ARTICLES = [
     commonErrors: 'Confundir exclusão de conta com cancelamento de assinatura.',
     faq: 'O MyFlowDay vende meus dados? Nunca! Seus dados são privados e criptografados.'
   },
+  {
+    id: 'account-deletion',
+    categoryId: 'account',
+    title: 'Como excluir sua conta permanentemente',
+    whatIs: 'O procedimento para apagar de forma definitiva sua conta e todos os dados associados do MyFlowDay.',
+    purpose: 'Garante o direito ao esquecimento e a eliminação completa dos seus dados pessoais em conformidade com as leis de privacidade.',
+    howToAccess: 'Acesso pelo menu lateral ou superior: Configurações ⚙️ > aba "Privacidade" (ou "Minha Conta") > botão "Excluir Minha Conta".',
+    howToUse: 'Acesse a tela de Configurações ⚙️, selecione a aba de "Privacidade" (ou "Perfil"), role até a base e clique no botão vermelho "Excluir Minha Conta". Por segurança, confirme o processo digitando a palavra "EXCLUIR".',
+    fieldGuide: [
+      { field: 'Confirmação', tip: 'Digite exatamente a palavra chave em maiúsculas "EXCLUIR" para efetivar a remoção.' }
+    ],
+    examples: {
+      bad: 'Excluir a conta achando que pode recuperar as tarefas antigas depois. A exclusão é 100% definitiva!',
+      good: 'Fazer o download das metas e tarefas antes de efetuar a exclusão definitiva.'
+    },
+    bestPractices: 'Se possuir uma assinatura ativa do Asaas, cancele-a previamente nas configurações para evitar cobranças pendentes antes de apagar a conta.',
+    commonErrors: 'Apenas deletar o aplicativo do smartphone sem efetuar o cancelamento e a exclusão da conta no sistema.',
+    faq: 'Posso reativar uma conta excluída? Não. Uma vez excluída, os dados e o histórico de streaks são apagados permanentemente.'
+  },
 
   // 📱 TÉCNICA
   {

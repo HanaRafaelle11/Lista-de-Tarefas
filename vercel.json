@@ -1,6 +1,10 @@
 {
   "rewrites": [
     {
+      "source": "/api/:routes*",
+      "destination": "/api/[...routes]"
+    },
+    {
       "source": "/((?!api|static|.*\\..*).*)",
       "destination": "/index.html"
     }

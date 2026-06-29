@@ -8,8 +8,8 @@ https.globalAgent.options.minVersion = 'TLSv1.2';
 
 import { supabaseAdmin } from '../lib/supabase.js';
 import { PaymentGateway } from '../lib/paymentGateway/index.js';
-import handleUnifiedAsaasWebhook from './billing/asaas-webhook.js';
-import handleBillingExpirationCron from './cron/billing-expiration.js';
+import handleUnifiedAsaasWebhook from '../api-handlers/billing/asaas-webhook.js';
+import { checkBillingExpirations } from '../services/billing.service.js';
 import { runBillingSanityCheck } from '../jobs/billing-sanity-check.js';
 import { withAdminAuth } from '../lib/auth/withAdminAuth.js';
 import { logPaymentEvent } from '../lib/payment-logger.js';
@@ -179,7 +179,6 @@ async function handleSubscriptionCreate(req, res) {
                         status: 'pending',
                         provider: 'asaas',
                         asaas_customer_id: customerId,
-                        idempotency_key: deterministicRef,
                         updated_at: new Date().toISOString()
                     }, { onConflict: 'user_id' });
                 console.log('[PAYMENT_WRITE_FIRST_SUCCESS] Intenção de pagamento gravada no DB antes do Gateway.');
@@ -523,19 +522,15 @@ export default async function handler(req, res) {
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Idempotency-Key, X-Trace-Id');
     if (req.method === 'OPTIONS') return res.status(200).end(); // [cite: 287]
 
-    const route =
-      Array.isArray(req.query.routes)
-        ? req.query.routes.join('/')
-        : typeof req.query.routes === 'string'
-          ? req.query.routes.replace(/^\/+|\/+$/g, '')
-          : '';
+    let route = Array.isArray(req.query?.routes)
+      ? req.query.routes.join('/')
+      : typeof req.query?.routes === 'string'
+        ? req.query.routes.replace(/^\/+|\/+$/g, '')
+        : '';
 
-    // 🚨 BLOQUEIO CRÍTICO: workers são de responsabilidade exclusiva do sistema de arquivos nativo do Vercel
-    if (route.startsWith('worker/')) {
-      return res.status(404).json({
-        error: 'Route belongs to native worker handler',
-        route
-      });
+    if (!route && req.url) {
+      const urlPath = req.url.split('?')[0];
+      route = urlPath.replace(/^\/?api\//, '').replace(/^\/+|\/+$/g, '');
     }
 
     const blockedPatterns = ['.env', '.git', 'config', 'secrets', 'credentials']; // [cite: 290]
@@ -543,48 +538,57 @@ export default async function handler(req, res) {
 
     try {
         if (route === 'subscription/create') {
-            const handleSubCreate = (await import('./billing/create-subscription.js')).default;
+            const handleSubCreate = (await import('../api-handlers/billing/create-subscription.js')).default;
             await handleSubCreate(req, res);
         } else if (route === 'subscription/status') {
-            const handleSubStatus = (await import('./billing/status.js')).default;
+            const handleSubStatus = (await import('../api-handlers/billing/status.js')).default;
             await handleSubStatus(req, res);
+        } else if (route === 'subscription/cancel' || route === 'billing/cancel') {
+            const handleSubCancel = (await import('../api-handlers/billing/cancel.js')).default;
+            await handleSubCancel(req, res);
         } else if (route === 'subscription/sync') {
             await handleSubscriptionSync(req, res);
         } else if (route === 'billing/asaas-webhook' || route === 'webhooks/asaas' || route === 'webhook/asaas') {
             await handleUnifiedAsaasWebhook(req, res);
         } else if (route === 'cron/billing-expiration') {
-            await handleBillingExpirationCron(req, res);
+            const result = await checkBillingExpirations({ traceId: 'cron_route_' + Date.now() });
+            return res.status(200).json(result);
         } else if (route === 'cron/billing-sanity-check') {
             const result = await runBillingSanityCheck();
             return res.status(200).json(result);
-
+        } else if (route === 'workers/worker-loop' || route === 'cron/worker-loop' || route === 'worker-loop') {
+            const handleWorker = (await import('../api-handlers/workers/worker-loop.js')).default;
+            await handleWorker(req, res);
         } else if (route === 'access/check' || route === 'auth/check-access') {
-            const handleAccess = (await import('./auth/access-check.js')).default;
+            const handleAccess = (await import('../api-handlers/auth/access-check.js')).default;
             await handleAccess(req, res);
         } else if (route === 'payments/create' || route === 'payments/pix') {
-            const handleSubCreate = (await import('./billing/create-subscription.js')).default;
+            const handleSubCreate = (await import('../api-handlers/billing/create-subscription.js')).default;
             await handleSubCreate(req, res);
         } else if (route === 'analytics/revenue') {
-            const handleRev = (await import('./analytics/revenue.js')).default;
+            const handleRev = (await import('../api-handlers/analytics/revenue.js')).default;
             await handleRev(req, res);
         } else if (route === 'analytics/user-timeline') {
             await handleAnalyticsUserTimeline(req, res);
         } else if (route === 'analytics/revenue-integrity') {
             await handleAnalyticsRevenueIntegrity(req, res);
         } else if (route === 'payment-events/log') {
-            const handlePayLog = (await import('./payments/events-log.js')).default;
+            const handlePayLog = (await import('../api-handlers/payments/events-log.js')).default;
             await handlePayLog(req, res);
         } else if (route === 'admin/dashboard') {
-            const handleDash = (await import('./admin/dashboard.js')).default;
+            const handleDash = (await import('../api-handlers/admin/dashboard.js')).default;
             await handleDash(req, res);
         } else if (route === 'admin/system-status' || route === 'admin/status') {
-            const handleStatus = (await import('./admin/system-status.js')).default;
+            const handleStatus = (await import('../api-handlers/admin/system-status.js')).default;
             await handleStatus(req, res);
         } else if (route === 'admin/growth/intelligence') {
-            const handleGrowthIntel = (await import('./admin/growth/intelligence.js')).default;
+            const handleGrowthIntel = (await import('../api-handlers/admin/growth/intelligence.js')).default;
             await handleGrowthIntel(req, res);
         } else if (route === 'admin/billing/health') {
             await handleAdminBillingHealth(req, res);
+        } else if (route === 'admin/notifications') {
+            const handleAdminNotifs = (await import('../api-handlers/admin/notifications.js')).default;
+            await handleAdminNotifs(req, res);
         } else if (route === 'admin/payment-events' || route === 'admin/billing/timeline' || route.startsWith('admin/billing/user')) {
             await handleAdminBillingTimeline(req, res);
         } else if (route === '' || route === 'health') {

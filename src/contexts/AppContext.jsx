@@ -25,6 +25,8 @@ import { eventEmitter } from '../services/eventEmitter';
 import { localDB } from '../db/localDB';
 import { isAdmin as checkIsAdmin } from '../../lib/auth/adminAuth.js';
 import { useAuthMachine } from '../hooks/useAuthMachine.js';
+import AccountReactivationModal from '../components/AccountReactivationModal.jsx';
+import CustomDialogModal from '../components/CustomDialogModal.jsx';
 
 // ─── Helpers para Metadados de Tarefas (Horário e Recorrência) ───────────────
 export function parseTaskMetadata(description = '') {
@@ -378,12 +380,127 @@ export function AppProvider({ children }) {
   const [churnScore, setChurnScore] = useState(0);
   const [churnRisk, setChurnRisk] = useState('low');
 
+  // ── Modais de Reativação e Diálogos Customizados ───────────────────────
+  const [showReactivationModal, setShowReactivationModal] = useState(false);
+  const [pendingDeletionDate, setPendingDeletionDate] = useState(null);
+
+  const [dialogConfig, setDialogConfig] = useState({
+    isOpen: false,
+    type: 'alert',
+    title: 'MyFlowDay',
+    message: '',
+    confirmText: 'OK',
+    cancelText: 'Cancelar',
+    onConfirm: () => {},
+    onCancel: () => {}
+  });
+
+  const openCustomAlert = useCallback((message, title = 'MyFlowDay') => {
+    setDialogConfig({
+      isOpen: true,
+      type: 'alert',
+      title,
+      message,
+      confirmText: 'OK',
+      onConfirm: () => setDialogConfig(prev => ({ ...prev, isOpen: false }))
+    });
+  }, []);
+
+  const openCustomConfirm = useCallback((message, title = 'Atenção', onConfirmCallback, confirmText = 'Confirmar', cancelText = 'Cancelar') => {
+    setDialogConfig({
+      isOpen: true,
+      type: 'confirm',
+      title,
+      message,
+      confirmText,
+      cancelText,
+      onConfirm: () => {
+        setDialogConfig(prev => ({ ...prev, isOpen: false }));
+        if (onConfirmCallback) onConfirmCallback();
+      },
+      onCancel: () => setDialogConfig(prev => ({ ...prev, isOpen: false }))
+    });
+  }, []);
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // AUTH ACTIONS
+  // ═══════════════════════════════════════════════════════════════════════════
+  const handleLoginSuccess = useCallback((user) => {
+    setCurrentUser(user);
+    eventsService.logEvent(user.id, 'login', { method: 'explicit' }).catch(() => {});
+    setActiveTab('home');
+  }, []);
+
+  const handleLogout = useCallback(async () => {
+    try {
+      if (currentUser?.id) {
+        if (!currentUser.isDemo) {
+          await eventsService.logEvent(currentUser.id, 'logout');
+        }
+      }
+      if (!currentUser?.isDemo) {
+        await supabase.auth.signOut();
+      }
+      
+      // Limpa dados demo se for o caso
+      if (currentUser?.isDemo) {
+        localStorage.removeItem(`flowday_demo_tasks_${currentUser.id}`);
+        localStorage.removeItem(`flowday_demo_goals_${currentUser.id}`);
+        localStorage.removeItem(`flowday_demo_habits_${currentUser.id}`);
+        localStorage.removeItem(`flowday_demo_achievements_${currentUser.id}`);
+      }
+
+      window.location.href = window.location.origin + '/login';
+      // Reset do guard de conquistas para o próximo login
+      dataLoadedOnce.current = false;
+      firstSuccessLogged.current = false;
+      setCurrentUser(null);
+      setUserProfile(null);
+      setTasks([]); setGoals([]); setGoalTasks([]);
+      setUnlockedAchievements(null); setUnlockedKeys(null);
+      setToastQueue([]); // Limpa a fila de exibição no logout
+      setHabits([]); setHabitLogs([]);
+      setNotifications([]);
+
+      // Limpa caches locais no IndexedDB para isolamento multiusuário
+      await localDB.clear('tasks').catch(() => {});
+      await localDB.clear('goals').catch(() => {});
+      await localDB.clear('habits').catch(() => {});
+      await localDB.clear('profile').catch(() => {});
+      await localDB.clear('events').catch(() => {});
+      await localDB.clear('notifications').catch(() => {});
+    } catch (e) { console.error(e); }
+  }, [currentUser]);
+
   // Determina se usuário logado é administrador
   const isAdmin = useMemo(() => checkIsAdmin(currentUser), [currentUser]);
 
   const loadSubscription = useCallback(async (userId) => {
-    // A assinatura agora é derivada do userProfile carregado por loadProfile e atualizado em tempo real.
-  }, []);
+    if (!userId) return;
+    try {
+      const { data, error } = await supabase
+        .from('subscriptions')
+        .select('*')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      if (!error && data) {
+        const status = (data.status || 'free').toLowerCase();
+        const plan = (data.plan || 'free').toLowerCase();
+        const expiresAt = data.expires_at || data.current_period_end;
+
+        const active = (status === 'active') &&
+                       (plan === 'pro' || plan === 'premium') &&
+                       (!expiresAt || new Date(expiresAt) > new Date());
+
+        setIsPro(active);
+        setSubscriptionStatus(active ? 'active' : status);
+        setSubscriptionPlan(plan);
+      }
+    } catch (e) {
+      console.warn('[AppContext] Erro ao carregar subscriptions:', e.message);
+    }
+  }, [setIsPro]);
 
   // ── Categorias Customizadas (SaaS) ──────────────────────────────────────────
   const categories = useMemo(() => {
@@ -652,17 +769,30 @@ export function AppProvider({ children }) {
         await tasksService.deletePermanent(userId, t.id);
       }
       
-      const { data: oldGoals } = await supabase
-        .from('goals')
-        .select('id')
-        .eq('user_id', userId)
-        .not('deleted_at', 'is', null)
-        .lt('deleted_at', thirtyDaysAgo.toISOString());
-      
-      if (oldGoals && oldGoals.length > 0) {
-        for (const g of oldGoals) {
-          await goalsService.deletePermanent(userId, g.id);
+      // Purga de goals via banco — defensivo para quando deleted_at não existir
+      try {
+        const { data: oldGoals, error: goalsErr } = await supabase
+          .from('goals')
+          .select('id')
+          .eq('user_id', userId)
+          .not('deleted_at', 'is', null)
+          .lt('deleted_at', thirtyDaysAgo.toISOString());
+        
+        if (goalsErr && (goalsErr.code === '42703' || goalsErr.message?.includes('deleted_at'))) {
+          // deleted_at column doesn't exist yet — purge only from local cache
+          console.warn('[AppContext] Coluna goals.deleted_at ausente — purgando apenas cache local.');
+          const localGoals = await localDB.getAll('goals');
+          const oldLocalGoals = localGoals.filter(g => g.user_id === userId && g.deletedAt && new Date(g.deletedAt) < thirtyDaysAgo);
+          for (const g of oldLocalGoals) {
+            await goalsService.deletePermanent(userId, g.id);
+          }
+        } else if (oldGoals && oldGoals.length > 0) {
+          for (const g of oldGoals) {
+            await goalsService.deletePermanent(userId, g.id);
+          }
         }
+      } catch (goalsErr) {
+        console.warn('[AppContext] Erro ao purgar goals da lixeira:', goalsErr.message);
       }
     } catch (err) {
       console.warn('[AppContext] Erro ao purgar lixeira:', err.message);
@@ -862,7 +992,6 @@ export function AppProvider({ children }) {
   // ═══════════════════════════════════════════════════════════════════════════
   // (auth state já inicializado no topo do provider via useAuthMachine)
 
-  // ── Verificação centralizada server-side do plano (Zero Trust) ──
   const checkServerAccess = useCallback(async (userId) => {
     if (!userId) {
       setIsPro(false);
@@ -870,8 +999,6 @@ export function AppProvider({ children }) {
       setSubscriptionPlan('free');
       setChurnScore(0);
       setChurnRisk('low');
-      setIsAccessChecked(true);
-      if (typeof window !== 'undefined') localStorage.setItem('flowday_access_checked', 'true');
       return false;
     }
     try {
@@ -890,15 +1017,11 @@ export function AppProvider({ children }) {
           setChurnRisk(prev => prev !== data.churn.risk ? data.churn.risk : prev);
         }
 
-        setIsAccessChecked(true);
-        if (typeof window !== 'undefined') localStorage.setItem('flowday_access_checked', 'true');
         return active;
       }
     } catch (err) {
       console.warn('[AppContext] Erro ao verificar acesso no servidor:', err.message);
     }
-    setIsAccessChecked(true);
-    if (typeof window !== 'undefined') localStorage.setItem('flowday_access_checked', 'true');
     return false;
   }, [setIsPro]);
 
@@ -919,10 +1042,19 @@ export function AppProvider({ children }) {
       setIsPro(false);
       setSubscriptionStatus('free');
       setSubscriptionPlan('free');
+      setIsAccessChecked(false);
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('flowday_access_checked');
+        localStorage.removeItem('flowday_is_pro');
+      }
       return;
     }
 
     const userId = currentUser.id;
+    setIsAccessChecked(false);
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('flowday_access_checked');
+    }
     
     // Tratamento para Modo Demo
     if (currentUser.isDemo) {
@@ -967,19 +1099,18 @@ export function AppProvider({ children }) {
   // ── Projeção do Estado de Assinatura a partir do Perfil do Usuário ──
   useEffect(() => {
     if (userProfile) {
-      const plano = userProfile.plano || 'free';
-      const status = userProfile.assinatura_status || 'free';
+      const plano = (userProfile.plano || 'free').toLowerCase();
+      const status = (userProfile.assinatura_status || 'free').toLowerCase();
       const expiresAt = userProfile.assinatura_expira_em;
       
-      // Valida se o plano é premium, status ativo e não expirou
-      const active = plano === 'premium' && 
-                     status === 'active' && 
+      // Valida se o plano é pro ou premium, status ativo e não expirou
+      const active = (plano === 'premium' || plano === 'pro') && 
+                     (status === 'active') && 
                      (!expiresAt || new Date(expiresAt) > new Date());
       
-      // Só atualiza os estados locais se eles realmente mudarem de valor para evitar renders/loops desnecessários
-      setIsPro(prev => prev !== active ? active : prev);
-      setSubscriptionStatus(prev => prev !== status ? status : prev);
-      setSubscriptionPlan(prev => prev !== plano ? plano : prev);
+      setIsPro(active);
+      setSubscriptionStatus(active ? 'active' : status);
+      setSubscriptionPlan(plano);
       setIsAccessChecked(true);
       if (typeof window !== 'undefined') localStorage.setItem('flowday_access_checked', 'true');
     } else if (currentUser) {
@@ -1010,6 +1141,63 @@ export function AppProvider({ children }) {
 
     return () => clearInterval(intervalId);
   }, [isPro, userProfile?.assinatura_expira_em]);
+
+  // ── Checagem de Período de Exclusão de Conta (Reativação de 0-30 dias) ──
+  useEffect(() => {
+    if (!currentUser?.id || currentUser.isDemo) return;
+
+    const isDeleted = currentUser?.user_metadata?.account_status === 'deleted' || userProfile?.account_status === 'deleted';
+    const deletedAt = currentUser?.user_metadata?.deleted_at || userProfile?.deleted_at;
+
+    if (isDeleted && deletedAt) {
+      const deletedDateObj = new Date(deletedAt);
+      const now = new Date();
+      const diffDays = (now.getTime() - deletedDateObj.getTime()) / (1000 * 60 * 60 * 24);
+
+      if (diffDays > 30) {
+        openCustomAlert('Sua conta foi excluída permanentemente após o período de recuperação de 30 dias.', 'Conta Excluída');
+        handleLogout();
+      } else {
+        setPendingDeletionDate(deletedAt);
+        setShowReactivationModal(true);
+      }
+    } else {
+      setShowReactivationModal(false);
+    }
+  }, [currentUser, userProfile, handleLogout, openCustomAlert]);
+
+  const handleReactivateAccount = useCallback(async () => {
+    if (!currentUser?.id) return;
+    try {
+      const { error: metaErr } = await supabase.auth.updateUser({
+        data: {
+          account_status: 'active',
+          deleted_at: null
+        }
+      });
+      if (metaErr) throw metaErr;
+
+      await supabase.from('profiles').update({
+        account_status: 'active',
+        deleted_at: null
+      }).eq('id', currentUser.id);
+
+      if (userProfile) {
+        setUserProfile(prev => ({ ...prev, account_status: 'active', deleted_at: null }));
+      }
+      setShowReactivationModal(false);
+      logEvent('account_reactivated', { userId: currentUser.id });
+      addNotification('system', 'Conta Reativada 🚀', 'Sua conta foi reativada com sucesso! Todos os seus dados continuam intactos.');
+    } catch (err) {
+      console.error('Erro ao reativar conta:', err);
+    }
+  }, [currentUser?.id, userProfile, logEvent, addNotification]);
+
+  const handleConfirmDeletion = useCallback(() => {
+    logEvent('account_deletion_confirmed', { userId: currentUser?.id });
+    setShowReactivationModal(false);
+    handleLogout();
+  }, [currentUser?.id, logEvent, handleLogout]);
 
   // ── Escuta em tempo real (Supabase Realtime) para atualizações de faturamento no Perfil ──
   useEffect(() => {
@@ -1203,55 +1391,7 @@ export function AppProvider({ children }) {
     checkAchievements();
   }, [tasks, goals, habits, habitLogs, currentUser?.id, unlockedKeys, unlockedAchievements]);
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // AUTH ACTIONS
-  // ═══════════════════════════════════════════════════════════════════════════
-  const handleLoginSuccess = useCallback((user) => {
-    setCurrentUser(user);
-    eventsService.logEvent(user.id, 'login', { method: 'explicit' }).catch(() => {});
-    setActiveTab('home');
-  }, []);
 
-  const handleLogout = useCallback(async () => {
-    try {
-      if (currentUser?.id) {
-        if (!currentUser.isDemo) {
-          await eventsService.logEvent(currentUser.id, 'logout');
-        }
-      }
-      if (!currentUser?.isDemo) {
-        await supabase.auth.signOut();
-      }
-      
-      // Limpa dados demo se for o caso
-      if (currentUser?.isDemo) {
-        localStorage.removeItem(`flowday_demo_tasks_${currentUser.id}`);
-        localStorage.removeItem(`flowday_demo_goals_${currentUser.id}`);
-        localStorage.removeItem(`flowday_demo_habits_${currentUser.id}`);
-        localStorage.removeItem(`flowday_demo_achievements_${currentUser.id}`);
-      }
-
-      window.location.href = window.location.origin + '/login';
-      // Reset do guard de conquistas para o próximo login
-      dataLoadedOnce.current = false;
-      firstSuccessLogged.current = false;
-      setCurrentUser(null);
-      setUserProfile(null);
-      setTasks([]); setGoals([]); setGoalTasks([]);
-      setUnlockedAchievements(null); setUnlockedKeys(null);
-      setToastQueue([]); // Limpa a fila de exibição no logout
-      setHabits([]); setHabitLogs([]);
-      setNotifications([]);
-
-      // Limpa caches locais no IndexedDB para isolamento multiusuário
-      await localDB.clear('tasks').catch(() => {});
-      await localDB.clear('goals').catch(() => {});
-      await localDB.clear('habits').catch(() => {});
-      await localDB.clear('profile').catch(() => {});
-      await localDB.clear('events').catch(() => {});
-      await localDB.clear('notifications').catch(() => {});
-    } catch (e) { console.error(e); }
-  }, [currentUser]);
 
   const dismissToast = useCallback(async (id, key) => {
     // Remove localmente do toastQueue para resposta visual instantiva
@@ -2276,12 +2416,41 @@ export function AppProvider({ children }) {
     if (!currentUser?.id) return;
     try {
       logEvent('downgrade_clicked');
-      // Apenas exibe instruções de cancelamento
-      alert('Para gerenciar ou cancelar sua assinatura, acesse sua conta do Mercado Pago e gerencie seus pagamentos autorizados.');
+      
+      const response = await fetch('/api/subscription/cancel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: currentUser.id })
+      });
+
+      if (!response.ok) {
+        throw new Error('Falha ao processar o cancelamento da assinatura.');
+      }
+
+      const data = await response.json();
+      if (data.success) {
+        setIsPro(false);
+        setSubscriptionStatus('canceled');
+        setSubscriptionPlan('free');
+        
+        // Atualiza o perfil localmente se estiver carregado
+        if (userProfile) {
+          setUserProfile(prev => ({
+            ...prev,
+            plano: 'free',
+            assinatura_status: 'canceled'
+          }));
+        }
+        
+        addNotification('system', 'Assinatura Cancelada', 'Sua assinatura Premium foi cancelada com sucesso. Você retornou ao plano Free.');
+      } else {
+        throw new Error(data.error || 'Erro ao cancelar assinatura.');
+      }
     } catch (e) {
-      console.error('Erro ao registrar clique de downgrade:', e);
+      console.error('Erro ao cancelar assinatura:', e);
+      alert('Não foi possível cancelar sua assinatura automaticamente: ' + e.message);
     }
-  }, [currentUser, logEvent]);
+  }, [currentUser, userProfile, setIsPro, addNotification, logEvent]);
 
   // ═══════════════════════════════════════════════════════════════════════════
   // HABITS — interface compatível com useHabits anterior
@@ -2801,8 +2970,32 @@ export function AppProvider({ children }) {
     userState,
     insights,
     suggestions,
+
+    // Custom Dialogs & Reactivation
+    openCustomAlert,
+    openCustomConfirm
   };
 
-  return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
+  return (
+    <AppContext.Provider value={value}>
+      {children}
+      <AccountReactivationModal
+        isOpen={showReactivationModal}
+        deletedAt={pendingDeletionDate}
+        onReactivate={handleReactivateAccount}
+        onConfirmDeletion={handleConfirmDeletion}
+      />
+      <CustomDialogModal
+        isOpen={dialogConfig.isOpen}
+        type={dialogConfig.type}
+        title={dialogConfig.title}
+        message={dialogConfig.message}
+        confirmText={dialogConfig.confirmText}
+        cancelText={dialogConfig.cancelText}
+        onConfirm={dialogConfig.onConfirm}
+        onCancel={dialogConfig.onCancel}
+      />
+    </AppContext.Provider>
+  );
 }
 

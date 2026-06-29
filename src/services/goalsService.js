@@ -53,11 +53,39 @@ export const goalsService = {
   getAll: async (userId) => {
     requireUser(userId);
     try {
-      const { data: goalsData, error: ge } = await supabase
-        .from('goals')
-        .select('*')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false });
+      // Try with deleted_at filter first (post-migration)
+      let goalsData, ge;
+      try {
+        const result = await supabase
+          .from('goals')
+          .select('*')
+          .eq('user_id', userId)
+          .is('deleted_at', null)
+          .order('created_at', { ascending: false });
+        goalsData = result.data;
+        ge = result.error;
+
+        // If deleted_at column doesn't exist (42703), fallback to query without it
+        if (ge && (ge.code === '42703' || ge.message?.includes('deleted_at'))) {
+          console.warn('[goalsService.getAll] Coluna deleted_at ausente — buscando sem filtro de soft delete.');
+          const fallback = await supabase
+            .from('goals')
+            .select('*')
+            .eq('user_id', userId)
+            .order('created_at', { ascending: false });
+          goalsData = fallback.data;
+          ge = fallback.error;
+        }
+      } catch (queryErr) {
+        // Fallback without deleted_at
+        const fallback = await supabase
+          .from('goals')
+          .select('*')
+          .eq('user_id', userId)
+          .order('created_at', { ascending: false });
+        goalsData = fallback.data;
+        ge = fallback.error;
+      }
 
       if (ge) throw ge;
 
@@ -162,8 +190,10 @@ export const goalsService = {
 
       if (error) {
         // Se falhar por coluna inexistente, usar o fallback de serialização na descrição
-        if (error.code === 'PGRST204' || (error.message && error.message.includes("end_time"))) {
-          console.warn('[goalsService.create] Colunas de horário não encontradas. Usando fallback de descrição...');
+        const isColError = error.code === 'PGRST204' || error.code === '42703' ||
+          (error.message && (error.message.includes('end_time') || error.message.includes('start_time') || error.message.includes('column')));
+        if (isColError) {
+          console.warn('[goalsService.create] Colunas de horário não encontradas no banco. Usando fallback de descrição...');
           const { data: fallbackData, error: fallbackError } = await supabase
             .from('goals')
             .insert([{
@@ -247,8 +277,10 @@ export const goalsService = {
 
       if (error) {
         // Se falhar por coluna inexistente, usar o fallback de serialização na descrição
-        if (error.code === 'PGRST204' || (error.message && error.message.includes("end_time"))) {
-          console.warn('[goalsService.update] Colunas de horário não encontradas. Usando fallback de descrição...');
+        const isColError = error.code === 'PGRST204' || error.code === '42703' ||
+          (error.message && (error.message.includes('end_time') || error.message.includes('start_time') || error.message.includes('column')));
+        if (isColError) {
+          console.warn('[goalsService.update] Colunas de horário não encontradas no banco. Usando fallback de descrição...');
           
           const fallbackPayload = {};
           if (updates.title !== undefined) fallbackPayload.title = updates.title;

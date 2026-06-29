@@ -69,7 +69,9 @@ export default function SettingsView() {
     handleCancelSubscription,
     logEvent,
     settingsTab,
-    setSettingsTab
+    setSettingsTab,
+    openCustomAlert,
+    openCustomConfirm
   } = useAppContext();
   const effectiveTheme = useEffectiveTheme(theme);
   const [loading, setLoading] = useState(false);
@@ -225,24 +227,37 @@ export default function SettingsView() {
   };
 
   const handleDeleteAccount = async () => {
-    if (!window.confirm('Tem certeza que deseja excluir sua conta? Seus dados serão mantidos por 30 dias para recuperação (Soft Delete).')) return;
-    
-    setLoading(true);
-    try {
-      const { error } = await supabase.auth.updateUser({
-        data: {
-          account_status: 'deleted',
-          deleted_at: new Date().toISOString()
+    openCustomConfirm(
+      'Tem certeza que deseja solicitar a exclusão da sua conta? Seus dados serão mantidos por 30 dias para recuperação e depois apagados permanentemente.',
+      'Excluir Conta',
+      async () => {
+        setLoading(true);
+        try {
+          const nowIso = new Date().toISOString();
+          const { error: metaErr } = await supabase.auth.updateUser({
+            data: {
+              account_status: 'deleted',
+              deleted_at: nowIso
+            }
+          });
+          if (metaErr) throw metaErr;
+
+          await supabase.from('profiles').update({
+            account_status: 'deleted',
+            deleted_at: nowIso
+          }).eq('id', currentUser.id);
+
+          openCustomAlert('Conta solicitada para exclusão com sucesso. Você será desconectado.', 'Conta Marcada para Exclusão');
+          setTimeout(() => handleLogout(), 1500);
+        } catch (e) {
+          openCustomAlert('Erro ao excluir conta: ' + e.message, 'Erro');
+        } finally {
+          setLoading(false);
         }
-      });
-      if (error) throw error;
-      alert('Conta desativada com sucesso. Você será desconectado.');
-      handleLogout();
-    } catch (e) {
-      alert('Erro ao excluir conta: ' + e.message);
-    } finally {
-      setLoading(false);
-    }
+      },
+      'Solicitar Exclusão',
+      'Cancelar'
+    );
   };
 
   const handleExportGoogleCalendar = () => {

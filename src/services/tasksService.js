@@ -32,12 +32,38 @@ export const tasksService = {
   getAll: async (userId) => {
     requireUser(userId);
     try {
-      const { data, error } = await supabase
-        .from('tasks')
-        .select('*')
-        .eq('user_id', userId)
-        .is('deleted_at', null)
-        .order('created_at', { ascending: false });
+      let data, error;
+      try {
+        const result = await supabase
+          .from('tasks')
+          .select('*')
+          .eq('user_id', userId)
+          .is('deleted_at', null)
+          .order('created_at', { ascending: false });
+        data = result.data;
+        error = result.error;
+
+        // Fallback se a coluna deleted_at não existe no banco (erro 42703)
+        if (error && (error.code === '42703' || error.message?.includes('deleted_at'))) {
+          console.warn('[tasksService.getAll] Coluna deleted_at ausente em tasks — buscando sem filtro.');
+          const fallback = await supabase
+            .from('tasks')
+            .select('*')
+            .eq('user_id', userId)
+            .order('created_at', { ascending: false });
+          data = fallback.data;
+          error = fallback.error;
+        }
+      } catch (queryErr) {
+        // Segundo nível de fallback caso a query inteira falhe com a coluna
+        const fallback = await supabase
+          .from('tasks')
+          .select('*')
+          .eq('user_id', userId)
+          .order('created_at', { ascending: false });
+        data = fallback.data;
+        error = fallback.error;
+      }
 
       if (error) throw error;
       
