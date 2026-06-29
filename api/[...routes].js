@@ -543,9 +543,11 @@ export default async function handler(req, res) {
 
     try {
         if (route === 'subscription/create') {
-            await handleSubscriptionCreate(req, res);
+            const handleSubCreate = (await import('./billing/create-subscription.js')).default;
+            await handleSubCreate(req, res);
         } else if (route === 'subscription/status') {
-            await handleSubscriptionStatus(req, res);
+            const handleSubStatus = (await import('./billing/status.js')).default;
+            await handleSubStatus(req, res);
         } else if (route === 'subscription/sync') {
             await handleSubscriptionSync(req, res);
         } else if (route === 'billing/asaas-webhook' || route === 'webhooks/asaas' || route === 'webhook/asaas') {
@@ -557,19 +559,24 @@ export default async function handler(req, res) {
             return res.status(200).json(result);
 
         } else if (route === 'access/check' || route === 'auth/check-access') {
-            await handleAccessCheck(req, res);
+            const handleAccess = (await import('./auth/access-check.js')).default;
+            await handleAccess(req, res);
         } else if (route === 'payments/create' || route === 'payments/pix') {
-            await handleSubscriptionCreate(req, res);
+            const handleSubCreate = (await import('./billing/create-subscription.js')).default;
+            await handleSubCreate(req, res);
         } else if (route === 'analytics/revenue') {
-            await handleAnalyticsRevenue(req, res);
+            const handleRev = (await import('./analytics/revenue.js')).default;
+            await handleRev(req, res);
         } else if (route === 'analytics/user-timeline') {
             await handleAnalyticsUserTimeline(req, res);
         } else if (route === 'analytics/revenue-integrity') {
             await handleAnalyticsRevenueIntegrity(req, res);
         } else if (route === 'payment-events/log') {
-            await handlePaymentEventsLog(req, res);
+            const handlePayLog = (await import('./payments/events-log.js')).default;
+            await handlePayLog(req, res);
         } else if (route === 'admin/dashboard') {
-            await handleAdminDashboard(req, res);
+            const handleDash = (await import('./admin/dashboard.js')).default;
+            await handleDash(req, res);
         } else if (route === 'admin/billing/health') {
             await handleAdminBillingHealth(req, res);
         } else if (route === 'admin/payment-events' || route === 'admin/billing/timeline' || route.startsWith('admin/billing/user')) {
