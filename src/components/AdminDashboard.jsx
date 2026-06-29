@@ -24,7 +24,12 @@ export default function AdminDashboard() {
   const [error, setError] = useState(null);
   
   // Navigation tabs for the admin dashboard
-  const [activeAdminTab, setActiveAdminTab] = useState('metrics'); // 'metrics' | 'users' | 'funnels' | 'payments' | 'notifications'
+  const [activeAdminTab, setActiveAdminTab] = useState(() => {
+    if (typeof window !== 'undefined' && (window.location.pathname.includes('/admin/status') || window.location.search.includes('status'))) {
+      return 'status';
+    }
+    return 'metrics';
+  }); // 'metrics' | 'status' | 'users' | 'funnels' | 'payments' | 'notifications'
   const [paymentHierarchyTab, setPaymentHierarchyTab] = useState('overview'); // 'overview' | 'diagnostics' | 'raw'
 
   // Push Notifications Queue Console States
