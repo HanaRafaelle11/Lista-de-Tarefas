@@ -7,7 +7,6 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Algoritmo de Retry Exponencial (1 min, 5 min, 15 min, 30 min, 1 hora)
 function getExponentialBackoffTime(attempts: number): string {
   const minutes = attempts === 1 ? 5 : attempts === 2 ? 15 : attempts === 3 ? 30 : 60;
   return new Date(Date.now() + minutes * 60 * 1000).toISOString();
@@ -44,7 +43,7 @@ serve(async (req) => {
       }
     }
 
-    // 1. Fetch pending items scheduled for now or earlier
+    // Fetch pending or failed retryable notifications
     const { data: queue, error: queueError } = await supabase
       .from('notification_queue')
       .select('*')
@@ -69,7 +68,7 @@ serve(async (req) => {
       });
     }
 
-    // 2. Agrupamento Inteligente por usuário (Notification Grouping)
+    // Grouping by user for batch push
     const groupedByUser: Record<string, typeof queue> = {};
     queue.forEach(item => {
       if (!groupedByUser[item.user_id]) groupedByUser[item.user_id] = [];
@@ -111,7 +110,6 @@ serve(async (req) => {
           .update({ status: 'processing', attempts: (item.attempts || 0) + 1, updated_at: new Date().toISOString() })
           .eq('id', item.id);
 
-        // Alimentar Centro de Notificações In-App
         await supabase.from('in_app_notifications').insert({
           user_id: userId,
           notification_queue_id: item.id,
@@ -126,6 +124,14 @@ serve(async (req) => {
       if (!subscriptions || subscriptions.length === 0) {
         for (const item of items) {
           await supabase.from('notification_queue').update({ status: 'failed', last_error: 'No push subscriptions', updated_at: new Date().toISOString() }).eq('id', item.id);
+          await supabase.from('notification_logs').insert({
+            user_id: userId,
+            notification_queue_id: item.id,
+            status: 'failed',
+            title: item.title,
+            body: item.body,
+            error_message: 'No push subscriptions'
+          });
         }
         continue;
       }
@@ -138,8 +144,16 @@ serve(async (req) => {
           );
 
           for (const item of items) {
-            await supabase.from('notification_queue').update({ status: 'success', sent_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq('id', item.id);
+            await supabase.from('notification_queue').update({ status: 'sent', sent_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq('id', item.id);
             await supabase.from('notification_analytics').insert({ user_id: userId, notification_id: item.id, event: 'sent', metadata: payloadObj });
+            await supabase.from('notification_logs').insert({
+              user_id: userId,
+              notification_queue_id: item.id,
+              status: 'sent',
+              title: item.title,
+              body: item.body,
+              payload: payloadObj
+            });
             processedCount++;
           }
         } catch (err) {
@@ -150,6 +164,14 @@ serve(async (req) => {
             const nextRetry = getExponentialBackoffTime((item.attempts || 0) + 1);
             await supabase.from('notification_queue').update({ status: 'failed', scheduled_for: nextRetry, last_error: errMsg, updated_at: new Date().toISOString() }).eq('id', item.id);
             await supabase.from('notification_analytics').insert({ user_id: userId, notification_id: item.id, event: 'failed', metadata: { error: errMsg } });
+            await supabase.from('notification_logs').insert({
+              user_id: userId,
+              notification_queue_id: item.id,
+              status: 'failed',
+              title: item.title,
+              body: item.body,
+              error_message: errMsg
+            });
           }
 
           if (statusCode === 404 || statusCode === 410) {
@@ -159,7 +181,7 @@ serve(async (req) => {
       }
     }
 
-    return new Response(JSON.stringify({ message: 'Enterprise execution completed', processed: processedCount, workerId }), {
+    return new Response(JSON.stringify({ message: 'E2E Worker execution completed', processed: processedCount, workerId }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200
     });

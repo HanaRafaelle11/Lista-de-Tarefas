@@ -176,9 +176,7 @@ export default function TodoItem({ item, onToggleComplete, onDelete, onEdit, goa
         
         {/* Botão Excluir Restaurado e Destacado */}
         <button 
-          onClick={() => {
-            if (onDelete) onDelete(item.id);
-          }}
+          onClick={() => setShowDeleteModal(true)}
           className="todo-item-action-btn delete-btn"
           title="Excluir tarefa"
           aria-label="Excluir tarefa"
@@ -187,6 +185,47 @@ export default function TodoItem({ item, onToggleComplete, onDelete, onEdit, goa
           <Trash2 size={15} />
         </button>
       </div>
+
+      {/* Modal de Confirmação de Exclusão */}
+      {showDeleteModal && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', justifyContent: 'center', alignItems: 'center',
+          zIndex: 99999, padding: '16px'
+        }}>
+          <div style={{
+            backgroundColor: 'var(--bg-card)', padding: '24px', borderRadius: 'var(--radius-lg)',
+            maxWidth: '400px', width: '100%', border: '1px solid var(--border-light)', boxShadow: 'var(--shadow-lg)'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--danger)', marginBottom: '12px' }}>
+              <AlertCircle size={24} />
+              <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '700', color: 'var(--text-main)' }}>Excluir tarefa?</h3>
+            </div>
+            <p style={{ fontSize: '13.5px', color: 'var(--text-muted)', lineHeight: '1.5', marginBottom: '20px' }}>
+              Tem certeza que deseja excluir esta tarefa? Essa ação não pode ser desfeita.
+            </p>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+              <button 
+                onClick={() => setShowDeleteModal(false)}
+                className="btn-secondary"
+                style={{ padding: '8px 16px', fontSize: '13px' }}
+              >
+                Cancelar
+              </button>
+              <button 
+                onClick={() => {
+                  setShowDeleteModal(false);
+                  if (onDelete) onDelete(item.id);
+                }}
+                className="btn-primary"
+                style={{ backgroundColor: 'var(--danger)', borderColor: 'var(--danger)', padding: '8px 16px', fontSize: '13px', color: '#fff' }}
+              >
+                Excluir
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

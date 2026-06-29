@@ -36,26 +36,21 @@ export const tasksService = {
         .from('tasks')
         .select('*')
         .eq('user_id', userId)
+        .is('deleted_at', null)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
       
       const mapped = (data || []).map(mapTask);
       
-      // Recupera tarefas deletadas locais para não perdê-las na sincronização
-      let allTasks = [...mapped];
       try {
-        const localTasks = await localDB.getAll('tasks');
-        const localDeleted = localTasks.filter(t => t.user_id === userId && t.deletedAt);
-        allTasks = [...mapped, ...localDeleted];
-        
         await localDB.clear('tasks');
-        await localDB.putMany('tasks', allTasks);
+        await localDB.putMany('tasks', mapped);
       } catch (err) {
         console.warn('[tasksService.getAll] Erro ao sincronizar com cache local:', err.message);
       }
 
-      return { data: allTasks, error: null };
+      return { data: mapped, error: null };
     } catch (error) {
       console.warn('[tasksService.getAll] Falha ao carregar tarefas — usando IndexedDB offline:', error.message);
       try {
