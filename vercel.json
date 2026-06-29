@@ -38,6 +38,10 @@
   ],
   "crons": [
     {
+      "path": "/api/worker/ping",
+      "schedule": "* * * * *"
+    },
+    {
       "path": "/api/worker/notifications",
       "schedule": "* * * * *"
     },

@@ -15,6 +15,7 @@ import { withAdminAuth } from '../lib/auth/withAdminAuth.js';
 import { logPaymentEvent } from '../lib/payment-logger.js';
 import { billingController } from '../server/modules/billing/billing.controller.js';
 import handleWorkerNotifications from './worker/notifications.js';
+import handleWorkerPing from './worker/ping.js';
 
 
 // =========================================================
@@ -541,6 +542,8 @@ export default async function handler(req, res) {
             await handleBillingExpirationCron(req, res);
         } else if (route === 'worker/notifications') {
             await handleWorkerNotifications(req, res);
+        } else if (route === 'worker/ping') {
+            await handleWorkerPing(req, res);
         } else if (route === 'cron/billing-sanity-check') {
             const result = await runBillingSanityCheck();
             return res.status(200).json(result);
