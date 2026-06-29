@@ -18,6 +18,12 @@ import {
   formatDescriptionWithoutMetadata, 
   buildDescriptionWithMetadata 
 } from '../contexts/AppContext';
+import { 
+  combineDateAndTime, 
+  extractDateAndTimeParts, 
+  formatTaskDateDisplay, 
+  formatTaskTimeDisplay 
+} from '../utils/dateUtils';
 
 // Importar SVGs personalizados
 import MfTasksIcon from '../assets/Icons/mf-tasks.svg';
@@ -40,10 +46,10 @@ const tomorrowStr = () => {
 
 const endOfWeekStr = () => {
   const d = new Date();
-  const dayOfWeek = d.getDay();
-  const daysUntilSunday = 7 - dayOfWeek;
-  d.setDate(d.getDate() + daysUntilSunday);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const day = d.getDay();
+  const diff = d.getDate() + (6 - day);
+  const end = new Date(d.setDate(diff));
+  return `${end.getFullYear()}-${String(end.getMonth() + 1).padStart(2, '0')}-${String(end.getDate()).padStart(2, '0')}`;
 };
 
 function formatFriendlyDate(dateStr) {
@@ -81,10 +87,28 @@ function getGoalIconEmoji(iconName) {
   return emojiMap[iconName.toLowerCase()] || '🎯';
 }
 
+function getCategoryEmoji(iconName) {
+  if (!iconName) return '🎯';
+  const emojiMap = {
+    briefcase: '💼',
+    user: '👤',
+    book: '📚',
+    dumbbell: '🏋️',
+    heart: '❤️',
+    palette: '🎨',
+    music: '🎵',
+    plane: '✈️',
+    sprout: '🌱',
+    trending: '📈',
+    star: '⭐',
+    users: '👥',
+  };
+
+  return emojiMap[iconName.toLowerCase()] || '🎯';
+}
+
 const formatarDataBR = (str) => {
-  if (!str) return '';
-  const p = str.split('-');
-  return p.length === 3 ? `${p[2]}/${p[1]}/${p[0]}` : new Date(str).toLocaleDateString('pt-BR');
+  return formatTaskDateDisplay(str);
 };
 
 
@@ -137,13 +161,16 @@ function categorizeTasks(tasks, goals = [], goalTasks = []) {
       }
       return;
     }
-    if (task.dueDate < today) {
+
+    const taskDateOnly = String(task.dueDate).includes('T') ? String(task.dueDate).split('T')[0] : String(task.dueDate).substring(0, 10);
+
+    if (taskDateOnly < today) {
       sections.overdue.push(task);
-    } else if (task.dueDate === today) {
+    } else if (taskDateOnly === today) {
       sections.today.push(task);
-    } else if (task.dueDate === tomorrow) {
+    } else if (taskDateOnly === tomorrow) {
       sections.tomorrow.push(task);
-    } else if (task.dueDate <= endOfWeek) {
+    } else if (taskDateOnly <= endOfWeek) {
       sections.thisWeek.push(task);
     } else {
       sections.future.push(task);
@@ -356,12 +383,13 @@ export default function TodoView() {
     
     const meta = parseTaskMetadata(task.description);
     const cleanDesc = formatDescriptionWithoutMetadata(task.description);
+    const { datePart, timePart } = extractDateAndTimeParts(task.dueDate);
     
     setDescription(cleanDesc);
     setCategory(task.category);
     setPriority(task.priority);
-    setDueDate(task.dueDate || '');
-    setDueTime(meta.due_time || '');
+    setDueDate(datePart || '');
+    setDueTime(timePart || meta.due_time || '');
     setRecurrence(meta.recurrence || 'nenhuma');
     
     setIsModalOpen(true);
@@ -393,7 +421,7 @@ export default function TodoView() {
     e.preventDefault();
     if (!title.trim()) return;
 
-    // Constrói descrição serializada com metadados de time/recurrence
+    const combinedDueDate = combineDateAndTime(dueDate, dueTime);
     const metaDescription = buildDescriptionWithMetadata(description, dueTime, recurrence);
 
     const taskData = {
@@ -401,7 +429,7 @@ export default function TodoView() {
       description: metaDescription,
       category,
       priority,
-      dueDate: dueDate || null,
+      dueDate: combinedDueDate,
       goal_id: linkedGoal || null
     };
 
@@ -1214,7 +1242,7 @@ export default function TodoView() {
                         {task.dueDate && (
                           <span style={{ fontSize: '10px', color: 'var(--text-muted)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
                             <Calendar size={11} />
-                            <span>{formatarDataBR(task.dueDate)} {meta.due_time ? `às ${meta.due_time}` : ''}</span>
+                            <span>{formatTaskDateDisplay(task.dueDate)}{formatTaskTimeDisplay(task.dueDate, meta.due_time) ? ` • ${formatTaskTimeDisplay(task.dueDate, meta.due_time)}` : ''}</span>
                           </span>
                         )}
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '6px', alignItems: 'center' }}>
@@ -1264,7 +1292,7 @@ export default function TodoView() {
                         {task.dueDate && (
                           <span style={{ fontSize: '10px', color: 'var(--text-muted)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
                             <Calendar size={11} />
-                            <span>{formatarDataBR(task.dueDate)} {meta.due_time ? `às ${meta.due_time}` : ''}</span>
+                            <span>{formatTaskDateDisplay(task.dueDate)}{formatTaskTimeDisplay(task.dueDate, meta.due_time) ? ` • ${formatTaskTimeDisplay(task.dueDate, meta.due_time)}` : ''}</span>
                           </span>
                         )}
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '6px', alignItems: 'center' }}>

@@ -1,20 +1,21 @@
 import React, { useState } from 'react';
-import { Calendar, Trash2, Edit2, AlertCircle, CalendarPlus, Check, Repeat, Unlink, Copy } from 'lucide-react';
+import { Calendar, Trash2, Edit2, AlertCircle, CalendarPlus, Check, Repeat, Unlink, Copy, Clock } from 'lucide-react';
 import { parseTaskMetadata, formatDescriptionWithoutMetadata, useAppContext } from '../contexts/AppContext';
+import { formatTaskDateDisplay, formatTaskTimeDisplay } from '../utils/dateUtils';
 import CategoryIcon from './CategoryIcon';
 
 // ─── Redireciona para o Google Calendar web pré-preenchido ───────────────────
 function exportTaskToCalendar(task) {
   const cleanDescription = formatDescriptionWithoutMetadata(task.description);
+  const dataLimite = task.dueDate ? task.dueDate.split('T')[0] : new Date().toISOString().split('T')[0];
   const tarefa = {
     titulo: task.title,
-    data_limite: task.dueDate || new Date().toISOString().split('T')[0],
+    data_limite: dataLimite,
     descricao: cleanDescription || '',
   };
   const url = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=[MyFlowDay]%20${encodeURIComponent(tarefa.titulo)}&dates=${tarefa.data_limite.replace(/-/g, '')}/${tarefa.data_limite.replace(/-/g, '')}&details=${encodeURIComponent(tarefa.descricao)}&sf=true&output=xml`;
   window.open(url, '_blank');
 }
-
 
 export default function TodoItem({ item, onToggleComplete, onDelete, onEdit, goalId, onUnlinkGoal, onDuplicate }) {
   const [calExported, setCalExported] = useState(false);
@@ -32,30 +33,21 @@ export default function TodoItem({ item, onToggleComplete, onDelete, onEdit, goa
 
   // Verificar se a tarefa está atrasada
   const isOverdue = () => {
-    if (item.completed) return false;
-    if (!item.dueDate) return false;
+    if (item.completed || !item.dueDate) return false;
     
-    // Obter data atual zerada (sem horas)
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const now = new Date();
+    const dateStr = item.dueDate.includes('T') ? item.dueDate : `${item.dueDate}T23:59:59`;
+    const taskDate = new Date(dateStr);
     
-    // Obter data de vencimento zerada
-    const dueDate = new Date(item.dueDate + 'T00:00:00'); // Trata timezone local
-    dueDate.setHours(0, 0, 0, 0);
-    
-    return dueDate < today;
-  };
-
-  // Formatar data em formato brasileiro dd/mm/aaaa
-  const formatarDataBR = (str) => {
-    if (!str) return '';
-    const p = str.split('-');
-    return p.length === 3 ? `${p[2]}/${p[1]}/${p[0]}` : new Date(str).toLocaleDateString('pt-BR');
+    return taskDate < now;
   };
 
   const overdue = isOverdue();
   const meta = parseTaskMetadata(item.description);
   const cleanDescription = formatDescriptionWithoutMetadata(item.description);
+
+  const dateText = formatTaskDateDisplay(item.dueDate);
+  const timeText = formatTaskTimeDisplay(item.dueDate, meta.due_time);
 
   return (
     <div 
@@ -90,27 +82,33 @@ export default function TodoItem({ item, onToggleComplete, onDelete, onEdit, goa
           </p>
         )}
 
-        {/* Metadados: Tags e Data */}
-        <div className="todo-item-meta-row">
+        {/* Metadados: Tags, Data e Hora */}
+        <div className="todo-item-meta-row" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '8px' }}>
           {/* Categoria */}
-          <span className={`badge-category ${item.category.toLowerCase()}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-            <CategoryIcon categoryId={item.category} size={12} />
-            <span>{item.category}</span>
+          <span className={`badge-category ${item.category ? item.category.toLowerCase() : 'trabalho'}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+            <CategoryIcon categoryId={item.category || 'Trabalho'} size={12} />
+            <span>{item.category || 'Trabalho'}</span>
           </span>
 
           {/* Prioridade */}
-          <span className={`badge-priority ${item.priority.toLowerCase()}`}>
-            {item.priority}
+          <span className={`badge-priority ${(item.priority || 'Média').toLowerCase()}`}>
+            {item.priority || 'Média'}
           </span>
 
-          {/* Vencimento */}
+          {/* Vencimento com Horário Limpo */}
           {item.dueDate && (
-            <div className={`todo-item-date-wrapper ${overdue ? 'date-overdue' : ''}`}>
+            <div className={`todo-item-date-wrapper ${overdue ? 'date-overdue' : ''}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: '600' }}>
               <Calendar size={13} />
               <span className="todo-item-date-text">
-                {formatarDataBR(item.dueDate)}
-                {meta.due_time && ` às ${meta.due_time}`}
+                {dateText}
               </span>
+              {timeText && (
+                <>
+                  <span style={{ opacity: 0.5 }}>•</span>
+                  <Clock size={12} style={{ marginLeft: '2px' }} />
+                  <span>{timeText}</span>
+                </>
+              )}
             </div>
           )}
 
@@ -125,7 +123,7 @@ export default function TodoItem({ item, onToggleComplete, onDelete, onEdit, goa
       </div>
 
       {/* Ações (Agenda / Editar / Excluir) */}
-      <div className="todo-item-actions">
+      <div className="todo-item-actions" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
         {/* Botão Adicionar à Agenda */}
         <button
           onClick={handleExportCalendar}
@@ -176,10 +174,15 @@ export default function TodoItem({ item, onToggleComplete, onDelete, onEdit, goa
           </button>
         )}
         
+        {/* Botão Excluir Restaurado e Destacado */}
         <button 
-          onClick={() => onDelete(item.id)}
+          onClick={() => {
+            if (onDelete) onDelete(item.id);
+          }}
           className="todo-item-action-btn delete-btn"
           title="Excluir tarefa"
+          aria-label="Excluir tarefa"
+          style={{ color: 'var(--danger)', cursor: 'pointer' }}
         >
           <Trash2 size={15} />
         </button>
