@@ -6,7 +6,6 @@ import {
 } from 'lucide-react';
 import { useAppContext } from '../contexts/AppContext';
 import { supabase } from '../supabaseClient';
-import { processNotificationQueue } from '../../services/push-worker-engine.js';
 import AdminNotificationDashboard from './AdminNotificationDashboard';
 import SystemStatusDashboard from './SystemStatusDashboard';
 import GrowthOSDashboard from './GrowthOSDashboard';
