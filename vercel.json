@@ -38,6 +38,10 @@
   ],
   "crons": [
     {
+      "path": "/api/worker/notifications",
+      "schedule": "* * * * *"
+    },
+    {
       "path": "/api/cron/billing-expiration",
       "schedule": "0 3 * * *"
     },

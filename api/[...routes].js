@@ -14,6 +14,7 @@ import { runBillingSanityCheck } from '../jobs/billing-sanity-check.js';
 import { withAdminAuth } from '../lib/auth/withAdminAuth.js';
 import { logPaymentEvent } from '../lib/payment-logger.js';
 import { billingController } from '../server/modules/billing/billing.controller.js';
+import handleWorkerNotifications from './worker/notifications.js';
 
 
 // =========================================================
@@ -538,6 +539,8 @@ export default async function handler(req, res) {
             await handleUnifiedAsaasWebhook(req, res);
         } else if (route === 'cron/billing-expiration') {
             await handleBillingExpirationCron(req, res);
+        } else if (route === 'worker/notifications') {
+            await handleWorkerNotifications(req, res);
         } else if (route === 'cron/billing-sanity-check') {
             const result = await runBillingSanityCheck();
             return res.status(200).json(result);
