@@ -7,9 +7,16 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Algoritmo de Retry Exponencial (1 min, 5 min, 15 min, 30 min, 1 hora)
+function getExponentialBackoffTime(attempts: number): string {
+  const minutes = attempts === 1 ? 5 : attempts === 2 ? 15 : attempts === 3 ? 30 : 60;
+  const retryDate = new Date(Date.now() + minutes * 60 * 1000);
+  return retryDate.toISOString();
+}
+
 serve(async (req) => {
   const startTime = Date.now();
-  const jobId = `job_${startTime}_${Math.random().toString(36).substring(2, 7)}`;
+  const workerId = `worker_${startTime}_${Math.random().toString(36).substring(2, 7)}`;
 
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -32,22 +39,21 @@ serve(async (req) => {
 
     if (vapidPublicKey && vapidPrivateKey) {
       try {
-        webpush.setVapidDetails(
-          'mailto:admin@myflowday.com',
-          vapidPublicKey,
-          vapidPrivateKey
-        );
+        webpush.setVapidDetails('mailto:admin@myflowday.com', vapidPublicKey, vapidPrivateKey);
       } catch (e) {
         console.warn('VAPID setVapidDetails warning:', e.message);
       }
     }
 
-    // 1. Fetch pending items scheduled for now or earlier
+    // 1. Fetch pending items scheduled for now or earlier with max attempts < 5
     const { data: queue, error: queueError } = await supabase
       .from('notification_queue')
       .select('*')
-      .eq('status', 'pending')
+      .in('status', ['pending', 'failed'])
       .lte('scheduled_for', new Date().toISOString())
+      .lt('attempts', 5)
+      .order('priority', { ascending: false })
+      .order('scheduled_for', { ascending: true })
       .limit(100);
 
     if (queueError) {
@@ -58,7 +64,7 @@ serve(async (req) => {
     }
 
     if (!queue?.length) {
-      return new Response(JSON.stringify({ message: 'No pending notifications', processed: 0, jobId }), {
+      return new Response(JSON.stringify({ message: 'No pending notifications', processed: 0, workerId }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200
       });
@@ -67,10 +73,16 @@ serve(async (req) => {
     let processedCount = 0;
 
     for (const item of queue) {
-      await supabase
+      const currentAttempts = (item.attempts || 0) + 1;
+
+      // Trava optimista de concorrência
+      const { error: lockError } = await supabase
         .from('notification_queue')
-        .update({ status: 'processing' })
-        .eq('id', item.id);
+        .update({ status: 'processing', attempts: currentAttempts, updated_at: new Date().toISOString() })
+        .eq('id', item.id)
+        .eq('status', item.status);
+
+      if (lockError) continue;
 
       const { data: subscriptions } = await supabase
         .from('push_subscriptions')
@@ -80,20 +92,24 @@ serve(async (req) => {
       const payloadObj = {
         title: item.title,
         body: item.body || '',
-        url: '/tasks',
-        tag: `task_push_${item.task_id}`
+        url: item.entity_type === 'focus' ? '/focus' : item.entity_type === 'goal' ? '/goals' : '/tasks',
+        tag: `push_${item.entity_type}_${item.entity_id}`,
+        entity_id: item.entity_id,
+        entity_type: item.entity_type,
+        event_type: item.event_type,
+        notification_id: item.id
       };
 
       if (!subscriptions || subscriptions.length === 0) {
         await supabase
           .from('notification_queue')
-          .update({ status: 'failed', updated_at: new Date().toISOString() })
+          .update({ status: 'failed', last_error: 'No active push subscriptions found for user', updated_at: new Date().toISOString() })
           .eq('id', item.id);
 
         await supabase.from('notification_logs').insert({
-          job_id: jobId,
+          job_id: workerId,
           notification_id: item.id,
-          task_id: item.task_id,
+          task_id: item.entity_type === 'task' ? item.entity_id : null,
           user_id: item.user_id,
           subscription: 'none',
           status: 'failed',
@@ -119,13 +135,13 @@ serve(async (req) => {
 
           await supabase
             .from('notification_queue')
-            .update({ status: 'success', updated_at: new Date().toISOString() })
+            .update({ status: 'success', sent_at: new Date().toISOString(), last_error: null, updated_at: new Date().toISOString() })
             .eq('id', item.id);
 
           await supabase.from('notification_logs').insert({
-            job_id: jobId,
+            job_id: workerId,
             notification_id: item.id,
-            task_id: item.task_id,
+            task_id: item.entity_type === 'task' ? item.entity_id : null,
             user_id: item.user_id,
             subscription: sub.endpoint,
             status: 'success',
@@ -137,29 +153,34 @@ serve(async (req) => {
           processedCount++;
         } catch (err) {
           const statusCode = err.statusCode || err.status;
-          
-          await supabase
-            .from('notification_queue')
-            .update({ status: 'failed', updated_at: new Date().toISOString() })
-            .eq('id', item.id);
+          const errMsg = String(err.message || err);
+
+          if (currentAttempts >= 5) {
+            await supabase
+              .from('notification_queue')
+              .update({ status: 'failed', last_error: `MAX_RETRIES: ${errMsg}`, updated_at: new Date().toISOString() })
+              .eq('id', item.id);
+          } else {
+            const nextRetry = getExponentialBackoffTime(currentAttempts);
+            await supabase
+              .from('notification_queue')
+              .update({ status: 'failed', scheduled_for: nextRetry, last_error: errMsg, updated_at: new Date().toISOString() })
+              .eq('id', item.id);
+          }
 
           // Limpeza automática de assinaturas inválidas (404 / 410 Gone)
           if (statusCode === 404 || statusCode === 410) {
-            console.log(`[Worker] Cleaned expired subscription: ${sub.endpoint}`);
-            await supabase
-              .from('push_subscriptions')
-              .delete()
-              .eq('endpoint', sub.endpoint);
+            await supabase.from('push_subscriptions').delete().eq('endpoint', sub.endpoint);
           }
 
           await supabase.from('notification_logs').insert({
-            job_id: jobId,
+            job_id: workerId,
             notification_id: item.id,
-            task_id: item.task_id,
+            task_id: item.entity_type === 'task' ? item.entity_id : null,
             user_id: item.user_id,
             subscription: sub.endpoint,
             status: 'failed',
-            error: String(err.message || err),
+            error: errMsg,
             tempo_execucao: Date.now() - startTime,
             payload: payloadObj
           });
@@ -167,12 +188,12 @@ serve(async (req) => {
       }
     }
 
-    return new Response(JSON.stringify({ message: 'Execution completed', processed: processedCount, jobId }), {
+    return new Response(JSON.stringify({ message: 'Execution completed', processed: processedCount, workerId }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200
     });
   } catch (err) {
-    return new Response(JSON.stringify({ error: String(err.message || err), jobId }), {
+    return new Response(JSON.stringify({ error: String(err.message || err), workerId }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 500
     });
