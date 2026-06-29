@@ -10,8 +10,7 @@ const corsHeaders = {
 // Algoritmo de Retry Exponencial (1 min, 5 min, 15 min, 30 min, 1 hora)
 function getExponentialBackoffTime(attempts: number): string {
   const minutes = attempts === 1 ? 5 : attempts === 2 ? 15 : attempts === 3 ? 30 : 60;
-  const retryDate = new Date(Date.now() + minutes * 60 * 1000);
-  return retryDate.toISOString();
+  return new Date(Date.now() + minutes * 60 * 1000).toISOString();
 }
 
 serve(async (req) => {
@@ -45,7 +44,7 @@ serve(async (req) => {
       }
     }
 
-    // 1. Fetch pending items scheduled for now or earlier with max attempts < 5
+    // 1. Fetch pending items scheduled for now or earlier
     const { data: queue, error: queueError } = await supabase
       .from('notification_queue')
       .select('*')
@@ -70,125 +69,97 @@ serve(async (req) => {
       });
     }
 
+    // 2. Agrupamento Inteligente por usuário (Notification Grouping)
+    const groupedByUser: Record<string, typeof queue> = {};
+    queue.forEach(item => {
+      if (!groupedByUser[item.user_id]) groupedByUser[item.user_id] = [];
+      groupedByUser[item.user_id].push(item);
+    });
+
     let processedCount = 0;
 
-    for (const item of queue) {
-      const currentAttempts = (item.attempts || 0) + 1;
-
-      // Trava optimista de concorrência
-      const { error: lockError } = await supabase
-        .from('notification_queue')
-        .update({ status: 'processing', attempts: currentAttempts, updated_at: new Date().toISOString() })
-        .eq('id', item.id)
-        .eq('status', item.status);
-
-      if (lockError) continue;
-
+    for (const [userId, items] of Object.entries(groupedByUser)) {
       const { data: subscriptions } = await supabase
         .from('push_subscriptions')
         .select('*')
-        .eq('user_id', item.user_id);
+        .eq('user_id', userId);
 
-      const payloadObj = {
-        title: item.title,
-        body: item.body || '',
-        url: item.entity_type === 'focus' ? '/focus' : item.entity_type === 'goal' ? '/goals' : '/tasks',
-        tag: `push_${item.entity_type}_${item.entity_id}`,
-        entity_id: item.entity_id,
-        entity_type: item.entity_type,
-        event_type: item.event_type,
-        notification_id: item.id
+      const isGrouped = items.length > 1;
+      const firstItem = items[0];
+
+      const payloadObj = isGrouped ? {
+        title: 'MyFlowDay ⚡',
+        body: `Você possui ${items.length} atividades agendadas para agora!`,
+        url: '/tasks',
+        tag: `group_push_${Date.now()}`,
+        grouped_count: items.length,
+        items: items.map(i => ({ title: i.title, id: i.entity_id }))
+      } : {
+        title: firstItem.title,
+        body: firstItem.body || '',
+        url: firstItem.entity_type === 'focus' ? '/focus' : firstItem.entity_type === 'goal' ? '/goals' : '/tasks',
+        tag: `push_${firstItem.entity_type}_${firstItem.entity_id}`,
+        entity_id: firstItem.entity_id,
+        entity_type: firstItem.entity_type,
+        event_type: firstItem.event_type,
+        notification_id: firstItem.id
       };
 
-      if (!subscriptions || subscriptions.length === 0) {
+      for (const item of items) {
         await supabase
           .from('notification_queue')
-          .update({ status: 'failed', last_error: 'No active push subscriptions found for user', updated_at: new Date().toISOString() })
+          .update({ status: 'processing', attempts: (item.attempts || 0) + 1, updated_at: new Date().toISOString() })
           .eq('id', item.id);
 
-        await supabase.from('notification_logs').insert({
-          job_id: workerId,
-          notification_id: item.id,
-          task_id: item.entity_type === 'task' ? item.entity_id : null,
-          user_id: item.user_id,
-          subscription: 'none',
-          status: 'failed',
-          error: 'No active push subscriptions found for user',
-          tempo_execucao: Date.now() - startTime,
-          payload: payloadObj
+        // Alimentar Centro de Notificações In-App
+        await supabase.from('in_app_notifications').insert({
+          user_id: userId,
+          notification_queue_id: item.id,
+          event_type: item.event_type,
+          entity_type: item.entity_type,
+          entity_id: item.entity_id,
+          title: item.title,
+          body: item.body
         });
+      }
+
+      if (!subscriptions || subscriptions.length === 0) {
+        for (const item of items) {
+          await supabase.from('notification_queue').update({ status: 'failed', last_error: 'No push subscriptions', updated_at: new Date().toISOString() }).eq('id', item.id);
+        }
         continue;
       }
 
       for (const sub of subscriptions || []) {
         try {
           await webpush.sendNotification(
-            {
-              endpoint: sub.endpoint,
-              keys: {
-                p256dh: sub.p256dh || sub.keys?.p256dh,
-                auth: sub.auth || sub.keys?.auth
-              }
-            },
+            { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh || sub.keys?.p256dh, auth: sub.auth || sub.keys?.auth } },
             JSON.stringify(payloadObj)
           );
 
-          await supabase
-            .from('notification_queue')
-            .update({ status: 'success', sent_at: new Date().toISOString(), last_error: null, updated_at: new Date().toISOString() })
-            .eq('id', item.id);
-
-          await supabase.from('notification_logs').insert({
-            job_id: workerId,
-            notification_id: item.id,
-            task_id: item.entity_type === 'task' ? item.entity_id : null,
-            user_id: item.user_id,
-            subscription: sub.endpoint,
-            status: 'success',
-            error: null,
-            tempo_execucao: Date.now() - startTime,
-            payload: payloadObj
-          });
-            
-          processedCount++;
+          for (const item of items) {
+            await supabase.from('notification_queue').update({ status: 'success', sent_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq('id', item.id);
+            await supabase.from('notification_analytics').insert({ user_id: userId, notification_id: item.id, event: 'sent', metadata: payloadObj });
+            processedCount++;
+          }
         } catch (err) {
           const statusCode = err.statusCode || err.status;
           const errMsg = String(err.message || err);
 
-          if (currentAttempts >= 5) {
-            await supabase
-              .from('notification_queue')
-              .update({ status: 'failed', last_error: `MAX_RETRIES: ${errMsg}`, updated_at: new Date().toISOString() })
-              .eq('id', item.id);
-          } else {
-            const nextRetry = getExponentialBackoffTime(currentAttempts);
-            await supabase
-              .from('notification_queue')
-              .update({ status: 'failed', scheduled_for: nextRetry, last_error: errMsg, updated_at: new Date().toISOString() })
-              .eq('id', item.id);
+          for (const item of items) {
+            const nextRetry = getExponentialBackoffTime((item.attempts || 0) + 1);
+            await supabase.from('notification_queue').update({ status: 'failed', scheduled_for: nextRetry, last_error: errMsg, updated_at: new Date().toISOString() }).eq('id', item.id);
+            await supabase.from('notification_analytics').insert({ user_id: userId, notification_id: item.id, event: 'failed', metadata: { error: errMsg } });
           }
 
-          // Limpeza automática de assinaturas inválidas (404 / 410 Gone)
           if (statusCode === 404 || statusCode === 410) {
             await supabase.from('push_subscriptions').delete().eq('endpoint', sub.endpoint);
           }
-
-          await supabase.from('notification_logs').insert({
-            job_id: workerId,
-            notification_id: item.id,
-            task_id: item.entity_type === 'task' ? item.entity_id : null,
-            user_id: item.user_id,
-            subscription: sub.endpoint,
-            status: 'failed',
-            error: errMsg,
-            tempo_execucao: Date.now() - startTime,
-            payload: payloadObj
-          });
         }
       }
     }
 
-    return new Response(JSON.stringify({ message: 'Execution completed', processed: processedCount, workerId }), {
+    return new Response(JSON.stringify({ message: 'Enterprise execution completed', processed: processedCount, workerId }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200
     });

@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Bell, Check, Trash2 } from 'lucide-react';
+import { Bell, Check, Trash2, Search, Filter } from 'lucide-react';
 import { useAppContext } from '../contexts/AppContext';
 
 export default function NotificationCenter() {
@@ -11,6 +11,8 @@ export default function NotificationCenter() {
   } = useAppContext();
 
   const [isOpen, setIsOpen] = useState(false);
+  const [filterType, setFilterType] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
   const containerRef = useRef(null);
 
   const unreadCount = notifications.filter(n => !n.read).length;
@@ -35,7 +37,6 @@ export default function NotificationCenter() {
   const handleNotificationClick = (n) => {
     let targetTab = n.metadata?.tab || n.metadata?.actionTab;
     
-    // Auto-map based on notification type if not specified or if it's invalid
     if (!targetTab || targetTab === 'evolution') {
       if (n.type === 'achievement') {
         targetTab = 'analytics';
@@ -43,15 +44,15 @@ export default function NotificationCenter() {
         targetTab = 'goals';
       } else if (n.type === 'task') {
         targetTab = 'tasks';
+      } else if (n.type === 'focus' || n.type === 'pomodoro') {
+        targetTab = 'focus';
       } else if (n.type === 'system') {
         targetTab = 'home';
       }
     }
     
     if (targetTab) {
-      // Normalize 'evolution' to 'analytics'
       if (targetTab === 'evolution') targetTab = 'analytics';
-      
       setActiveTab(targetTab);
       setIsOpen(false);
     }
@@ -81,11 +82,21 @@ export default function NotificationCenter() {
     switch (type) {
       case 'achievement': return '🏆';
       case 'goal': return '🎯';
+      case 'habit': return '🌱';
       case 'task': return '📋';
-      case 'system': return '🔔';
+      case 'focus': case 'pomodoro': return '🍅';
+      case 'system': case 'billing': return '🔔';
       default: return '🔔';
     }
   };
+
+  const filteredNotifications = notifications.filter(n => {
+    const matchesFilter = filterType === 'all' || n.type === filterType;
+    const matchesSearch = !searchQuery.trim() || 
+      n.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+      (n.description && n.description.toLowerCase().includes(searchQuery.toLowerCase()));
+    return matchesFilter && matchesSearch;
+  });
 
   return (
     <div className="notification-container" ref={containerRef} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '38px' }}>
@@ -102,15 +113,15 @@ export default function NotificationCenter() {
       </button>
 
       {isOpen && (
-        <div className="notification-dropdown">
-          <div className="notification-header">
-            <h3>Notificações</h3>
-            <div style={{ display: 'flex', gap: '12px' }}>
+        <div className="notification-dropdown" style={{ width: '360px', padding: '16px' }}>
+          <div className="notification-header" style={{ marginBottom: '12px' }}>
+            <h3 style={{ margin: 0, fontSize: '15px', fontWeight: '700' }}>Centro de Notificações</h3>
+            <div style={{ display: 'flex', gap: '8px' }}>
               {unreadCount > 0 && (
                 <button 
                   onClick={markNotificationsAsRead}
                   className="notification-clear-btn"
-                  style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
+                  style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px' }}
                 >
                   <Check size={12} /> Marcar lidas
                 </button>
@@ -119,7 +130,7 @@ export default function NotificationCenter() {
                 <button 
                   onClick={clearNotifications}
                   className="notification-clear-btn"
-                  style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--text-light)' }}
+                  style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--text-light)', fontSize: '11px' }}
                 >
                   <Trash2 size={12} /> Limpar
                 </button>
@@ -127,30 +138,71 @@ export default function NotificationCenter() {
             </div>
           </div>
 
-          <div className="notification-list">
-            {notifications.length === 0 ? (
-              <div className="notification-empty">
-                Nenhuma notificação por enquanto.
+          {/* Busca e Filtros */}
+          <div style={{ marginBottom: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <div style={{ position: 'relative' }}>
+              <Search size={13} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+              <input
+                type="text"
+                placeholder="Buscar notificações..."
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                style={{
+                  width: '100%', padding: '6px 10px 6px 30px', fontSize: '12px',
+                  borderRadius: '6px', border: '1px solid var(--border-light)',
+                  backgroundColor: 'var(--bg-app)', color: 'var(--text-main)'
+                }}
+              />
+            </div>
+            
+            <div style={{ display: 'flex', gap: '4px', overflowX: 'auto', paddingBottom: '2px' }}>
+              {[
+                { key: 'all', label: 'Todas' },
+                { key: 'task', label: 'Tarefas' },
+                { key: 'goal', label: 'Metas' },
+                { key: 'habit', label: 'Hábitos' },
+                { key: 'focus', label: 'Foco' }
+              ].map(f => (
+                <button
+                  key={f.key}
+                  onClick={() => setFilterType(f.key)}
+                  style={{
+                    padding: '3px 8px', fontSize: '11px', borderRadius: '4px', border: 'none',
+                    backgroundColor: filterType === f.key ? 'var(--primary)' : 'var(--bg-app)',
+                    color: filterType === f.key ? 'white' : 'var(--text-muted)',
+                    cursor: 'pointer', whiteSpace: 'nowrap'
+                  }}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="notification-list" style={{ maxHeight: '280px', overflowY: 'auto' }}>
+            {filteredNotifications.length === 0 ? (
+              <div className="notification-empty" style={{ padding: '20px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '12px' }}>
+                Nenhuma notificação localizada.
               </div>
             ) : (
-              notifications.map((n) => (
+              filteredNotifications.map((n) => (
                 <div 
                   key={n.id} 
                   className={`notification-item ${!n.read ? 'unread' : ''}`}
                   onClick={() => handleNotificationClick(n)}
-                  style={{ cursor: 'pointer' }}
+                  style={{ cursor: 'pointer', padding: '10px', borderBottom: '1px solid var(--border-light)' }}
                 >
-                  <div className="notification-item-title">
+                  <div className="notification-item-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12.5px', fontWeight: '600' }}>
                     <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                       <span>{getNotificationIcon(n.type)}</span>
-                      <span>{n.title}</span>
+                      <span style={{ color: 'var(--text-main)' }}>{n.title}</span>
                     </span>
-                    <span className="notification-item-time">
+                    <span className="notification-item-time" style={{ fontSize: '10.5px', color: 'var(--text-muted)' }}>
                       {formatTime(n.timestamp)}
                     </span>
                   </div>
                   {n.description && (
-                    <div className="notification-item-desc" style={{ marginTop: '2px' }}>
+                    <div className="notification-item-desc" style={{ marginTop: '4px', fontSize: '11.5px', color: 'var(--text-muted)' }}>
                       {n.description}
                     </div>
                   )}
