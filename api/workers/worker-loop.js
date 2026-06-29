@@ -1,5 +1,6 @@
 import { processPendingNotificationQueue } from '../../services/notification.service.js';
 import { checkBillingExpirations } from '../../services/billing.service.js';
+import { processGrowthOSEngine } from '../../domain/growth/growthEngine.js';
 import { logger } from '../../lib/logger.js';
 
 export default async function handler(req, res) {
@@ -16,12 +17,16 @@ export default async function handler(req, res) {
     // 2. Processar Expirações de Faturamento
     const billingResult = await checkBillingExpirations({ traceId });
 
+    // 3. Processar Inteligência e Automações Growth OS
+    const growthResult = await processGrowthOSEngine({ traceId });
+
     const latency = Date.now() - start;
     logger.info('worker_loop.finish', {
       traceId,
       latency,
       processedNotifications: notifResult.processed,
-      expiredSubscriptions: billingResult.expiredCount
+      expiredSubscriptions: billingResult.expiredCount,
+      growthActionsTriggered: growthResult.actionsTriggered || 0
     });
 
     return res.status(200).json({
@@ -31,7 +36,8 @@ export default async function handler(req, res) {
       latencyMs: latency,
       summary: {
         notificationsProcessed: notifResult.processed,
-        subscriptionsExpired: billingResult.expiredCount
+        subscriptionsExpired: billingResult.expiredCount,
+        growthActionsTriggered: growthResult.actionsTriggered || 0
       }
     });
 

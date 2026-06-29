@@ -580,6 +580,9 @@ export default async function handler(req, res) {
         } else if (route === 'admin/system-status' || route === 'admin/status') {
             const handleStatus = (await import('./admin/system-status.js')).default;
             await handleStatus(req, res);
+        } else if (route === 'admin/growth/intelligence') {
+            const handleGrowthIntel = (await import('./admin/growth/intelligence.js')).default;
+            await handleGrowthIntel(req, res);
         } else if (route === 'admin/billing/health') {
             await handleAdminBillingHealth(req, res);
         } else if (route === 'admin/payment-events' || route === 'admin/billing/timeline' || route.startsWith('admin/billing/user')) {

@@ -2,13 +2,14 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { 
   BarChart, Users, Star, BarChart3, TrendingUp, ShieldAlert, CheckCircle2, 
   ChevronRight, Download, Filter, Calendar, Award, CheckSquare, Target, Flame, 
-  Activity, ArrowLeft, ArrowRight, UserCheck, DollarSign, Clock, HelpCircle, Bell, RefreshCw
+  Activity, ArrowLeft, ArrowRight, UserCheck, DollarSign, Clock, HelpCircle, Bell, RefreshCw, Brain
 } from 'lucide-react';
 import { useAppContext } from '../contexts/AppContext';
 import { supabase } from '../supabaseClient';
 import { processNotificationQueue } from '../../services/push-worker-engine.js';
 import AdminNotificationDashboard from './AdminNotificationDashboard';
 import SystemStatusDashboard from './SystemStatusDashboard';
+import GrowthOSDashboard from './GrowthOSDashboard';
 
 export default function AdminDashboard() {
   const { isAdmin, currentUser } = useAppContext();
@@ -668,6 +669,7 @@ export default function AdminDashboard() {
             {[
               { id: 'metrics', label: '📊 Métricas SaaS', icon: <BarChart size={16} /> },
               { id: 'status', label: '🟢 Status do Sistema', icon: <Activity size={16} /> },
+              { id: 'growth', label: '🧠 Growth OS', icon: <Brain size={16} /> },
               { id: 'users', label: '👥 Diretório de Usuários', icon: <Users size={16} /> },
               { id: 'funnels', label: '🎯 Funis de Conversão', icon: <Target size={16} /> },
               { id: 'payments', label: '💳 Debug de Pagamentos', icon: <DollarSign size={16} /> },
@@ -697,6 +699,8 @@ export default function AdminDashboard() {
           </div>
 
           {activeAdminTab === 'status' && <SystemStatusDashboard />}
+
+          {activeAdminTab === 'growth' && <GrowthOSDashboard />}
 
           {activeAdminTab === 'metrics' && (
             <>
