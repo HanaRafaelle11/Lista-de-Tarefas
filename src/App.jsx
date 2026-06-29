@@ -12,22 +12,55 @@ import FaqView from './components/FaqView';
 import AchievementToastManager from './components/AchievementToast';
 import SyncStatusBanner from './components/SyncStatusBanner';
 import PaywallModal from './components/PaywallModal';
-const HomeView = lazy(() => import('./components/HomeView'));
-const GoalsView = lazy(() => import('./components/GoalsView'));
-const TodoView = lazy(() => import('./components/TodoView'));
-const FocusView = lazy(() => import('./components/FocusView'));
-const EvolutionView = lazy(() => import('./components/EvolutionView'));
-const PerformanceView = lazy(() => import('./components/PerformanceView'));
-const ProfileView = lazy(() => import('./components/ProfileView'));
-const AdminDashboard = lazy(() => import('./components/AdminDashboard'));
+
+import HomeView from './components/HomeView';
+import GoalsView from './components/GoalsView';
+import TodoView from './components/TodoView';
+import FocusView from './components/FocusView';
+import EvolutionView from './components/EvolutionView';
+import PerformanceView from './components/PerformanceView';
+import ProfileView from './components/ProfileView';
+import AdminDashboard from './components/AdminDashboard';
+import SettingsView from './components/SettingsView';
+import CoachView from './components/CoachView';
+
 const RevenueDashboard = lazy(() => import('./pages/RevenueDashboard'));
 const Checkout = lazy(() => import('./pages/Checkout'));
-const SettingsView = lazy(() => import('./components/SettingsView'));
-const CoachView = lazy(() => import('./components/CoachView'));
 const DevToolsWidget = lazy(() => import('./components/DevToolsWidget'));
 const GuidedTour = lazy(() => import('./components/GuidedTour'));
 const NotificationEngine = lazy(() => import('./components/NotificationEngine'));
 const PwaInstallPrompt = lazy(() => import('./components/PwaInstallPrompt'));
+
+// Classe Error Boundary para resiliência total de interface
+class ViewErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+  componentDidCatch(error, errorInfo) {
+    console.error('[ViewErrorBoundary] Erro de renderizacao capturado:', error, errorInfo);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ padding: '2rem', textAlign: 'center', background: 'var(--bg-card, #1e293b)', color: 'var(--text-main, #f8fafc)', borderRadius: '12px', margin: '2rem 0', border: '1px solid var(--border-light, #334155)' }}>
+          <h3 style={{ marginTop: 0 }}>⚠️ Ocorreu um problema ao carregar esta tela</h3>
+          <p style={{ fontSize: '0.9rem', color: '#94a3b8' }}>{this.state.error?.message || 'Falha ao renderizar componente.'}</p>
+          <button 
+            onClick={() => { this.setState({ hasError: false, error: null }); window.location.reload(); }}
+            style={{ padding: '0.6rem 1.2rem', background: 'var(--primary, #3b82f6)', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 600 }}
+          >
+            Recarregar Aplicativo
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 // Helper function to resolve public legal routes
 const getLegalRoute = (path, hash) => {
@@ -272,24 +305,26 @@ function AppLayout() {
 
       <main className="app-main-content">
         <div className="container">
-          <Suspense fallback={
-            <div className="app-loading-container">
-              <div className="app-loading-spinner" />
-              <span className="app-loading-text">Carregando...</span>
-            </div>
-          }>
-            {activeTab === 'home' && <HomeView />}
-            {activeTab === 'goals' && <GoalsView />}
-            {activeTab === 'tasks' && <TodoView />}
-            {activeTab === 'focus' && <FocusView />}
-            {activeTab === 'coach' && <CoachView />}
-            {activeTab === 'analytics' && <EvolutionView />}
-            {activeTab === 'performance' && <PerformanceView />}
-            {activeTab === 'profile' && <ProfileView />}
-            {activeTab === 'admin' && <AdminDashboard />}
-            {activeTab === 'revenue' && <RevenueDashboard />}
-            {activeTab === 'settings' && <SettingsView />}
-          </Suspense>
+          <ViewErrorBoundary>
+            <Suspense fallback={
+              <div className="app-loading-container">
+                <div className="app-loading-spinner" />
+                <span className="app-loading-text">Carregando...</span>
+              </div>
+            }>
+              {activeTab === 'home' && <HomeView />}
+              {activeTab === 'goals' && <GoalsView />}
+              {activeTab === 'tasks' && <TodoView />}
+              {activeTab === 'focus' && <FocusView />}
+              {activeTab === 'coach' && <CoachView />}
+              {activeTab === 'analytics' && <EvolutionView />}
+              {activeTab === 'performance' && <PerformanceView />}
+              {activeTab === 'profile' && <ProfileView />}
+              {activeTab === 'admin' && <AdminDashboard />}
+              {activeTab === 'revenue' && <RevenueDashboard />}
+              {activeTab === 'settings' && <SettingsView />}
+            </Suspense>
+          </ViewErrorBoundary>
         </div>
       </main>
 

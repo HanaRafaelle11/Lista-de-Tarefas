@@ -135,13 +135,25 @@ export function AppProvider({ children }) {
   const VALID_TABS = new Set(['home', 'goals', 'tasks', 'focus', 'coach', 'analytics', 'performance', 'profile', 'admin', 'revenue', 'settings']);
   const [activeTab, setActiveTab] = useState(() => {
     try {
-      // Validar contra whitelist: evita que hash/params OAuth (access_token, code, type=recovery)
-      // sejam confundidos com nome de aba, causando tela em branco permanente.
-      const params = new URLSearchParams(window.location.search);
-      const tabParam = params.get('tab');
-      if (tabParam && VALID_TABS.has(tabParam)) return tabParam;
-      const rawHash = window.location.hash.replace(/^#\/?/, '');
-      if (rawHash && VALID_TABS.has(rawHash)) return rawHash;
+      if (typeof window !== 'undefined') {
+        const pathname = window.location.pathname.toLowerCase().replace(/\/$/, '');
+        if (pathname.includes('/admin')) return 'admin';
+        if (pathname.includes('/tasks') || pathname.includes('/tarefas')) return 'tasks';
+        if (pathname.includes('/goals') || pathname.includes('/objetivos')) return 'goals';
+        if (pathname.includes('/focus') || pathname.includes('/foco')) return 'focus';
+        if (pathname.includes('/coach')) return 'coach';
+        if (pathname.includes('/analytics') || pathname.includes('/evolucao')) return 'analytics';
+        if (pathname.includes('/performance') || pathname.includes('/desempenho')) return 'performance';
+        if (pathname.includes('/profile') || pathname.includes('/perfil')) return 'profile';
+        if (pathname.includes('/revenue') || pathname.includes('/financas')) return 'revenue';
+        if (pathname.includes('/settings') || pathname.includes('/configuracoes')) return 'settings';
+
+        const params = new URLSearchParams(window.location.search);
+        const tabParam = params.get('tab');
+        if (tabParam && VALID_TABS.has(tabParam)) return tabParam;
+        const rawHash = window.location.hash.replace(/^#\/?/, '');
+        if (rawHash && VALID_TABS.has(rawHash)) return rawHash;
+      }
     } catch (_) {}
     return 'home';
   });
