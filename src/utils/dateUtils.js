@@ -1,64 +1,97 @@
 /**
- * Utilities para manipulação unificada de Data + Hora (Timestamp) no MyFlowDay
+ * Central de Utilitários de Data e Hora com Suporte Robusto a Timezones (UTC / Local)
+ * Garantia de conversão precisa de horário local para UTC antes da persistência no banco.
  */
 
 /**
- * Combina uma string de data (YYYY-MM-DD) e uma string de hora (HH:mm) em um timestamp ISO completo.
- * Exemplo: '2026-06-28' e '22:55' -> '2026-06-28T22:55:00'
+ * Combina data local (YYYY-MM-DD) e hora local (HH:mm) e converte para string ISO UTC exata.
+ * Exemplo em UTC-3: '2026-06-28' + '23:30' -> '2026-06-29T02:30:00.000Z'
  */
 export function combineDateAndTime(dateStr, timeStr) {
   if (!dateStr) return null;
-  
-  // Se já for uma string ISO contendo 'T', extrai apenas a parte da data YYYY-MM-DD
-  const cleanDate = dateStr.includes('T') ? dateStr.split('T')[0] : dateStr;
-  
-  if (!cleanDate || cleanDate.length < 10) return null;
 
-  const cleanTime = (timeStr && timeStr.trim().length >= 4) ? timeStr.trim() : '00:00';
-  const seconds = cleanTime.length === 5 ? ':00' : '';
+  // Se já for uma string ISO completa contendo 'T' e 'Z', retorna limpa
+  if (typeof dateStr === 'string' && dateStr.includes('T') && dateStr.endsWith('Z')) {
+    return dateStr;
+  }
 
-  return `${cleanDate}T${cleanTime}${seconds}`;
+  const cleanDate = typeof dateStr === 'string' && dateStr.includes('T') ? dateStr.split('T')[0] : String(dateStr);
+  const parts = cleanDate.split('-');
+  if (parts.length < 3) return null;
+
+  const year = parseInt(parts[0], 10);
+  const month = parseInt(parts[1], 10) - 1; // Month index 0-11
+  const day = parseInt(parts[2], 10);
+
+  let hours = 0;
+  let minutes = 0;
+
+  if (timeStr && typeof timeStr === 'string' && timeStr.trim().length >= 4) {
+    const timeParts = timeStr.trim().split(':');
+    hours = parseInt(timeParts[0], 10) || 0;
+    minutes = parseInt(timeParts[1], 10) || 0;
+  }
+
+  // Cria o objeto Date no fuso horário local do navegador do usuário
+  const localDate = new Date(year, month, day, hours, minutes, 0, 0);
+  
+  if (isNaN(localDate.getTime())) return null;
+
+  // Retorna em formato ISO UTC padrão (Z) para salvar no Supabase (TIMESTAMPTZ)
+  return localDate.toISOString();
 }
 
 /**
- * Extrai componentes YYYY-MM-DD e HH:mm de uma string ISO ou data legada.
+ * Extrai componentes de data (YYYY-MM-DD) e hora (HH:mm) no FUSO HORÁRIO LOCAL do usuário
+ * a partir de uma string ISO UTC vinda do banco de dados.
+ * Exemplo em UTC-3: '2026-06-29T02:30:00.000Z' -> { datePart: '2026-06-28', timePart: '23:30' }
  */
 export function extractDateAndTimeParts(isoOrDateStr) {
   if (!isoOrDateStr) return { datePart: '', timePart: '' };
 
   const str = String(isoOrDateStr).trim();
-  if (str.includes('T')) {
-    const [d, t] = str.split('T');
-    const timePart = t ? t.substring(0, 5) : '';
-    return { datePart: d, timePart: timePart === '00:00' ? '' : timePart };
+
+  // Se não contiver indicação de horário, trata como data pura YYYY-MM-DD
+  if (!str.includes('T') && str.length === 10) {
+    return { datePart: str, timePart: '' };
   }
 
-  // Se for apenas YYYY-MM-DD
-  if (str.length >= 10) {
-    return { datePart: str.substring(0, 10), timePart: '' };
+  const d = new Date(str);
+  if (isNaN(d.getTime())) {
+    const clean = str.includes('T') ? str.split('T')[0] : str.substring(0, 10);
+    return { datePart: clean, timePart: '' };
   }
 
-  return { datePart: str, timePart: '' };
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  const hours = String(d.getHours()).padStart(2, '0');
+  const minutes = String(d.getMinutes()).padStart(2, '0');
+
+  const datePart = `${year}-${month}-${day}`;
+  const timePart = (hours === '00' && minutes === '00') ? '' : `${hours}:${minutes}`;
+
+  return { datePart, timePart };
 }
 
 /**
- * Formata a data para exibição amigável em português (ex: "Hoje", "Amanhã", "Ontem" ou "28/06/2026").
- * Nunca gera strings corrompidas como "28T00:00:00...".
+ * Formata a data para exibição no fuso horário local do usuário (ex: "Hoje", "Amanhã", "Ontem" ou "28/06/2026").
  */
 export function formatTaskDateDisplay(dueDateStr) {
   if (!dueDateStr) return '';
-  
-  const cleanDate = String(dueDateStr).includes('T') ? String(dueDateStr).split('T')[0] : String(dueDateStr).substring(0, 10);
-  const parts = cleanDate.split('-');
-  
-  if (parts.length !== 3) return cleanDate;
+
+  const { datePart } = extractDateAndTimeParts(dueDateStr);
+  if (!datePart || datePart.length < 10) return String(dueDateStr);
+
+  const parts = datePart.split('-');
+  if (parts.length !== 3) return datePart;
 
   const [year, month, day] = parts;
   const targetDateStr = `${year}-${month}-${day}`;
 
   const now = new Date();
   const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-  
+
   const tomorrow = new Date(now);
   tomorrow.setDate(tomorrow.getDate() + 1);
   const tomorrowStr = `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, '0')}-${String(tomorrow.getDate()).padStart(2, '0')}`;
@@ -75,12 +108,26 @@ export function formatTaskDateDisplay(dueDateStr) {
 }
 
 /**
- * Extrai e formata o horário para exibição (ex: "22:55").
+ * Extrai e formata a hora no fuso horário local do usuário (ex: "23:30").
  */
 export function formatTaskTimeDisplay(dueDateStr, legacyDueTime) {
-  if (dueDateStr && String(dueDateStr).includes('T')) {
-    const timePart = String(dueDateStr).split('T')[1]?.substring(0, 5);
-    if (timePart && timePart !== '00:00') return timePart;
-  }
+  if (!dueDateStr) return legacyDueTime && legacyDueTime !== '00:00' ? legacyDueTime : '';
+
+  const { timePart } = extractDateAndTimeParts(dueDateStr);
+  if (timePart && timePart !== '00:00') return timePart;
+
   return legacyDueTime && legacyDueTime !== '00:00' ? legacyDueTime : '';
+}
+
+/**
+ * Verifica se a tarefa está atrasada comparando o timestamp com o horário atual do usuário.
+ */
+export function isTaskOverdue(dueDateStr, completed) {
+  if (completed || !dueDateStr) return false;
+
+  const taskDate = new Date(dueDateStr);
+  if (isNaN(taskDate.getTime())) return false;
+
+  const now = new Date();
+  return taskDate < now;
 }
