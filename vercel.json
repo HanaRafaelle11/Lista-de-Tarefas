@@ -34,15 +34,7 @@
   ],
   "crons": [
     {
-      "path": "/api/workers/event-processor",
-      "schedule": "* * * * *"
-    },
-    {
-      "path": "/api/worker/ping",
-      "schedule": "* * * * *"
-    },
-    {
-      "path": "/api/worker/notifications",
+      "path": "/api/workers/worker-loop",
       "schedule": "* * * * *"
     }
   ]
