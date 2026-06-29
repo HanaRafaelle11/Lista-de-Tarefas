@@ -14,8 +14,6 @@ import { runBillingSanityCheck } from '../jobs/billing-sanity-check.js';
 import { withAdminAuth } from '../lib/auth/withAdminAuth.js';
 import { logPaymentEvent } from '../lib/payment-logger.js';
 import { billingController } from '../server/modules/billing/billing.controller.js';
-import handleWorkerNotifications from './worker/notifications.js';
-import handleWorkerPing from './worker/ping.js';
 
 
 // =========================================================
@@ -525,7 +523,21 @@ export default async function handler(req, res) {
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Idempotency-Key, X-Trace-Id');
     if (req.method === 'OPTIONS') return res.status(200).end(); // [cite: 287]
 
-    const route = Array.isArray(req.query.routes) ? req.query.routes.join('/') : (req.query.routes || ''); // [cite: 288, 289]
+    const route =
+      Array.isArray(req.query.routes)
+        ? req.query.routes.join('/')
+        : typeof req.query.routes === 'string'
+          ? req.query.routes.replace(/^\/+|\/+$/g, '')
+          : '';
+
+    // 🚨 BLOQUEIO CRÍTICO: workers são de responsabilidade exclusiva do sistema de arquivos nativo do Vercel
+    if (route.startsWith('worker/')) {
+      return res.status(404).json({
+        error: 'Route belongs to native worker handler',
+        route
+      });
+    }
+
     const blockedPatterns = ['.env', '.git', 'config', 'secrets', 'credentials']; // [cite: 290]
     if (blockedPatterns.some(p => route.toLowerCase().includes(p))) return res.status(403).json({ error: 'Acesso negado.' }); // [cite: 291, 292]
 
@@ -540,10 +552,6 @@ export default async function handler(req, res) {
             await handleUnifiedAsaasWebhook(req, res);
         } else if (route === 'cron/billing-expiration') {
             await handleBillingExpirationCron(req, res);
-        } else if (route === 'worker/notifications') {
-            await handleWorkerNotifications(req, res);
-        } else if (route === 'worker/ping') {
-            await handleWorkerPing(req, res);
         } else if (route === 'cron/billing-sanity-check') {
             const result = await runBillingSanityCheck();
             return res.status(200).json(result);
