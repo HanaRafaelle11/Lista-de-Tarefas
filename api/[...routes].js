@@ -577,6 +577,9 @@ export default async function handler(req, res) {
         } else if (route === 'admin/dashboard') {
             const handleDash = (await import('./admin/dashboard.js')).default;
             await handleDash(req, res);
+        } else if (route === 'admin/system-status' || route === 'admin/status') {
+            const handleStatus = (await import('./admin/system-status.js')).default;
+            await handleStatus(req, res);
         } else if (route === 'admin/billing/health') {
             await handleAdminBillingHealth(req, res);
         } else if (route === 'admin/payment-events' || route === 'admin/billing/timeline' || route.startsWith('admin/billing/user')) {

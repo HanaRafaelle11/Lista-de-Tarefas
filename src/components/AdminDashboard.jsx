@@ -8,6 +8,7 @@ import { useAppContext } from '../contexts/AppContext';
 import { supabase } from '../supabaseClient';
 import { processNotificationQueue } from '../../services/push-worker-engine.js';
 import AdminNotificationDashboard from './AdminNotificationDashboard';
+import SystemStatusDashboard from './SystemStatusDashboard';
 
 export default function AdminDashboard() {
   const { isAdmin, currentUser } = useAppContext();
@@ -661,6 +662,7 @@ export default function AdminDashboard() {
           <div style={{ display: 'flex', borderBottom: '1px solid var(--border-medium)', gap: '16px', marginBottom: '8px' }}>
             {[
               { id: 'metrics', label: '📊 Métricas SaaS', icon: <BarChart size={16} /> },
+              { id: 'status', label: '🟢 Status do Sistema', icon: <Activity size={16} /> },
               { id: 'users', label: '👥 Diretório de Usuários', icon: <Users size={16} /> },
               { id: 'funnels', label: '🎯 Funis de Conversão', icon: <Target size={16} /> },
               { id: 'payments', label: '💳 Debug de Pagamentos', icon: <DollarSign size={16} /> },
@@ -688,6 +690,8 @@ export default function AdminDashboard() {
               </button>
             ))}
           </div>
+
+          {activeAdminTab === 'status' && <SystemStatusDashboard />}
 
           {activeAdminTab === 'metrics' && (
             <>
