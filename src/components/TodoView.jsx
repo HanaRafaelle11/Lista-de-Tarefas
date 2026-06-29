@@ -285,19 +285,19 @@ function EmptyState({ filter, searchQuery, onAdd }) {
 
 export default function TodoView() {
   const {
-    tasks,
+    tasks = [],
     handleAddTask: onAddTask,
     handleUpdateTask: onUpdateTask,
     handleDeleteTask: onDeleteTask,
     handleBulkDeleteCompleted: onBulkDeleteCompleted,
     handleToggleComplete: onToggleComplete, // Original onToggleComplete from context
-    categories,
+    categories = [],
     handleAddCategory,
     handleDeleteCategory,
     habitsManager,
-    logEvent,
-    goals,
-    goalTasks,
+    logEvent = () => {},
+    goals = [],
+    goalTasks = [],
     handleUnlinkTask,
     isPro,
     openPaywall,
