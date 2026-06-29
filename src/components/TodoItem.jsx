@@ -19,6 +19,7 @@ function exportTaskToCalendar(task) {
 
 export default function TodoItem({ item, onToggleComplete, onDelete, onEdit, goalId, onUnlinkGoal, onDuplicate }) {
   const [calExported, setCalExported] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
   const { isPro, openPaywall } = useAppContext();
 
   const handleExportCalendar = () => {

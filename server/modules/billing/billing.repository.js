@@ -69,24 +69,37 @@ export const billingRepository = {
     if (!userIdOrSearch) return null;
     const term = String(userIdOrSearch).trim().toLowerCase();
 
-    try {
-      const { data: authData } = await supabaseAdmin.auth.admin.listUsers({ perPage: 1000 });
-      const matchedUser = authData?.users?.find(u => 
-        u.id === term || (u.email && u.email.toLowerCase().trim() === term)
-      );
-
-      if (matchedUser) {
-        return {
-          id: matchedUser.id,
-          email: matchedUser.email,
-          createdAt: matchedUser.created_at
-        };
+    // 1. Se contiver '@', buscar nativamente pelo e-mail
+    if (term.includes('@')) {
+      try {
+        const { data, error } = await supabaseAdmin.auth.admin.getUserByEmail(term);
+        if (!error && data?.user) {
+          return {
+            id: data.user.id,
+            email: data.user.email,
+            createdAt: data.user.created_at
+          };
+        }
+      } catch (err) {
+        console.warn('[BillingRepo] resolveUser getUserByEmail error:', err.message);
       }
-    } catch (err) {
-      console.warn('[BillingRepo] resolveUser auth list error:', err.message);
+    } else {
+      // 2. Tentar buscar diretamente por UUID de usuário
+      try {
+        const { data, error } = await supabaseAdmin.auth.admin.getUser(term);
+        if (!error && data?.user) {
+          return {
+            id: data.user.id,
+            email: data.user.email,
+            createdAt: data.user.created_at
+          };
+        }
+      } catch (err) {
+        console.warn('[BillingRepo] resolveUser getUser error:', err.message);
+      }
     }
 
-    // Fallback: Tentar via tabela subscriptions se não encontrou no auth list
+    // 3. Fallback: Tentar via tabela subscriptions se não encontrou no auth list
     try {
       const { data: sub } = await supabaseAdmin
         .from('subscriptions')
@@ -96,6 +109,16 @@ export const billingRepository = {
         .maybeSingle();
 
       if (sub) {
+        try {
+          const { data, error } = await supabaseAdmin.auth.admin.getUser(sub.user_id);
+          if (!error && data?.user) {
+            return {
+              id: data.user.id,
+              email: data.user.email,
+              createdAt: data.user.created_at
+            };
+          }
+        } catch (_) {}
         return { id: sub.user_id, email: null, createdAt: null };
       }
     } catch (err) {
