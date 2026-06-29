@@ -92,6 +92,16 @@ const ICONS = {
     </>
   ),
 
+  admin: (
+    <>
+      <rect x="3" y="3" width="18" height="18" rx="4" />
+      <line x1="3" y1="9" x2="21" y2="9" />
+      <rect x="6" y="13" width="3" height="5" rx="0.5" />
+      <rect x="11" y="11" width="3" height="7" rx="0.5" />
+      <rect x="16" y="14" width="3" height="4" rx="0.5" />
+    </>
+  ),
+
   'flow-score': (
     <path d="M2 12 C4.5 7 7 17 10 12 C13 7 15.5 17 18 12 C19.5 9 21 10.5 22 12" />
   ),

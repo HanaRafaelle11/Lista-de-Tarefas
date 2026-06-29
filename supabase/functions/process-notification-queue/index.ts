@@ -8,6 +8,9 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
+  const startTime = Date.now();
+  const jobId = `job_${startTime}_${Math.random().toString(36).substring(2, 7)}`;
+
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
@@ -55,7 +58,7 @@ serve(async (req) => {
     }
 
     if (!queue?.length) {
-      return new Response(JSON.stringify({ message: 'No pending notifications', processed: 0 }), {
+      return new Response(JSON.stringify({ message: 'No pending notifications', processed: 0, jobId }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200
       });
@@ -74,18 +77,29 @@ serve(async (req) => {
         .select('*')
         .eq('user_id', item.user_id);
 
+      const payloadObj = {
+        title: item.title,
+        body: item.body || '',
+        url: '/tasks',
+        tag: `task_push_${item.task_id}`
+      };
+
       if (!subscriptions || subscriptions.length === 0) {
         await supabase
           .from('notification_queue')
-          .update({ status: 'failed' })
+          .update({ status: 'failed', updated_at: new Date().toISOString() })
           .eq('id', item.id);
 
         await supabase.from('notification_logs').insert({
+          job_id: jobId,
           notification_id: item.id,
           task_id: item.task_id,
           user_id: item.user_id,
+          subscription: 'none',
           status: 'failed',
-          error: 'No active push subscriptions found for user'
+          error: 'No active push subscriptions found for user',
+          tempo_execucao: Date.now() - startTime,
+          payload: payloadObj
         });
         continue;
       }
@@ -100,43 +114,65 @@ serve(async (req) => {
                 auth: sub.auth || sub.keys?.auth
               }
             },
-            JSON.stringify({
-              title: item.title,
-              body: item.body || '',
-              url: '/tasks',
-              tag: `task_push_${item.task_id}`
-            })
+            JSON.stringify(payloadObj)
           );
 
           await supabase
             .from('notification_queue')
             .update({ status: 'success', updated_at: new Date().toISOString() })
             .eq('id', item.id);
+
+          await supabase.from('notification_logs').insert({
+            job_id: jobId,
+            notification_id: item.id,
+            task_id: item.task_id,
+            user_id: item.user_id,
+            subscription: sub.endpoint,
+            status: 'success',
+            error: null,
+            tempo_execucao: Date.now() - startTime,
+            payload: payloadObj
+          });
             
           processedCount++;
         } catch (err) {
+          const statusCode = err.statusCode || err.status;
+          
           await supabase
             .from('notification_queue')
             .update({ status: 'failed', updated_at: new Date().toISOString() })
             .eq('id', item.id);
 
+          // Limpeza automática de assinaturas inválidas (404 / 410 Gone)
+          if (statusCode === 404 || statusCode === 410) {
+            console.log(`[Worker] Cleaned expired subscription: ${sub.endpoint}`);
+            await supabase
+              .from('push_subscriptions')
+              .delete()
+              .eq('endpoint', sub.endpoint);
+          }
+
           await supabase.from('notification_logs').insert({
+            job_id: jobId,
             notification_id: item.id,
             task_id: item.task_id,
             user_id: item.user_id,
+            subscription: sub.endpoint,
             status: 'failed',
-            error: String(err.message || err)
+            error: String(err.message || err),
+            tempo_execucao: Date.now() - startTime,
+            payload: payloadObj
           });
         }
       }
     }
 
-    return new Response(JSON.stringify({ message: 'Execution completed', processed: processedCount }), {
+    return new Response(JSON.stringify({ message: 'Execution completed', processed: processedCount, jobId }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200
     });
   } catch (err) {
-    return new Response(JSON.stringify({ error: String(err.message || err) }), {
+    return new Response(JSON.stringify({ error: String(err.message || err), jobId }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 500
     });
