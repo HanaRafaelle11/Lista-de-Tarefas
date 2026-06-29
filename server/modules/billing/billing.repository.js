@@ -125,6 +125,27 @@ export const billingRepository = {
       console.warn('[BillingRepo] resolveUser sub search error:', err.message);
     }
 
+    // 4. Fallback final: Buscar na tabela profiles por name ou nickname
+    try {
+      const { data: profile } = await supabaseAdmin
+        .from('profiles')
+        .select('id, name, nickname, created_at')
+        .or(`name.ilike.%${term}%,nickname.ilike.%${term}%`)
+        .limit(1)
+        .maybeSingle();
+
+      if (profile) {
+        return {
+          id: profile.id,
+          email: null,
+          name: profile.name || profile.nickname || '',
+          createdAt: profile.created_at
+        };
+      }
+    } catch (err) {
+      console.warn('[BillingRepo] resolveUser profiles search error:', err.message);
+    }
+
     return null;
   }
 };

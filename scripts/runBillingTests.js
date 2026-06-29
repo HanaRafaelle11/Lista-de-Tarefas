@@ -304,7 +304,7 @@ async function runTests() {
 
   // 8. Timeout e Locks
   await runTest('Timeout', async () => {
-    const { DistributedLock } = await import('../api/distributed-lock.js');
+    const { DistributedLock } = await import('../services/distributed-lock.js');
     let executed = false;
     await DistributedLock.withLock('test-lock', async () => {
       executed = true;

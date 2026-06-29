@@ -81,10 +81,7 @@ async function checkDrift() {
   // Output obrigatório
   console.log('\n=====================================');
   console.log('SCHEMA CHECK RESULT:');
-  console.log(`- profiles: ${results['profiles'] || 'MISSING'}`);
-  console.log(`- events: ${results['events'] || 'MISSING'}`);
-  console.log(`- tasks.completed_at: ${results['tasks.completed_at'] || 'MISSING'}`);
-  console.log(`- avatars bucket: ${results['avatars bucket'] || 'MISSING'}`);
+  console.log(JSON.stringify(results, null, 2));
   console.log('=====================================');
   
   if (hasDrift) {
