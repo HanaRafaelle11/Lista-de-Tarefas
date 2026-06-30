@@ -113,6 +113,7 @@ serve(async (req) => {
         entity_id: entity_id || '',
         entity_type: entity_type || 'system',
         event_type: 'send_push_notification',
+        user_id,
         data: {
           url: url || '/tasks'
         }
@@ -120,6 +121,14 @@ serve(async (req) => {
 
       let sentCount = 0;
       for (const sub of subscriptions) {
+        // A) Registrar tentativa (sent_attempt)
+        await supabase.from('push_telemetry').insert({
+          user_id,
+          endpoint: sub.endpoint,
+          event_type: 'sent_attempt',
+          status: 'success'
+        });
+
         try {
           await webpush.sendNotification(
             {
@@ -132,9 +141,26 @@ serve(async (req) => {
             JSON.stringify(payloadObj)
           );
           sentCount++;
+
+          // B) Registro de entrega com sucesso no gateway (sent)
+          await supabase.from('push_telemetry').insert({
+            user_id,
+            endpoint: sub.endpoint,
+            event_type: 'sent',
+            status: 'success'
+          });
         } catch (err) {
           const statusCode = err.statusCode || err.status;
           console.warn(`[Push Service] Envio falhou para ${sub.endpoint.substring(0, 30)}:`, err.message);
+
+          // C) Registro de falha (failed)
+          await supabase.from('push_telemetry').insert({
+            user_id,
+            endpoint: sub.endpoint,
+            event_type: 'failed',
+            status: 'error',
+            error: String(statusCode || err.message)
+          });
 
           // Limpa endpoints expirados ou desinstalados automaticamente (404 / 410)
           if (statusCode === 404 || statusCode === 410) {
@@ -143,6 +169,14 @@ serve(async (req) => {
               .from('push_subscriptions')
               .delete()
               .eq('endpoint', sub.endpoint);
+
+            // D) Registro de limpeza (cleaned)
+            await supabase.from('push_telemetry').insert({
+              user_id,
+              endpoint: sub.endpoint,
+              event_type: 'cleaned',
+              status: 'success'
+            });
           }
         }
       }

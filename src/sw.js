@@ -43,6 +43,7 @@ self.addEventListener('push', (event) => {
         entity_type: data.entity_type,
         event_type: data.event_type,
         notification_id: data.notification_id,
+        user_id: data.user_id || null,
         timestamp: new Date().toISOString()
       }
     };
@@ -50,6 +51,20 @@ self.addEventListener('push', (event) => {
     event.waitUntil(
       Promise.all([
         self.registration.showNotification(title, options),
+        // Registrar telemetria de recebimento (received)
+        self.registration.pushManager.getSubscription().then(sub => {
+          if (sub) {
+            return fetch('/api/push-telemetry', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                event_type: 'received',
+                endpoint: sub.endpoint,
+                user_id: data.user_id || null
+              })
+            }).catch(err => console.warn('[SW] Telemetry received log error:', err));
+          }
+        }),
         self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clients => {
           clients.forEach(client => {
             client.postMessage({
@@ -77,6 +92,23 @@ self.addEventListener('notificationclick', (event) => {
   const action = event.action;
   const notificationData = event.notification.data || {};
   const targetUrl = notificationData.url || '/';
+
+  // Registrar telemetria de clique (clicked)
+  event.waitUntil(
+    self.registration.pushManager.getSubscription().then(sub => {
+      if (sub) {
+        return fetch('/api/push-telemetry', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            event_type: 'clicked',
+            endpoint: sub.endpoint,
+            user_id: notificationData.user_id || null
+          })
+        }).catch(err => console.warn('[SW] Telemetry clicked log error:', err));
+      }
+    })
+  );
 
   // Trata Ação de Snooze (Adiar por 10 minutos)
   if (action === 'snooze_10') {

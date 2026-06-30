@@ -586,6 +586,9 @@ export default async function handler(req, res) {
             await handleGrowthIntel(req, res);
         } else if (route === 'admin/billing/health') {
             await handleAdminBillingHealth(req, res);
+        } else if (route === 'push-telemetry') {
+            const handlePushTelemetry = (await import('../api-handlers/push-telemetry.js')).default;
+            await handlePushTelemetry(req, res);
         } else if (route === 'admin/notifications') {
             const handleAdminNotifs = (await import('../api-handlers/admin/notifications.js')).default;
             await handleAdminNotifs(req, res);
