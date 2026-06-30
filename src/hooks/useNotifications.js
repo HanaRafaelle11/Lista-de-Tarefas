@@ -96,16 +96,13 @@ export function useNotifications() {
       const endpoint = subJson.endpoint;
 
       if (endpoint && p256dh && auth) {
-        await supabase.functions.invoke('process-events', {
+        await supabase.functions.invoke('push', {
           body: {
-            type: 'push_subscription',
-            payload: {
-              user_id: userId,
-              endpoint,
-              keys: {
-                p256dh,
-                auth
-              }
+            user_id: userId,
+            endpoint,
+            keys: {
+              p256dh,
+              auth
             }
           }
         });
@@ -156,9 +153,9 @@ export function useNotifications() {
         const subscription = await registration.pushManager.getSubscription();
         if (subscription) {
           await subscription.unsubscribe();
-          await supabase.functions.invoke('process-events', {
+          await supabase.functions.invoke('push', {
             body: {
-              type: 'push_unsubscription',
+              type: 'unregister',
               payload: {
                 user_id: userId,
                 endpoint: subscription.endpoint
