@@ -589,6 +589,9 @@ export default async function handler(req, res) {
         } else if (route === 'admin/notifications') {
             const handleAdminNotifs = (await import('../api-handlers/admin/notifications.js')).default;
             await handleAdminNotifs(req, res);
+        } else if (route === 'admin/notifications/test-push') {
+            const handleTestPush = (await import('../api-handlers/admin/test-push.js')).default;
+            await handleTestPush(req, res);
         } else if (route === 'admin/payment-events' || route === 'admin/billing/timeline' || route.startsWith('admin/billing/user')) {
             await handleAdminBillingTimeline(req, res);
         } else if (route === '' || route === 'health') {

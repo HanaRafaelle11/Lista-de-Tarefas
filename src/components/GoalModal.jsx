@@ -64,6 +64,13 @@ function GoalIcon({ name, size = 18, className = '' }) {
   return <IconComponent size={size} className={className} />;
 }
 
+function getLocalDateString(date = new Date()) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 export default function GoalModal({ isOpen, onClose, onSave, onDelete, editingGoal }) {
   const { currentUser } = useAppContext();
   const [title, setTitle] = useState('');
@@ -149,10 +156,8 @@ export default function GoalModal({ isOpen, onClose, onSave, onDelete, editingGo
     if (!title.trim()) return;
 
     if (!editingGoal && targetDate) {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const selectedDate = new Date(targetDate + 'T00:00:00');
-      if (selectedDate < today) {
+      const todayStr = getLocalDateString();
+      if (targetDate < todayStr) {
         alert('Objetivos não podem ser criados em datas passadas.');
         return;
       }
@@ -442,7 +447,7 @@ export default function GoalModal({ isOpen, onClose, onSave, onDelete, editingGo
                 type="date"
                 value={targetDate}
                 onChange={e => setTargetDate(e.target.value)}
-                min={new Date().toISOString().split('T')[0]}
+                min={getLocalDateString()}
                 className="todo-modal-date-input"
               />
             </div>

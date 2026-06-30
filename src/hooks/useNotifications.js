@@ -32,6 +32,9 @@ export function useNotifications() {
   const [isEnabled, setIsEnabled] = useState(() => {
     if (!isSupported) return false;
     const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved === null) {
+      return Notification.permission === 'granted';
+    }
     return saved === 'true' && Notification.permission === 'granted';
   });
 

@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect, useRef, lazy, Suspense } from 'rea
 import { 
   Plus, Search, X, Calendar, ChevronDown, ChevronRight, 
   List, Columns, Grid, Trash2, Edit2, AlertCircle, ArrowLeft, ArrowRight,
-  Sparkles, Award, Sprout, Pin, Zap, CheckCircle, Moon, Sun, Tag, AlertTriangle, RotateCcw
+  Sparkles, Award, Sprout, Pin, Zap, CheckCircle, Moon, Sun, Tag, AlertTriangle, RotateCcw, Copy
 } from 'lucide-react';
 import EmojiPicker from 'emoji-picker-react';
 import CategoryIcon from './CategoryIcon';

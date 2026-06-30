@@ -1161,7 +1161,7 @@ export default function AdminDashboard() {
                 {metrics && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                     {[
-                      { step: 'Início (onboarding_started)', val: metrics.onboarding_started, pct: 100 },
+                      { step: 'Início (onboarding_started)', val: metrics.onboarding_started, pct: metrics.onboarding_started > 0 ? 100 : 0 },
                       { step: 'Passo 1 (Criação de Meta)', val: metrics.onboarding_step1, pct: metrics.onboarding_started > 0 ? Math.round((metrics.onboarding_step1 / metrics.onboarding_started) * 100) : 0 },
                       { step: 'Passo 2 (Criação de Tarefa)', val: metrics.onboarding_step2, pct: metrics.onboarding_started > 0 ? Math.round((metrics.onboarding_step2 / metrics.onboarding_started) * 100) : 0 },
                       { step: 'Passo 3 (Criação de Hábito)', val: metrics.onboarding_step3, pct: metrics.onboarding_started > 0 ? Math.round((metrics.onboarding_step3 / metrics.onboarding_started) * 100) : 0 },

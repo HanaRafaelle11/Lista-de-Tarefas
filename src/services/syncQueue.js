@@ -403,6 +403,23 @@ export function enqueue(type, payload, idempotencyKey) {
 }
 
 /**
+ * Remove um item da fila de sync (usado quando a operação é concluída com sucesso sincronamente).
+ */
+export function dequeue(idempotencyKey) {
+  const queue = readQueue();
+  const remaining = queue.filter(item => item.idempotency_key !== idempotencyKey);
+  if (remaining.length !== queue.length) {
+    writeQueue(remaining);
+    const count = remaining.length;
+    updateStatus({
+      pendingOps: count,
+      supabase: count === 0 ? 'healthy' : 'degraded'
+    });
+    console.debug(`[syncQueue] Item removido da fila: ${idempotencyKey}`);
+  }
+}
+
+/**
  * Tenta reenviar todos os itens prontos para retry.
  * Respeita prioridades e exponential backoff.
  */

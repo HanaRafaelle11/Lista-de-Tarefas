@@ -317,6 +317,8 @@ export function AppProvider({ children }) {
   // Garante que conquistas só são verificadas APÓS o primeiro carregamento completo dos dados
   // Isso impede o popup falso na inicialização antes dos dados carregarem do Supabase
   const dataLoadedOnce = useRef(false);
+  const initialGoalsCount = useRef(-1);
+  const initialCompletedTasksCount = useRef(-1);
 
   // ── User State Intelligence (Growth) ─────────────────────────────────────────────
   const [userState, setUserState] = useState({
@@ -453,6 +455,8 @@ export function AppProvider({ children }) {
       window.location.href = window.location.origin + '/login';
       // Reset do guard de conquistas para o próximo login
       dataLoadedOnce.current = false;
+      initialGoalsCount.current = -1;
+      initialCompletedTasksCount.current = -1;
       firstSuccessLogged.current = false;
       setCurrentUser(null);
       setUserProfile(null);
@@ -906,33 +910,6 @@ export function AppProvider({ children }) {
     const list = data || [];
     setUnlockedAchievements(list);
     setUnlockedKeys(new Set(list.map((a) => a.achievement_key)));
-
-    // Usa localStorage como ÚNICA fonte de verdade para "já foi dispensado".
-    // (Colunas seen/dismissed_at podem não existir no banco — não dependemos delas.)
-    const dismissedLocalKey = `myflowday_dismissed_achievements_${userId}`;
-    let dismissedLocal = {};
-    try {
-      const val = localStorage.getItem(dismissedLocalKey);
-      if (val) dismissedLocal = JSON.parse(val);
-    } catch (_) {}
-
-    // Só exibe toasts de conquistas que não foram dispensadas pelo usuário
-    const pendingToasts = list.filter((a) => !dismissedLocal[a.achievement_key]);
-
-    if (pendingToasts.length > 0) {
-      // ACHIEVEMENTS já está importado estaticamente no topo do arquivo
-      setToastQueue((prev) => {
-        const existingKeys = new Set(prev.map(t => t.achievement?.key));
-        const toAdd = pendingToasts
-          .filter(a => !existingKeys.has(a.achievement_key))
-          .map(a => ({
-            id: `${a.achievement_key}-restore-${Date.now()}`,
-            achievement: ACHIEVEMENTS.find(d => d.key === a.achievement_key)
-          }))
-          .filter(t => t.achievement);
-        return [...prev, ...toAdd];
-      });
-    }
   }, []);
 
   const loadHabits = useCallback(async (userId) => {
@@ -1264,6 +1241,8 @@ export function AppProvider({ children }) {
         // unlockedAchievements é Array (mesmo vazio) significa que já carregou.
         if (unlockedAchievements === null) return;
         dataLoadedOnce.current = true;
+        initialGoalsCount.current = goals.length;
+        initialCompletedTasksCount.current = tasks.filter(t => t.completed).length;
         // Na primeira carga, só prossegue se existem dados reais — se não, aborta silenciosamente.
         if (tasks.length === 0 && goals.length === 0) return;
       }
@@ -1278,7 +1257,13 @@ export function AppProvider({ children }) {
           if (unlockedKeys.has(a.key) || unlockedKeysRef.current.has(a.key)) return false;
           // Conquistas baseadas em tarefas concluídas: só disparam se há completedTasks > 0
           if (['first_task', 'tasks_10', 'tasks_50', 'tasks_100'].includes(a.key)) {
+            if (a.key === 'first_task' && initialCompletedTasksCount.current >= 1) return false;
             if (stats.completedTasks === 0) return false;
+          }
+          // Conquista de primeiro objetivo: só dispara se foi criado na sessão atual
+          if (a.key === 'first_goal') {
+            if (initialGoalsCount.current >= 1) return false;
+            if (stats.totalGoals === 0) return false;
           }
           // Conquistas baseadas em streak: só disparam se streak > 0 (ou seja, há atividade real)
           if (['streak_3', 'streak_7', 'streak_30'].includes(a.key)) {

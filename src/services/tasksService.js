@@ -1,5 +1,5 @@
 import { supabase } from '../supabaseClient';
-import { enqueue, generateId } from './syncQueue';
+import { enqueue, dequeue, generateId } from './syncQueue';
 import { localDB } from '../db/localDB';
 
 // Mapper: converte registro do banco para objeto do app
@@ -70,8 +70,20 @@ export const tasksService = {
       const mapped = (data || []).map(mapTask);
       
       try {
+        const localTasks = await localDB.getAll('tasks');
+        const pendingOps = await localDB.getAll('pendingOps');
+        const pendingIds = new Set(pendingOps.map(op => op.payload?.taskId || op.payload?.id).filter(Boolean));
+        
+        const localUnsynced = localTasks.filter(t => 
+          t.user_id === userId && 
+          (t.deletedAt || pendingIds.has(t.id) || !mapped.some(mt => mt.id === t.id))
+        );
+        
+        const unsyncedToKeep = localUnsynced.filter(lt => !mapped.some(mt => mt.id === lt.id));
+        const allTasks = [...mapped, ...unsyncedToKeep];
+
         await localDB.clear('tasks');
-        await localDB.putMany('tasks', mapped);
+        await localDB.putMany('tasks', allTasks);
       } catch (err) {
         console.warn('[tasksService.getAll] Erro ao sincronizar com cache local:', err.message);
       }
@@ -119,7 +131,10 @@ export const tasksService = {
       console.warn('[tasksService.create] Erro ao salvar no cache local:', err.message);
     }
 
-    // 2. Tenta enviar para o Supabase
+    // 2. Enfileira na fila de sync antecipadamente para evitar perda de dados por race condition (F5/fechar aba)
+    enqueue('task_create', { userId, taskData, taskId: clientId }, clientId);
+
+    // 3. Tenta enviar para o Supabase
     try {
       const { data, error } = await supabase
         .from('tasks')
@@ -138,10 +153,12 @@ export const tasksService = {
         .single();
 
       if (error) throw error;
+      
+      // Sucesso na gravação: remove da fila de sync
+      dequeue(clientId);
       return { data: mapTask(data), error: null };
     } catch (error) {
-      console.warn('[tasksService.create] Falha ao criar no Supabase — enfileirado para sync:', error.message);
-      enqueue('task_create', { userId, taskData, taskId: clientId }, clientId);
+      console.warn('[tasksService.create] Falha ao criar no Supabase — mantido na fila de sync:', error.message);
       return { data: optimistic, error, degraded: true };
     }
   },
@@ -169,7 +186,12 @@ export const tasksService = {
       console.warn('[tasksService.update] Erro ao atualizar cache local:', err.message);
     }
 
-    // 2. Tenta sincronizar com o Supabase
+    // 2. Enfileira na fila de sync antecipadamente para evitar perda de dados por race condition (F5/fechar aba)
+    const syncKey = `task_update_${id}_${Date.now()}`;
+    const queueUpdates = { ...updates, updated_at: nowIso };
+    enqueue('task_update', { userId, id, updates: queueUpdates }, syncKey);
+
+    // 3. Tenta sincronizar com o Supabase
     try {
       const payload = {};
       if (updates.title !== undefined)       payload.title = updates.title;
@@ -187,11 +209,12 @@ export const tasksService = {
         .eq('user_id', userId);
 
       if (error) throw error;
+      
+      // Sucesso: remove da fila de sync
+      dequeue(syncKey);
       return { error: null };
     } catch (error) {
-      console.warn('[tasksService.update] Falha — enfileirado para retry:', error.message);
-      const queueUpdates = { ...updates, updated_at: nowIso };
-      enqueue('task_update', { userId, id, updates: queueUpdates });
+      console.warn('[tasksService.update] Falha ao atualizar no Supabase — mantido na fila de sync:', error.message);
       return { error, degraded: true };
     }
   },
@@ -228,7 +251,11 @@ export const tasksService = {
       console.warn('[tasksService.delete] Erro ao marcar soft delete local:', err.message);
     }
 
-    // 2. Tenta fazer soft delete (UPDATE deleted_at) no Supabase
+    // 2. Enfileira na fila de sync antecipadamente para evitar perda de dados por race condition (F5/fechar aba)
+    const syncKey = `task_delete_${id}_${Date.now()}`;
+    enqueue('task_delete', { userId, id }, syncKey);
+
+    // 3. Tenta fazer soft delete (UPDATE deleted_at) no Supabase
     try {
       const { error } = await supabase
         .from('tasks')
@@ -241,23 +268,24 @@ export const tasksService = {
         if (error.code === '42703' || (error.message && error.message.includes('deleted_at'))) {
           console.warn('[tasksService.delete] Coluna deleted_at ausente — executando hard delete no Supabase.');
           const { error: hardError } = await supabase
-            .from('tasks')
-            .delete()
-            .eq('id', id)
-            .eq('user_id', userId);
-          if (hardError) {
-            enqueue('task_delete', { userId, id });
-            return { error: hardError, degraded: true };
-          }
-          // Mantém no cache local com deletedAt para que vá para a lixeira
+             .from('tasks')
+             .delete()
+             .eq('id', id)
+             .eq('user_id', userId);
+          if (hardError) throw hardError;
+          
+          // Sucesso no hard delete fallback: remove da fila de sync
+          dequeue(syncKey);
           return { error: null };
         }
         throw error;
       }
+      
+      // Sucesso: remove da fila de sync
+      dequeue(syncKey);
       return { error: null };
     } catch (error) {
-      console.warn('[tasksService.delete] Falha ao excluir no Supabase — enfileirado:', error.message);
-      enqueue('task_delete', { userId, id });
+      console.warn('[tasksService.delete] Falha ao excluir no Supabase — mantido na fila de sync:', error.message);
       return { error, degraded: true };
     }
   },
