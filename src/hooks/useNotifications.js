@@ -73,24 +73,13 @@ export function useNotifications() {
    */
   const subscribeToPush = useCallback(async (userId) => {
     if (!isSupported || !('serviceWorker' in navigator) || !('PushManager' in window) || !userId) {
-      console.warn('[Push] subscribeToPush abortado:', { isSupported, hasSW: 'serviceWorker' in navigator, hasPM: 'PushManager' in window, userId: !!userId });
       return null;
     }
 
     try {
-      console.log('1 - permission:', Notification.permission);
-      
       const registration = await navigator.serviceWorker.ready;
-      if (!registration.pushManager) {
-        console.warn('[Push] PushManager is not supported by the Service Worker.');
-        return null;
-      }
-
       const publicVapidKey = import.meta.env.VITE_PUBLIC_VAPID_KEY;
-      if (!publicVapidKey) {
-        console.warn('[Push] VITE_PUBLIC_VAPID_KEY not defined in environment');
-        return null;
-      }
+      if (!publicVapidKey) return null;
 
       let subscription = await registration.pushManager.getSubscription();
 
@@ -100,8 +89,6 @@ export function useNotifications() {
           applicationServerKey: urlBase64ToUint8Array(publicVapidKey)
         });
       }
-      
-      console.log('2 - subscription created:', subscription);
 
       const subJson = subscription.toJSON();
       const p256dh = subJson.keys?.p256dh;
@@ -109,9 +96,7 @@ export function useNotifications() {
       const endpoint = subJson.endpoint;
 
       if (endpoint && p256dh && auth) {
-        console.log('3 - sending to Supabase:', subscription);
-        
-        const result = await supabase
+        await supabase
           .from('push_subscriptions')
           .upsert({
             user_id: userId,
@@ -122,36 +107,11 @@ export function useNotifications() {
           }, {
             onConflict: 'endpoint'
           });
-
-        console.log('4 - supabase response:', result.data);
-        console.log('5 - supabase error:', result.error);
-
-        if (result.error) {
-          console.error('[PUSH] FAILED HARD:', result.error);
-          throw result.error;
-        }
-
-        // 6 - Passo de Verificação Ativa (Verify Step)
-        const { data: check, error: checkError } = await supabase
-          .from('push_subscriptions')
-          .select('*')
-          .eq('user_id', userId)
-          .eq('endpoint', endpoint)
-          .maybeSingle();
-
-        console.log('6 - verify in DB:', check, checkError);
-
-        if (checkError) {
-          console.error('[PUSH] Verification query failed:', checkError);
-          throw checkError;
-        }
-      } else {
-        console.warn('[Push] Subscription incompleta - faltam campos:', { endpoint: !!endpoint, p256dh: !!p256dh, auth: !!auth });
       }
 
       return subscription;
     } catch (err) {
-      console.error('[Push] ERRO no fluxo de Web Push subscription:', err.message, err);
+      console.error('[Push] Falha ao registrar assinatura push:', err.message);
       return null;
     }
   }, [isSupported]);
