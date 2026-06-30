@@ -698,12 +698,14 @@ export default function HomeView() {
                         className="home-ritmo-pets-selector"
                         style={{ 
                           display: 'flex', 
+                          flexDirection: 'row',
                           gap: '6px', 
                           backgroundColor: 'var(--bg-app)', 
                           padding: '3px', 
                           borderRadius: '20px', 
                           border: '1px solid var(--border-light)',
                           overflowX: 'auto',
+                          whiteSpace: 'nowrap',
                           maxWidth: '100%',
                           scrollbarWidth: 'none',
                           msOverflowStyle: 'none',
