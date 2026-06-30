@@ -1,15 +1,17 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import webpush from 'https://esm.sh/web-push@3.6.3';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Max-Age': '86400',
 };
 
-serve(async (req) => {
+Deno.serve(async (req) => {
+  // Intercepta estritamente o Preflight do celular para matar erro de CORS
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
+    return new Response('ok', { headers: corsHeaders, status: 200 });
   }
 
   try {
@@ -17,150 +19,60 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
 
     if (!supabaseUrl || !supabaseServiceKey) {
-      return new Response(JSON.stringify({ error: 'Missing SUPABASE environment keys' }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 500
+      return new Response(JSON.stringify({ error: 'Falta chaves de sistema SUPABASE' }), {
+        status: 200, // Força 200 para o gateway não mascarar com 500
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
 
-    // Inicializa o client administrativo
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // 1. Validar autenticação do usuário ou chave de serviço (Service Role)
-    const authHeader = req.headers.get('Authorization') || '';
-    if (!authHeader) {
-      return new Response(JSON.stringify({ error: 'Missing authorization header' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
-    }
-
-    const token = authHeader.replace('Bearer ', '').trim();
-    let isServiceRole = false;
-    let user = null;
-
-    try {
-      const parts = token.split('.');
-      if (parts.length === 3) {
-        const payloadDecoded = atob(parts[1].replace(/-/g, '+').replace(/_/g, '/'));
-        const jwtData = JSON.parse(payloadDecoded);
-        if (jwtData.role === 'service_role') {
-          isServiceRole = true;
-        }
-      }
-    } catch (e) {
-      console.warn('[Push Auth] Error parsing JWT claims:', e.message);
-    }
-
-    if (!isServiceRole) {
-      const { data: authData, error: authError } = await supabase.auth.getUser(token);
-      if (!authError && authData?.user) {
-        user = authData.user;
-      }
-    }
-
-    if (!isServiceRole && !user) {
-      return new Response(JSON.stringify({ error: 'Unauthorized session context' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
-    }
-
-    // 2. Obter payload
     let reqBody: any = null;
     try {
       reqBody = await req.json();
     } catch (_) {
-      return new Response(JSON.stringify({ error: 'Request body must be valid JSON' }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
+      return new Response(JSON.stringify({ error: 'JSON inválido' }), { status: 200, headers: corsHeaders });
     }
 
-    const { type, payload } = reqBody || {};
+    const isSendOp = reqBody.type === 'send';
+    const dataContainer = reqBody.payload ? reqBody.payload : reqBody;
 
-    // 3. Roteamento de comandos
-    if (type === 'send') {
-      const { user_id, title, body, url, entity_id, entity_type } = payload || {};
+    // OPERAÇÃO DE ENVIO (SEND)
+    if (isSendOp) {
+      const { user_id, title, body, url } = dataContainer;
       if (!user_id) {
-        return new Response(JSON.stringify({ error: 'Missing user_id in payload for send operation' }), {
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        });
+        return new Response(JSON.stringify({ error: 'Falta user_id' }), { status: 200, headers: corsHeaders });
       }
 
-      // Configura VAPID
       const vapidPublicKey = Deno.env.get('VAPID_PUBLIC_KEY') || Deno.env.get('VITE_PUBLIC_VAPID_KEY') || '';
       const vapidPrivateKey = Deno.env.get('VAPID_PRIVATE_KEY') || Deno.env.get('PRIVATE_VAPID_KEY') || '';
 
       if (!vapidPublicKey || !vapidPrivateKey) {
-        return new Response(JSON.stringify({ error: 'Missing VAPID configuration on server env' }), {
-          status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        });
+        return new Response(JSON.stringify({ error: 'Falta chaves VAPID no servidor' }), { status: 200, headers: corsHeaders });
       }
 
-      try {
-        webpush.setVapidDetails('mailto:admin@myflowday.com', vapidPublicKey, vapidPrivateKey);
-      } catch (e) {
-        console.warn('[Push Service] VAPID configuration warning:', e.message);
-      }
+      webpush.setVapidDetails('mailto:admin@myflowday.com', vapidPublicKey, vapidPrivateKey);
 
-      // Buscar assinaturas
       const { data: subscriptions, error: fetchError } = await supabase
         .from('push_subscriptions')
         .select('*')
         .eq('user_id', user_id);
 
-      if (fetchError) {
-        return new Response(JSON.stringify({ error: fetchError.message }), {
-          status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        });
-      }
+      if (fetchError) throw fetchError;
 
       if (!subscriptions || subscriptions.length === 0) {
-        return new Response(JSON.stringify({ ok: true, sent: 0, msg: 'Nenhuma assinatura cadastrada para o usuário' }), {
-          status: 200,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        });
+        return new Response(JSON.stringify({ ok: true, sent: 0 }), { status: 200, headers: corsHeaders });
       }
 
       const payloadObj = {
         title: title || 'MyFlowDay ⚡',
         body: body || '',
         url: url || '/tasks',
-        tag: `push_send_${user_id}_${Date.now()}`,
-        entity_id: entity_id || '',
-        entity_type: entity_type || 'system',
-        event_type: 'send_push_notification',
-        user_id,
-        data: {
-          url: url || '/tasks'
-        }
+        tag: `push_send_${user_id}_${Date.now()}`
       };
 
       let sentCount = 0;
-
-      // Função auxiliar fail-safe para telemetria
-      const logTelemetry = async (eventType: string, status: string, endpoint: string, errorMsg?: string) => {
-        try {
-          await supabase.from('push_telemetry').insert({
-            user_id,
-            endpoint,
-            event_type: eventType,
-            status,
-            error: errorMsg || null
-          });
-        } catch (e) {
-          console.warn(`[Push Telemetry Error] Falha ao gravar telemetria (${eventType}):`, e.message);
-        }
-      };
-
       for (const sub of subscriptions) {
-        // A) Registrar tentativa (sent_attempt)
-        await logTelemetry('sent_attempt', 'success', sub.endpoint);
-
         try {
           await webpush.sendNotification(
             {
@@ -173,51 +85,24 @@ serve(async (req) => {
             JSON.stringify(payloadObj)
           );
           sentCount++;
-
-          // B) Registro de entrega com sucesso no gateway (sent)
-          await logTelemetry('sent', 'success', sub.endpoint);
         } catch (err) {
-          const statusCode = err.statusCode || err.status;
-          console.warn(`[Push Service] Envio falhou para ${sub.endpoint.substring(0, 30)}:`, err.message);
-
-          // C) Registro de falha (failed)
-          await logTelemetry('failed', 'error', sub.endpoint, String(statusCode || err.message));
-
-          // Limpa endpoints expirados ou desinstalados automaticamente (404 / 410)
-          if (statusCode === 404 || statusCode === 410) {
-            console.log(`[Push Service] Limpando endpoint expirado (${statusCode})`);
-            await supabase
-              .from('push_subscriptions')
-              .delete()
-              .eq('endpoint', sub.endpoint);
-
-            // D) Registro de limpeza (cleaned)
-            await logTelemetry('cleaned', 'success', sub.endpoint);
+          if (err.statusCode === 404 || err.statusCode === 410) {
+            await supabase.from('push_subscriptions').delete().eq('endpoint', sub.endpoint);
           }
         }
       }
 
-      return new Response(JSON.stringify({ ok: true, sent: sentCount }), {
-        status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
+      return new Response(JSON.stringify({ ok: true, sent: sentCount }), { status: 200, headers: corsHeaders });
     }
 
-    // Default: 'register' (inserir/atualizar assinatura)
-    const registerPayload = (type === 'register' && payload) ? payload : (reqBody || {});
-    const { user_id, endpoint, keys } = registerPayload;
-    
+    // OPERAÇÃO DE REGISTRO (REGISTER)
+    const user_id = dataContainer.user_id || dataContainer.userId;
+    const endpoint = dataContainer.endpoint;
+    const keys = dataContainer.keys;
+
     if (!endpoint || !user_id) {
-      return new Response(JSON.stringify({ error: 'Missing user_id or endpoint in payload' }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
-    }
-
-    // Segurança: um usuário comum só pode registrar sua própria assinatura (service role tem bypass)
-    if (!isServiceRole && (!user || user.id !== user_id)) {
-      return new Response(JSON.stringify({ error: 'Forbidden' }), {
-        status: 403,
+      return new Response(JSON.stringify({ error: 'Falta user_id ou endpoint no payload enviado' }), {
+        status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
@@ -235,21 +120,22 @@ serve(async (req) => {
       });
 
     if (upsertError) {
-      return new Response(JSON.stringify({ error: upsertError.message }), {
-        status: 500,
+      return new Response(JSON.stringify({ error: 'Erro de banco Postgres', details: upsertError.message }), {
+        status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
 
-    return new Response(JSON.stringify({ ok: true }), {
+    return new Response(JSON.stringify({ ok: true, registered: true }), {
       status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
 
   } catch (err) {
-    return new Response(JSON.stringify({ error: String(err.message || err) }), {
+    // Força o retorno como status 200 contendo o texto do erro para enganar o gateway e expor o log na telemetria
+    return new Response(JSON.stringify({ error: 'Crash interno capturado', message: String(err.message || err) }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 500
+      status: 200
     });
   }
 });

@@ -35,7 +35,7 @@ self.addEventListener('push', (event) => {
       actions: [
         { action: 'open', title: '👁️ Abrir' },
         { action: 'complete', title: '✅ Concluir' },
-        { action: 'snooze_10', title: '⏰ Adiara 10 min' }
+        { action: 'snooze_10', title: '⏰ Adiar 10 min' }
       ],
       data: {
         url: data.url || '/',
@@ -48,40 +48,59 @@ self.addEventListener('push', (event) => {
       }
     };
 
+    // EXECUÇÃO ISOLADA: Mostra a notificação primeiro (Garante a exibição visual)
     event.waitUntil(
-      Promise.all([
-        self.registration.showNotification(title, options),
-        // Registrar telemetria de recebimento (received)
-        self.registration.pushManager.getSubscription().then(sub => {
-          if (sub) {
-            return fetch('/api/push-telemetry', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
+      self.registration.showNotification(title, options)
+        .then(() => {
+          // Tenta rodar as telemetrias secundárias sem travar a renderização do push
+          return self.registration.pushManager.getSubscription().then(sub => {
+            if (sub) {
+              const payloadData = JSON.stringify({
                 event_type: 'received',
                 endpoint: sub.endpoint,
                 user_id: data.user_id || null
+              });
+
+              return fetch('https://mftsklhrzhhvtsuamqaw.supabase.co/functions/v1/push-telemetry', { 
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: payloadData
               })
-            }).catch(err => console.warn('[SW] Telemetry received log error:', err));
-          }
-        }),
-        self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clients => {
-          clients.forEach(client => {
-            client.postMessage({
-              type: 'INJECT_NOTIFICATION_TO_APP',
-              payload: {
-                notifType: data.entity_type || 'system',
-                title: title,
-                description: data.body || '',
-                metadata: { actionTab: data.entity_type === 'goal' ? 'goals' : data.entity_type === 'focus' ? 'focus' : 'tasks', url: data.url }
-              }
+              .then(res => {
+                if (!res.ok) throw new Error('Supabase returned ' + res.status);
+                return res;
+              })
+              .catch(() => {
+                // Fallback para API Vercel
+                return fetch('/api/push-telemetry', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: payloadData
+                });
+              })
+              .catch(err => console.warn('[SW] Telemetry ignore:', err));
+            }
+          });
+        })
+        .then(() => {
+          return self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clients => {
+            clients.forEach(client => {
+              client.postMessage({
+                type: 'INJECT_NOTIFICATION_TO_APP',
+                payload: {
+                  notifType: data.entity_type || 'system',
+                  title: title,
+                  description: data.body || '',
+                  metadata: { actionTab: data.entity_type === 'goal' ? 'goals' : data.entity_type === 'focus' ? 'focus' : 'tasks', url: data.url }
+                }
+              });
             });
           });
         })
-      ])
+        .catch(err => console.error('[SW Fail-Safe Notification Error]:', err))
     );
   } catch (err) {
-    console.error('[SW] Erro ao processar evento Push nativo:', err);
+    console.error('[SW] Erro crítico ao processar evento Push:', err);
   }
 });
 
@@ -97,15 +116,30 @@ self.addEventListener('notificationclick', (event) => {
   event.waitUntil(
     self.registration.pushManager.getSubscription().then(sub => {
       if (sub) {
-        return fetch('/api/push-telemetry', {
+        const payloadData = JSON.stringify({
+          event_type: 'clicked',
+          endpoint: sub.endpoint,
+          user_id: notificationData.user_id || null
+        });
+
+        return fetch('https://mftsklhrzhhvtsuamqaw.supabase.co/functions/v1/push-telemetry', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            event_type: 'clicked',
-            endpoint: sub.endpoint,
-            user_id: notificationData.user_id || null
-          })
-        }).catch(err => console.warn('[SW] Telemetry clicked log error:', err));
+          body: payloadData
+        })
+        .then(res => {
+          if (!res.ok) throw new Error('Supabase returned ' + res.status);
+          return res;
+        })
+        .catch(() => {
+          // Fallback para API Vercel
+          return fetch('/api/push-telemetry', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: payloadData
+          });
+        })
+        .catch(err => console.warn('[SW] Telemetry clicked log error:', err));
       }
     })
   );
@@ -127,7 +161,7 @@ self.addEventListener('notificationclick', (event) => {
         });
         
         return self.registration.showNotification('⏰ Notificação Adiada', {
-          body: 'Lombraremos você novamente em 10 minutos.',
+          body: 'Lembraremos você novamente em 10 minutos.',
           icon: '/branding/icon-192.png',
           badge: '/branding/notification-badge.png',
           tag: `snooze_confirm_${Date.now()}`

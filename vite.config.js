@@ -143,7 +143,7 @@ export default defineConfig({
     apiDevServerPlugin(),
     react(),
     VitePWA({
-      strategy: 'injectManifest',
+      strategies: 'injectManifest',
       srcDir: 'src',
       filename: 'sw.js',
       registerType: 'autoUpdate',
@@ -181,32 +181,9 @@ export default defineConfig({
         ]
       },
       injectManifest: {
-        // 🛡️ SOLUÇÃO DO BUG: Força o empacotamento inline do runtime do Workbox,
-        // eliminando o uso de 'importScripts()' dentro do escopo do Worker global.
-        inlineWorkboxRuntime: true
-      },
-      workbox: {
         maximumFileSizeToCacheInBytes: 5000000,
         globIgnores: ['**/branding-source*'],
-        cleanupOutdatedCaches: true,
-        navigateFallback: '/index.html',
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,webp}'],
-        runtimeCaching: [
-          {
-            urlPattern: /^https:\/\/.*\.supabase\.co\/.*/i,
-            handler: 'NetworkFirst',
-            options: {
-              cacheName: 'supabase-api-cache',
-              expiration: {
-                maxEntries: 100,
-                maxAgeSeconds: 60 * 60 * 24 // 1 dia
-              },
-              cacheableResponse: {
-                statuses: [0, 200]
-              }
-            }
-          }
-        ]
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,webp}']
       },
       devOptions: {
         enabled: true,
