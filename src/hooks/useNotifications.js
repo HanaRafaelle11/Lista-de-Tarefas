@@ -121,11 +121,30 @@ export function useNotifications() {
             created_at: new Date().toISOString()
           }, {
             onConflict: 'endpoint'
-          })
-          .select();
+          });
 
         console.log('4 - supabase response:', result.data);
         console.log('5 - supabase error:', result.error);
+
+        if (result.error) {
+          console.error('[PUSH] FAILED HARD:', result.error);
+          throw result.error;
+        }
+
+        // 6 - Passo de Verificação Ativa (Verify Step)
+        const { data: check, error: checkError } = await supabase
+          .from('push_subscriptions')
+          .select('*')
+          .eq('user_id', userId)
+          .eq('endpoint', endpoint)
+          .maybeSingle();
+
+        console.log('6 - verify in DB:', check, checkError);
+
+        if (checkError) {
+          console.error('[PUSH] Verification query failed:', checkError);
+          throw checkError;
+        }
       } else {
         console.warn('[Push] Subscription incompleta - faltam campos:', { endpoint: !!endpoint, p256dh: !!p256dh, auth: !!auth });
       }
