@@ -5,6 +5,15 @@ precacheAndRoute(self.__WB_MANIFEST || []);
 
 console.log('[SW] Service Worker Event-Driven Production Grade registrado e ativo.');
 
+// Força ativação imediata do novo Service Worker sem esperar sessões antigas fecharem
+self.addEventListener('install', (event) => {
+  self.skipWaiting();
+});
+
+self.addEventListener('activate', (event) => {
+  event.waitUntil(self.clients.claim());
+});
+
 // ── 1. Evento Push Nativo (Servidor VAPID / FCM / APNs → Celular Fechado) ──
 self.addEventListener('push', (event) => {
   try {
