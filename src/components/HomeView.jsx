@@ -694,24 +694,7 @@ export default function HomeView() {
                       <h4 className="home-ritmo-title" style={{ margin: 0 }}>Seu ritmo de crescimento</h4>
                       
                       {/* Seleção de Pet / Tipo de Crescimento */}
-                      <div 
-                        className="home-ritmo-pets-selector"
-                        style={{ 
-                          display: 'flex', 
-                          flexDirection: 'row',
-                          gap: '6px', 
-                          backgroundColor: 'var(--bg-app)', 
-                          padding: '3px', 
-                          borderRadius: '20px', 
-                          border: '1px solid var(--border-light)',
-                          overflowX: 'auto',
-                          whiteSpace: 'nowrap',
-                          maxWidth: '100%',
-                          scrollbarWidth: 'none',
-                          msOverflowStyle: 'none',
-                          WebkitOverflowScrolling: 'touch'
-                        }}
-                      >
+                      <div className="home-ritmo-pets-selector">
                         {[
                           { id: 'plant', label: 'Plantinha', icon: '🌱' },
                           { id: 'baby', label: 'Bebê', icon: '👶' },
