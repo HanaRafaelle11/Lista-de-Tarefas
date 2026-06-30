@@ -702,12 +702,32 @@ async function trySend(item) {
 
     if (type === 'task_delete') {
       const { userId, id } = payload;
+      
       const { error } = await supabase
         .from('tasks')
-        .delete()
+        .update({ deleted_at: new Date().toISOString() })
         .eq('id', id)
         .eq('user_id', userId);
-      if (error) throw error;
+        
+      if (error) {
+        if (error.code === '42703' || (error.message && error.message.includes('deleted_at'))) {
+          console.warn('[syncQueue] task_delete: coluna deleted_at ausente, fazendo hard delete.');
+          const { error: hardError } = await supabase
+            .from('tasks')
+            .delete()
+            .eq('id', id)
+            .eq('user_id', userId);
+          if (hardError) throw hardError;
+        } else {
+          throw error;
+        }
+      }
+      
+      try {
+        await localDB.delete('tasks', id);
+      } catch (e) {
+        console.warn('[syncQueue] task_delete: falha ao limpar IndexedDB:', e.message);
+      }
       return true;
     }
 

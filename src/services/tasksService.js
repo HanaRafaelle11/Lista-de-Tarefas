@@ -69,18 +69,29 @@ export const tasksService = {
       
       const mapped = (data || []).map(mapTask);
       
+      let allTasks = [...mapped];
+
       try {
         const localTasks = await localDB.getAll('tasks');
         const pendingOps = await localDB.getAll('pendingOps');
-        const pendingIds = new Set(pendingOps.map(op => op.payload?.taskId || op.payload?.id).filter(Boolean));
         
-        const localUnsynced = localTasks.filter(t => 
-          t.user_id === userId && 
-          (t.deletedAt || pendingIds.has(t.id) || !mapped.some(mt => mt.id === t.id))
+        const pendingCreateIds = new Set(
+          pendingOps
+            .filter(op => op.type === 'task_create')
+            .map(op => op.payload?.taskId || op.payload?.id)
+            .filter(Boolean)
         );
-        
-        const unsyncedToKeep = localUnsynced.filter(lt => !mapped.some(mt => mt.id === lt.id));
-        const allTasks = [...mapped, ...unsyncedToKeep];
+
+        // REGRA CRÍTICA: Supabase é a fonte da verdade.
+        // Só re-injetamos tarefas criadas localmente offline que ainda não estão no Supabase
+        const unsyncedToKeep = localTasks.filter(lt =>
+          lt.user_id === userId &&
+          !lt.deletedAt &&
+          !mapped.some(mt => mt.id === lt.id) &&
+          pendingCreateIds.has(lt.id)
+        );
+
+        allTasks = [...mapped, ...unsyncedToKeep];
 
         await localDB.clear('tasks');
         await localDB.putMany('tasks', allTasks);
@@ -88,12 +99,12 @@ export const tasksService = {
         console.warn('[tasksService.getAll] Erro ao sincronizar com cache local:', err.message);
       }
 
-      return { data: mapped, error: null };
+      return { data: allTasks, error: null };
     } catch (error) {
       console.warn('[tasksService.getAll] Falha ao carregar tarefas — usando IndexedDB offline:', error.message);
       try {
         const localTasks = await localDB.getAll('tasks');
-        const userTasks = localTasks.filter(t => t.user_id === userId);
+        const userTasks = localTasks.filter(t => t.user_id === userId && !t.deletedAt);
         return { data: userTasks, error, degraded: true };
       } catch (dbErr) {
         return { data: [], error: dbErr, degraded: true };
@@ -239,20 +250,22 @@ export const tasksService = {
   delete: async (userId, id) => {
     requireUser(userId);
     const nowIso = new Date().toISOString();
+    const syncKey = `delete_${id}`;
     
-    // 1. Marca como excluído logicamente no cache local (para UX de undo)
+    // 1. Marca como excluído logicamente no cache local imediatamente
     try {
       const existing = await localDB.get('tasks', id);
       if (existing) {
         existing.deletedAt = nowIso;
         await localDB.put('tasks', existing);
+      } else {
+        await localDB.delete('tasks', id).catch(() => {});
       }
     } catch (err) {
       console.warn('[tasksService.delete] Erro ao marcar soft delete local:', err.message);
     }
 
-    // 2. Enfileira na fila de sync antecipadamente para evitar perda de dados por race condition (F5/fechar aba)
-    const syncKey = `task_delete_${id}_${Date.now()}`;
+    // 2. Enfileira na fila de sync
     enqueue('task_delete', { userId, id }, syncKey);
 
     // 3. Tenta fazer soft delete (UPDATE deleted_at) no Supabase
@@ -274,15 +287,17 @@ export const tasksService = {
              .eq('user_id', userId);
           if (hardError) throw hardError;
           
-          // Sucesso no hard delete fallback: remove da fila de sync
+          // Sucesso no hard delete fallback: remove da fila de sync e limpa IndexedDB
           dequeue(syncKey);
+          await localDB.delete('tasks', id).catch(() => {});
           return { error: null };
         }
         throw error;
       }
       
-      // Sucesso: remove da fila de sync
+      // Sucesso: remove da fila de sync e limpa IndexedDB
       dequeue(syncKey);
+      await localDB.delete('tasks', id).catch(() => {});
       return { error: null };
     } catch (error) {
       console.warn('[tasksService.delete] Falha ao excluir no Supabase — mantido na fila de sync:', error.message);
