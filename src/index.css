@@ -6765,6 +6765,15 @@ body,
   background-color: var(--danger-hover) !important;
 }
 
+/* Hide scrollbar for growth pet selector */
+.home-ritmo-pets-selector::-webkit-scrollbar {
+  display: none;
+}
+.home-ritmo-pets-selector {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
 
 
 

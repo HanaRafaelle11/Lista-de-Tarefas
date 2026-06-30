@@ -694,7 +694,22 @@ export default function HomeView() {
                       <h4 className="home-ritmo-title" style={{ margin: 0 }}>Seu ritmo de crescimento</h4>
                       
                       {/* Seleção de Pet / Tipo de Crescimento */}
-                      <div style={{ display: 'flex', gap: '6px', backgroundColor: 'var(--bg-app)', padding: '3px', borderRadius: '20px', border: '1px solid var(--border-light)' }}>
+                      <div 
+                        className="home-ritmo-pets-selector"
+                        style={{ 
+                          display: 'flex', 
+                          gap: '6px', 
+                          backgroundColor: 'var(--bg-app)', 
+                          padding: '3px', 
+                          borderRadius: '20px', 
+                          border: '1px solid var(--border-light)',
+                          overflowX: 'auto',
+                          maxWidth: '100%',
+                          scrollbarWidth: 'none',
+                          msOverflowStyle: 'none',
+                          WebkitOverflowScrolling: 'touch'
+                        }}
+                      >
                         {[
                           { id: 'plant', label: 'Plantinha', icon: '🌱' },
                           { id: 'baby', label: 'Bebê', icon: '👶' },
@@ -717,7 +732,8 @@ export default function HomeView() {
                               alignItems: 'center',
                               gap: '4px',
                               transition: 'all 0.2s ease',
-                              boxShadow: growthPet === pet.id ? '0 2px 8px rgba(0,0,0,0.15)' : 'none'
+                              boxShadow: growthPet === pet.id ? '0 2px 8px rgba(0,0,0,0.15)' : 'none',
+                              flexShrink: 0
                             }}
                             title={`Escolher ${pet.label}`}
                           >
