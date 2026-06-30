@@ -82,7 +82,13 @@ Deno.serve(async (req) => {
                 auth: sub.auth || sub.keys?.auth
               }
             },
-            JSON.stringify(payloadObj)
+            JSON.stringify(payloadObj),
+            {
+              headers: {
+                'Urgency': 'high',
+                'TTL': '60'
+              }
+            }
           );
           sentCount++;
         } catch (err) {
