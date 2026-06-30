@@ -112,7 +112,10 @@ serve(async (req) => {
         tag: `push_send_${user_id}_${Date.now()}`,
         entity_id: entity_id || '',
         entity_type: entity_type || 'system',
-        event_type: 'send_push_notification'
+        event_type: 'send_push_notification',
+        data: {
+          url: url || '/tasks'
+        }
       };
 
       let sentCount = 0;
