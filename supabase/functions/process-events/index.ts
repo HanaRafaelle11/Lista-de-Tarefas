@@ -8,6 +8,7 @@ import { handleTaskDeleted } from './handlers/task-deleted.ts';
 import { handleHabitCompleted } from './handlers/habit-completed.ts';
 import { handleGoalCompleted } from './handlers/goal-completed.ts';
 import { handleAnalyticsEvent } from './handlers/analytics-handler.ts';
+import { handleSendPushNotification } from './handlers/send-push-notification.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -123,6 +124,53 @@ serve(async (req) => {
       });
     }
 
+    if (reqBody && reqBody.type === 'send_push_notification') {
+      const { payload } = reqBody;
+      const { user_id, title, body } = payload || {};
+
+      if (!user_id) {
+        return new Response(JSON.stringify({ error: 'Missing user_id in payload' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+
+      // Validar JWT
+      const authHeader = req.headers.get('Authorization') || '';
+      if (!authHeader) {
+        return new Response(JSON.stringify({ error: 'Missing authorization header' }), {
+          status: 401,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+
+      const token = authHeader.replace('Bearer ', '').trim();
+      const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+      
+      if (authError || !user) {
+        return new Response(JSON.stringify({ error: 'Unauthorized session' }), {
+          status: 401,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+
+      // Executa o envio
+      const handlerResult = await handleSendPushNotification(supabase, {
+        user_id,
+        event_type: 'send_push_notification',
+        payload: {
+          user_id,
+          title: title || 'MyFlowDay ⚡',
+          body: body || ''
+        }
+      });
+
+      return new Response(JSON.stringify(handlerResult), {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
     // 1. Selecionar eventos pendentes ou que falharam mas estão elegíveis para retry
     const { data: pendingEvents, error: fetchError } = await supabase
       .from('events')
@@ -189,6 +237,11 @@ serve(async (req) => {
           case 'GoalCompleted':
             handlerName = 'goal-completed';
             handlerResult = await handleGoalCompleted(supabase, event);
+            break;
+          case 'send_push_notification':
+          case 'SendPushNotification':
+            handlerName = 'send-push-notification';
+            handlerResult = await handleSendPushNotification(supabase, event);
             break;
           default:
             handlerName = 'analytics-fallback';
