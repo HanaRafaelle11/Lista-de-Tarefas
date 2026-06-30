@@ -153,16 +153,7 @@ export function useNotifications() {
         const subscription = await registration.pushManager.getSubscription();
         if (subscription) {
           await subscription.unsubscribe();
-          await supabase.functions.invoke('push', {
-            body: {
-              type: 'unregister',
-              payload: {
-                user_id: userId,
-                endpoint: subscription.endpoint
-              }
-            }
-          });
-          console.log('[Push] Unsubscribed and deleted from database.');
+          console.log('[Push] Unsubscribed successfully in browser.');
         }
       } catch (err) {
         console.warn('[Push] Error during unsubscription cleanup:', err);

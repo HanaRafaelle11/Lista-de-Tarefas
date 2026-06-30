@@ -153,43 +153,7 @@ serve(async (req) => {
       });
     }
 
-    if (type === 'unregister') {
-      const { user_id, endpoint } = payload || {};
-      if (!endpoint || !user_id) {
-        return new Response(JSON.stringify({ error: 'Missing endpoint or user_id in payload for unregister' }), {
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        });
-      }
-
-      // Segurança: um usuário comum só pode deletar sua própria assinatura
-      if (user.id !== user_id) {
-        return new Response(JSON.stringify({ error: 'Forbidden' }), {
-          status: 403,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        });
-      }
-
-      const { error: deleteError } = await supabase
-        .from('push_subscriptions')
-        .delete()
-        .eq('endpoint', endpoint)
-        .eq('user_id', user_id);
-
-      if (deleteError) {
-        return new Response(JSON.stringify({ error: deleteError.message }), {
-          status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        });
-      }
-
-      return new Response(JSON.stringify({ ok: true }), {
-        status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
-    }
-
-    // Default: 'register' ou sem type (inserir/atualizar assinatura)
+    // Default: 'register' (inserir/atualizar assinatura)
     const { user_id, endpoint, keys } = reqBody || {};
     
     if (!endpoint || !user_id) {
