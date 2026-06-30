@@ -27,12 +27,15 @@ export default async function handler(req, res) {
         error: error || null
       }]);
 
-    if (insertError) throw insertError;
+    if (insertError) {
+      logger.warn('api.pushTelemetry.db_warning', { error: insertError.message });
+      return res.status(200).json({ success: false, warning: insertError.message });
+    }
 
     logger.info('api.pushTelemetry.success', { event_type, endpoint: endpoint.substring(0, 30) });
     return res.status(200).json({ success: true });
   } catch (err) {
-    logger.error('api.pushTelemetry.error', { error: err.message });
-    return res.status(500).json({ error: err.message });
+    logger.error('api.pushTelemetry.catch_error', { error: err.message });
+    return res.status(200).json({ success: false, error: err.message });
   }
 }

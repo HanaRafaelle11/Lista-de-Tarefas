@@ -26,7 +26,7 @@ serve(async (req) => {
     // Inicializa o client administrativo
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // 1. Validar autenticação do usuário
+    // 1. Validar autenticação do usuário ou chave de serviço (Service Role)
     const authHeader = req.headers.get('Authorization') || '';
     if (!authHeader) {
       return new Response(JSON.stringify({ error: 'Missing authorization header' }), {
@@ -36,10 +36,31 @@ serve(async (req) => {
     }
 
     const token = authHeader.replace('Bearer ', '').trim();
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-    
-    if (authError || !user) {
-      return new Response(JSON.stringify({ error: 'Unauthorized user session context' }), {
+    let isServiceRole = false;
+    let user = null;
+
+    try {
+      const parts = token.split('.');
+      if (parts.length === 3) {
+        const payloadDecoded = atob(parts[1].replace(/-/g, '+').replace(/_/g, '/'));
+        const jwtData = JSON.parse(payloadDecoded);
+        if (jwtData.role === 'service_role') {
+          isServiceRole = true;
+        }
+      }
+    } catch (e) {
+      console.warn('[Push Auth] Error parsing JWT claims:', e.message);
+    }
+
+    if (!isServiceRole) {
+      const { data: authData, error: authError } = await supabase.auth.getUser(token);
+      if (!authError && authData?.user) {
+        user = authData.user;
+      }
+    }
+
+    if (!isServiceRole && !user) {
+      return new Response(JSON.stringify({ error: 'Unauthorized session context' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
@@ -120,14 +141,25 @@ serve(async (req) => {
       };
 
       let sentCount = 0;
+
+      // Função auxiliar fail-safe para telemetria
+      const logTelemetry = async (eventType: string, status: string, endpoint: string, errorMsg?: string) => {
+        try {
+          await supabase.from('push_telemetry').insert({
+            user_id,
+            endpoint,
+            event_type: eventType,
+            status,
+            error: errorMsg || null
+          });
+        } catch (e) {
+          console.warn(`[Push Telemetry Error] Falha ao gravar telemetria (${eventType}):`, e.message);
+        }
+      };
+
       for (const sub of subscriptions) {
         // A) Registrar tentativa (sent_attempt)
-        await supabase.from('push_telemetry').insert({
-          user_id,
-          endpoint: sub.endpoint,
-          event_type: 'sent_attempt',
-          status: 'success'
-        });
+        await logTelemetry('sent_attempt', 'success', sub.endpoint);
 
         try {
           await webpush.sendNotification(
@@ -143,24 +175,13 @@ serve(async (req) => {
           sentCount++;
 
           // B) Registro de entrega com sucesso no gateway (sent)
-          await supabase.from('push_telemetry').insert({
-            user_id,
-            endpoint: sub.endpoint,
-            event_type: 'sent',
-            status: 'success'
-          });
+          await logTelemetry('sent', 'success', sub.endpoint);
         } catch (err) {
           const statusCode = err.statusCode || err.status;
           console.warn(`[Push Service] Envio falhou para ${sub.endpoint.substring(0, 30)}:`, err.message);
 
           // C) Registro de falha (failed)
-          await supabase.from('push_telemetry').insert({
-            user_id,
-            endpoint: sub.endpoint,
-            event_type: 'failed',
-            status: 'error',
-            error: String(statusCode || err.message)
-          });
+          await logTelemetry('failed', 'error', sub.endpoint, String(statusCode || err.message));
 
           // Limpa endpoints expirados ou desinstalados automaticamente (404 / 410)
           if (statusCode === 404 || statusCode === 410) {
@@ -171,12 +192,7 @@ serve(async (req) => {
               .eq('endpoint', sub.endpoint);
 
             // D) Registro de limpeza (cleaned)
-            await supabase.from('push_telemetry').insert({
-              user_id,
-              endpoint: sub.endpoint,
-              event_type: 'cleaned',
-              status: 'success'
-            });
+            await logTelemetry('cleaned', 'success', sub.endpoint);
           }
         }
       }
@@ -188,7 +204,8 @@ serve(async (req) => {
     }
 
     // Default: 'register' (inserir/atualizar assinatura)
-    const { user_id, endpoint, keys } = reqBody || {};
+    const registerPayload = (type === 'register' && payload) ? payload : (reqBody || {});
+    const { user_id, endpoint, keys } = registerPayload;
     
     if (!endpoint || !user_id) {
       return new Response(JSON.stringify({ error: 'Missing user_id or endpoint in payload' }), {
@@ -197,8 +214,8 @@ serve(async (req) => {
       });
     }
 
-    // Segurança: um usuário comum só pode registrar sua própria assinatura
-    if (user.id !== user_id) {
+    // Segurança: um usuário comum só pode registrar sua própria assinatura (service role tem bypass)
+    if (!isServiceRole && (!user || user.id !== user_id)) {
       return new Response(JSON.stringify({ error: 'Forbidden' }), {
         status: 403,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }

@@ -1276,7 +1276,7 @@ export default function SettingsView() {
                 {/* Botão toggle */}
                 <button
                   id="notifications-toggle-btn"
-                  onClick={notifications.isEnabled ? notifications.disableNotifications : notifications.requestPermission}
+                  onClick={() => notifications.isEnabled ? notifications.disableNotifications(currentUser?.id) : notifications.requestPermission(currentUser?.id)}
                   style={{
                     position: 'relative',
                     width: '44px',

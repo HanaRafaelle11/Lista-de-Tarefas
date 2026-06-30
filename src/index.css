@@ -2763,6 +2763,11 @@ button[title="Sair do MyFlowDay"]:hover {
 }
 
 /* — Menu de opções do GoalCard ——————————————————————————— */
+.goal-card:has(.goal-menu-dropdown),
+.goal-card:focus-within {
+  z-index: 10;
+}
+
 .goal-menu-wrap {
   position: relative;
 }
