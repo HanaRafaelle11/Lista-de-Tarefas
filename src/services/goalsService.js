@@ -163,7 +163,7 @@ export const goalsService = {
       log('getAll failed -> offline fallback', error.message);
 
       const localGoals = await localDB.getAll('goals');
-      const userGoals = localGoals.filter(g => g.user_id === userId);
+      const userGoals = localGoals.filter(g => g.user_id === userId && !g.deletedAt);
 
       return {
         data: { goals: userGoals, goalTasks: [] },
