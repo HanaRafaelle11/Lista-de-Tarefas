@@ -96,17 +96,19 @@ export function useNotifications() {
       const endpoint = subJson.endpoint;
 
       if (endpoint && p256dh && auth) {
-        await supabase
-          .from('push_subscriptions')
-          .upsert({
-            user_id: userId,
-            endpoint,
-            p256dh,
-            auth,
-            created_at: new Date().toISOString()
-          }, {
-            onConflict: 'endpoint'
-          });
+        await supabase.functions.invoke('process-events', {
+          body: {
+            type: 'push_subscription',
+            payload: {
+              user_id: userId,
+              endpoint,
+              keys: {
+                p256dh,
+                auth
+              }
+            }
+          }
+        });
       }
 
       return subscription;
@@ -154,10 +156,15 @@ export function useNotifications() {
         const subscription = await registration.pushManager.getSubscription();
         if (subscription) {
           await subscription.unsubscribe();
-          await supabase
-            .from('push_subscriptions')
-            .delete()
-            .eq('endpoint', subscription.endpoint);
+          await supabase.functions.invoke('process-events', {
+            body: {
+              type: 'push_unsubscription',
+              payload: {
+                user_id: userId,
+                endpoint: subscription.endpoint
+              }
+            }
+          });
           console.log('[Push] Unsubscribed and deleted from database.');
         }
       } catch (err) {

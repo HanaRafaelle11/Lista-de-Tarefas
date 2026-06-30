@@ -42,6 +42,87 @@ serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+    // 0. Interceptar e processar requisições síncronas de push subscriptions
+    let reqBody: any = null;
+    try {
+      if (req.method === 'POST') {
+        reqBody = await req.json();
+      }
+    } catch (_) {
+      // Ignora erro se não for JSON
+    }
+
+    if (reqBody && (reqBody.type === 'push_subscription' || reqBody.type === 'push_unsubscription')) {
+      const { type, payload } = reqBody;
+      const { endpoint, keys, user_id } = payload || {};
+
+      if (!endpoint || !user_id) {
+        return new Response(JSON.stringify({ error: 'Missing endpoint or user_id in payload' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+
+      // Validar JWT
+      const authHeader = req.headers.get('Authorization') || '';
+      if (!authHeader) {
+        return new Response(JSON.stringify({ error: 'Missing authorization header' }), {
+          status: 401,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+
+      const token = authHeader.replace('Bearer ', '').trim();
+      const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+      
+      if (authError || !user || user.id !== user_id) {
+        return new Response(JSON.stringify({ error: 'Unauthorized user session context' }), {
+          status: 401,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+
+      if (type === 'push_subscription') {
+        const { error: upsertError } = await supabase
+          .from('push_subscriptions')
+          .upsert({
+            user_id,
+            endpoint,
+            p256dh: keys?.p256dh || null,
+            auth: keys?.auth || null,
+            updated_at: new Date().toISOString()
+          }, {
+            onConflict: 'endpoint'
+          });
+
+        if (upsertError) {
+          return new Response(JSON.stringify({ error: upsertError.message }), {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
+        }
+      } else {
+        // push_unsubscription
+        const { error: deleteError } = await supabase
+          .from('push_subscriptions')
+          .delete()
+          .eq('endpoint', endpoint)
+          .eq('user_id', user_id);
+
+        if (deleteError) {
+          return new Response(JSON.stringify({ error: deleteError.message }), {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
+        }
+      }
+
+      return new Response(JSON.stringify({ ok: true }), {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
     // 1. Selecionar eventos pendentes ou que falharam mas estão elegíveis para retry
     const { data: pendingEvents, error: fetchError } = await supabase
       .from('events')
