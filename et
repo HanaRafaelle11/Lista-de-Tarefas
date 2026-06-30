@@ -1,0 +1,22 @@
+warning: in the working copy of 'api-handlers/admin/notifications.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'api/[...routes].js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/components/AdminNotificationDashboard.jsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/hooks/useNotifications.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/services/goalsService.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/services/syncQueue.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/services/tasksService.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'supabase/functions/process-notification-queue/index.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'vite.config.js', LF will be replaced by CRLF the next time Git touches it
+api-handlers/admin/notifications.js
+api/[...routes].js
+src/components/AdminDashboard.jsx
+src/components/AdminNotificationDashboard.jsx
+src/components/GoalModal.jsx
+src/components/TodoView.jsx
+src/contexts/AppContext.jsx
+src/hooks/useNotifications.js
+src/services/goalsService.js
+src/services/syncQueue.js
+src/services/tasksService.js
+supabase/functions/process-notification-queue/index.ts
+vite.config.js

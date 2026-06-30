@@ -73,29 +73,37 @@ export function useNotifications() {
    */
   const subscribeToPush = useCallback(async (userId) => {
     if (!isSupported || !('serviceWorker' in navigator) || !('PushManager' in window) || !userId) {
+      console.warn('[Push] subscribeToPush abortado:', { isSupported, hasSW: 'serviceWorker' in navigator, hasPM: 'PushManager' in window, userId: !!userId });
       return null;
     }
 
     try {
+      console.log('[Push] Iniciando fluxo de subscribe para userId:', userId);
+      
       const registration = await navigator.serviceWorker.ready;
       if (!registration.pushManager) {
         console.warn('[Push] PushManager is not supported by the Service Worker.');
         return null;
       }
+      console.log('[Push] Service Worker ready. Scope:', registration.scope);
 
       const publicVapidKey = import.meta.env.VITE_PUBLIC_VAPID_KEY;
       if (!publicVapidKey) {
         console.warn('[Push] VITE_PUBLIC_VAPID_KEY not defined in environment');
         return null;
       }
+      console.log('[Push] VAPID key encontrada:', publicVapidKey.substring(0, 20) + '...');
 
       let subscription = await registration.pushManager.getSubscription();
+      console.log('[Push] Subscription existente:', subscription ? 'SIM' : 'NÃO');
 
       if (!subscription) {
+        console.log('[Push] Criando nova subscription...');
         subscription = await registration.pushManager.subscribe({
           userVisibleOnly: true,
           applicationServerKey: urlBase64ToUint8Array(publicVapidKey)
         });
+        console.log('[Push] Nova subscription criada com sucesso');
       }
 
       const subJson = subscription.toJSON();
@@ -103,8 +111,16 @@ export function useNotifications() {
       const auth = subJson.keys?.auth;
       const endpoint = subJson.endpoint;
 
+      console.log('[Push] Subscription data:', { 
+        endpoint: endpoint?.substring(0, 50) + '...', 
+        hasP256dh: !!p256dh, 
+        hasAuth: !!auth 
+      });
+
       if (endpoint && p256dh && auth) {
-        const { error } = await supabase
+        console.log('[Push] Salvando subscription no banco (upsert em push_subscriptions)...');
+        
+        const { data, error } = await supabase
           .from('push_subscriptions')
           .upsert({
             user_id: userId,
@@ -114,18 +130,26 @@ export function useNotifications() {
             created_at: new Date().toISOString()
           }, {
             onConflict: 'endpoint'
-          });
+          })
+          .select();
 
         if (error) {
-          console.error('[Push] Error saving subscription in database:', error.message);
+          console.error('[Push] ERRO ao salvar subscription no banco:', {
+            message: error.message,
+            code: error.code,
+            details: error.details,
+            hint: error.hint
+          });
         } else {
-          console.log('[Push] Subscription synchronized successfully.');
+          console.log('[Push] ✅ Subscription salva com sucesso no banco:', data);
         }
+      } else {
+        console.warn('[Push] Subscription incompleta - faltam campos:', { endpoint: !!endpoint, p256dh: !!p256dh, auth: !!auth });
       }
 
       return subscription;
     } catch (err) {
-      console.error('[Push] Error in Web Push subscription flow:', err);
+      console.error('[Push] ERRO no fluxo de Web Push subscription:', err.message, err);
       return null;
     }
   }, [isSupported]);

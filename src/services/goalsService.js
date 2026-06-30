@@ -126,21 +126,30 @@ export const goalsService = {
         const localGoals = await localDB.getAll('goals');
         const pendingOps = await localDB.getAll('pendingOps');
 
-        const pendingIds = new Set(
-          pendingOps.map(op => op.payload?.goalId || op.payload?.id).filter(Boolean)
+        const pendingCreateIds = new Set(
+          pendingOps
+            .filter(op => op.type === 'goal_create')
+            .map(op => op.payload?.goalId || op.payload?.id)
+            .filter(Boolean)
         );
 
-        const localUnsynced = localGoals.filter(g =>
-          g.user_id === userId &&
-          (g.deletedAt || pendingIds.has(g.id) || !mappedGoals.some(m => m.id === g.id))
+        // REGRA CRÍTICA: Supabase é source of truth.
+        // Só re-injetar goals locais que:
+        //   1. NÃO existem no Supabase (pendentes de sync de criação)
+        //   2. NÃO estão marcados como deletados localmente
+        //   3. TÊM operação pendente de criação na fila
+        const unsyncedToKeep = localGoals.filter(lg =>
+          lg.user_id === userId &&
+          !lg.deletedAt &&
+          !mappedGoals.some(mg => mg.id === lg.id) &&
+          pendingCreateIds.has(lg.id)
         );
 
-        const unsyncedToKeep = localUnsynced.filter(lg =>
-          !mappedGoals.some(mg => mg.id === lg.id)
-        );
+        log('merge: supabase=' + mappedGoals.length + ', localPendingCreate=' + unsyncedToKeep.length);
 
         allGoals = [...mappedGoals, ...unsyncedToKeep];
 
+        // Atualiza cache com dados limpos (sem goals deletados)
         await localDB.clear('goals');
         await localDB.putMany('goals', allGoals);
 
@@ -287,10 +296,29 @@ export const goalsService = {
     requireUser(userId);
 
     const nowIso = new Date().toISOString();
+    const syncKey = `delete_${id}`;
 
-    enqueue('goal_delete', { userId, id }, `delete_${id}`);
+    // 1. Marca como deletado no IndexedDB IMEDIATAMENTE
+    try {
+      const existing = await localDB.get('goals', id);
+      if (existing) {
+        existing.deletedAt = nowIso;
+        existing.deleted_at = nowIso;
+        await localDB.put('goals', existing);
+        log('delete: IndexedDB marcado com deletedAt', id);
+      } else {
+        // Se não existe no cache, remove por segurança
+        await localDB.delete('goals', id).catch(() => {});
+      }
+    } catch (e) {
+      log('delete: erro ao atualizar IndexedDB', e.message);
+    }
+
+    // 2. Enfileira para sync offline
+    enqueue('goal_delete', { userId, id }, syncKey);
 
     try {
+      // 3. Soft delete no Supabase
       const { error } = await supabase
         .from('goals')
         .update({ deleted_at: nowIso })
@@ -299,10 +327,15 @@ export const goalsService = {
 
       if (error) throw error;
 
+      // 4. Sucesso: remove da fila de sync e limpa do IndexedDB
+      dequeue(syncKey);
+      await localDB.delete('goals', id).catch(() => {});
+      log('delete: sucesso completo', id);
+
       return { error: null };
 
     } catch (error) {
-      log('delete failed', error.message);
+      log('delete failed, mantido na fila de sync', error.message);
       return { error, degraded: true };
     }
   },
