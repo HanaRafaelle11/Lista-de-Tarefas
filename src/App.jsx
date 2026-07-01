@@ -26,7 +26,7 @@ import CoachView from './components/CoachView';
 
 const RevenueDashboard = lazy(() => import('./pages/RevenueDashboard'));
 const Checkout = lazy(() => import('./pages/Checkout'));
-const DevToolsWidget = lazy(() => import('./components/DevToolsWidget'));
+
 const GuidedTour = lazy(() => import('./components/GuidedTour'));
 const NotificationEngine = lazy(() => import('./components/NotificationEngine'));
 const PwaInstallPrompt = lazy(() => import('./components/PwaInstallPrompt'));
@@ -403,11 +403,7 @@ function AppLayout() {
         </div>
       )}
 
-      {import.meta.env.DEV && isAdmin && (
-        <Suspense fallback={null}>
-          <DevToolsWidget />
-        </Suspense>
-      )}
+
 
       <AchievementToastManager queue={toastQueue} onDismiss={dismissToast} />
       <PaywallModal />

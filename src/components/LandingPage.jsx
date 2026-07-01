@@ -117,7 +117,9 @@ export default function LandingPage({ onEnterApp }) {
         background: '#0F172A',
         color: '#F8FAFC', 
         fontFamily: 'var(--font-body)',
-        overflowX: 'hidden'
+        overflowX: 'hidden',
+        width: '100%',
+        boxSizing: 'border-box'
       }}
     >
       {/* ── HEADER / NAVBAR ────────────────────────────────────────────── */}

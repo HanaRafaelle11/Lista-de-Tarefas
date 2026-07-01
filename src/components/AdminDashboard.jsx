@@ -484,20 +484,23 @@ export default function AdminDashboard() {
               display: 'flex', 
               alignItems: 'center', 
               gap: '8px', 
-              fontSize: '13px', 
-              padding: '8px 16px', 
-              borderRadius: '20px',
-              backgroundColor: 'var(--primary)',
+              fontSize: '13.5px', 
+              padding: '10px 20px', 
+              borderRadius: '99px',
+              background: 'linear-gradient(135deg, var(--primary) 0%, #4f46e5 100%)',
               color: 'white',
               border: 'none',
-              fontWeight: '600',
+              fontWeight: '700',
               cursor: 'pointer',
-              boxShadow: '0 4px 12px rgba(37, 99, 235, 0.2)',
-              transition: 'all 0.2s ease'
+              boxShadow: '0 4px 14px rgba(79, 70, 229, 0.3)',
+              transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+              transform: loading ? 'scale(0.98)' : 'scale(1)'
             }}
+            onMouseOver={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 6px 20px rgba(79, 70, 229, 0.4)'; }}
+            onMouseOut={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 14px rgba(79, 70, 229, 0.3)'; }}
           >
-            <RefreshCw size={14} className={loading ? 'spin' : ''} />
-            Recarregar Dados
+            <RefreshCw size={16} className={loading ? 'spin' : ''} />
+            {loading ? 'Atualizando...' : 'Recarregar Dados'}
           </button>
         )}
       </div>

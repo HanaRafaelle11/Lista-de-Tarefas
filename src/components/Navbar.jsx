@@ -38,7 +38,7 @@ export default function Navbar() {
         <div className="app-top-header-container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', maxWidth: '1200px', margin: '0 auto', padding: '0 16px', height: '64px' }}>
           
           {/* Logo — símbolo SVG oficial e texto da marca */}
-          <div className="navbar-brand" style={{ display: 'flex', alignItems: 'center', gap: '10px', marginRight: '80px', cursor: 'pointer' }} onClick={() => setActiveTab('home')}>
+          <div className="navbar-brand" style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, justifyContent: 'flex-start', cursor: 'pointer' }} onClick={() => setActiveTab('home')}>
             <img 
               src={theme === 'dark' ? '/branding/logo-dark.svg' : '/branding/logo.svg'}
               alt="MyFlowDay Logo" 
@@ -50,7 +50,7 @@ export default function Navbar() {
           </div>
 
           {/* Navegação */}
-          <nav className="desktop-nav-links hide-on-mobile" style={{ display: 'flex', gap: '16px', height: '100%' }}>
+          <nav className="desktop-nav-links hide-on-mobile" style={{ display: 'flex', gap: '16px', height: '100%', justifyContent: 'center' }}>
             {navItems.map(({ key, icon, label }) => (
               <button
                 key={key}
@@ -79,7 +79,7 @@ export default function Navbar() {
           </nav>
 
           {/* Ações com Alinhamento Perfeito */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', height: '100%', marginLeft: '32px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '10px', height: '100%', flex: 1 }}>
             <NotificationCenter />
             <button
               onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
