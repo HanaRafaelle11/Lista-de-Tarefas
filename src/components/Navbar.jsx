@@ -79,7 +79,7 @@ export default function Navbar() {
           </nav>
 
           {/* Ações com Alinhamento Perfeito */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', height: '100%' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', height: '100%', marginLeft: '32px' }}>
             <NotificationCenter />
             <button
               onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}

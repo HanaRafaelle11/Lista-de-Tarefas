@@ -90,20 +90,7 @@ serve(async (req) => {
       // 2. Clean the body text (strip --flowday-meta-- and internal JSON)
       const finalBody = cleanBody(item.body, item.title);
 
-      // ─── STEP A: In-App Notification (INDEPENDENT — never blocks push) ───
-      try {
-        await supabase.from('in_app_notifications').insert({
-          user_id: item.user_id,
-          notification_queue_id: item.id,
-          title: item.title,
-          body: finalBody
-        });
-      } catch (inAppErr) {
-        // Log but never throw — in-app failure must NOT block push delivery
-        console.warn(`[Worker] In-app insert failed for ${item.id}: ${String(inAppErr.message || inAppErr)}`);
-      }
-
-      // ─── STEP B: Web Push Delivery (INDEPENDENT — never blocks in-app) ───
+      // ─── STEP B: Web Push Delivery ───
       let pushSuccess = false;
       let pushResult: any = null;
       try {
@@ -124,7 +111,6 @@ serve(async (req) => {
         pushResult = invokeRes;
 
         // The push function returns { ok: true, sent: N } on success
-        // It returns { error: '...' } only on hard failures (missing keys, etc.)
         if (invokeErr) {
           console.error(`[Worker] Push invoke error for ${item.id}: ${invokeErr.message}`);
         } else if (invokeRes?.error && !invokeRes?.ok) {
@@ -137,9 +123,7 @@ serve(async (req) => {
       }
 
       // ─── STEP C: Update queue status ───
-      // Mark as sent regardless — the in-app was created, the push was attempted.
-      // Only mark as failed if BOTH in-app insert and push hard-failed.
-      const finalStatus = pushSuccess ? 'sent' : 'sent'; // Always mark sent to avoid re-processing
+      const finalStatus = 'sent'; // Mark sent to avoid re-processing
       try {
         await supabase
           .from('notification_queue')
@@ -149,26 +133,25 @@ serve(async (req) => {
         console.error(`[Worker] Status update failed for ${item.id}: ${String(updateErr.message || updateErr)}`);
       }
 
-      // ─── STEP D: Analytics & Logs (best-effort, never throw) ───
+      // ─── STEP D: Logs (best-effort, never throw) ───
       try {
-        await supabase.from('notification_analytics').insert({
-          user_id: item.user_id,
-          notification_id: item.id,
-          event: pushSuccess ? 'sent' : 'push_failed_inapp_sent',
-          metadata: pushResult || { note: 'push delivery uncertain' }
-        });
-      } catch (_) { /* analytics is best-effort */ }
-
-      try {
-        await supabase.from('notification_logs').insert({
+        const logData = {
           user_id: item.user_id,
           notification_queue_id: item.id,
-          status: pushSuccess ? 'sent' : 'push_failed',
+          status: pushSuccess ? 'sent' : 'failed',
           title: item.title,
           body: finalBody,
-          payload: pushResult
-        });
-      } catch (_) { /* logs are best-effort */ }
+          sent_at: new Date().toISOString()
+        };
+        
+        if (!pushSuccess) {
+          logData.error_message = pushResult?.error || 'Push attempts failed';
+        }
+        
+        await supabase.from('notification_logs').insert(logData);
+      } catch (logErr) {
+        console.error(`[Worker] Failed to write notification log: ${String(logErr.message || logErr)}`);
+      }
 
       processedCount++;
     }

@@ -124,11 +124,11 @@ export default function LandingPage({ onEnterApp }) {
       <header
         style={{
           position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100,
-          background: scrolled ? 'rgba(15, 23, 42, 0.9)' : 'transparent',
+          background: scrolled ? 'rgba(15, 23, 42, 0.95)' : 'transparent',
           backdropFilter: scrolled ? 'blur(16px)' : 'none',
           borderBottom: scrolled ? '1px solid rgba(255, 255, 255, 0.08)' : 'none',
           transition: 'all 0.3s ease',
-          padding: '0 24px',
+          padding: scrolled ? '12px 24px' : '24px 24px',
         }}
       >
         <div 
@@ -136,7 +136,6 @@ export default function LandingPage({ onEnterApp }) {
           style={{ 
             maxWidth: '1100px', 
             margin: '0 auto', 
-            height: '76px', 
             display: 'flex', 
             alignItems: 'center', 
             justifyContent: 'space-between' 
@@ -149,13 +148,16 @@ export default function LandingPage({ onEnterApp }) {
               style={{ height: '32px', width: 'auto' }}
               onError={(e) => { e.target.style.display = 'none'; }}
             />
-            <span style={{ 
-              fontSize: '20px', 
-              fontWeight: 800, 
-              letterSpacing: '-0.75px', 
-              color: '#F8FAFC', 
-              fontFamily: 'var(--font-display)' 
-            }}>
+            <span 
+              className="brand-text-hide-mobile"
+              style={{ 
+                fontSize: '20px', 
+                fontWeight: 800, 
+                letterSpacing: '-0.75px', 
+                color: '#F8FAFC', 
+                fontFamily: 'var(--font-display)' 
+              }}
+            >
               MyFlowDay
             </span>
           </div>
@@ -308,19 +310,6 @@ export default function LandingPage({ onEnterApp }) {
             <span>✓ Funciona offline</span>
           </div>
 
-          <div style={{ marginTop: '20px', fontSize: '14px', color: '#94A3B8', fontWeight: 500 }}>
-            Já tem uma conta?{' '}
-            <button 
-              onClick={onEnterApp} 
-              style={{ 
-                background: 'none', border: 'none', color: 'var(--primary)', 
-                fontWeight: 750, cursor: 'pointer', padding: 0, textDecoration: 'underline',
-                fontFamily: 'inherit'
-              }}
-            >
-              Faça login
-            </button>
-          </div>
 
           {/* MOCK DE TELA DO APP NA PRIMEIRA DOBRA - FLUTUANTE 3D */}
           <div 
@@ -1308,19 +1297,21 @@ export default function LandingPage({ onEnterApp }) {
 
         @media (max-width: 768px) {
           .landing-header-container {
-            height: 64px !important;
+            height: auto !important;
+            padding: 0 !important;
           }
           .landing-nav-links {
             display: none !important;
           }
           .nav-btn-secondary {
             display: inline-block !important;
-            padding: 6px 12px !important;
-            font-size: 12.5px !important;
+            padding: 6px 10px !important;
+            font-size: 11.5px !important;
+            margin-right: 4px !important;
           }
           .nav-btn-primary {
-            padding: 6px 14px !important;
-            font-size: 12.5px !important;
+            padding: 6px 12px !important;
+            font-size: 11.5px !important;
           }
           .timeline-steps {
             grid-template-columns: 1fr !important;
@@ -1341,6 +1332,12 @@ export default function LandingPage({ onEnterApp }) {
           }
           .timeline-steps button div {
             margin-bottom: 0 !important;
+          }
+        }
+
+        @media (max-width: 480px) {
+          .brand-text-hide-mobile {
+            display: none !important;
           }
         }
       `}

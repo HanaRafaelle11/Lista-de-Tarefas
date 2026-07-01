@@ -1090,9 +1090,6 @@ export function AppProvider({ children }) {
       setSubscriptionPlan(plano);
       setIsAccessChecked(true);
       if (typeof window !== 'undefined') localStorage.setItem('flowday_access_checked', 'true');
-    } else if (currentUser) {
-      setIsAccessChecked(true);
-      if (typeof window !== 'undefined') localStorage.setItem('flowday_access_checked', 'true');
     }
   }, [userProfile, currentUser, setIsPro]);
 
