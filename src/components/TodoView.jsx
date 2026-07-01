@@ -52,6 +52,21 @@ const endOfWeekStr = () => {
   return `${end.getFullYear()}-${String(end.getMonth() + 1).padStart(2, '0')}-${String(end.getDate()).padStart(2, '0')}`;
 };
 
+const isTaskOnDate = (task, dateStr) => {
+  if (!task.dueDate) return false;
+  const taskDateOnly = String(task.dueDate).includes('T') ? String(task.dueDate).split('T')[0] : String(task.dueDate).substring(0, 10);
+  if (taskDateOnly === dateStr) return true;
+  
+  // Recorrência diária espelhada em todos os dias subsequentes se não concluída
+  if (taskDateOnly < dateStr && !task.completed) {
+    const meta = parseTaskMetadata(task.description);
+    if (meta.recurrence === 'diaria') {
+      return true;
+    }
+  }
+  return false;
+};
+
 function formatFriendlyDate(dateStr) {
   if (!dateStr) return '';
   const parts = dateStr.split('-');
@@ -181,8 +196,25 @@ function categorizeTasks(tasks, goals = [], goalTasks = []) {
 }
 
 const priorityOrder = { 'Alta': 0, 'Média': 1, 'Baixa': 2 };
-const sortByPriority = (tasks) =>
-  [...tasks].sort((a, b) => (priorityOrder[a.priority] ?? 2) - (priorityOrder[b.priority] ?? 2));
+const sortByTime = (tasksList) =>
+  [...tasksList].sort((a, b) => {
+    const metaA = parseTaskMetadata(a.description);
+    const metaB = parseTaskMetadata(b.description);
+    const timeA = metaA.due_time || '';
+    const timeB = metaB.due_time || '';
+
+    if (timeA && timeB) {
+      return timeA.localeCompare(timeB);
+    }
+    if (timeA && !timeB) return -1;
+    if (!timeA && timeB) return 1;
+
+    const pA = priorityOrder[a.priority] ?? 2;
+    const pB = priorityOrder[b.priority] ?? 2;
+    if (pA !== pB) return pA - pB;
+
+    return new Date(a.created_at || a.createdAt || 0) - new Date(b.created_at || b.createdAt || 0);
+  });
 
 function TaskSection({ title, tasks, icon, accent, onEdit, onDelete, onToggle, defaultOpen = true, isOverdue = false, goalId, onUnlinkGoal }) {
   const [open, setOpen] = useState(defaultOpen);
@@ -209,7 +241,7 @@ function TaskSection({ title, tasks, icon, accent, onEdit, onDelete, onToggle, d
 
       {open && (
         <div className="task-section-list animate-fade-in">
-          {sortByPriority(tasks).map(task => (
+          {sortByTime(tasks).map(task => (
             <TodoItem
               key={task.id}
               item={task}
@@ -690,6 +722,10 @@ export default function TodoView() {
         }
       }
     });
+    // Sort each column by time
+    list.todo = sortByTime(list.todo);
+    list.inProgress = sortByTime(list.inProgress);
+    list.completed = sortByTime(list.completed);
     return list;
   }, [kanbanFiltered]);
 
@@ -1466,7 +1502,7 @@ export default function TodoView() {
 
           <div className="calendar-grid-days">
             {calendarCells.map((cell, idx) => {
-              const dayTasks = tasks.filter(t => t.dueDate === cell.dateStr);
+              const dayTasks = tasks.filter(t => isTaskOnDate(t, cell.dateStr));
               const habitsDone = habitsManager.habitLogs.filter(l => l.completed_date === cell.dateStr);
               
               return (
@@ -1509,10 +1545,10 @@ export default function TodoView() {
             
             <h4 style={{ fontSize: '13px', fontWeight: '700', textTransform: 'uppercase', color: 'var(--text-light)', marginBottom: '8px', borderBottom: '1px solid var(--border-light)', paddingBottom: '4px' }}>Tarefas do Dia</h4>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px', maxHeight: '180px', overflowY: 'auto' }}>
-              {tasks.filter(t => t.dueDate === selectedCalendarDay).length === 0 ? (
+              {tasks.filter(t => isTaskOnDate(t, selectedCalendarDay)).length === 0 ? (
                 <p style={{ fontSize: '12px', color: 'var(--text-muted)', fontStyle: 'italic' }}>Nenhuma tarefa agendada.</p>
               ) : (
-                tasks.filter(t => t.dueDate === selectedCalendarDay).map(task => (
+                tasks.filter(t => isTaskOnDate(t, selectedCalendarDay)).map(task => (
                   <div key={task.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px', border: '1px solid var(--border-light)', borderRadius: 'var(--radius-sm)', backgroundColor: 'var(--bg-app)', opacity: task.completed ? 0.6 : 1 }}>
                     <input 
                       type="checkbox" 

@@ -21,7 +21,7 @@ Deno.serve(async (req) => {
     if (!supabaseUrl || !supabaseServiceKey) {
       return new Response(JSON.stringify({ error: 'Falta chaves de sistema SUPABASE' }), {
         status: 200, // Força 200 para o gateway não mascarar com 500
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        headers: { ...corsHeaders, 'Content-Type': 'application/json; charset=utf-8' }
       });
     }
 
@@ -29,9 +29,14 @@ Deno.serve(async (req) => {
 
     let reqBody: any = null;
     try {
-      reqBody = await req.json();
+      const buffer = await req.arrayBuffer();
+      const decoded = new TextDecoder('utf-8').decode(buffer);
+      reqBody = JSON.parse(decoded);
     } catch (_) {
-      return new Response(JSON.stringify({ error: 'JSON inválido' }), { status: 200, headers: corsHeaders });
+      return new Response(JSON.stringify({ error: 'JSON inválido ou codificação incorreta' }), { 
+        status: 200, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json; charset=utf-8' } 
+      });
     }
 
     const isSendOp = reqBody.type === 'send';
@@ -98,7 +103,10 @@ Deno.serve(async (req) => {
         }
       }
 
-      return new Response(JSON.stringify({ ok: true, sent: sentCount }), { status: 200, headers: corsHeaders });
+      return new Response(JSON.stringify({ ok: true, sent: sentCount }), { 
+        status: 200, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json; charset=utf-8' } 
+      });
     }
 
     // OPERAÇÃO DE REGISTRO (REGISTER)
@@ -109,7 +117,7 @@ Deno.serve(async (req) => {
     if (!endpoint || !user_id) {
       return new Response(JSON.stringify({ error: 'Falta user_id ou endpoint no payload enviado' }), {
         status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        headers: { ...corsHeaders, 'Content-Type': 'application/json; charset=utf-8' }
       });
     }
 
@@ -128,19 +136,19 @@ Deno.serve(async (req) => {
     if (upsertError) {
       return new Response(JSON.stringify({ error: 'Erro de banco Postgres', details: upsertError.message }), {
         status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        headers: { ...corsHeaders, 'Content-Type': 'application/json; charset=utf-8' }
       });
     }
 
     return new Response(JSON.stringify({ ok: true, registered: true }), {
       status: 200,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      headers: { ...corsHeaders, 'Content-Type': 'application/json; charset=utf-8' }
     });
 
   } catch (err) {
     // Força o retorno como status 200 contendo o texto do erro para enganar o gateway e expor o log na telemetria
     return new Response(JSON.stringify({ error: 'Crash interno capturado', message: String(err.message || err) }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      headers: { ...corsHeaders, 'Content-Type': 'application/json; charset=utf-8' },
       status: 200
     });
   }

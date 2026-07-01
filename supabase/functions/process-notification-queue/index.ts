@@ -25,7 +25,7 @@ serve(async (req) => {
 
     if (!supabaseUrl || !supabaseServiceKey) {
       return new Response(JSON.stringify({ error: 'Missing SUPABASE environment keys' }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...corsHeaders, 'Content-Type': 'application/json; charset=utf-8' },
         status: 500
       });
     }
@@ -147,12 +147,12 @@ serve(async (req) => {
     }
 
     return new Response(JSON.stringify({ message: 'E2E Worker execution completed via delegate', processed: processedCount, workerId }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      headers: { ...corsHeaders, 'Content-Type': 'application/json; charset=utf-8' },
       status: 200
     });
   } catch (err) {
     return new Response(JSON.stringify({ error: String(err.message || err), workerId }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      headers: { ...corsHeaders, 'Content-Type': 'application/json; charset=utf-8' },
       status: 500
     });
   }
