@@ -38,7 +38,7 @@ export default function Navbar() {
         <div className="app-top-header-container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', maxWidth: '1200px', margin: '0 auto', padding: '0 16px', height: '64px' }}>
           
           {/* Logo — símbolo SVG oficial e texto da marca */}
-          <div className="navbar-brand" style={{ display: 'flex', alignItems: 'center', gap: '10px', marginRight: '40px', cursor: 'pointer' }} onClick={() => setActiveTab('home')}>
+          <div className="navbar-brand" style={{ display: 'flex', alignItems: 'center', gap: '10px', marginRight: '80px', cursor: 'pointer' }} onClick={() => setActiveTab('home')}>
             <img 
               src={theme === 'dark' ? '/branding/logo-dark.svg' : '/branding/logo.svg'}
               alt="MyFlowDay Logo" 

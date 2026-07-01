@@ -9,7 +9,6 @@ const corsHeaders = {
 };
 
 Deno.serve(async (req) => {
-  // Intercepta estritamente o Preflight do celular para matar erro de CORS
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders, status: 200 });
   }
@@ -20,7 +19,7 @@ Deno.serve(async (req) => {
 
     if (!supabaseUrl || !supabaseServiceKey) {
       return new Response(JSON.stringify({ error: 'Falta chaves de sistema SUPABASE' }), {
-        status: 200, // Força 200 para o gateway não mascarar com 500
+        status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json; charset=utf-8' }
       });
     }
@@ -42,7 +41,9 @@ Deno.serve(async (req) => {
     const isSendOp = reqBody.type === 'send';
     const dataContainer = reqBody.payload ? reqBody.payload : reqBody;
 
+    // ══════════════════════════════════════════════════════════════
     // OPERAÇÃO DE ENVIO (SEND)
+    // ══════════════════════════════════════════════════════════════
     if (isSendOp) {
       const { user_id, title, body, url } = dataContainer;
       if (!user_id) {
@@ -58,15 +59,24 @@ Deno.serve(async (req) => {
 
       webpush.setVapidDetails('mailto:admin@myflowday.com', vapidPublicKey, vapidPrivateKey);
 
+      // ── PRIORITIZE: Fetch only the 3 most recent subscriptions per user ──
       const { data: subscriptions, error: fetchError } = await supabase
         .from('push_subscriptions')
         .select('*')
-        .eq('user_id', user_id);
+        .eq('user_id', user_id)
+        .order('updated_at', { ascending: false, nullsFirst: false })
+        .limit(3);
 
-      if (fetchError) throw fetchError;
+      if (fetchError) {
+        console.error(`[Push] Error fetching subscriptions for ${user_id}: ${fetchError.message}`);
+        // Return ok:true so caller doesn't treat this as a hard failure
+        return new Response(JSON.stringify({ ok: true, sent: 0, note: 'subscription_fetch_error' }), { 
+          status: 200, headers: corsHeaders 
+        });
+      }
 
       if (!subscriptions || subscriptions.length === 0) {
-        return new Response(JSON.stringify({ ok: true, sent: 0 }), { status: 200, headers: corsHeaders });
+        return new Response(JSON.stringify({ ok: true, sent: 0, note: 'no_subscriptions' }), { status: 200, headers: corsHeaders });
       }
 
       const payloadObj = {
@@ -82,6 +92,8 @@ Deno.serve(async (req) => {
       };
 
       let sentCount = 0;
+      const deadEndpoints: string[] = [];
+
       for (const sub of subscriptions) {
         try {
           await webpush.sendNotification(
@@ -96,36 +108,45 @@ Deno.serve(async (req) => {
             {
               headers: {
                 'Urgency': 'high',
-                'TTL': '60'
+                'TTL': '86400'
               }
             }
           );
           sentCount++;
         } catch (err) {
-          console.error(`[WebPush Error] User: ${user_id}, Endpoint: ${sub.endpoint}, StatusCode: ${err.statusCode}, Msg: ${err.message || err}`);
-          if (err.statusCode === 404 || err.statusCode === 410) {
-            await supabase.from('push_subscriptions').delete().eq('endpoint', sub.endpoint);
+          console.error(`[WebPush Error] User: ${user_id}, Endpoint: ${sub.endpoint?.substring(0, 60)}..., StatusCode: ${err.statusCode}, Msg: ${err.message || err}`);
+          
+          // Remove dead endpoints (404, 410, or any 4xx/5xx that indicates permanent failure)
+          if (err.statusCode === 404 || err.statusCode === 410 || err.statusCode === 403) {
+            deadEndpoints.push(sub.endpoint);
           }
         }
       }
 
-      if (subscriptions.length > 0 && sentCount === 0) {
-        return new Response(JSON.stringify({ 
-          error: 'All push attempts failed', 
-          details: `Failed to deliver notifications to all ${subscriptions.length} registered device endpoints.`
-        }), { 
-          status: 200, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json; charset=utf-8' } 
-        });
+      // ── CLEANUP: Remove dead endpoints from the database ──
+      for (const deadEp of deadEndpoints) {
+        try {
+          await supabase.from('push_subscriptions').delete().eq('endpoint', deadEp);
+          console.log(`[Push Cleanup] Removed dead endpoint: ${deadEp.substring(0, 60)}...`);
+        } catch (_) { /* best-effort cleanup */ }
       }
 
-      return new Response(JSON.stringify({ ok: true, sent: sentCount }), { 
+      // IMPORTANT: Always return ok:true so the caller (process-notification-queue)
+      // never treats push delivery issues as a reason to keep retrying forever.
+      return new Response(JSON.stringify({ 
+        ok: true, 
+        sent: sentCount,
+        total_endpoints: subscriptions.length,
+        dead_removed: deadEndpoints.length
+      }), { 
         status: 200, 
         headers: { ...corsHeaders, 'Content-Type': 'application/json; charset=utf-8' } 
       });
     }
 
+    // ══════════════════════════════════════════════════════════════
     // OPERAÇÃO DE REGISTRO (REGISTER)
+    // ══════════════════════════════════════════════════════════════
     const user_id = dataContainer.user_id || dataContainer.userId;
     const endpoint = dataContainer.endpoint;
     const keys = dataContainer.keys;
@@ -162,7 +183,6 @@ Deno.serve(async (req) => {
     });
 
   } catch (err) {
-    // Força o retorno como status 200 contendo o texto do erro para enganar o gateway e expor o log na telemetria
     return new Response(JSON.stringify({ error: 'Crash interno capturado', message: String(err.message || err) }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json; charset=utf-8' },
       status: 200

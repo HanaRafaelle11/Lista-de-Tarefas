@@ -3,6 +3,21 @@ import { Bell, RefreshCw, AlertTriangle, CheckCircle, Clock, Send, Zap, Shield, 
 import { supabase } from '../supabaseClient';
 import { useAppContext } from '../contexts/AppContext';
 
+// Strips internal --flowday-meta-- metadata block from notification body for display
+function cleanMetadata(text) {
+  if (!text) return '-';
+  let cleaned = text.split('--flowday-meta--')[0].trim();
+  cleaned = cleaned.replace(/\{[\s\S]*?"due_time"[\s\S]*?\}/g, '').trim();
+  cleaned = cleaned.replace(/[\n\r]+$/g, '').trim();
+  return cleaned || '-';
+}
+
+// Truncates a UUID to a readable short form
+function truncateId(id) {
+  if (!id) return '-';
+  return typeof id === 'string' && id.length > 12 ? id.substring(0, 8) + '…' : id;
+}
+
 export default function AdminNotificationDashboard() {
   const { currentUser } = useAppContext();
   const [loading, setLoading] = useState(true);
@@ -332,8 +347,8 @@ export default function AdminNotificationDashboard() {
           </div>
         </div>
 
-        <div style={{ overflowX: 'auto', maxHeight: '400px' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', textAlign: 'left' }}>
+        <div style={{ overflowX: 'auto', maxHeight: '400px', WebkitOverflowScrolling: 'touch' }}>
+          <table style={{ width: '100%', minWidth: '800px', borderCollapse: 'collapse', fontSize: '13px', textAlign: 'left' }}>
             <thead>
               <tr style={{ borderBottom: '1px solid var(--border-light)', color: 'var(--text-light)' }}>
                 <th style={{ padding: '12px 8px' }}>Evento</th>
@@ -352,9 +367,9 @@ export default function AdminNotificationDashboard() {
                   <tr key={item.id} style={{ borderBottom: '1px solid var(--border-light)', hover: { backgroundColor: 'var(--bg-app)' } }}>
                     <td style={{ padding: '12px 8px' }}>
                       <div style={{ fontWeight: '700', color: 'var(--text-main)' }}>{item.title}</div>
-                      <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>{item.body}</div>
+                      <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>{cleanMetadata(item.body)}</div>
                     </td>
-                    <td style={{ padding: '12px 8px', color: 'var(--text-light)', fontSize: '11px', fontFamily: 'monospace' }}>{item.user_id}</td>
+                    <td style={{ padding: '12px 8px', color: 'var(--text-light)', fontSize: '11px', fontFamily: 'monospace' }} title={item.user_id}>{truncateId(item.user_id)}</td>
                     <td style={{ padding: '12px 8px', color: 'var(--text-muted)' }}>{new Date(item.scheduled_for).toLocaleString('pt-BR')}</td>
                     <td style={{ padding: '12px 8px' }}>
                       <span style={{
@@ -380,8 +395,8 @@ export default function AdminNotificationDashboard() {
       {/* Tabela de Eventos de Telemetria Recentes (public.events) */}
       <div style={{ padding: '20px', backgroundColor: 'var(--bg-card)', borderRadius: '12px', border: '1px solid var(--border-light)' }}>
         <h3 style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-main)', marginBottom: '16px' }}>Últimos Eventos de Telemetria (public.events)</h3>
-        <div style={{ overflowX: 'auto', maxHeight: '300px' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', textAlign: 'left' }}>
+        <div style={{ overflowX: 'auto', maxHeight: '300px', WebkitOverflowScrolling: 'touch' }}>
+          <table style={{ width: '100%', minWidth: '700px', borderCollapse: 'collapse', fontSize: '13px', textAlign: 'left' }}>
             <thead>
               <tr style={{ borderBottom: '1px solid var(--border-light)', color: 'var(--text-light)' }}>
                 <th style={{ padding: '12px 8px' }}>Tipo de Evento</th>
@@ -397,7 +412,7 @@ export default function AdminNotificationDashboard() {
                 recentEvents.map(evt => (
                   <tr key={evt.id} style={{ borderBottom: '1px solid var(--border-light)' }}>
                     <td style={{ padding: '12px 8px', fontWeight: '700', color: 'var(--text-main)' }}>{evt.event_type}</td>
-                    <td style={{ padding: '12px 8px', fontSize: '11px', fontFamily: 'monospace', color: 'var(--text-light)' }}>{evt.user_id}</td>
+                    <td style={{ padding: '12px 8px', fontSize: '11px', fontFamily: 'monospace', color: 'var(--text-light)' }} title={evt.user_id}>{truncateId(evt.user_id)}</td>
                     <td style={{ padding: '12px 8px', color: 'var(--text-muted)' }}>{new Date(evt.created_at).toLocaleString('pt-BR')}</td>
                     <td style={{ padding: '12px 8px', color: 'var(--text-light)', fontSize: '11px', fontFamily: 'monospace', maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={JSON.stringify(evt.metadata)}>
                       {JSON.stringify(evt.metadata)}

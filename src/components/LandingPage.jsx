@@ -1314,7 +1314,13 @@ export default function LandingPage({ onEnterApp }) {
             display: none !important;
           }
           .nav-btn-secondary {
-            display: none !important;
+            display: inline-block !important;
+            padding: 6px 12px !important;
+            font-size: 12.5px !important;
+          }
+          .nav-btn-primary {
+            padding: 6px 14px !important;
+            font-size: 12.5px !important;
           }
           .timeline-steps {
             grid-template-columns: 1fr !important;

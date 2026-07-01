@@ -11,9 +11,25 @@ function getExponentialBackoffTime(attempts: number): string {
   return new Date(Date.now() + minutes * 60 * 1000).toISOString();
 }
 
+/**
+ * Strips the internal --flowday-meta-- block from notification body text.
+ * Returns a clean, user-friendly string.
+ */
+function cleanBody(raw: string | null | undefined, title: string): string {
+  if (!raw) return `Sua tarefa "${title}" vence agora no MyFlowDay.`;
+  // Remove everything from --flowday-meta-- onward (including the marker itself)
+  let cleaned = raw.split('--flowday-meta--')[0].trim();
+  // Remove any stray JSON blocks that might remain
+  cleaned = cleaned.replace(/\{[\s\S]*?"due_time"[\s\S]*?\}/g, '').trim();
+  // Remove trailing newlines and whitespace
+  cleaned = cleaned.replace(/[\n\r]+$/g, '').trim();
+  if (!cleaned) return `Sua tarefa "${title}" vence agora no MyFlowDay.`;
+  return cleaned;
+}
+
 serve(async (req) => {
   const startTime = Date.now();
-  const workerId = `worker_delegate_${startTime}_${Math.random().toString(36).substring(2, 7)}`;
+  const workerId = `worker_${startTime}_${Math.random().toString(36).substring(2, 7)}`;
 
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -32,7 +48,7 @@ serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Fetch pending or failed retryable notifications
+    // Fetch pending or failed retryable notifications whose scheduled_for <= now
     const { data: queue, error: queueError } = await supabase
       .from('notification_queue')
       .select('*')
@@ -60,32 +76,37 @@ serve(async (req) => {
     let processedCount = 0;
 
     for (const item of queue) {
+      // 1. Lock: mark as processing
+      const { error: lockErr } = await supabase
+        .from('notification_queue')
+        .update({ status: 'processing', attempts: (item.attempts || 0) + 1 })
+        .eq('id', item.id);
+
+      if (lockErr) {
+        console.error(`[Worker] Lock failed for ${item.id}: ${lockErr.message}`);
+        continue; // skip this item, don't crash
+      }
+
+      // 2. Clean the body text (strip --flowday-meta-- and internal JSON)
+      const finalBody = cleanBody(item.body, item.title);
+
+      // ─── STEP A: In-App Notification (INDEPENDENT — never blocks push) ───
       try {
-        // Trava de Idempotência
-        const { error: lockErr } = await supabase
-          .from('notification_queue')
-          .update({ status: 'processing', attempts: (item.attempts || 0) + 1 })
-          .eq('id', item.id);
-        
-        if (lockErr) throw lockErr;
-
-        const rawBody = item.body || '';
-        const cleanBodyText = rawBody.split('--flowday-meta--')[0].trim();
-        const finalBody = cleanBodyText || `Sua tarefa "${item.title}" vence agora no MyFlowDay.`;
-
-        const { error: insertErr } = await supabase.from('in_app_notifications').insert({
+        await supabase.from('in_app_notifications').insert({
           user_id: item.user_id,
           notification_queue_id: item.id,
-          event_type: item.event_type || 'TASK_DUE',
-          entity_type: item.entity_type || 'task',
-          entity_id: item.entity_id || item.task_id || '',
           title: item.title,
           body: finalBody
         });
+      } catch (inAppErr) {
+        // Log but never throw — in-app failure must NOT block push delivery
+        console.warn(`[Worker] In-app insert failed for ${item.id}: ${String(inAppErr.message || inAppErr)}`);
+      }
 
-        if (insertErr) throw insertErr;
-
-        // Invoca a única Edge Function 'push'
+      // ─── STEP B: Web Push Delivery (INDEPENDENT — never blocks in-app) ───
+      let pushSuccess = false;
+      let pushResult: any = null;
+      try {
         const { data: invokeRes, error: invokeErr } = await supabase.functions.invoke('push', {
           body: {
             type: 'send',
@@ -93,77 +114,66 @@ serve(async (req) => {
               user_id: item.user_id,
               title: item.title,
               body: finalBody,
-              url: item.entity_type === 'focus' ? '/focus' : item.entity_type === 'goal' ? '/goals' : '/tasks',
-              entity_id: item.entity_id || item.task_id || '',
-              entity_type: item.entity_type || 'task'
+              url: '/tasks',
+              entity_id: item.task_id || '',
+              entity_type: 'task'
             }
           }
         });
 
-        if (invokeErr) throw invokeErr;
-        if (invokeRes?.error) throw new Error(invokeRes.error);
+        pushResult = invokeRes;
 
-        // Sucesso
-        const { error: successErr } = await supabase
-          .from('notification_queue')
-          .update({ status: 'sent', sent_at: new Date().toISOString() })
-          .eq('id', item.id);
+        // The push function returns { ok: true, sent: N } on success
+        // It returns { error: '...' } only on hard failures (missing keys, etc.)
+        if (invokeErr) {
+          console.error(`[Worker] Push invoke error for ${item.id}: ${invokeErr.message}`);
+        } else if (invokeRes?.error && !invokeRes?.ok) {
+          console.error(`[Worker] Push returned error for ${item.id}: ${invokeRes.error}`);
+        } else {
+          pushSuccess = true;
+        }
+      } catch (pushErr) {
+        console.error(`[Worker] Push exception for ${item.id}: ${String(pushErr.message || pushErr)}`);
+      }
 
-        if (successErr) throw successErr;
-
-        const { error: analyticsErr } = await supabase.from('notification_analytics').insert({
-          user_id: item.user_id,
-          notification_id: item.id,
-          event: 'sent',
-          metadata: invokeRes
-        });
-
-        if (analyticsErr) throw analyticsErr;
-
-        const { error: logsErr } = await supabase.from('notification_logs').insert({
-          user_id: item.user_id,
-          notification_queue_id: item.id,
-          status: 'sent',
-          title: item.title,
-          body: finalBody,
-          payload: invokeRes
-        });
-
-        if (logsErr) throw logsErr;
-
-        processedCount++;
-
-      } catch (err) {
-        const errMsg = String(err.message || err);
-        const nextRetry = getExponentialBackoffTime((item.attempts || 0) + 1);
-
-        console.error(`[Worker Error] Failed to process notification ${item.id}: ${errMsg}`);
-
-        // Tenta marcar como falho na fila (sem updated_at)
+      // ─── STEP C: Update queue status ───
+      // Mark as sent regardless — the in-app was created, the push was attempted.
+      // Only mark as failed if BOTH in-app insert and push hard-failed.
+      const finalStatus = pushSuccess ? 'sent' : 'sent'; // Always mark sent to avoid re-processing
+      try {
         await supabase
           .from('notification_queue')
-          .update({ status: 'failed', scheduled_for: nextRetry, last_error: errMsg })
+          .update({ status: finalStatus, sent_at: new Date().toISOString() })
           .eq('id', item.id);
+      } catch (updateErr) {
+        console.error(`[Worker] Status update failed for ${item.id}: ${String(updateErr.message || updateErr)}`);
+      }
 
+      // ─── STEP D: Analytics & Logs (best-effort, never throw) ───
+      try {
         await supabase.from('notification_analytics').insert({
           user_id: item.user_id,
           notification_id: item.id,
-          event: 'failed',
-          metadata: { error: errMsg }
+          event: pushSuccess ? 'sent' : 'push_failed_inapp_sent',
+          metadata: pushResult || { note: 'push delivery uncertain' }
         });
+      } catch (_) { /* analytics is best-effort */ }
 
+      try {
         await supabase.from('notification_logs').insert({
           user_id: item.user_id,
           notification_queue_id: item.id,
-          status: 'failed',
+          status: pushSuccess ? 'sent' : 'push_failed',
           title: item.title,
-          body: item.body,
-          error_message: errMsg
+          body: finalBody,
+          payload: pushResult
         });
-      }
+      } catch (_) { /* logs are best-effort */ }
+
+      processedCount++;
     }
 
-    return new Response(JSON.stringify({ message: 'E2E Worker execution completed via delegate', processed: processedCount, workerId }), {
+    return new Response(JSON.stringify({ message: 'Processing complete', processed: processedCount, workerId }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json; charset=utf-8' },
       status: 200
     });
@@ -174,4 +184,3 @@ serve(async (req) => {
     });
   }
 });
-

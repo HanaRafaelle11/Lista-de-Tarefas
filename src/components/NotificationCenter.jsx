@@ -203,7 +203,13 @@ export default function NotificationCenter() {
                   </div>
                   {n.description && (
                     <div className="notification-item-desc" style={{ marginTop: '4px', fontSize: '11.5px', color: 'var(--text-muted)' }}>
-                      {n.description}
+                      {(() => {
+                        const raw = n.description;
+                        let cleaned = raw.split('--flowday-meta--')[0].trim();
+                        cleaned = cleaned.replace(/\{[\s\S]*?"due_time"[\s\S]*?\}/g, '').trim();
+                        cleaned = cleaned.replace(/[\n\r]+$/g, '').trim();
+                        return cleaned || ' Compromisso agendado';
+                      })()}
                     </div>
                   )}
                 </div>

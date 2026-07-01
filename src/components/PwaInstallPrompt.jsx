@@ -86,8 +86,8 @@ export default function PwaInstallPrompt() {
     }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <div style={{ backgroundColor: 'var(--primary-light)', padding: '10px', borderRadius: '10px', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Download size={22} />
+          <div style={{ padding: '2px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <img src="/branding/logo.svg" alt="Logo" style={{ height: '36px', width: 'auto', background: 'transparent', objectFit: 'contain' }} />
           </div>
           <div>
             <h4 style={{ margin: 0, fontSize: '15px', fontWeight: '700', color: 'var(--text-main)', fontFamily: 'var(--font-display)' }}>Instalar MyFlowDay</h4>
