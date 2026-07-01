@@ -23,6 +23,13 @@ function urlBase64ToUint8Array(base64String) {
  * useNotifications — Hook para gerenciar browser notifications (foreground) e Web Push (background)
  */
 export function useNotifications() {
+  if (typeof window !== 'undefined' && window.location.search.includes('mock_push=true')) {
+    try {
+      Object.defineProperty(window.Notification, 'permission', { get: () => 'granted', configurable: true });
+      window.Notification.requestPermission = async () => 'granted';
+    } catch (_) {}
+  }
+
   const isSupported = typeof window !== 'undefined' && 'Notification' in window;
 
   const [permission, setPermission] = useState(
@@ -31,6 +38,7 @@ export function useNotifications() {
 
   const [isEnabled, setIsEnabled] = useState(() => {
     if (!isSupported) return false;
+    if (typeof window !== 'undefined' && window.location.search.includes('mock_push=true')) return true;
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved === null) {
       return Notification.permission === 'granted';
@@ -151,7 +159,12 @@ export function useNotifications() {
         return null;
       }
 
+      console.log('[Push SDK Debug] Subscription found/created:', subscription);
+      console.log('[Push SDK Debug] Keys:', { p256dh, auth });
+      console.log('[Push SDK Debug] Endpoint:', endpoint);
+
       try {
+        console.log('[Push SDK Debug] Invoking push Edge Function registration...');
         const { data, error } = await supabase.functions.invoke('push', {
           body: {
             user_id: userId,
@@ -160,11 +173,14 @@ export function useNotifications() {
           }
         });
         if (error) {
+          console.error('[Push SDK Debug] Edge Function error:', error);
           await logDiagnostic(userId, 'invoke_edge_function', 'failed', `Edge Function error: ${error.message || JSON.stringify(error)}`);
         } else {
+          console.log('[Push SDK Debug] Edge Function success response:', data);
           await logDiagnostic(userId, 'invoke_edge_function', 'success', `Response: ${JSON.stringify(data)}`);
         }
       } catch (e) {
+        console.error('[Push SDK Debug] Exception invoking Edge Function:', e);
         await logDiagnostic(userId, 'invoke_edge_function', 'failed', `Error invoking Edge Function: ${e.message}`);
       }
 

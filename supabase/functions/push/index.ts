@@ -68,14 +68,18 @@ Deno.serve(async (req) => {
         .limit(3);
 
       if (fetchError) {
-        console.error(`[Push] Error fetching subscriptions for ${user_id}: ${fetchError.message}`);
-        // Return ok:true so caller doesn't treat this as a hard failure
-        return new Response(JSON.stringify({ ok: true, sent: 0, note: 'subscription_fetch_error' }), { 
-          status: 200, headers: corsHeaders 
+        console.error(`[Push Server Error] Error fetching subscriptions for ${user_id}: ${fetchError.message}`);
+      }
+
+      console.log(`[Push Server] Found ${subscriptions?.length || 0} subscriptions for user ${user_id}`);
+      if (subscriptions) {
+        subscriptions.forEach((sub, i) => {
+          console.log(`[Push Server] Sub #${i+1}: ID=${sub.id}, updated_at=${sub.updated_at}, endpoint=${sub.endpoint.substring(0, 60)}...`);
         });
       }
 
       if (!subscriptions || subscriptions.length === 0) {
+        console.warn(`[Push Server] No subscriptions found for user ${user_id}`);
         return new Response(JSON.stringify({ ok: true, sent: 0, note: 'no_subscriptions' }), { status: 200, headers: corsHeaders });
       }
 
@@ -96,7 +100,10 @@ Deno.serve(async (req) => {
 
       for (const sub of subscriptions) {
         try {
-          await webpush.sendNotification(
+          console.log(`[Push Server] Sending webpush to endpoint: ${sub.endpoint.substring(0, 60)}...`);
+          console.log(`[Push Server] Payload to send: ${JSON.stringify(payloadObj)}`);
+          
+          const result = await webpush.sendNotification(
             {
               endpoint: sub.endpoint,
               keys: {
@@ -112,9 +119,11 @@ Deno.serve(async (req) => {
               }
             }
           );
+          
+          console.log(`[Push Server] WebPush success. StatusCode: ${result.statusCode}, Body: ${result.body || 'empty'}`);
           sentCount++;
         } catch (err) {
-          console.error(`[WebPush Error] User: ${user_id}, Endpoint: ${sub.endpoint?.substring(0, 60)}..., StatusCode: ${err.statusCode}, Msg: ${err.message || err}`);
+          console.error(`[Push Server Error] User: ${user_id}, Endpoint: ${sub.endpoint?.substring(0, 60)}..., StatusCode: ${err.statusCode}, Msg: ${err.message || err}, Headers: ${JSON.stringify(err.headers || {})}, Body: ${err.body || ''}`);
           
           // Remove dead endpoints (404, 410, or any 4xx/5xx that indicates permanent failure)
           if (err.statusCode === 404 || err.statusCode === 410 || err.statusCode === 403) {

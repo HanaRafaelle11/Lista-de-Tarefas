@@ -30,7 +30,8 @@ window.BETA_SAFE_MODE = true;
 // Register custom PWA service worker with scope /
 if ('serviceWorker' in navigator && !import.meta.env.SSR) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js')
+    const swUrl = import.meta.env.DEV ? '/dev-sw.js?dev-sw' : '/sw.js';
+    navigator.serviceWorker.register(swUrl, { type: import.meta.env.DEV ? 'module' : 'classic' })
       .then((reg) => {
         console.log('[PWA] Service Worker registered with scope:', reg.scope);
       })

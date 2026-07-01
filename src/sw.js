@@ -16,6 +16,7 @@ self.addEventListener('activate', (event) => {
 
 // ── 1. Evento Push Nativo (Servidor VAPID / FCM / APNs → Celular Fechado) ──
 self.addEventListener('push', (event) => {
+  console.log('[SW Debug] Push event received!', event);
   try {
     let data = {
       title: 'MyFlowDay ⚡',
@@ -25,11 +26,16 @@ self.addEventListener('push', (event) => {
     };
 
     if (event.data) {
+      console.log('[SW Debug] Event data payload exists. Text:', event.data.text());
       try {
         data = event.data.json();
+        console.log('[SW Debug] Parsed JSON payload:', data);
       } catch (e) {
+        console.warn('[SW Debug] Failed to parse payload as JSON. Using text.', e.message);
         data.body = event.data.text();
       }
+    } else {
+      console.warn('[SW Debug] Push event received but NO data payload exists!');
     }
 
     const title = data.title || 'MyFlowDay ⚡';
@@ -58,9 +64,11 @@ self.addEventListener('push', (event) => {
     };
 
     // EXECUÇÃO ISOLADA: Mostra a notificação primeiro (Garante a exibição visual)
+    console.log('[SW Debug] Calling showNotification with:', { title, options });
     event.waitUntil(
       self.registration.showNotification(title, options)
         .then(() => {
+          console.log('[SW Debug] showNotification completed successfully!');
           // Tenta rodar as telemetrias secundárias sem travar a renderização do push
           return self.registration.pushManager.getSubscription().then(sub => {
             if (sub) {
@@ -92,6 +100,7 @@ self.addEventListener('push', (event) => {
           });
         })
         .then(() => {
+          console.log('[SW Debug] Injecting notification to active clients...');
           return self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clients => {
             clients.forEach(client => {
               client.postMessage({
@@ -106,10 +115,10 @@ self.addEventListener('push', (event) => {
             });
           });
         })
-        .catch(err => console.error('[SW Fail-Safe Notification Error]:', err))
+        .catch(err => console.error('[SW Debug] showNotification or telemetry failed:', err))
     );
   } catch (err) {
-    console.error('[SW] Erro crítico ao processar evento Push:', err);
+    console.error('[SW Debug] Critical push processing error:', err);
   }
 });
 
@@ -120,6 +129,7 @@ self.addEventListener('notificationclick', (event) => {
   const action = event.action;
   const notificationData = event.notification.data || {};
   const targetUrl = notificationData.url || '/';
+  console.log('[SW Debug] Notification clicked! Action:', action, 'Data:', notificationData, 'TargetUrl:', targetUrl);
 
   // Registrar telemetria de clique (clicked)
   event.waitUntil(
