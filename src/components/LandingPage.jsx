@@ -27,7 +27,7 @@ export default function LandingPage({ onEnterApp }) {
   const { handleStartDemoMode } = useAppContext();
   const [scrolled, setScrolled] = useState(false);
   
-  // Estados interativos
+  // Estados para elementos interativos
   const [activeFeatureTab, setActiveFeatureTab] = useState('dashboard');
   const [lostMinutes, setLostMinutes] = useState(30);
   const [openFaq, setOpenFaq] = useState(null);
@@ -116,6 +116,21 @@ export default function LandingPage({ onEnterApp }) {
         }}
       >
         <div style={{ maxWidth: '960px', margin: '0 auto', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <div
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: '8px',
+              padding: '8px 18px', borderRadius: '99px',
+              background: 'rgba(37, 99, 235, 0.08)',
+              border: '1px solid rgba(37, 99, 235, 0.2)',
+              fontSize: '12px', fontWeight: 750, color: 'var(--primary)',
+              marginBottom: '24px',
+              textTransform: 'uppercase',
+              letterSpacing: '0.08em',
+            }}
+          >
+            🧠 SEU SISTEMA OPERACIONAL DE PRODUTIVIDADE
+          </div>
+
           <h1
             style={{
               fontSize: 'clamp(34px, 5.5vw, 62px)',
@@ -197,7 +212,7 @@ export default function LandingPage({ onEnterApp }) {
       {/* ── VEJA O MYFLOWDAY EM AÇÃO (SCREENSHOTS REAIS) ─────────────────── */}
       <section
         style={{
-          padding: '80px 24px 60px',
+          padding: '60px 24px',
           background: 'var(--bg-app)',
           borderTop: '1px solid var(--border-light)',
           textAlign: 'center'
@@ -317,10 +332,10 @@ export default function LandingPage({ onEnterApp }) {
         </div>
       </section>
 
-      {/* ── SEÇÃO VÍDEO / VJA COMO FUNCIONA ──────────────────────────────── */}
+      {/* ── VEJA O MYFLOWDAY EM 30 SEGUNDOS (VÍDEO REAL) ─────────────────── */}
       <section
         style={{
-          padding: '80px 24px',
+          padding: '60px 24px',
           background: 'var(--bg-card)',
           borderTop: '1px solid var(--border-light)',
           borderBottom: '1px solid var(--border-light)',
@@ -329,57 +344,43 @@ export default function LandingPage({ onEnterApp }) {
       >
         <div style={{ maxWidth: '800px', margin: '0 auto' }}>
           <h2 style={{ fontSize: 'clamp(24px, 3.5vw, 36px)', fontWeight: 900, color: 'var(--text-main)', letterSpacing: '-1px', marginBottom: '16px' }}>
-            Veja como funciona em 20 segundos
+            Veja o MyFlowDay em 30 segundos
           </h2>
           <p style={{ fontSize: '15px', color: 'var(--text-muted)', marginBottom: '32px', lineHeight: '1.6' }}>
-            Acompanhe o fluxo completo desde o planejamento inicial até a entrega de insights sobre a sua rotina:
+            Demonstração em tempo real mostrando a criação, priorização, foco, conclusão e relatório de dados:
           </p>
 
-          {/* Placeholder interativo de Vídeo/GIF */}
+          {/* Vídeo Real / GIF Player */}
           <div style={{
             width: '100%',
             aspectRatio: '16/9',
-            background: 'linear-gradient(135deg, rgba(15,23,42,0.9) 0%, rgba(37,99,235,0.15) 100%)',
+            background: 'var(--bg-app)',
             border: '1px solid var(--border-medium)',
             borderRadius: '16px',
             boxShadow: 'var(--shadow-lg)',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            cursor: 'pointer',
-            position: 'relative',
-            overflow: 'hidden'
-          }} onClick={onEnterApp}>
-            {/* Visual Steps Overlay */}
-            <div style={{
-              position: 'absolute', bottom: '20px', left: '20px', right: '20px',
-              display: 'flex', gap: '8px', justifyContent: 'center', zIndex: 2
-            }}>
-              {['Criar Tarefa', 'Priorizar', 'Entrar em Foco', 'Concluir', 'Receber Insights', 'Evoluir Pet'].map((step, idx) => (
-                <span key={idx} style={{
-                  background: 'rgba(15,23,42,0.8)', color: 'var(--text-main)',
-                  border: '1px solid var(--border-light)', padding: '4px 10px',
-                  borderRadius: '12px', fontSize: '11px', fontWeight: 600
-                }}>{step}</span>
-              ))}
+            overflow: 'hidden',
+            position: 'relative'
+          }}>
+            <video
+              src="/assets/flow_demo.webp"
+              autoPlay
+              loop
+              muted
+              playsInline
+              style={{
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover'
+              }}
+              onError={(e) => {
+                // Fallback to static or custom preview frame if video not supported by some engines
+                e.target.style.display = 'none';
+              }}
+            />
+            {/* Fallback visual if video fails or displays none */}
+            <div className="video-fallback" style={{ display: 'none', position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'rgba(15,23,42,0.9)' }}>
+              <Play size={48} color="var(--primary)" />
             </div>
-            
-            <div style={{
-              width: '64px', height: '64px', borderRadius: '50%',
-              background: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-              color: 'white', boxShadow: '0 8px 24px rgba(37,99,235,0.4)',
-              transition: 'transform 0.2s', zIndex: 2
-            }}
-            onMouseEnter={e => e.target.style.transform = 'scale(1.08)'}
-            onMouseLeave={e => e.target.style.transform = 'scale(1)'}
-            >
-              <Play size={24} fill="white" style={{ marginLeft: '4px' }} />
-            </div>
-            
-            <span style={{ color: 'var(--text-muted)', fontSize: '13px', marginTop: '16px', fontWeight: 600, zIndex: 2 }}>
-              Toque para abrir a demonstração interativa
-            </span>
           </div>
         </div>
       </section>
@@ -400,10 +401,10 @@ export default function LandingPage({ onEnterApp }) {
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '32px' }}>
             {[
-              { step: '1', title: 'Organize suas tarefas', desc: 'Cadastre tarefas e hábitos. Defina horários e organize tudo na visualização de sua preferência: Lista, Kanban ou Matriz.' },
-              { step: '2', title: 'Foque com tranquilidade', desc: 'Ative o Pomodoro com sons ambientes relaxantes de alta fidelidade para entrar no estado de flow profundo.' },
+              { step: '1', title: 'Organize suas tarefas', desc: 'Cadastre tarefas e hábitos. Organize tudo na visualização de sua preferência: Lista, Kanban ou Matriz.' },
+              { step: '2', title: 'Entre em foco usando Pomodoro', desc: 'Ative o cronômetro com sons ambientes relaxantes de alta fidelidade para entrar no estado de flow profundo.' },
               { step: '3', title: 'Conclua suas atividades', desc: 'Marque como feito para subir a sequência (streaks) de consistência diária e evoluir o mascote do seu painel.' },
-              { step: '4', title: 'Entenda seus padrões', desc: 'A Central de Insights cruza seus horários e hábitos concluídos para mostrar as melhores faixas de produtividade de sua mente.' }
+              { step: '4', title: 'Descubra padrões da sua produtividade', desc: 'A Central de Insights cruza seus horários e hábitos concluídos para mostrar as melhores faixas de foco de sua mente.' }
             ].map((item, idx) => (
               <div key={idx} style={{ textAlign: 'left', display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 <span style={{
@@ -412,8 +413,121 @@ export default function LandingPage({ onEnterApp }) {
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   fontSize: '16px', fontWeight: 800
                 }}>{item.step}</span>
-                <h3 style={{ fontSize: '18px', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>{item.title}</h3>
+                <h3 style={{ fontSize: '17px', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>{item.title}</h3>
                 <p style={{ fontSize: '13.5px', color: 'var(--text-muted)', lineHeight: '1.6', margin: 0 }}>{item.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── CENTRAL DE INSIGHTS (DESTAQUE PRINCIPAL) ────────────────────── */}
+      <section
+        id="insights"
+        style={{
+          padding: '100px 24px',
+          background: 'var(--bg-card)',
+          borderTop: '1px solid var(--border-light)',
+          borderBottom: '1px solid var(--border-light)',
+          textAlign: 'center'
+        }}
+      >
+        <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
+          <span style={{ fontSize: '12.5px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.15em', color: 'var(--primary)' }}>
+            O MAIOR DIFERENCIAL
+          </span>
+          <h2 style={{ fontSize: 'clamp(28px, 4vw, 42px)', fontWeight: 900, color: 'var(--text-main)', letterSpacing: '-1.5px', marginTop: '8px', marginBottom: '24px' }}>
+            A Central de Insights que decifra sua rotina
+          </h2>
+          <p style={{ fontSize: '15.5px', color: 'var(--text-muted)', maxWidth: '680px', margin: '0 auto 48px', lineHeight: '1.6' }}>
+            Qualquer aplicativo organiza tarefas. Poucos mostram quando você rende mais, quais padrões você tem e como melhorar sua rotina semanal de forma real:
+          </p>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1.3fr 1fr', gap: '40px', alignItems: 'center' }}>
+            {/* Imagem Real de Insights */}
+            <div style={{
+              background: 'var(--bg-app)', border: '1px solid var(--border-light)', borderRadius: '16px', padding: '16px',
+              boxShadow: 'var(--shadow-lg)'
+            }}>
+              <img
+                src="/assets/insights.png"
+                alt="Central de Insights cognitivos no aplicativo MyFlowDay"
+                style={{ width: '100%', height: 'auto', borderRadius: '8px', objectFit: 'contain' }}
+                onError={(e) => {
+                  e.target.src = "https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=1200&q=80";
+                }}
+              />
+            </div>
+
+            {/* Exemplos de Insights Reais */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', textAlign: 'left' }}>
+              {[
+                { title: '💡 Horários de Maior Concentração', desc: '"Você conclui suas tarefas de Alta prioridade 42% mais rápido nas terças-feiras de manhã. Que tal agendar suas tarefas estratégicas para este bloco?"' },
+                { title: '🛋️ Prevenção de Estresse', desc: '"Seu rendimento em sessões de foco cai 60% às sextas-feiras após as 15h. Que tal adiar novas tarefas complexas e reservar esse horário para revisões simples?"' },
+                { title: '📈 Análise de Estabilidade', desc: '"Você manteve a consistência de foco e hábitos por 5 dias seguidos sem picos de procrastinação. Seu ritmo de rotina está excelente."' }
+              ].map((item, idx) => (
+                <div key={idx} style={{
+                  background: 'var(--bg-app)', border: '1px solid var(--border-light)',
+                  borderRadius: '10px', padding: '20px', position: 'relative', overflow: 'hidden'
+                }}>
+                  <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '4px', background: 'var(--primary)' }} />
+                  <h4 style={{ fontSize: '15px', fontWeight: 800, color: 'var(--text-main)', marginBottom: '6px' }}>{item.title}</h4>
+                  <p style={{ fontSize: '13px', color: 'var(--text-muted)', lineHeight: '1.5', margin: 0 }}>{item.desc}</p>
+                </div>
+              ))}
+              
+              <button onClick={onEnterApp} style={{ padding: '14px 28px', borderRadius: '24px', background: 'var(--primary)', color: 'white', fontWeight: 800, fontSize: '13.5px', border: 'none', cursor: 'pointer', alignSelf: 'flex-start', boxShadow: '0 4px 12px rgba(37,99,235,0.2)' }}>
+                Descobrir Meu Perfil de Produtividade →
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── TUDO EM UM ÚNICO LUGAR (NOVA SEÇÃO DE VALOR) ─────────────────── */}
+      <section
+        style={{
+          padding: '100px 24px',
+          background: 'var(--bg-app)',
+          textAlign: 'center'
+        }}
+      >
+        <div style={{ maxWidth: '900px', margin: '0 auto' }}>
+          <span style={{ fontSize: '12px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--primary)' }}>
+            INTEGRAÇÃO COMPLETA
+          </span>
+          <h2 style={{ fontSize: 'clamp(26px, 4vw, 38px)', fontWeight: 900, color: 'var(--text-main)', letterSpacing: '-1.5px', marginTop: '12px', marginBottom: '20px' }}>
+            Tudo em um único lugar
+          </h2>
+          <p style={{ fontSize: '15px', color: 'var(--text-muted)', marginBottom: '40px', lineHeight: '1.6' }}>
+            Pare de pular de aba em aba e gerenciar múltiplos aplicativos separados. O MyFlowDay consolida as 7 ferramentas essenciais do seu dia em um sistema operacional integrado:
+          </p>
+
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+            gap: '20px',
+            textAlign: 'left'
+          }}>
+            {[
+              { title: 'Agenda Semanal', app: 'Substitui Google Calendar', desc: 'Agende compromissos de forma visual no mesmo painel das tarefas.' },
+              { title: 'Gerenciador de Tarefas', app: 'Substitui Todoist / Asana', desc: 'Crie listas simples e filtre por prioridades sem poluição visual.' },
+              { title: 'Foco Pomodoro', app: 'Substitui Forest / Focus Keeper', desc: 'Rode o timer acoplado a sons de chuva e lareira em alta fidelidade.' },
+              { title: 'Monitor de Hábitos', app: 'Substitui Habitica / Loop', desc: 'Monitore hábitos com sequências diárias de consistência.' },
+              { title: 'Quadro Kanban', app: 'Substitui Trello / Jira', desc: 'Rastreie etapas de projetos arrastando cartões de forma simples.' },
+              { title: 'Matriz Eisenhower', app: 'Substitui planilhas de priorização', desc: 'Filtre tarefas por Urgência e Importância para focar no essencial.' },
+              { title: 'Central de Insights', app: 'Substitui relatórios manuais', desc: 'Veja a análise inteligente dos seus horários e padrões de foco.' }
+            ].map((box, idx) => (
+              <div key={idx} style={{
+                background: 'var(--bg-card)', border: '1px solid var(--border-light)',
+                borderRadius: '12px', padding: '24px', display: 'flex', flexDirection: 'column', gap: '8px'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Check size={16} color="#10b981" />
+                  <strong style={{ fontSize: '15px', color: 'var(--text-main)' }}>{box.title}</strong>
+                </div>
+                <span style={{ fontSize: '11px', color: 'var(--text-light)', fontWeight: 700 }}>{box.app}</span>
+                <p style={{ fontSize: '13px', color: 'var(--text-muted)', lineHeight: '1.5', margin: 0 }}>{box.desc}</p>
               </div>
             ))}
           </div>
@@ -430,12 +544,6 @@ export default function LandingPage({ onEnterApp }) {
         }}
       >
         <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
-          <div style={{ textAlign: 'center', marginBottom: '64px' }}>
-            <h2 style={{ fontSize: 'clamp(28px, 4vw, 42px)', fontWeight: 900, color: 'var(--text-main)', letterSpacing: '-1.5px' }}>
-              O que você ganha usando o MyFlowDay?
-            </h2>
-          </div>
-
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '28px' }}>
             {[
               {
@@ -475,80 +583,13 @@ export default function LandingPage({ onEnterApp }) {
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                   {feat.icon}
-                  <h3 style={{ fontSize: '17px', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>{feat.title}</h3>
+                  <h3 style={{ fontSize: '16px', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>{feat.title}</h3>
                 </div>
                 <p style={{ fontSize: '13.5px', color: 'var(--text-muted)', lineHeight: '1.6', margin: 0 }}>
                   {feat.desc}
                 </p>
               </div>
             ))}
-          </div>
-
-          <div style={{ display: 'flex', justifyContent: 'center', marginTop: '48px' }}>
-            <button onClick={onEnterApp} style={{ padding: '16px 36px', borderRadius: '24px', background: 'var(--primary)', color: 'white', fontWeight: 800, fontSize: '15px', border: 'none', cursor: 'pointer', boxShadow: '0 4px 14px rgba(37,99,235,0.3)' }}>
-              Organizar Minha Rotina ⚡
-            </button>
-          </div>
-        </div>
-      </section>
-
-      {/* ── REFORÇO DA CENTRAL DE INSIGHTS ─────────────────────────────── */}
-      <section
-        id="insights"
-        style={{
-          padding: '100px 24px',
-          background: 'var(--bg-app)',
-          textAlign: 'center'
-        }}
-      >
-        <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
-          <span style={{ fontSize: '12.5px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.15em', color: 'var(--primary)' }}>
-            DIFERENCIAL INTELIGENTE
-          </span>
-          <h2 style={{ fontSize: 'clamp(28px, 4vw, 42px)', fontWeight: 900, color: 'var(--text-main)', letterSpacing: '-1.5px', marginTop: '8px', marginBottom: '24px' }}>
-            A inteligência cognitiva que mapeia seus dados
-          </h2>
-          <p style={{ fontSize: '15.5px', color: 'var(--text-muted)', maxWidth: '680px', margin: '0 auto 48px', lineHeight: '1.6' }}>
-            O grande diferencial do MyFlowDay é analisar silenciosamente seus blocos de foco para gerar alertas amigáveis sobre a sua rotina de trabalho ou estudos.
-          </p>
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1.3fr 1fr', gap: '40px', alignItems: 'center' }}>
-            {/* Imagem Real de Insights */}
-            <div style={{
-              background: 'var(--bg-card)', border: '1px solid var(--border-light)', borderRadius: '16px', padding: '16px',
-              boxShadow: 'var(--shadow-lg)'
-            }}>
-              <img
-                src="/assets/insights.png"
-                alt="Central de Insights cognitivos no aplicativo MyFlowDay"
-                style={{ width: '100%', height: 'auto', borderRadius: '8px', objectFit: 'contain' }}
-                onError={(e) => {
-                  e.target.src = "https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=1200&q=80";
-                }}
-              />
-            </div>
-
-            {/* Exemplos de Insights */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', textAlign: 'left' }}>
-              {[
-                { title: '💡 Horários de Maior Concentração', desc: '"Você conclui suas tarefas de Alta prioridade 42% mais rápido nas terças-feiras de manhã. Que tal agendar suas tarefas estratégicas para este bloco?"' },
-                { title: '🛋️ Prevenção de Estresse', desc: '"Seu rendimento em sessões de foco cai 60% às sextas-feiras após as 15h. Que tal adiar novas tarefas complexas e reservar esse horário para revisões simples?"' },
-                { title: '📈 Análise de Estabilidade', desc: '"Você manteve a consistência de foco e hábitos por 5 dias seguidos sem picos de procrastinação. Seu ritmo de rotina está excelente."' }
-              ].map((item, idx) => (
-                <div key={idx} style={{
-                  background: 'var(--bg-card)', border: '1px solid var(--border-light)',
-                  borderRadius: '10px', padding: '20px', position: 'relative', overflow: 'hidden'
-                }}>
-                  <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '4px', background: 'var(--primary)' }} />
-                  <h4 style={{ fontSize: '15px', fontWeight: 800, color: 'var(--text-main)', marginBottom: '6px' }}>{item.title}</h4>
-                  <p style={{ fontSize: '13px', color: 'var(--text-muted)', lineHeight: '1.5', margin: 0 }}>{item.desc}</p>
-                </div>
-              ))}
-              
-              <button onClick={onEnterApp} style={{ padding: '14px 28px', borderRadius: '24px', background: 'var(--primary)', color: 'white', fontWeight: 800, fontSize: '13.5px', border: 'none', cursor: 'pointer', alignSelf: 'flex-start', boxShadow: '0 4px 12px rgba(37,99,235,0.2)' }}>
-                Descobrir Meu Perfil de Produtividade →
-              </button>
-            </div>
           </div>
         </div>
       </section>
@@ -557,9 +598,7 @@ export default function LandingPage({ onEnterApp }) {
       <section
         style={{
           padding: '100px 24px',
-          background: 'var(--bg-card)',
-          borderTop: '1px solid var(--border-light)',
-          borderBottom: '1px solid var(--border-light)',
+          background: 'var(--bg-app)',
           textAlign: 'center'
         }}
       >
@@ -575,7 +614,7 @@ export default function LandingPage({ onEnterApp }) {
           </p>
 
           <div style={{
-            background: 'var(--bg-app)', border: '1px solid var(--border-light)',
+            background: 'var(--bg-card)', border: '1px solid var(--border-light)',
             borderRadius: '16px', padding: '36px', boxShadow: 'var(--shadow-md)', marginBottom: '32px'
           }}>
             <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', flexWrap: 'wrap', marginBottom: '28px' }}>
@@ -620,7 +659,9 @@ export default function LandingPage({ onEnterApp }) {
       <section
         style={{
           padding: '100px 24px',
-          background: 'var(--bg-app)',
+          background: 'var(--bg-card)',
+          borderTop: '1px solid var(--border-light)',
+          borderBottom: '1px solid var(--border-light)',
           textAlign: 'center'
         }}
       >
@@ -630,7 +671,7 @@ export default function LandingPage({ onEnterApp }) {
           </h2>
 
           <div style={{
-            background: 'var(--bg-card)', border: '1px solid var(--border-light)',
+            background: 'var(--bg-app)', border: '1px solid var(--border-light)',
             borderRadius: '16px', overflow: 'hidden', boxShadow: 'var(--shadow-lg)'
           }}>
             <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr 1fr', padding: '20px', borderBottom: '1px solid var(--border-light)', fontSize: '13.5px', fontWeight: 800, color: 'var(--text-main)' }}>
@@ -664,9 +705,7 @@ export default function LandingPage({ onEnterApp }) {
       <section
         style={{
           padding: '100px 24px',
-          background: 'var(--bg-card)',
-          borderTop: '1px solid var(--border-light)',
-          borderBottom: '1px solid var(--border-light)',
+          background: 'var(--bg-app)',
           textAlign: 'center'
         }}
       >
@@ -688,7 +727,9 @@ export default function LandingPage({ onEnterApp }) {
         id="faq"
         style={{
           padding: '100px 24px',
-          background: 'var(--bg-app)'
+          background: 'var(--bg-card)',
+          borderTop: '1px solid var(--border-light)',
+          borderBottom: '1px solid var(--border-light)',
         }}
       >
         <div style={{ maxWidth: '800px', margin: '0 auto' }}>
@@ -737,7 +778,7 @@ export default function LandingPage({ onEnterApp }) {
               }
             ].map((faq, idx) => (
               <div key={idx} style={{
-                background: 'var(--bg-card)', border: '1px solid var(--border-light)',
+                background: 'var(--bg-app)', border: '1px solid var(--border-light)',
                 borderRadius: '12px', overflow: 'hidden', transition: 'all 0.3s ease'
               }}>
                 <button
@@ -788,11 +829,15 @@ export default function LandingPage({ onEnterApp }) {
 
         <div style={{ maxWidth: '800px', margin: '0 auto', position: 'relative', zIndex: 1 }}>
           <h2 style={{ fontSize: 'clamp(28px, 4.5vw, 44px)', fontWeight: 900, letterSpacing: '-1.5px', marginBottom: '20px', fontFamily: 'var(--font-display)' }}>
-            Organize sua rotina com foco inteligente
+            Comece gratuitamente hoje.
           </h2>
-          <p style={{ fontSize: '17px', opacity: 0.9, marginBottom: '40px', maxWidth: '580px', margin: '0 auto 40px', lineHeight: '1.6' }}>
-            Entre agora gratuitamente, instale no celular e teste o app em segundos sem precisar cadastrar cartão.
-          </p>
+          
+          <div style={{ fontSize: '20px', fontWeight: 600, opacity: 0.95, marginBottom: '40px', lineHeight: '1.8' }}>
+            <div>Organize sua rotina.</div>
+            <div>Descubra seus melhores horários de produtividade.</div>
+            <div>Trabalhe com mais foco e menos estresse.</div>
+          </div>
+
           <div style={{ display: 'flex', gap: '16px', justifyContent: 'center', flexWrap: 'wrap' }}>
             <button
               onClick={onEnterApp}
@@ -857,7 +902,7 @@ export default function LandingPage({ onEnterApp }) {
           </div>
           
           <p style={{ fontSize: '13.5px', color: 'var(--text-muted)', marginBottom: '24px', maxWidth: '500px', margin: '0 auto 24px', lineHeight: '1.6' }}>
-            O gerenciador de tarefas inteligente com Pomodoro, Kanban, Planejador Semanal e Central de Insights integrado.
+            O seu sistema operacional de produtividade e gerenciador de tarefas integrado com Pomodoro, Kanban e Central de Insights.
           </p>
 
           <div style={{ display: 'flex', gap: '28px', justifyContent: 'center', flexWrap: 'wrap', marginBottom: '24px' }}>
