@@ -478,8 +478,26 @@ export default function AdminDashboard() {
           <p style={{ fontSize: '13.5px', color: 'var(--text-light)', marginTop: '4px', margin: 0 }}>Métricas analíticas consolidadas e auditoria de usuários em tempo real.</p>
         </div>
         {!selectedUser && (
-          <button onClick={fetchGlobalData} className="btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', padding: '8px 16px', borderRadius: 'var(--radius-md)' }}>
-            🔄 Recarregar Dados
+          <button 
+            onClick={fetchGlobalData} 
+            style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '8px', 
+              fontSize: '13px', 
+              padding: '8px 16px', 
+              borderRadius: '20px',
+              backgroundColor: 'var(--primary)',
+              color: 'white',
+              border: 'none',
+              fontWeight: '600',
+              cursor: 'pointer',
+              boxShadow: '0 4px 12px rgba(37, 99, 235, 0.2)',
+              transition: 'all 0.2s ease'
+            }}
+          >
+            <RefreshCw size={14} className={loading ? 'spin' : ''} />
+            Recarregar Dados
           </button>
         )}
       </div>

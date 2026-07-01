@@ -75,13 +75,7 @@ export default function SystemStatusDashboard() {
             </p>
           </div>
         </div>
-        <button onClick={fetchStatus} style={{
-          display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.6rem 1.2rem',
-          background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)',
-          borderRadius: '10px', color: '#fff', cursor: 'pointer', fontWeight: 600
-        }}>
-          <RefreshCw size={16} className={loading ? 'spinning' : ''} /> Atualizar Agora
-        </button>
+
       </div>
 
       {/* GRID DE METRICAS PRINCIPAIS */}

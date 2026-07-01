@@ -36,8 +36,24 @@ export default function LandingPage({ onEnterApp }) {
   const { handleStartDemoMode } = useAppContext();
   const [scrolled, setScrolled] = useState(false);
   
+  const heroImages = [
+    { src: '/assets/dashboard.png', alt: 'Dashboard do MyFlowDay', fallback: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1200&q=80', label: 'dashboard' },
+    { src: '/assets/agenda.png', alt: 'Agenda Semanal Integrada', fallback: 'https://images.unsplash.com/photo-1506784983877-45594efa4cbe?auto=format&fit=crop&w=1200&q=80', label: 'agenda' },
+    { src: '/assets/kanban.png', alt: 'Quadro Kanban de Tarefas', fallback: 'https://images.unsplash.com/photo-1611224923853-80b023f02d71?auto=format&fit=crop&w=1200&q=80', label: 'kanban' },
+    { src: '/assets/pomodoro.png', alt: 'Modo Foco Pomodoro com Som Ambiente', fallback: 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=1200&q=80', label: 'foco-pomodoro' },
+    { src: '/assets/insights.png', alt: 'Central de Insights Comportamentais', fallback: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=1200&q=80', label: 'insights' },
+  ];
+
+  const [heroImageIdx, setHeroImageIdx] = useState(0);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setHeroImageIdx(prev => (prev + 1) % heroImages.length);
+    }, 3000);
+    return () => clearInterval(timer);
+  }, []);
+  
   // Estados para elementos interativos
-  const [activeStep, setActiveStep] = useState(0);
   const [lostMinutes, setLostMinutes] = useState(30);
   const [openFaq, setOpenFaq] = useState(null);
 
@@ -45,14 +61,6 @@ export default function LandingPage({ onEnterApp }) {
     const onScroll = () => setScrolled(window.scrollY > 20);
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
-  }, []);
-
-  // Rotação automática dos passos da jornada
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setActiveStep(prev => (prev + 1) % 5);
-    }, 6000);
-    return () => clearInterval(timer);
   }, []);
 
   const calculatedHoursLost = Math.round((lostMinutes * 365) / 60);
@@ -160,7 +168,7 @@ export default function LandingPage({ onEnterApp }) {
           </div>
 
           <div className="landing-nav-buttons" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <button onClick={onEnterApp} className="nav-btn-secondary" style={{ padding: '8px 16px', borderRadius: '20px', background: 'transparent', color: '#F8FAFC', fontWeight: 600, fontSize: '13.5px', cursor: 'pointer', border: '1px solid rgba(255, 255, 255, 0.15)', transition: 'all 0.2s' }}>Entrar</button>
+            <button onClick={onEnterApp} className="nav-btn-secondary" style={{ padding: '8px 16px', borderRadius: '20px', background: 'transparent', color: '#F8FAFC', fontWeight: 600, fontSize: '13.5px', cursor: 'pointer', border: '1px solid rgba(255, 255, 255, 0.15)', transition: 'all 0.2s' }}>Faça login</button>
             <button onClick={onEnterApp} className="nav-btn-primary" style={{ padding: '8px 20px', borderRadius: '20px', background: 'var(--primary)', color: 'white', fontWeight: 700, fontSize: '13.5px', cursor: 'pointer', border: 'none', transition: 'all 0.2s', boxShadow: '0 4px 12px rgba(37,99,235,0.25)' }}>Criar Conta</button>
           </div>
         </div>
@@ -300,6 +308,20 @@ export default function LandingPage({ onEnterApp }) {
             <span>✓ Funciona offline</span>
           </div>
 
+          <div style={{ marginTop: '20px', fontSize: '14px', color: '#94A3B8', fontWeight: 500 }}>
+            Já tem uma conta?{' '}
+            <button 
+              onClick={onEnterApp} 
+              style={{ 
+                background: 'none', border: 'none', color: 'var(--primary)', 
+                fontWeight: 750, cursor: 'pointer', padding: 0, textDecoration: 'underline',
+                fontFamily: 'inherit'
+              }}
+            >
+              Faça login
+            </button>
+          </div>
+
           {/* MOCK DE TELA DO APP NA PRIMEIRA DOBRA - FLUTUANTE 3D */}
           <div 
             className="floating-screenshot"
@@ -338,21 +360,38 @@ export default function LandingPage({ onEnterApp }) {
                   padding: '4px 24px', 
                   borderRadius: '6px', 
                   fontSize: '11px', 
-                  color: '#64748B', 
-                  letterSpacing: '0.05em' 
+                  color: '#94A3B8', 
+                  letterSpacing: '0.05em',
+                  fontWeight: 600
                 }}>
-                  myflowday.com.br/app
+                  myflowday.com.br/app/{heroImages[heroImageIdx].label}
                 </div>
                 <div style={{ width: '40px' }}></div>
               </div>
-              <img
-                src="/assets/dashboard.png"
-                alt="MyFlowDay App Dashboard"
-                style={{ width: '100%', height: 'auto', display: 'block', minHeight: '300px', objectFit: 'cover' }}
-                onError={(e) => {
-                  e.target.src = "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1200&q=80";
-                }}
-              />
+              <div style={{ position: 'relative', width: '100%', overflow: 'hidden', background: '#0F172A' }}>
+                {heroImages.map((img, idx) => (
+                  <img
+                    key={img.src}
+                    src={img.src}
+                    alt={img.alt}
+                    style={{
+                      width: '100%',
+                      height: 'auto',
+                      display: 'block',
+                      position: idx === 0 ? 'relative' : 'absolute',
+                      top: 0,
+                      left: 0,
+                      opacity: heroImageIdx === idx ? 1 : 0,
+                      transition: 'opacity 0.8s ease-in-out',
+                      zIndex: heroImageIdx === idx ? 2 : 1,
+                      objectFit: 'cover'
+                    }}
+                    onError={(e) => {
+                      e.target.src = img.fallback;
+                    }}
+                  />
+                ))}
+              </div>
             </div>
           </div>
         </div>
@@ -443,9 +482,23 @@ export default function LandingPage({ onEnterApp }) {
             }}>
               Seu aplicativo observa sua rotina e mostra padrões que você dificilmente perceberia sozinho.
             </h2>
-            <p style={{ fontSize: '16.5px', color: '#94A3B8', maxWidth: '780px', margin: '0 auto', lineHeight: '1.6' }}>
-              À medida que você usa o MyFlowDay, a Central de Insights encontra padrões na sua rotina e destaca oportunidades para melhorar seu foco e sua organização:
+            <p style={{ fontSize: '16.5px', color: '#94A3B8', maxWidth: '820px', margin: '0 auto', lineHeight: '1.6' }}>
+              Ao invés de apenas organizar tarefas, o MyFlowDay aprende seus padrões ao longo do tempo e transforma seu histórico em recomendações práticas. A nossa inteligência analisa automaticamente seus horários mais produtivos, riscos de sobrecarga e comportamento durante os ciclos de foco para gerar um relatório inteligente de evolução semanal:
             </p>
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap', marginTop: '24px', fontSize: '13.5px', color: '#CBD5E1', fontWeight: 500 }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 14px', background: 'rgba(255,255,255,0.03)', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                <Clock size={14} style={{ color: 'var(--secondary)' }} /> Melhores horários para foco profundo
+              </span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 14px', background: 'rgba(255,255,255,0.03)', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                <AlertTriangle size={14} style={{ color: '#FB7185' }} /> Alertas preditivos de sobrecarga
+              </span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 14px', background: 'rgba(255,255,255,0.03)', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                <TrendingUp size={14} style={{ color: '#34D399' }} /> Evolução real da consistência
+              </span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 14px', background: 'rgba(255,255,255,0.03)', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                <Sparkles size={14} style={{ color: '#FCD34D' }} /> Recomendações semanais personalizadas
+              </span>
+            </div>
           </div>
 
           <div className="insights-grid">
@@ -490,27 +543,44 @@ export default function LandingPage({ onEnterApp }) {
               {/* Decorative top gradient line */}
               <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '4px', background: 'linear-gradient(90deg, var(--primary), #3b82f6)' }} />
               
-              {/* Greeting & Subtitle */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
-                <div style={{
-                  width: '42px',
-                  height: '42px',
-                  borderRadius: '12px',
-                  backgroundColor: 'rgba(37, 99, 235, 0.12)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: 'var(--primary)'
-                }}>
-                  <Sparkles size={20} />
+              {/* Greeting & Subtitle with Coach Pro Active badge */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px', marginBottom: '24px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div style={{
+                    width: '42px',
+                    height: '42px',
+                    borderRadius: '12px',
+                    backgroundColor: 'rgba(37, 99, 235, 0.12)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: 'var(--primary)'
+                  }}>
+                    <Brain size={22} />
+                  </div>
+                  <div>
+                    <h3 style={{ fontSize: '17px', fontWeight: '800', color: '#FFFFFF', margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      Coach MyFlowDay
+                    </h3>
+                    <span style={{ fontSize: '11px', color: '#94A3B8' }}>
+                      Seu companheiro rumo à consistência sustentável
+                    </span>
+                  </div>
                 </div>
-                <div>
-                  <h3 style={{ fontSize: '16px', fontWeight: '700', color: '#FFFFFF', margin: 0 }}>
-                    Análise Personalizada da Semana
-                  </h3>
-                  <span style={{ fontSize: '11px', color: '#64748B' }}>
-                    Gerado reativamente com base no seu comportamento
-                  </span>
+                
+                <div style={{
+                  padding: '4px 10px',
+                  borderRadius: '99px',
+                  background: 'rgba(34, 197, 94, 0.1)',
+                  border: '1px solid rgba(34, 197, 94, 0.3)',
+                  color: '#4ADE80',
+                  fontSize: '11px',
+                  fontWeight: '700',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px'
+                }}>
+                  <span>⚡</span> Coach Pro Ativo
                 </div>
               </div>
 
@@ -519,22 +589,58 @@ export default function LandingPage({ onEnterApp }) {
                 style={{ 
                   fontSize: '14px', 
                   color: '#E2E8F0', 
-                  lineHeight: '1.75', 
+                  lineHeight: '1.8', 
                   padding: '20px',
                   backgroundColor: '#0F172A',
                   borderRadius: '12px',
                   border: '1px solid rgba(255, 255, 255, 0.05)',
                   marginBottom: '24px',
-                  fontFamily: 'var(--font-body)',
+                  fontFamily: 'inherit',
                 }}
               >
-                <p style={{ margin: '0 0 12px 0' }}>Olá! Analisando seu comportamento nos últimos 7 dias, identifiquei padrões muito claros na sua rotina:</p>
+                <p style={{ margin: '0 0 16px 0', color: '#94A3B8' }}>
+                  Olá! Analisando seu comportamento nos últimos 7 dias, identifiquei padrões muito claros na sua rotina:
+                </p>
                 
-                <p style={{ margin: '0 0 8px 0' }}>📊 <strong>Consistência:</strong> Você concluiu 31 tarefas com sucesso, atingindo 88% de taxa de conclusão.</p>
-                <p style={{ margin: '0 0 8px 0' }}>⏰ <strong>Pico de Foco:</strong> Seu maior horário de energia ocorre entre 9h e 11h da manhã. Terças e quartas foram seus dias mais produtivos.</p>
-                <p style={{ margin: '0 0 12px 0' }}>⚠️ <strong>Alerta de Sobrecarga:</strong> Sessões de foco Pomodoro com mais de 70 minutos registram maior taxa de abandono (cerca de 42%).</p>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', margin: '0 0 16px 0' }}>
+                  <CheckCircle2 size={16} style={{ color: '#38BDF8', marginTop: '3px', flexShrink: 0 }} />
+                  <div>
+                    <strong style={{ color: '#FFFFFF' }}>Consistência Analisada:</strong>
+                    <span style={{ color: '#E2E8F0', marginLeft: '6px' }}>
+                      Durante esta semana você manteve um excelente nível de consistência. Sua taxa de conclusão permaneceu acima de 85%, especialmente nas manhãs de terça e quarta-feira.
+                    </span>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', margin: '0 0 16px 0' }}>
+                  <Activity size={16} style={{ color: '#22D3EE', marginTop: '3px', flexShrink: 0 }} />
+                  <div>
+                    <strong style={{ color: '#FFFFFF' }}>Pico de Foco:</strong>
+                    <span style={{ color: '#E2E8F0', marginLeft: '6px' }}>
+                      Identifiquei que seu maior período de engajamento mental ocorre entre 9h e 11h da manhã, onde as tarefas são concluídas 30% mais rápido.
+                    </span>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', margin: '0 0 16px 0' }}>
+                  <AlertTriangle size={16} style={{ color: '#FB7185', marginTop: '3px', flexShrink: 0 }} />
+                  <div>
+                    <strong style={{ color: '#FFFFFF' }}>Alerta de Sobrecarga:</strong>
+                    <span style={{ color: '#E2E8F0', marginLeft: '6px' }}>
+                      Observei que sessões de foco contínuo acima de 60 minutos reduziram drasticamente seu rendimento posterior. Na próxima semana vale experimentar ciclos menores para manter a energia.
+                    </span>
+                  </div>
+                </div>
                 
-                <p style={{ margin: 0 }}>Para a próxima semana, sugiro reservar as tarefas mais complexas para a manhã e limitar as sessões de foco a 50 minutos.</p>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', margin: '0 0 8px 0' }}>
+                  <Sparkles size={16} style={{ color: '#FCD34D', marginTop: '3px', flexShrink: 0 }} />
+                  <div>
+                    <strong style={{ color: '#FFFFFF' }}>Sugestão Prática:</strong>
+                    <span style={{ color: '#E2E8F0', marginLeft: '6px' }}>
+                      Reserve tarefas profundas para terças e quartas pela manhã, e utilize sessões Pomodoro limitadas a 50 minutos para evitar fadiga cognitiva.
+                    </span>
+                  </div>
+                </div>
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -592,131 +698,73 @@ export default function LandingPage({ onEnterApp }) {
             Acompanhe o fluxo contínuo de uso e veja como o sistema entende e apoia seu comportamento:
           </p>
 
-          <div 
-            className="timeline-steps"
-            style={{ 
-              display: 'grid', 
-              gridTemplateColumns: 'repeat(5, 1fr)', 
-              gap: '12px', 
-              marginBottom: '40px',
-              position: 'relative'
-            }}
-          >
-            <div 
-              className="timeline-line"
-              style={{
-                position: 'absolute',
-                top: '20px',
-                left: '10%',
-                right: '10%',
-                height: '2px',
-                background: '#E2E8F0',
-                zIndex: 1
-              }}
-            ></div>
-
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '48px', marginTop: '48px' }}>
             {journeySteps.map((step, idx) => (
-              <button
+              <div 
                 key={step.id}
-                onClick={() => setActiveStep(idx)}
                 style={{
-                  background: 'transparent',
-                  border: 'none',
-                  cursor: 'pointer',
-                  zIndex: 2,
+                  background: '#FFFFFF',
+                  border: '1px solid #E2E8F0',
+                  borderRadius: '20px',
+                  padding: '40px',
+                  boxShadow: '0 10px 30px rgba(15,23,42,0.04)',
                   display: 'flex',
                   flexDirection: 'column',
-                  alignItems: 'center',
-                  padding: 0
+                  gap: '24px',
+                  textAlign: 'left',
+                  transition: 'all 0.3s ease',
+                  maxWidth: '850px',
+                  margin: '0 auto',
+                  width: '100%'
                 }}
+                className="floating-screenshot-light"
               >
-                <div style={{
-                  width: '40px',
-                  height: '40px',
-                  borderRadius: '50%',
-                  background: activeStep === idx ? 'var(--primary)' : '#FFFFFF',
-                  border: activeStep === idx ? '3px solid var(--secondary)' : '1px solid #E2E8F0',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontWeight: 800,
-                  fontSize: '14px',
-                  color: activeStep === idx ? '#FFFFFF' : '#64748B',
-                  marginBottom: '12px',
-                  boxShadow: '0 2px 8px rgba(15,23,42,0.05)',
-                  transition: 'all 0.3s'
-                }}>
-                  {idx + 1}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ 
+                    fontSize: '11px', fontWeight: 900, background: 'var(--primary)', 
+                    color: 'white', padding: '6px 14px', borderRadius: '20px',
+                    textTransform: 'uppercase', display: 'inline-block'
+                  }}>
+                    {step.step}
+                  </span>
                 </div>
-                <span style={{ 
-                  fontSize: '13.5px', 
-                  fontWeight: activeStep === idx ? 800 : 600, 
-                  color: activeStep === idx ? 'var(--primary)' : '#64748B',
-                  transition: 'color 0.2s'
-                }}>
-                  {step.title}
-                </span>
-              </button>
+                
+                <div 
+                  style={{
+                    background: '#F8FAFC',
+                    borderRadius: '12px',
+                    overflow: 'hidden',
+                    border: '1px solid #E2E8F0',
+                    padding: '8px',
+                  }}
+                >
+                  <img
+                    src={`/assets/${step.id}.png`}
+                    alt={step.title}
+                    style={{
+                      width: '100%',
+                      height: 'auto',
+                      maxHeight: '480px',
+                      objectFit: 'contain',
+                      display: 'block',
+                      borderRadius: '8px'
+                    }}
+                    onError={(e) => {
+                      e.target.src = "https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=1200&q=80";
+                    }}
+                  />
+                </div>
+
+                <div>
+                  <h3 style={{ fontSize: '22px', fontWeight: 900, color: '#0F172A', marginBottom: '8px', fontFamily: 'var(--font-display)', letterSpacing: '-0.5px' }}>
+                    {step.title}
+                  </h3>
+                  <p style={{ fontSize: '15px', color: '#475569', lineHeight: '1.6', margin: 0 }}>
+                    {step.benefit}
+                  </p>
+                </div>
+              </div>
             ))}
-          </div>
-
-          <div 
-            className="step-details-container"
-            style={{
-              background: '#FFFFFF',
-              border: '1px solid #E2E8F0',
-              borderRadius: '16px',
-              padding: '32px',
-              boxShadow: '0 10px 30px rgba(15,23,42,0.04)',
-              display: 'grid',
-              gridTemplateColumns: '1fr 1.2fr',
-              gap: '32px',
-              alignItems: 'center',
-              textAlign: 'left'
-            }}
-          >
-            <div>
-              <span style={{ 
-                fontSize: '11px', fontWeight: 900, background: 'var(--primary)', 
-                color: 'white', padding: '4px 10px', borderRadius: '12px',
-                textTransform: 'uppercase', display: 'inline-block', marginBottom: '14px'
-              }}>
-                {journeySteps[activeStep].step}
-              </span>
-              <h3 style={{ fontSize: '20px', fontWeight: 850, color: '#0F172A', marginBottom: '12px' }}>
-                {journeySteps[activeStep].title}
-              </h3>
-              <p style={{ fontSize: '15px', color: '#475569', lineHeight: '1.6', margin: 0 }}>
-                {journeySteps[activeStep].benefit}
-              </p>
-            </div>
-
-            <div 
-              className="floating-screenshot-light"
-              style={{
-                background: '#F8FAFC',
-                borderRadius: '12px',
-                overflow: 'hidden',
-                border: '1px solid #E2E8F0',
-                padding: '6px'
-              }}
-            >
-              <img
-                src={`/assets/${journeySteps[activeStep].id}.png`}
-                alt={journeySteps[activeStep].title}
-                style={{
-                  width: '100%',
-                  height: 'auto',
-                  maxHeight: '360px',
-                  objectFit: 'contain',
-                  display: 'block',
-                  borderRadius: '8px'
-                }}
-                onError={(e) => {
-                  e.target.src = "https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=1200&q=80";
-                }}
-              />
-            </div>
           </div>
         </div>
       </section>
@@ -1242,7 +1290,7 @@ export default function LandingPage({ onEnterApp }) {
         /* ── RESPONSIVIDADE ADICIONAL LAYOUT ── */
         .insights-grid {
           display: grid;
-          grid-template-columns: 1.1fr 1fr;
+          grid-template-columns: 1.2fr 0.8fr;
           gap: 48px;
           align-items: center;
         }

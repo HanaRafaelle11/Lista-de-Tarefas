@@ -70,11 +70,14 @@ export const goalsService = {
       let ge;
 
       try {
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
         const result = await supabase
           .from('goals')
           .select('*')
           .eq('user_id', userId)
-          .is('deleted_at', null)
+          .or(`deleted_at.is.null,deleted_at.gte.${thirtyDaysAgo.toISOString()}`)
           .order('created_at', { ascending: false });
 
         goalsData = result.data;
@@ -327,9 +330,8 @@ export const goalsService = {
 
       if (error) throw error;
 
-      // 4. Sucesso: remove da fila de sync e limpa do IndexedDB
+      // 4. Sucesso: remove da fila de sync (mantém no cache local com deletedAt para visualização na Lixeira)
       dequeue(syncKey);
-      await localDB.delete('goals', id).catch(() => {});
       log('delete: sucesso completo', id);
 
       return { error: null };

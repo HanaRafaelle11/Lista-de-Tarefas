@@ -21,6 +21,7 @@ export default function AdminNotificationDashboard() {
   });
 
   const [recentQueue, setRecentQueue] = useState([]);
+  const [recentEvents, setRecentEvents] = useState([]);
   const [filterStatus, setFilterStatus] = useState('all');
   const [swStatus, setSwStatus] = useState('checking');
   const [browserPermission, setBrowserPermission] = useState('default');
@@ -48,31 +49,54 @@ export default function AdminNotificationDashboard() {
   const fetchNotificationMetrics = async () => {
     setLoading(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const token = session?.access_token || '';
-      
-      const res = await fetch('/api/admin/notifications', {
-        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+      // 1. Busca quantidade de inscrições ativas
+      const { count: subCount, error: subErr } = await supabase
+        .from('push_subscriptions')
+        .select('*', { count: 'exact', head: true });
+
+      if (subErr) throw subErr;
+
+      // 2. Busca contagem de status na fila
+      const [pendingRes, processingRes, successRes, failedRes] = await Promise.all([
+        supabase.from('notification_queue').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
+        supabase.from('notification_queue').select('*', { count: 'exact', head: true }).eq('status', 'processing'),
+        supabase.from('notification_queue').select('*', { count: 'exact', head: true }).in('status', ['sent', 'success']),
+        supabase.from('notification_queue').select('*', { count: 'exact', head: true }).eq('status', 'failed')
+      ]);
+
+      setStats({
+        pending: pendingRes.count || 0,
+        processing: processingRes.count || 0,
+        success: successRes.count || 0,
+        failed: failedRes.count || 0,
+        total: (pendingRes.count || 0) + (processingRes.count || 0) + (successRes.count || 0) + (failedRes.count || 0),
+        totalSubscriptions: subCount || 0,
+        ctr: '0%',
+        avgLatency: '38ms'
       });
-      
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
-      
-      if (data && data.stats) {
-        setStats({
-          pending: data.stats.pending,
-          processing: data.stats.processing,
-          success: data.stats.success,
-          failed: data.stats.failed,
-          total: data.stats.total,
-          totalSubscriptions: data.stats.totalSubscriptions,
-          ctr: '0%',
-          avgLatency: '38ms'
-        });
-        setRecentQueue(data.queue || []);
-      }
+
+      // 3. Busca itens recentes da fila de notificações
+      const { data: queueData, error: qErr } = await supabase
+        .from('notification_queue')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(100);
+
+      if (qErr) throw qErr;
+      setRecentQueue(queueData || []);
+
+      // 4. Busca eventos de telemetria da tabela public.events
+      const { data: eventsData, error: evtsErr } = await supabase
+        .from('events')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(50);
+
+      if (evtsErr) throw evtsErr;
+      setRecentEvents(eventsData || []);
+
     } catch (err) {
-      console.error('Error fetching notification metrics:', err);
+      console.error('Error fetching direct notification metrics:', err);
     } finally {
       setLoading(false);
       checkBrowserCapabilities();
@@ -148,13 +172,7 @@ export default function AdminNotificationDashboard() {
             Auditoria em tempo real do barramento de eventos de entrega Push, Service Workers e Telemetria VAPID.
           </p>
         </div>
-        <button 
-          onClick={fetchNotificationMetrics}
-          className="btn-primary-glow"
-          style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '10px 16px', fontSize: '13px', borderRadius: '8px', border: 0, cursor: 'pointer' }}
-        >
-          <RefreshCw size={14} className={loading ? 'spin' : ''} /> Atualizar Painel
-        </button>
+
       </div>
 
       {/* Grid de Estado de Infraestrutura Local */}
@@ -350,6 +368,39 @@ export default function AdminNotificationDashboard() {
                     <td style={{ padding: '12px 8px', textAlign: 'center' }}>{item.attempts}</td>
                     <td style={{ padding: '12px 8px', color: 'var(--danger)', fontSize: '11px', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={item.last_error}>
                       {item.last_error || '-'}
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Tabela de Eventos de Telemetria Recentes (public.events) */}
+      <div style={{ padding: '20px', backgroundColor: 'var(--bg-card)', borderRadius: '12px', border: '1px solid var(--border-light)' }}>
+        <h3 style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-main)', marginBottom: '16px' }}>Últimos Eventos de Telemetria (public.events)</h3>
+        <div style={{ overflowX: 'auto', maxHeight: '300px' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', textAlign: 'left' }}>
+            <thead>
+              <tr style={{ borderBottom: '1px solid var(--border-light)', color: 'var(--text-light)' }}>
+                <th style={{ padding: '12px 8px' }}>Tipo de Evento</th>
+                <th style={{ padding: '12px 8px' }}>Usuário</th>
+                <th style={{ padding: '12px 8px' }}>Registrado Em</th>
+                <th style={{ padding: '12px 8px' }}>Metadados</th>
+              </tr>
+            </thead>
+            <tbody>
+              {recentEvents.length === 0 ? (
+                <tr><td colSpan="4" style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)' }}>Nenhum evento encontrado em public.events.</td></tr>
+              ) : (
+                recentEvents.map(evt => (
+                  <tr key={evt.id} style={{ borderBottom: '1px solid var(--border-light)' }}>
+                    <td style={{ padding: '12px 8px', fontWeight: '700', color: 'var(--text-main)' }}>{evt.event_type}</td>
+                    <td style={{ padding: '12px 8px', fontSize: '11px', fontFamily: 'monospace', color: 'var(--text-light)' }}>{evt.user_id}</td>
+                    <td style={{ padding: '12px 8px', color: 'var(--text-muted)' }}>{new Date(evt.created_at).toLocaleString('pt-BR')}</td>
+                    <td style={{ padding: '12px 8px', color: 'var(--text-light)', fontSize: '11px', fontFamily: 'monospace', maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={JSON.stringify(evt.metadata)}>
+                      {JSON.stringify(evt.metadata)}
                     </td>
                   </tr>
                 ))

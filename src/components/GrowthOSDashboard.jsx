@@ -53,13 +53,7 @@ export default function GrowthOSDashboard() {
             </p>
           </div>
         </div>
-        <button onClick={fetchIntelligence} style={{
-          display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.6rem 1.2rem',
-          background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)',
-          borderRadius: '10px', color: '#fff', cursor: 'pointer', fontWeight: 600
-        }}>
-          <RefreshCw size={16} className={loading ? 'spinning' : ''} /> Recalcular Inteligência
-        </button>
+
       </div>
 
       {/* QUADROS PRINCIPAIS */}

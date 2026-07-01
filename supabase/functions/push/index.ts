@@ -73,7 +73,12 @@ Deno.serve(async (req) => {
         title: title || 'MyFlowDay ⚡',
         body: body || '',
         url: url || '/tasks',
-        tag: `push_send_${user_id}_${Date.now()}`
+        tag: `push_send_${user_id}_${Date.now()}`,
+        entity_id: dataContainer.entity_id || '',
+        entity_type: dataContainer.entity_type || 'system',
+        event_type: dataContainer.event_type || 'TASK_DUE',
+        notification_id: dataContainer.notification_id || '',
+        user_id: user_id
       };
 
       let sentCount = 0;
@@ -97,10 +102,21 @@ Deno.serve(async (req) => {
           );
           sentCount++;
         } catch (err) {
+          console.error(`[WebPush Error] User: ${user_id}, Endpoint: ${sub.endpoint}, StatusCode: ${err.statusCode}, Msg: ${err.message || err}`);
           if (err.statusCode === 404 || err.statusCode === 410) {
             await supabase.from('push_subscriptions').delete().eq('endpoint', sub.endpoint);
           }
         }
+      }
+
+      if (subscriptions.length > 0 && sentCount === 0) {
+        return new Response(JSON.stringify({ 
+          error: 'All push attempts failed', 
+          details: `Failed to deliver notifications to all ${subscriptions.length} registered device endpoints.`
+        }), { 
+          status: 200, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json; charset=utf-8' } 
+        });
       }
 
       return new Response(JSON.stringify({ ok: true, sent: sentCount }), { 

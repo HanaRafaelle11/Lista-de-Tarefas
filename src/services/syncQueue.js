@@ -702,6 +702,7 @@ async function trySend(item) {
 
     if (type === 'task_delete') {
       const { userId, id } = payload;
+      let isHardDelete = false;
       
       const { error } = await supabase
         .from('tasks')
@@ -712,6 +713,7 @@ async function trySend(item) {
       if (error) {
         if (error.code === '42703' || (error.message && error.message.includes('deleted_at'))) {
           console.warn('[syncQueue] task_delete: coluna deleted_at ausente, fazendo hard delete.');
+          isHardDelete = true;
           const { error: hardError } = await supabase
             .from('tasks')
             .delete()
@@ -724,9 +726,18 @@ async function trySend(item) {
       }
       
       try {
-        await localDB.delete('tasks', id);
+        if (isHardDelete) {
+          await localDB.delete('tasks', id);
+        } else {
+          // Mantém no cache local com o timestamp correto de soft delete para visualização na Lixeira
+          const existing = await localDB.get('tasks', id);
+          if (existing) {
+            existing.deletedAt = new Date().toISOString();
+            await localDB.put('tasks', existing);
+          }
+        }
       } catch (e) {
-        console.warn('[syncQueue] task_delete: falha ao limpar IndexedDB:', e.message);
+        console.warn('[syncQueue] task_delete: falha ao atualizar IndexedDB:', e.message);
       }
       return true;
     }
@@ -855,6 +866,7 @@ async function trySend(item) {
 
     if (type === 'goal_delete') {
       const { userId, id } = payload;
+      let isHardDelete = false;
       
       // Tenta soft delete primeiro (consistente com goalsService.delete)
       const { error } = await supabase
@@ -867,6 +879,7 @@ async function trySend(item) {
         // Fallback: se coluna deleted_at não existe, faz hard delete
         if (error.code === '42703' || (error.message && error.message.includes('deleted_at'))) {
           console.warn('[syncQueue] goal_delete: coluna deleted_at ausente, fazendo hard delete.');
+          isHardDelete = true;
           const { error: hardError } = await supabase
             .from('goals')
             .delete()
@@ -878,11 +891,19 @@ async function trySend(item) {
         }
       }
       
-      // Remove do IndexedDB após sucesso
       try {
-        await localDB.delete('goals', id);
+        if (isHardDelete) {
+          await localDB.delete('goals', id);
+        } else {
+          // Mantém no cache local com o timestamp de soft delete para exibição na Lixeira
+          const existing = await localDB.get('goals', id);
+          if (existing) {
+            existing.deletedAt = new Date().toISOString();
+            await localDB.put('goals', existing);
+          }
+        }
       } catch (e) {
-        console.warn('[syncQueue] goal_delete: falha ao limpar IndexedDB:', e.message);
+        console.warn('[syncQueue] goal_delete: falha ao atualizar IndexedDB:', e.message);
       }
       
       return true;

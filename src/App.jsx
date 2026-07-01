@@ -403,7 +403,7 @@ function AppLayout() {
         </div>
       )}
 
-      {isAdmin && (
+      {import.meta.env.DEV && isAdmin && (
         <Suspense fallback={null}>
           <DevToolsWidget />
         </Suspense>

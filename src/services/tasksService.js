@@ -34,11 +34,14 @@ export const tasksService = {
     try {
       let data, error;
       try {
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
         const result = await supabase
           .from('tasks')
           .select('*')
           .eq('user_id', userId)
-          .is('deleted_at', null)
+          .or(`deleted_at.is.null,deleted_at.gte.${thirtyDaysAgo.toISOString()}`)
           .order('created_at', { ascending: false });
         data = result.data;
         error = result.error;
@@ -295,9 +298,8 @@ export const tasksService = {
         throw error;
       }
       
-      // Sucesso: remove da fila de sync e limpa IndexedDB
+      // Sucesso: remove da fila de sync (mantém no cache local com deletedAt para visualização na Lixeira)
       dequeue(syncKey);
-      await localDB.delete('tasks', id).catch(() => {});
       return { error: null };
     } catch (error) {
       console.warn('[tasksService.delete] Falha ao excluir no Supabase — mantido na fila de sync:', error.message);

@@ -62,20 +62,28 @@ serve(async (req) => {
     for (const item of queue) {
       try {
         // Trava de Idempotência
-        await supabase
+        const { error: lockErr } = await supabase
           .from('notification_queue')
-          .update({ status: 'processing', attempts: (item.attempts || 0) + 1, updated_at: new Date().toISOString() })
+          .update({ status: 'processing', attempts: (item.attempts || 0) + 1 })
           .eq('id', item.id);
+        
+        if (lockErr) throw lockErr;
 
-        await supabase.from('in_app_notifications').insert({
+        const rawBody = item.body || '';
+        const cleanBodyText = rawBody.split('--flowday-meta--')[0].trim();
+        const finalBody = cleanBodyText || `Sua tarefa "${item.title}" vence agora no MyFlowDay.`;
+
+        const { error: insertErr } = await supabase.from('in_app_notifications').insert({
           user_id: item.user_id,
           notification_queue_id: item.id,
-          event_type: item.event_type,
-          entity_type: item.entity_type,
-          entity_id: item.entity_id,
+          event_type: item.event_type || 'TASK_DUE',
+          entity_type: item.entity_type || 'task',
+          entity_id: item.entity_id || item.task_id || '',
           title: item.title,
-          body: item.body
+          body: finalBody
         });
+
+        if (insertErr) throw insertErr;
 
         // Invoca a única Edge Function 'push'
         const { data: invokeRes, error: invokeErr } = await supabase.functions.invoke('push', {
@@ -84,10 +92,10 @@ serve(async (req) => {
             payload: {
               user_id: item.user_id,
               title: item.title,
-              body: item.body || '',
+              body: finalBody,
               url: item.entity_type === 'focus' ? '/focus' : item.entity_type === 'goal' ? '/goals' : '/tasks',
-              entity_id: item.entity_id,
-              entity_type: item.entity_type
+              entity_id: item.entity_id || item.task_id || '',
+              entity_type: item.entity_type || 'task'
             }
           }
         });
@@ -96,26 +104,32 @@ serve(async (req) => {
         if (invokeRes?.error) throw new Error(invokeRes.error);
 
         // Sucesso
-        await supabase
+        const { error: successErr } = await supabase
           .from('notification_queue')
-          .update({ status: 'sent', sent_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+          .update({ status: 'sent', sent_at: new Date().toISOString() })
           .eq('id', item.id);
 
-        await supabase.from('notification_analytics').insert({
+        if (successErr) throw successErr;
+
+        const { error: analyticsErr } = await supabase.from('notification_analytics').insert({
           user_id: item.user_id,
           notification_id: item.id,
           event: 'sent',
           metadata: invokeRes
         });
 
-        await supabase.from('notification_logs').insert({
+        if (analyticsErr) throw analyticsErr;
+
+        const { error: logsErr } = await supabase.from('notification_logs').insert({
           user_id: item.user_id,
           notification_queue_id: item.id,
           status: 'sent',
           title: item.title,
-          body: item.body,
+          body: finalBody,
           payload: invokeRes
         });
+
+        if (logsErr) throw logsErr;
 
         processedCount++;
 
@@ -123,9 +137,12 @@ serve(async (req) => {
         const errMsg = String(err.message || err);
         const nextRetry = getExponentialBackoffTime((item.attempts || 0) + 1);
 
+        console.error(`[Worker Error] Failed to process notification ${item.id}: ${errMsg}`);
+
+        // Tenta marcar como falho na fila (sem updated_at)
         await supabase
           .from('notification_queue')
-          .update({ status: 'failed', scheduled_for: nextRetry, last_error: errMsg, updated_at: new Date().toISOString() })
+          .update({ status: 'failed', scheduled_for: nextRetry, last_error: errMsg })
           .eq('id', item.id);
 
         await supabase.from('notification_analytics').insert({
