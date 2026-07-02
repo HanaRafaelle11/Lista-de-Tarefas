@@ -22,7 +22,7 @@ SELECT cron.schedule(
     url := 'https://mftsklhrzhhvtsuamqaw.supabase.co/functions/v1/process-notification-queue',
     headers := jsonb_build_object(
       'Content-Type', 'application/json',
-      'Authorization', 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1mdHNrbGhyemhodnRzdWFtcWF3Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MTIxMjQwNSwiZXhwIjoyMDk2Nzg4NDA1fQ.KS_4QJR8TW02XZqPdwX05uR3jlZK_LsKLXjpDuHH45c'
+      'Authorization', (SELECT 'Bearer ' || decrypted_secret FROM vault.decrypted_secrets WHERE name = 'service_role_key' OR name ILIKE '%service_role%' LIMIT 1)
     ),
     body := '{}'::jsonb
   );
@@ -38,7 +38,7 @@ SELECT cron.schedule(
     url := 'https://mftsklhrzhhvtsuamqaw.supabase.co/functions/v1/process-events',
     headers := jsonb_build_object(
       'Content-Type', 'application/json',
-      'Authorization', 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1mdHNrbGhyemhodnRzdWFtcWF3Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MTIxMjQwNSwiZXhwIjoyMDk2Nzg4NDA1fQ.KS_4QJR8TW02XZqPdwX05uR3jlZK_LsKLXjpDuHH45c'
+      'Authorization', (SELECT 'Bearer ' || decrypted_secret FROM vault.decrypted_secrets WHERE name = 'service_role_key' OR name ILIKE '%service_role%' LIMIT 1)
     ),
     body := '{}'::jsonb
   );

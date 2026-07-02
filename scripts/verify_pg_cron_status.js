@@ -45,7 +45,33 @@ async function verifyCron() {
     console.log(`Extension pg_cron: ${data.pg_cron_installed ? '🟢 INSTALADA' : '🔴 NÃO ENCONTRADA'}`);
     console.log(`Extension pg_net : ${data.pg_net_installed ? '🟢 INSTALADA' : '🔴 NÃO ENCONTRADA'}`);
 
-    // 2. Jobs ativos
+    // 2. Métricas da Fila
+    console.log('\n--- 📊 Métricas de Fila (notification_queue) ---');
+    if (data.queue_metrics) {
+      console.log(`- Total de Notificações Registradas: ${data.queue_metrics.total}`);
+      console.log(`  * Pendentes: ${data.queue_metrics.pending}`);
+      console.log(`  * Em Processamento: ${data.queue_metrics.processing}`);
+      console.log(`  * Enviadas (antigo): ${data.queue_metrics.sent}`);
+      console.log(`  * Concluídas (atual): ${data.queue_metrics.completed}`);
+      console.log(`  * Falhas: ${data.queue_metrics.failed}`);
+      console.log(`  * Canceladas: ${data.queue_metrics.cancelled}`);
+    } else {
+      console.log('⚠️ Métricas da fila indisponíveis.');
+    }
+
+    // 3. Constraints do banco de dados (CHECKs de status)
+    console.log('\n--- 🔒 CHECK Constraints de Status (notification_queue) ---');
+    if (data.notification_queue_constraints?.length > 0) {
+      data.notification_queue_constraints.forEach((c) => {
+        if (c.definition.includes('status')) {
+          console.log(`- Nome: ${c.name} | Definição: ${c.definition}`);
+        }
+      });
+    } else {
+      console.log('Nenhuma constraint de status encontrada.');
+    }
+
+    // 4. Jobs ativos
     console.log('\n--- 📅 Jobs Agendados (cron.job) ---');
     if (data.active_jobs?.length > 0) {
       data.active_jobs.forEach((job) => {
@@ -57,7 +83,7 @@ async function verifyCron() {
       console.log('⚠️ Nenhum job encontrado na tabela cron.job.');
     }
 
-    // 3. Execuções recentes
+    // 5. Execuções recentes
     console.log('\n--- ⚙️ Execuções Recentes dos Jobs (cron.job_run_details) ---');
     if (data.recent_executions?.length > 0) {
       data.recent_executions.forEach((run) => {
@@ -69,7 +95,7 @@ async function verifyCron() {
       console.log('Nenhum registro de execução encontrado em cron.job_run_details.');
     }
 
-    // 4. Respostas HTTP reais do pg_net
+    // 6. Respostas HTTP reais do pg_net
     console.log('\n--- 🌐 Respostas HTTP das Edge Functions (net.http_responses) ---');
     if (data.recent_http_responses?.length > 0) {
       data.recent_http_responses.forEach((res) => {
@@ -81,7 +107,7 @@ async function verifyCron() {
       console.log('Nenhuma resposta HTTP encontrada em net.http_responses.');
     }
 
-    // 5. Erros HTTP do pg_net
+    // 7. Erros HTTP do pg_net
     console.log('\n--- ⚠️ Erros de Rede Recentes (net.http_errors) ---');
     if (data.recent_http_errors?.length > 0) {
       data.recent_http_errors.forEach((err) => {

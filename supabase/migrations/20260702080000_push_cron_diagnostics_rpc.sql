@@ -18,6 +18,8 @@ DECLARE
   job_runs jsonb;
   net_responses jsonb;
   net_errors jsonb;
+  queue_metrics jsonb;
+  table_constraints jsonb;
 BEGIN
   -- 1. Verificar instalação das extensões
   SELECT EXISTS(SELECT 1 FROM pg_extension WHERE extname = 'pg_cron') INTO cron_enabled;
@@ -73,6 +75,31 @@ BEGIN
     net_errors := '[]'::jsonb;
   END;
 
+  -- 6. Obter métricas da tabela notification_queue
+  BEGIN
+    SELECT jsonb_build_object(
+      'total', COUNT(*),
+      'pending', COUNT(*) FILTER (WHERE status = 'pending'),
+      'processing', COUNT(*) FILTER (WHERE status = 'processing'),
+      'sent', COUNT(*) FILTER (WHERE status = 'sent'),
+      'completed', COUNT(*) FILTER (WHERE status = 'completed'),
+      'failed', COUNT(*) FILTER (WHERE status = 'failed'),
+      'cancelled', COUNT(*) FILTER (WHERE status = 'cancelled')
+    ) FROM public.notification_queue INTO queue_metrics;
+  EXCEPTION WHEN OTHERS THEN
+    queue_metrics := '{}'::jsonb;
+  END;
+
+  -- 7. Obter constraints da tabela notification_queue para validar CHECKs de status
+  BEGIN
+    SELECT jsonb_agg(jsonb_build_object('name', cc.conname, 'definition', pg_get_constraintdef(cc.oid)))
+    FROM pg_constraint cc
+    JOIN pg_class c ON cc.conrelid = c.oid
+    WHERE c.relname = 'notification_queue' INTO table_constraints;
+  EXCEPTION WHEN OTHERS THEN
+    table_constraints := '[]'::jsonb;
+  END;
+
   -- Retorna relatório agregado
   RETURN jsonb_build_object(
     'timestamp', now(),
@@ -81,7 +108,9 @@ BEGIN
     'active_jobs', COALESCE(jobs_list, '[]'::jsonb),
     'recent_executions', COALESCE(job_runs, '[]'::jsonb),
     'recent_http_responses', COALESCE(net_responses, '[]'::jsonb),
-    'recent_http_errors', COALESCE(net_errors, '[]'::jsonb)
+    'recent_http_errors', COALESCE(net_errors, '[]'::jsonb),
+    'queue_metrics', queue_metrics,
+    'notification_queue_constraints', COALESCE(table_constraints, '[]'::jsonb)
   );
 END;
 $$ LANGUAGE plpgsql;
