@@ -110,7 +110,6 @@ export default function FocusView() {
       timerRef.current = setInterval(() => {
         setTimeLeft((prev) => {
           if (prev <= 1) {
-            handleTimerComplete();
             return 0;
           }
           return prev - 1;
@@ -121,6 +120,13 @@ export default function FocusView() {
     }
     return () => clearInterval(timerRef.current);
   }, [isActive]);
+
+  // Efeito para disparar a finalização de forma segura fora da fase de render/update do state
+  useEffect(() => {
+    if (isActive && timeLeft === 0) {
+      handleTimerComplete();
+    }
+  }, [timeLeft, isActive]);
 
   const handleTimerComplete = () => {
     setIsActive(false);
