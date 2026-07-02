@@ -41,8 +41,8 @@ self.addEventListener('push', (event) => {
     const title = data.title || 'MyFlowDay ⚡';
     const options = {
       body: data.body || '',
-      icon: '/branding/icon-192.png',
-      badge: '/branding/notification-badge.png',
+      icon: '/icon.svg',
+      badge: '/favicon.svg',
       vibrate: [200, 100, 200, 100, 200],
       requireInteraction: true,
       renotify: true,
@@ -181,8 +181,8 @@ self.addEventListener('notificationclick', (event) => {
         
         return self.registration.showNotification('⏰ Notificação Adiada', {
           body: 'Lembraremos você novamente em 10 minutos.',
-          icon: '/branding/icon-192.png',
-          badge: '/branding/notification-badge.png',
+          icon: '/icon.svg',
+          badge: '/favicon.svg',
           tag: `snooze_confirm_${Date.now()}`
         });
       })

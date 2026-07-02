@@ -691,8 +691,11 @@ export default function Auth({ onLoginSuccess, initialMode = 'login', onBackToLa
             <img 
               src={logo.src} 
               alt={logo.alt} 
-              style={{ height: '64px', width: 'auto', objectFit: 'contain', marginBottom: '8px', background: 'transparent', border: 'none', boxShadow: 'none', padding: 0 }} 
+              style={{ height: '56px', width: 'auto', objectFit: 'contain', marginBottom: '4px', background: 'transparent', border: 'none', boxShadow: 'none', padding: 0 }} 
             />
+            <h1 style={{ fontSize: '24px', fontWeight: 800, color: 'var(--text-main)', letterSpacing: '-0.5px', margin: '0 0 4px 0', fontFamily: 'var(--font-display)' }}>
+              MyFlowDay
+            </h1>
             <p style={{ fontSize: '15px', color: 'var(--text-muted)', margin: '0 0 24px 0', letterSpacing: '0.5px', fontWeight: '500', textAlign: 'center' }}>
               {mode === 'updatePassword' ? 'Crie sua nova senha de acesso.' :
                mode === 'recovery' ? 'Recupere o acesso à sua conta.' :

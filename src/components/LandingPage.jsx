@@ -145,13 +145,16 @@ export default function LandingPage({ onEnterApp }) {
             justifyContent: 'space-between' 
           }}
         >
-          <div className="landing-logo-container" style={{ display: 'flex', alignItems: 'center', height: '40px' }}>
+          <div className="landing-logo-container" style={{ display: 'flex', alignItems: 'center', gap: '8px', height: '40px' }}>
             <img
               src={logo.src}
               alt={logo.alt}
-              style={{ height: '32px', width: 'auto', objectFit: 'contain' }}
+              style={{ height: '28px', width: 'auto', objectFit: 'contain' }}
               onError={(e) => { e.target.style.display = 'none'; }}
             />
+            <span style={{ fontSize: '18px', fontWeight: 800, color: '#FFFFFF', letterSpacing: '-0.5px', fontFamily: 'Outfit, sans-serif' }}>
+              MyFlowDay
+            </span>
           </div>
           
           <div className="landing-nav-links" style={{ display: 'flex', alignItems: 'center', gap: '28px' }}>
@@ -1180,8 +1183,11 @@ export default function LandingPage({ onEnterApp }) {
         }}
       >
         <Container>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '24px' }}>
-            <img src={logo.src} alt={logo.alt} style={{ height: '28px' }} onError={e => e.target.style.display = 'none'} />
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '24px' }}>
+            <img src={logo.src} alt={logo.alt} style={{ height: '28px', width: 'auto', objectFit: 'contain' }} onError={e => e.target.style.display = 'none'} />
+            <span style={{ fontSize: '18px', fontWeight: 800, color: '#FFFFFF', letterSpacing: '-0.5px', fontFamily: 'Outfit, sans-serif' }}>
+              MyFlowDay
+            </span>
           </div>
           
           <p style={{ fontSize: '13.5px', color: '#64748B', marginBottom: '32px', maxWidth: '500px', margin: '0 auto 32px', lineHeight: '1.6' }}>

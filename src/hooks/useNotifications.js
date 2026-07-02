@@ -287,16 +287,16 @@ export function useNotifications() {
         const reg = await navigator.serviceWorker.ready;
         if (reg && reg.showNotification) {
           reg.showNotification(title, {
-            icon: '/branding/icon-192.png',
-            badge: '/branding/notification-badge.png',
+            icon: '/icon.svg',
+            badge: '/favicon.svg',
             ...options,
           });
           return;
         }
       }
       new Notification(title, {
-        icon: '/branding/icon-192.png',
-        badge: '/branding/notification-badge.png',
+        icon: '/icon.svg',
+        badge: '/favicon.svg',
         ...options,
       });
     } catch (e) {

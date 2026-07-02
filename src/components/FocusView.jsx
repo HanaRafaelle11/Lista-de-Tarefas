@@ -141,7 +141,7 @@ export default function FocusView() {
       if ('Notification' in window && Notification.permission === 'granted') {
         new Notification('Flowday - Timer', {
           body: 'Ciclo de foco concluído! Hora de uma pausa de ' + breakTime + ' minutos.',
-          icon: '/favicon.ico'
+          icon: '/icon.svg'
         });
       }
       setMode('break');
@@ -151,7 +151,7 @@ export default function FocusView() {
       if ('Notification' in window && Notification.permission === 'granted') {
         new Notification('Flowday - Timer', {
           body: 'A pausa acabou! Hora de voltar ao foco.',
-          icon: '/favicon.ico'
+          icon: '/icon.svg'
         });
       }
       setMode('focus');

@@ -159,28 +159,22 @@ export default defineConfig({
         orientation: 'portrait',
         icons: [
           {
-            src: '/branding/icon-152.png',
-            sizes: '152x152',
-            type: 'image/png',
-            purpose: 'any maskable'
-          },
-          {
-            src: '/branding/icon-192.png',
+            src: 'icon.svg',
             sizes: '192x192',
-            type: 'image/png',
-            purpose: 'any maskable'
+            type: 'image/svg+xml',
+            purpose: 'any'
           },
           {
-            src: '/branding/icon-512.png',
+            src: 'icon.svg',
             sizes: '512x512',
-            type: 'image/png',
-            purpose: 'any maskable'
+            type: 'image/svg+xml',
+            purpose: 'any'
           },
           {
-            src: '/branding/icon-1024.png',
-            sizes: '1024x1024',
-            type: 'image/png',
-            purpose: 'any maskable'
+            src: 'icon.svg',
+            sizes: '192x192 512x512',
+            type: 'image/svg+xml',
+            purpose: 'maskable'
           }
         ]
       },
