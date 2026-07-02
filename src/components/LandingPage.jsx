@@ -245,16 +245,7 @@ export default function LandingPage({ onEnterApp }) {
             O MyFlowDay reúne tarefas, agenda, foco e insights em um único lugar para ajudar você a entender como trabalha melhor.
           </p>
 
-          <div style={{ 
-            display: 'flex', 
-            gap: '24px', 
-            justifyContent: 'center', 
-            flexWrap: 'wrap', 
-            marginBottom: '36px',
-            fontSize: '14.5px',
-            fontWeight: 600,
-            color: '#CBD5E1'
-          }}>
+          <div className="landing-hero-benefits">
             <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <CheckCircle2 size={16} style={{ color: 'var(--secondary)' }} /> Organize todas as suas tarefas
             </span>
@@ -1276,6 +1267,27 @@ export default function LandingPage({ onEnterApp }) {
         .floating-screenshot-light:hover {
           transform: perspective(1000px) rotateX(0deg) rotateY(0deg) translateY(-6px);
           box-shadow: 0 25px 50px -10px rgba(15, 23, 42, 0.12), 0 0 0 1px rgba(15, 23, 42, 0.08);
+        }
+
+        .landing-hero-benefits {
+          display: flex;
+          gap: 24px;
+          justify-content: center;
+          flex-wrap: wrap;
+          margin-bottom: 36px;
+          font-size: 14.5px;
+          font-weight: 600;
+          color: #CBD5E1;
+        }
+
+        @media (max-width: 768px) {
+          .landing-hero-benefits {
+            flex-direction: column;
+            align-items: flex-start;
+            width: max-content;
+            margin: 0 auto 36px !important;
+            gap: 12px !important;
+          }
         }
 
         /* ── RESPONSIVIDADE ADICIONAL LAYOUT ── */

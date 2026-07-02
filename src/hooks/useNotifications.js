@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '../supabaseClient';
 
 const STORAGE_KEY = 'notifications_enabled';
@@ -91,104 +91,146 @@ export function useNotifications() {
     }
   };
 
+  // Log initial load once per mount
+  useEffect(() => {
+    if (isSupported) {
+      console.log('[Push Telemetry] App iniciado / Hook carregado:', new Date().toISOString());
+    }
+  }, [isSupported]);
+
   /**
    * Subscribes the current user to Web Push notifications.
    */
   const subscribeToPush = useCallback(async (userId) => {
     if (!userId) return null;
 
-    if (!isSupported) {
-      await logDiagnostic(userId, 'check_support', 'failed', 'Notification API not supported in window');
-      return null;
-    }
-    if (!('serviceWorker' in navigator)) {
-      await logDiagnostic(userId, 'check_sw_in_navigator', 'failed', 'serviceWorker not in navigator');
-      return null;
-    }
-    if (!('PushManager' in window)) {
-      await logDiagnostic(userId, 'check_pushmanager_in_window', 'failed', 'PushManager not in window');
-      return null;
-    }
+    const runRegistration = async () => {
+      const startPerf = performance.now();
+      const getElapsedStr = () => `[tempo_gasto: ${Math.round(performance.now() - startPerf)}ms]`;
 
-    try {
-      await logDiagnostic(userId, 'start_subscription', 'success', 'Starting subscription flow');
-      
-      const publicVapidKey = import.meta.env.VITE_PUBLIC_VAPID_KEY;
-      if (!publicVapidKey) {
-        await logDiagnostic(userId, 'check_vapid_key', 'failed', 'VITE_PUBLIC_VAPID_KEY is empty or undefined');
+      if (!isSupported) {
+        await logDiagnostic(userId, 'check_support', 'failed', `${getElapsedStr()} Notification API not supported in window`);
+        return null;
+      }
+      if (!('serviceWorker' in navigator)) {
+        await logDiagnostic(userId, 'check_sw_in_navigator', 'failed', `${getElapsedStr()} serviceWorker not in navigator`);
+        return null;
+      }
+      if (!('PushManager' in window)) {
+        await logDiagnostic(userId, 'check_pushmanager_in_window', 'failed', `${getElapsedStr()} PushManager not in window`);
         return null;
       }
 
-      let registration;
       try {
-        registration = await navigator.serviceWorker.ready;
-        await logDiagnostic(userId, 'sw_ready', 'success', `SW registered: ${registration ? 'yes' : 'no'}`);
-      } catch (e) {
-        await logDiagnostic(userId, 'sw_ready', 'failed', `Error waiting for SW ready: ${e.message}`);
-        return null;
-      }
-
-      let subscription;
-      try {
-        subscription = await registration.pushManager.getSubscription();
-        await logDiagnostic(userId, 'get_subscription', 'success', `Existing subscription: ${subscription ? 'yes' : 'no'}`);
-      } catch (e) {
-        await logDiagnostic(userId, 'get_subscription', 'failed', `Error getting subscription: ${e.message}`);
-      }
-
-      if (!subscription) {
-        try {
-          subscription = await registration.pushManager.subscribe({
-            userVisibleOnly: true,
-            applicationServerKey: urlBase64ToUint8Array(publicVapidKey)
-          });
-          await logDiagnostic(userId, 'subscribe_new', 'success', 'New subscription created successfully');
-        } catch (e) {
-          await logDiagnostic(userId, 'subscribe_new', 'failed', `Error subscribing: ${e.message}`);
+        await logDiagnostic(userId, 'subscribeToPush iniciado', 'success', `${getElapsedStr()} Starting subscription flow`);
+        
+        const publicVapidKey = import.meta.env.VITE_PUBLIC_VAPID_KEY;
+        if (!publicVapidKey) {
+          await logDiagnostic(userId, 'check_vapid_key', 'failed', `${getElapsedStr()} VITE_PUBLIC_VAPID_KEY is empty or undefined`);
           return null;
         }
-      }
 
-      const subJson = subscription.toJSON();
-      const p256dh = subJson.keys?.p256dh;
-      const auth = subJson.keys?.auth;
-      const endpoint = subJson.endpoint;
+        let registration;
+        try {
+          registration = await navigator.serviceWorker.ready;
+          await logDiagnostic(userId, 'serviceWorker.ready', 'success', `${getElapsedStr()} Service worker ready`);
+        } catch (e) {
+          await logDiagnostic(userId, 'serviceWorker.ready', 'failed', `${getElapsedStr()} Error waiting for SW ready: ${e.message}`);
+          return null;
+        }
 
-      if (!endpoint || !p256dh || !auth) {
-        await logDiagnostic(userId, 'parse_subscription', 'failed', `Missing sub elements: endpoint=${!!endpoint}, p256dh=${!!p256dh}, auth=${!!auth}`);
+        let subscription;
+        try {
+          subscription = await registration.pushManager.getSubscription();
+          await logDiagnostic(userId, 'getSubscription', 'success', `${getElapsedStr()} Checked subscription`);
+        } catch (e) {
+          await logDiagnostic(userId, 'getSubscription', 'failed', `${getElapsedStr()} Error getting subscription: ${e.message}`);
+        }
+
+        if (subscription) {
+          await logDiagnostic(userId, 'subscription existente', 'success', `${getElapsedStr()} Existing subscription found`);
+        } else {
+          try {
+            subscription = await registration.pushManager.subscribe({
+              userVisibleOnly: true,
+              applicationServerKey: urlBase64ToUint8Array(publicVapidKey)
+            });
+            await logDiagnostic(userId, 'subscription criada', 'success', `${getElapsedStr()} New subscription created successfully`);
+          } catch (e) {
+            await logDiagnostic(userId, 'subscription criada', 'failed', `${getElapsedStr()} Error subscribing: ${e.message}`);
+            return null;
+          }
+        }
+
+        const subJson = subscription.toJSON();
+        const p256dh = subJson.keys?.p256dh;
+        const auth = subJson.keys?.auth;
+        const endpoint = subJson.endpoint;
+
+        if (!endpoint || !p256dh || !auth) {
+          await logDiagnostic(userId, 'parse_subscription', 'failed', `${getElapsedStr()} Missing sub elements: endpoint=${!!endpoint}, p256dh=${!!p256dh}, auth=${!!auth}`);
+          return null;
+        }
+
+        const sessionKey = `push_verified_${userId}`;
+        try {
+          if (sessionStorage.getItem(sessionKey) === endpoint) {
+            console.log('[Push SDK Debug] Subscription already verified in this session.');
+            return subscription;
+          }
+        } catch (_) {}
+
+        console.log('[Push SDK Debug] Subscription found/created:', subscription);
+        console.log('[Push SDK Debug] Keys:', { p256dh, auth });
+        console.log('[Push SDK Debug] Endpoint:', endpoint);
+
+        try {
+          await logDiagnostic(userId, 'Edge Function chamada', 'success', `${getElapsedStr()} Invoking push Edge Function registration`);
+          const { data, error } = await supabase.functions.invoke('push', {
+            body: {
+              user_id: userId,
+              endpoint,
+              keys: { p256dh, auth }
+            }
+          });
+          
+          if (error) {
+            console.error('[Push SDK Debug] Edge Function error:', error);
+            await logDiagnostic(userId, 'erro', 'failed', `${getElapsedStr()} Edge Function error: ${error.message || JSON.stringify(error)}`);
+          } else {
+            try {
+              sessionStorage.setItem(sessionKey, endpoint);
+            } catch (_) {}
+            
+            const logLabel = data?.action === 'registro criado' ? 'registro criado' : 'registro atualizado';
+            console.log('[Push SDK Debug] Edge Function success response:', data);
+            await logDiagnostic(userId, logLabel, 'success', `${getElapsedStr()} Registration complete: ${JSON.stringify(data)}`);
+          }
+        } catch (e) {
+          console.error('[Push SDK Debug] Exception invoking Edge Function:', e);
+          await logDiagnostic(userId, 'erro', 'failed', `${getElapsedStr()} Error invoking Edge Function: ${e.message}`);
+        }
+
+        await logDiagnostic(userId, 'tempo gasto', 'success', `Total subscription flow time: ${Math.round(performance.now() - startPerf)}ms`);
+        return subscription;
+      } catch (err) {
+        console.error('[Push] Falha ao registrar assinatura push:', err.message);
+        await logDiagnostic(userId, 'erro', 'failed', `${getElapsedStr()} General exception: ${err.message}`);
         return null;
       }
+    };
 
-      console.log('[Push SDK Debug] Subscription found/created:', subscription);
-      console.log('[Push SDK Debug] Keys:', { p256dh, auth });
-      console.log('[Push SDK Debug] Endpoint:', endpoint);
-
+    if (typeof navigator !== 'undefined' && 'locks' in navigator) {
       try {
-        console.log('[Push SDK Debug] Invoking push Edge Function registration...');
-        const { data, error } = await supabase.functions.invoke('push', {
-          body: {
-            user_id: userId,
-            endpoint,
-            keys: { p256dh, auth }
-          }
+        return await navigator.locks.request('push-registration', { mode: 'exclusive' }, async () => {
+          return await runRegistration();
         });
-        if (error) {
-          console.error('[Push SDK Debug] Edge Function error:', error);
-          await logDiagnostic(userId, 'invoke_edge_function', 'failed', `Edge Function error: ${error.message || JSON.stringify(error)}`);
-        } else {
-          console.log('[Push SDK Debug] Edge Function success response:', data);
-          await logDiagnostic(userId, 'invoke_edge_function', 'success', `Response: ${JSON.stringify(data)}`);
-        }
-      } catch (e) {
-        console.error('[Push SDK Debug] Exception invoking Edge Function:', e);
-        await logDiagnostic(userId, 'invoke_edge_function', 'failed', `Error invoking Edge Function: ${e.message}`);
+      } catch (lockErr) {
+        console.warn('[Push Lock] Failed to acquire Web Lock, running fallback:', lockErr);
+        return await runRegistration();
       }
-
-      return subscription;
-    } catch (err) {
-      console.error('[Push] Falha ao registrar assinatura push:', err.message);
-      await logDiagnostic(userId, 'subscription_exception', 'failed', err.message);
-      return null;
+    } else {
+      return await runRegistration();
     }
   }, [isSupported]);
 
@@ -262,7 +304,7 @@ export function useNotifications() {
     }
   }, [isSupported, isEnabled]);
 
-  return {
+  return useMemo(() => ({
     isSupported,
     permission,
     isEnabled,
@@ -271,5 +313,5 @@ export function useNotifications() {
     subscribeToPush,
     sendNotification,
     type: 'push'
-  };
+  }), [isSupported, permission, isEnabled, requestPermission, disableNotifications, subscribeToPush, sendNotification]);
 }

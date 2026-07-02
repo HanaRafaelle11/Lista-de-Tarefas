@@ -5,7 +5,7 @@ import { eventsService } from '../services/eventsService';
 
 import { useAppContext } from '../contexts/AppContext';
 
-export default function Auth({ onLoginSuccess, initialMode = 'login' }) {
+export default function Auth({ onLoginSuccess, initialMode = 'login', onBackToLanding }) {
   const { theme, handleStartDemoMode } = useAppContext();
   const [mode, setMode] = useState(initialMode); // 'login', 'signup', 'recovery', 'updatePassword'
   const [email, setEmail] = useState('');
@@ -395,6 +395,34 @@ export default function Auth({ onLoginSuccess, initialMode = 'login' }) {
   return (
     <div style={styles.authContainer} className="animate-fade-in">
       <div style={styles.authCard}>
+        {onBackToLanding && (
+          <button 
+            type="button"
+            onClick={onBackToLanding}
+            style={{
+              position: 'absolute',
+              top: '16px',
+              left: '16px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              background: 'rgba(255, 255, 255, 0.05)',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              color: 'var(--text-muted)',
+              fontSize: '12.5px',
+              fontWeight: 600,
+              cursor: 'pointer',
+              padding: '6px 12px',
+              borderRadius: '20px',
+              transition: 'all 0.2s',
+              zIndex: 10
+            }}
+            className="auth-back-btn"
+          >
+            <ArrowLeft size={14} />
+            <span>Voltar ao início</span>
+          </button>
+        )}
         {/* Top Header com Gradiente */}
         <div style={{ position: 'relative', ...styles.cardHeader, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
           <div style={{ marginTop: '0', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px' }} className="auth-brand-container">
@@ -589,6 +617,7 @@ const styles = {
     padding: '24px',
   },
   authCard: {
+    position: 'relative',
     backgroundColor: 'var(--bg-card)',
     borderRadius: 'var(--radius-lg)',
     boxShadow: 'var(--shadow-lg)',
@@ -596,7 +625,7 @@ const styles = {
     width: '100%',
     maxWidth: '480px',
     overflow: 'hidden',
-    padding: '40px 32px',
+    padding: '60px 32px 40px 32px', // increased top padding for back button spacing
   },
   cardHeader: {
     textAlign: 'center',

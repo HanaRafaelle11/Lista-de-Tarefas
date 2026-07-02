@@ -5033,6 +5033,13 @@ button[title="Sair do MyFlowDay"]:hover {
    UNIVERSAL RESPONSIVENESS OVERRIDES (MyFlowDay V3)
    ================================================================ */
 
+/* Support for safe areas/notches on mobile to push the top header down */
+@media (max-width: 768px) {
+  .app-top-header {
+    padding-top: max(12px, env(safe-area-inset-top, 0px)) !important;
+  }
+}
+
 /* Support for very small devices (320px to 360px) */
 @media (max-width: 360px) {
   :root {

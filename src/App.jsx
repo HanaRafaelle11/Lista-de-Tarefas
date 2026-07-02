@@ -169,14 +169,7 @@ function AppLayout() {
     handleLogout
   } = useAppContext();
 
-  const notifications = useNotifications();
 
-  // Renew push notification registration on mount/refresh if enabled
-  useEffect(() => {
-    if (currentUser?.id && notifications.isEnabled) {
-      notifications.subscribeToPush(currentUser.id);
-    }
-  }, [currentUser?.id, notifications.isEnabled, notifications]);
 
   // Custom routing states
   const [currentPath, setCurrentPath] = React.useState(() => window.location.pathname);

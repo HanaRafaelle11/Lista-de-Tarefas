@@ -32,9 +32,9 @@ Deno.serve(async (req) => {
       const decoded = new TextDecoder('utf-8').decode(buffer);
       reqBody = JSON.parse(decoded);
     } catch (_) {
-      return new Response(JSON.stringify({ ok: false, error: 'JSON inválido ou codificação incorreta' }), { 
-        status: 200, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json; charset=utf-8' } 
+      return new Response(JSON.stringify({ ok: false, error: 'JSON inválido ou codificação incorreta' }), {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json; charset=utf-8' }
       });
     }
 
@@ -98,6 +98,15 @@ Deno.serve(async (req) => {
       let sentCount = 0;
       const deadEndpoints: string[] = [];
       const errors: string[] = [];
+      const fcmResults: Array<{
+        subscription_id: string;
+        endpoint: string;
+        statusCode: number;
+        success: boolean;
+        message_id: string | null;
+        error: string | null;
+        raw_response: any;
+      }> = [];
 
       for (const sub of subscriptions) {
         try {
@@ -105,8 +114,8 @@ Deno.serve(async (req) => {
             {
               endpoint: sub.endpoint,
               keys: {
-                p256dh: sub.p256dh || sub.keys?.p256dh,
-                auth: sub.auth || sub.keys?.auth
+                p256dh: sub.p256dh || (sub.keys as any)?.p256dh,
+                auth: sub.auth || (sub.keys as any)?.auth
               }
             },
             JSON.stringify(payloadObj),
@@ -117,15 +126,43 @@ Deno.serve(async (req) => {
               }
             }
           );
+
+          const responseBody = result.body || '';
+          const statusCode = result.statusCode || 0;
+          const isOk = statusCode >= 200 && statusCode < 300;
+
+          console.log(`[Push] Success → subId=${sub.id} status=${statusCode} body=${responseBody.substring(0, 200)}`);
           
-          console.log(`[Push] Success → endpoint=${sub.endpoint.substring(0, 50)}… status=${result.statusCode}`);
-          sentCount++;
-        } catch (err) {
-          const statusCode = err.statusCode || 0;
-          const errMsg = `status=${statusCode} msg=${err.message || err}`;
-          console.error(`[Push] Failed → endpoint=${sub.endpoint?.substring(0, 50)}… ${errMsg}`);
+          fcmResults.push({
+            subscription_id: sub.id,
+            endpoint: sub.endpoint,
+            statusCode,
+            success: isOk,
+            message_id: responseBody.includes('projects/') || responseBody.includes('messages/') ? responseBody : null,
+            error: null,
+            raw_response: { body: responseBody, headers: result.headers }
+          });
+          
+          if (isOk) {
+            sentCount++;
+          }
+        } catch (err: any) {
+          const statusCode = err?.statusCode || 0;
+          const errBody = err?.body || err?.message || String(err);
+          const errMsg = `status=${statusCode} body=${String(errBody).substring(0, 300)}`;
+          console.error(`[Push] Failed → subId=${sub.id} ${errMsg}`);
           errors.push(errMsg);
           
+          fcmResults.push({
+            subscription_id: sub.id,
+            endpoint: sub.endpoint,
+            statusCode,
+            success: false,
+            message_id: null,
+            error: errMsg,
+            raw_response: { error: String(errBody) }
+          });
+
           // Remove permanently dead endpoints (404, 410, 403)
           if (statusCode === 404 || statusCode === 410 || statusCode === 403) {
             deadEndpoints.push(sub.endpoint);
@@ -143,17 +180,18 @@ Deno.serve(async (req) => {
 
       // ── AUDIT RESPONSE: ok=true ONLY when at least 1 notification was delivered ──
       const isSuccess = sentCount > 0;
-      
-      return new Response(JSON.stringify({ 
-        ok: isSuccess, 
+
+      return new Response(JSON.stringify({
+        ok: isSuccess,
         sent: sentCount,
         total_found: totalFound,
         dead_removed: deadEndpoints.length,
+        fcm_results: fcmResults,
         errors: isSuccess ? undefined : errors.slice(0, 5),
         error: isSuccess ? undefined : `0/${totalFound} endpoints succeeded`
-      }), { 
-        status: 200, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json; charset=utf-8' } 
+      }), {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json; charset=utf-8' }
       });
     }
 
@@ -171,52 +209,92 @@ Deno.serve(async (req) => {
       });
     }
 
-    // ── DEDUP: Delete stale subscriptions older than 30 days for this user.
-    //    This prevents indefinite growth of the push_subscriptions table
-    //    while preserving multi-device support. ──
+    // ── DEDUP: Delete stale subscriptions older than 30 days globally.
     try {
       const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
       const { error: cleanupErr } = await supabase
         .from('push_subscriptions')
         .delete()
-        .eq('user_id', user_id)
         .lt('updated_at', thirtyDaysAgo);
 
       if (cleanupErr) {
         console.warn(`[Push Register] Stale cleanup warning: ${cleanupErr.message}`);
       } else {
-        console.log(`[Push Register] Cleaned subscriptions older than 30 days for user ${user_id}`);
+        console.log(`[Push Register] Cleaned subscriptions older than 30 days globally`);
       }
-    } catch (cleanupErr) {
-      console.warn(`[Push Register] Cleanup error (non-fatal): ${cleanupErr.message}`);
+    } catch (cleanupErr: any) {
+      console.warn(`[Push Register] Cleanup error (non-fatal): ${cleanupErr?.message || cleanupErr}`);
     }
 
-    const { error: upsertError } = await supabase
+    // Check if the subscription with this endpoint already exists
+    const { data: existingSub, error: fetchSubError } = await supabase
       .from('push_subscriptions')
-      .upsert({
-        user_id,
-        endpoint,
-        p256dh: keys?.p256dh || null,
-        auth: keys?.auth || null,
-        updated_at: new Date().toISOString()
-      }, {
-        onConflict: 'endpoint'
-      });
+      .select('id, user_id')
+      .eq('endpoint', endpoint)
+      .maybeSingle();
 
-    if (upsertError) {
-      return new Response(JSON.stringify({ ok: false, error: 'Erro de banco Postgres', details: upsertError.message }), {
+    if (fetchSubError) {
+      return new Response(JSON.stringify({ ok: false, error: 'Erro ao consultar assinatura existente', details: fetchSubError.message }), {
         status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json; charset=utf-8' }
       });
     }
 
-    return new Response(JSON.stringify({ ok: true, registered: true }), {
-      status: 200,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json; charset=utf-8' }
-    });
+    if (existingSub) {
+      // Existente -> atualiza (pode ser o mesmo usuário ou re-associação)
+      const isSameUser = existingSub.user_id === user_id;
+      const { error: updateErr } = await supabase
+        .from('push_subscriptions')
+        .update({
+          user_id,
+          p256dh: keys?.p256dh || null,
+          auth: keys?.auth || null,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', existingSub.id);
 
-  } catch (err) {
-    return new Response(JSON.stringify({ ok: false, error: 'Crash interno capturado', message: String(err.message || err) }), {
+      if (updateErr) {
+        return new Response(JSON.stringify({ ok: false, error: 'Erro ao atualizar assinatura existente', details: updateErr.message }), {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json; charset=utf-8' }
+        });
+      }
+
+      console.log(`[Push Register] Subscription updated. Same user: ${isSameUser}, ID: ${existingSub.id}`);
+      return new Response(JSON.stringify({ ok: true, registered: true, action: 'registro atualizado', id: existingSub.id }), {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json; charset=utf-8' }
+      });
+    } else {
+      // Nova assinatura -> insere
+      const { data: insertRes, error: insertErr } = await supabase
+        .from('push_subscriptions')
+        .insert({
+          user_id,
+          endpoint,
+          p256dh: keys?.p256dh || null,
+          auth: keys?.auth || null,
+          updated_at: new Date().toISOString()
+        })
+        .select('id')
+        .single();
+
+      if (insertErr) {
+        return new Response(JSON.stringify({ ok: false, error: 'Erro ao criar nova assinatura', details: insertErr.message }), {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json; charset=utf-8' }
+        });
+      }
+
+      console.log(`[Push Register] New subscription created. ID: ${insertRes.id}`);
+      return new Response(JSON.stringify({ ok: true, registered: true, action: 'registro criado', id: insertRes.id }), {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json; charset=utf-8' }
+      });
+    }
+
+  } catch (err: any) {
+    return new Response(JSON.stringify({ ok: false, error: 'Crash interno capturado', message: String(err?.message || err) }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json; charset=utf-8' },
       status: 200
     });

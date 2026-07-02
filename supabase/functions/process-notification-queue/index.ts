@@ -48,16 +48,11 @@ serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Fetch pending or failed retryable notifications whose scheduled_for <= now
-    const { data: queue, error: queueError } = await supabase
-      .from('notification_queue')
-      .select('*')
-      .in('status', ['pending', 'failed'])
-      .lte('scheduled_for', new Date().toISOString())
-      .lt('attempts', 5)
-      .order('priority', { ascending: false })
-      .order('scheduled_for', { ascending: true })
-      .limit(50);
+    // Fetch and lock pending or failed retryable notifications using RPC
+    const { data: queue, error: queueError } = await supabase.rpc('claim_pending_notifications', {
+      worker_id_val: workerId,
+      limit_val: 50
+    });
 
     if (queueError) {
       return new Response(JSON.stringify({ error: queueError.message }), {
@@ -77,18 +72,7 @@ serve(async (req) => {
     let failCount = 0;
 
     for (const item of queue) {
-      const currentAttempt = (item.attempts || 0) + 1;
-
-      // ─── STEP A: Lock — mark as processing ───
-      const { error: lockErr } = await supabase
-        .from('notification_queue')
-        .update({ status: 'processing', attempts: currentAttempt })
-        .eq('id', item.id);
-
-      if (lockErr) {
-        console.error(`[Worker] Lock failed for ${item.id}: ${lockErr.message}`);
-        continue;
-      }
+      const currentAttempt = item.attempts || 1;
 
       // ─── STEP B: Clean the body text ───
       const finalBody = cleanBody(item.body, item.title);
@@ -97,6 +81,11 @@ serve(async (req) => {
       let pushSuccess = false;
       let pushResult: any = null;
       let pushErrorMsg = '';
+      
+      // FCM evidence fields
+      let providerStatus: number | null = null;
+      let providerMessageId: string | null = null;
+      let providerResponse: string | null = null;
 
       try {
         const { data: invokeRes, error: invokeErr } = await supabase.functions.invoke('push', {
@@ -108,25 +97,32 @@ serve(async (req) => {
               body: finalBody,
               url: '/tasks',
               entity_id: item.task_id || item.entity_id || '',
-              entity_type: item.entity_type || 'task'
+              entity_type: item.entity_type || 'task',
+              notification_id: item.id
             }
           }
         });
 
         pushResult = invokeRes;
 
+        // Extract FCM evidence from the push response
+        if (invokeRes?.fcm_results && Array.isArray(invokeRes.fcm_results) && invokeRes.fcm_results.length > 0) {
+          const firstResult = invokeRes.fcm_results[0];
+          providerStatus = firstResult.statusCode || null;
+          providerMessageId = firstResult.message_id || null;
+          providerResponse = JSON.stringify(invokeRes.fcm_results);
+        }
+
         if (invokeErr) {
           pushErrorMsg = `Edge Function invoke error: ${invokeErr.message}`;
           console.error(`[Worker] ${pushErrorMsg} (item=${item.id})`);
         } else if (!invokeRes?.ok) {
-          // push returned ok:false — real delivery failure
           pushErrorMsg = invokeRes?.error || `Push returned ok:false, sent:${invokeRes?.sent || 0}`;
           console.error(`[Worker] Push delivery failed for ${item.id}: ${pushErrorMsg}`);
         } else if (invokeRes?.ok && invokeRes?.sent > 0) {
           pushSuccess = true;
-          console.log(`[Worker] Push delivery OK for ${item.id}: sent=${invokeRes.sent}, dead_removed=${invokeRes.dead_removed || 0}`);
+          console.log(`[Worker] Push delivery OK for ${item.id}: sent=${invokeRes.sent}, provider_status=${providerStatus}`);
         } else {
-          // ok:true but sent:0 — should not happen with new push code, but handle defensively
           pushErrorMsg = `Push returned ok:true but sent:0 (total_found=${invokeRes?.total_found || 0})`;
           console.warn(`[Worker] ${pushErrorMsg} (item=${item.id})`);
         }
@@ -135,26 +131,76 @@ serve(async (req) => {
         console.error(`[Worker] ${pushErrorMsg} (item=${item.id})`);
       }
 
-      // ─── STEP D: Update queue status based on REAL result ───
+      // ─── STEP D: Insert Per-Device Deliveries (Truth Layer) ───
+      let successDevices = 0;
+      let totalDevices = 0;
+
+      if (pushResult?.fcm_results && Array.isArray(pushResult.fcm_results) && pushResult.fcm_results.length > 0) {
+        totalDevices = pushResult.fcm_results.length;
+        const deliveriesToInsert = pushResult.fcm_results.map((res: any) => {
+          if (res.success) successDevices++;
+          return {
+            notification_id: item.id,
+            user_id: item.user_id,
+            push_subscription_id: res.subscription_id,
+            status: res.success ? 'sent' : 'failed',
+            provider_response: res.raw_response,
+            message_id: res.message_id,
+            error_message: res.error
+          };
+        });
+
+        const { error: insertErr } = await supabase.from('notification_deliveries').insert(deliveriesToInsert);
+        if (insertErr) {
+          console.error(`[Worker] Error inserting notification_deliveries for item ${item.id}: ${insertErr.message}`);
+        }
+      } else {
+        // No subscriptions found or push failed completely before loop
+        const { error: insertErr } = await supabase.from('notification_deliveries').insert({
+          notification_id: item.id,
+          user_id: item.user_id,
+          status: 'failed',
+          error_message: pushErrorMsg || 'no_subscriptions',
+          provider_response: pushResult ? { raw: pushResult } : null
+        });
+        if (insertErr) {
+          console.error(`[Worker] Error inserting fallback delivery: ${insertErr.message}`);
+        }
+      }
+
+      // ─── STEP E: Update queue status based on REAL result + persist FCM evidence ───
       try {
-        if (pushSuccess) {
-          // ✅ Real success — mark as sent
+        let finalStatus = 'failed';
+        if (successDevices === totalDevices && totalDevices > 0) {
+          finalStatus = 'completed'; // fully_delivered
+        } else if (successDevices > 0) {
+          finalStatus = 'completed'; // partially_delivered
+        }
+
+        if (finalStatus === 'completed') {
+          // ✅ Real success — mark as completed with provider evidence
           await supabase
             .from('notification_queue')
             .update({
-              status: 'sent',
+              status: 'completed',
               sent_at: new Date().toISOString(),
-              last_error: null
+              last_error: null,
+              provider_status: providerStatus,
+              provider_message_id: providerMessageId,
+              provider_response: providerResponse
             })
             .eq('id', item.id);
           successCount++;
         } else if (currentAttempt >= 5) {
-          // ❌ Max retries exhausted — mark as permanently failed
+          // ❌ Max retries exhausted — mark as permanently failed with provider evidence
           await supabase
             .from('notification_queue')
             .update({
               status: 'failed',
-              last_error: `[final] ${pushErrorMsg}`
+              last_error: `[final] ${pushErrorMsg || 'all_devices_failed'}`,
+              provider_status: providerStatus,
+              provider_message_id: providerMessageId,
+              provider_response: providerResponse
             })
             .eq('id', item.id);
           failCount++;
@@ -166,7 +212,9 @@ serve(async (req) => {
             .update({
               status: 'failed',
               scheduled_for: nextRetry,
-              last_error: `[attempt ${currentAttempt}/5] ${pushErrorMsg}`
+              last_error: `[attempt ${currentAttempt}/5] ${pushErrorMsg || 'all_devices_failed'}`,
+              provider_status: providerStatus,
+              provider_response: providerResponse
             })
             .eq('id', item.id);
           failCount++;
@@ -176,16 +224,19 @@ serve(async (req) => {
         console.error(`[Worker] Status update failed for ${item.id}: ${String(updateErr.message || updateErr)}`);
       }
 
-      // ─── STEP E: Audit log (best-effort, never throw) ───
+      // ─── STEP F: Audit log with FCM evidence (best-effort, never throw) ───
       try {
         await supabase.from('notification_logs').insert({
           user_id: item.user_id,
           notification_queue_id: item.id,
-          status: pushSuccess ? 'sent' : 'failed',
+          status: successDevices > 0 ? 'sent' : 'failed',
           title: item.title,
           body: finalBody,
-          sent_at: pushSuccess ? new Date().toISOString() : null,
-          error_message: pushSuccess ? null : pushErrorMsg
+          sent_at: successDevices > 0 ? new Date().toISOString() : null,
+          error_message: successDevices > 0 ? null : (pushErrorMsg || 'all_devices_failed'),
+          provider_status: providerStatus,
+          provider_message_id: providerMessageId,
+          provider_response: providerResponse
         });
       } catch (logErr) {
         console.error(`[Worker] Failed to write notification log: ${String(logErr.message || logErr)}`);

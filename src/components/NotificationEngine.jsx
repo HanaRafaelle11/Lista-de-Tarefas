@@ -8,6 +8,7 @@ export default function NotificationEngine() {
 
   // 1. Escutar mensagens vindas do Service Worker (Notificações em tempo real + Deep Linking)
   useEffect(() => {
+    console.log('[Push Telemetry] NotificationEngine iniciado:', new Date().toISOString());
     if (!('serviceWorker' in navigator)) return;
 
     const handleSWMessage = (event) => {
@@ -37,6 +38,7 @@ export default function NotificationEngine() {
   // 2. Garantir inscrição do dispositivo no servidor Push ao carregar
   useEffect(() => {
     if (currentUser?.id && isSupported && isEnabled && permission === 'granted') {
+      console.log('[Push Telemetry] NotificationEngine triggering subscribeToPush for user:', currentUser.id);
       subscribeToPush(currentUser.id);
     }
   }, [currentUser?.id, isSupported, isEnabled, permission, subscribeToPush]);
