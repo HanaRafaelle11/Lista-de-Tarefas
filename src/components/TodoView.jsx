@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import EmojiPicker from 'emoji-picker-react';
 import CategoryIcon from './CategoryIcon';
+import MFIcon from './MFIcon';
 import TodoItem from './TodoItem';
 import AchievementModal from './AchievementModal'; // Importar AchievementModal
 import Skeleton from './Skeleton';
