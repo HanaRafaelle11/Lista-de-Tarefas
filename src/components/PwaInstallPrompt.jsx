@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Download, X } from 'lucide-react';
+import { useAppContext } from '../contexts/AppContext';
+import { getLogo } from '../design-system/branding/logo';
 
 export default function PwaInstallPrompt() {
+  const { theme } = useAppContext();
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [showPrompt, setShowPrompt] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
@@ -87,7 +90,7 @@ export default function PwaInstallPrompt() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <div style={{ padding: '2px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <img src="/branding/logo.svg" alt="Logo" style={{ height: '36px', width: 'auto', background: 'transparent', objectFit: 'contain' }} />
+            <img src={getLogo(theme).src} alt={getLogo(theme).alt} style={{ height: '36px', width: 'auto', background: 'transparent', objectFit: 'contain' }} />
           </div>
           <div>
             <h4 style={{ margin: 0, fontSize: '15px', fontWeight: '700', color: 'var(--text-main)', fontFamily: 'var(--font-display)' }}>Instalar MyFlowDay</h4>

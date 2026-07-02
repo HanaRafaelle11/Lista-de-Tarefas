@@ -49,7 +49,9 @@ export const profilesService = {
             nickname: 'user',
             profession: '',
             bio: '',
-            avatar_url: ''
+            avatar_url: '',
+            has_password: false,
+            dismissed_password_prompt: false
           };
           const { data: newProfile, error: createError } = await supabase
             .from('profiles')
@@ -111,6 +113,29 @@ export const profilesService = {
       enqueue('profile_update', { userId, data: profileData });
       // Retorna otimisticamente os dados que o usuário enviou
       return { data: { id: userId, ...profileData, _local: true }, error: null, degraded: true };
+    }
+  },
+
+  /**
+   * Atualiza campos específicos do perfil (ex: has_password, dismissed_password_prompt)
+   */
+  updateProfileFields: async (userId, fields) => {
+    requireUser(userId);
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .update({
+          ...fields,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', userId)
+        .select()
+        .single();
+      if (error) throw error;
+      return { data, error: null };
+    } catch (error) {
+      console.warn('[profilesService.updateProfileFields] Erro:', error.message);
+      return { data: null, error };
     }
   },
 

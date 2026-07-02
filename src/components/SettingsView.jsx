@@ -4,6 +4,9 @@ import { supabase } from '../supabaseClient';
 import { useNotifications } from '../hooks/useNotifications';
 import { useAppContext } from '../contexts/AppContext';
 import { exportAllTasksToCalendar } from '../services/googleCalendarService';
+import { Card } from '../design-system/ui/Card';
+import { Input } from '../design-system/ui/Input';
+import { Button } from '../design-system/ui/Button';
 
 function useEffectiveTheme(theme) {
   const [effectiveTheme, setEffectiveTheme] = useState(() => {
@@ -71,7 +74,9 @@ export default function SettingsView() {
     settingsTab,
     setSettingsTab,
     openCustomAlert,
-    openCustomConfirm
+    openCustomConfirm,
+    handleUpdateProfileFields,
+    logAuthEvent
   } = useAppContext();
   const effectiveTheme = useEffectiveTheme(theme);
   const [loading, setLoading] = useState(false);
@@ -80,6 +85,50 @@ export default function SettingsView() {
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
   const [isSyncModalOpen, setIsSyncModalOpen] = useState(false);
   const notifications = useNotifications();
+
+  // Password States
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
+  const [passwordError, setPasswordError] = useState(null);
+  const [passwordSuccess, setPasswordSuccess] = useState(null);
+
+  const handleUpdatePassword = async (e) => {
+    e.preventDefault();
+    setPasswordError(null);
+    setPasswordSuccess(null);
+
+    if (!newPassword || newPassword.length < 6) {
+      setPasswordError('A senha deve ter pelo menos 6 caracteres.');
+      return;
+    }
+    if (newPassword !== confirmNewPassword) {
+      setPasswordError('As senhas não coincidem.');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword,
+        data: { password_created: true }
+      });
+      if (error) throw error;
+      await handleUpdateProfileFields({ has_password: true, dismissed_password_prompt: true });
+      logAuthEvent('password_change_success', currentUser?.email);
+      setPasswordSuccess('Senha salva com sucesso!');
+      setNewPassword('');
+      setConfirmNewPassword('');
+      // Atualiza o local currentUser metadata se possível
+      if (currentUser && currentUser.user_metadata) {
+        currentUser.user_metadata.password_created = true;
+      }
+    } catch (err) {
+      setPasswordError('Erro ao atualizar senha: ' + err.message);
+      logAuthEvent('password_change_failed', currentUser?.email, { error: err.message });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // MFA States
   const [mfaStatus, setMfaStatus] = useState('loading'); // 'loading', 'unconfigured', 'enrolling', 'verified'
@@ -805,7 +854,7 @@ export default function SettingsView() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
         
         {/* Perfil */}
-        <div style={{ backgroundColor: 'var(--bg-card)', padding: '24px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-light)' }}>
+        <Card>
           <h2 style={{ fontSize: '16px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
             <User size={18} /> Sua Conta
           </h2>
@@ -826,14 +875,77 @@ export default function SettingsView() {
               Redefinir Senha
             </button>
           </div>
-        </div>
+        </Card>
 
         {/* Segurança e Autenticação MFA */}
-        <div style={{ backgroundColor: 'var(--bg-card)', padding: '24px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-light)' }}>
+        <Card>
           <h2 style={{ fontSize: '16px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
             <Shield size={18} /> Segurança da Conta
           </h2>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            
+            {/* Seção de Senha de Acesso */}
+            <div style={{ paddingBottom: '20px', borderBottom: '1px solid var(--border-light)', marginBottom: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                <span style={{ fontSize: '12px', color: 'var(--text-light)', textTransform: 'uppercase' }}>Senha de Acesso</span>
+                {currentUser?.user_metadata?.password_created ? (
+                  <span style={{ fontSize: '11px', fontWeight: '750', padding: '2px 8px', borderRadius: '4px', backgroundColor: 'var(--prio-baixa-bg)', color: 'var(--prio-baixa-text)' }}>Cadastrada</span>
+                ) : (
+                  <span style={{ fontSize: '11px', fontWeight: '750', padding: '2px 8px', borderRadius: '4px', backgroundColor: 'var(--prio-media-bg)', color: 'var(--prio-media-text)' }}>Não Definida</span>
+                )}
+              </div>
+              <p style={{ fontSize: '13px', color: 'var(--text-light)', lineHeight: '1.5', margin: '0 0 12px 0' }}>
+                {currentUser?.user_metadata?.password_created 
+                  ? 'Você pode alterar sua senha de acesso a qualquer momento.' 
+                  : 'Você entrou via Google ou Link Mágico. Defina uma senha para poder acessar sua conta com e-mail e senha diretamente.'}
+              </p>
+              
+              <form onSubmit={handleUpdatePassword} style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxWidth: '360px' }}>
+                {passwordError && (
+                  <div style={{ backgroundColor: '#fef2f2', color: '#991b1b', border: '1px solid #fca5a5', borderRadius: 'var(--radius-sm)', padding: '8px 12px', fontSize: '12px' }}>
+                    {passwordError}
+                  </div>
+                )}
+                {passwordSuccess && (
+                  <div style={{ backgroundColor: '#ecfdf5', color: '#065f46', border: '1px solid #a7f3d0', borderRadius: 'var(--radius-sm)', padding: '8px 12px', fontSize: '12px' }}>
+                    {passwordSuccess}
+                  </div>
+                )}
+                
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <label style={{ fontSize: '12.5px', fontWeight: '600', color: 'var(--text-main)' }}>Nova Senha</label>
+                  <Input
+                    type="password"
+                    placeholder="Mínimo 6 caracteres"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    disabled={loading}
+                    autoComplete="new-password"
+                  />
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <label style={{ fontSize: '12.5px', fontWeight: '600', color: 'var(--text-main)' }}>Confirmar Nova Senha</label>
+                  <Input
+                    type="password"
+                    placeholder="Repita a nova senha"
+                    value={confirmNewPassword}
+                    onChange={(e) => setConfirmNewPassword(e.target.value)}
+                    disabled={loading}
+                    autoComplete="new-password"
+                  />
+                </div>
+
+                <Button
+                  type="submit"
+                  disabled={loading || !newPassword || !confirmNewPassword}
+                  style={{ alignSelf: 'flex-start' }}
+                >
+                  {loading ? 'Salvando...' : currentUser?.user_metadata?.password_created ? 'Alterar Senha' : 'Criar Senha'}
+                </Button>
+              </form>
+            </div>
+
             {mfaError && (
               <div style={{ backgroundColor: '#fef2f2', color: '#991b1b', border: '1px solid #fca5a5', borderRadius: 'var(--radius-sm)', padding: '10px 14px', fontSize: '13px', textAlign: 'center' }}>
                 {mfaError}
@@ -946,7 +1058,7 @@ export default function SettingsView() {
               </div>
             )}
           </div>
-        </div>
+        </Card>
 
         {/* Assinatura SaaS (Simulador Pro) - Bloco 6 */}
         <div style={{ backgroundColor: 'var(--bg-card)', padding: '24px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-light)' }}>

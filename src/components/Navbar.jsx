@@ -4,9 +4,13 @@ import { useAppContext } from '../contexts/AppContext';
 import MFIcon from './MFIcon';
 import DefaultAvatar from './DefaultAvatar';
 import NotificationCenter from './NotificationCenter';
+import { useTheme } from '../design-system/theme/useTheme';
+import { getLogo } from '../design-system/branding/logo';
 
 export default function Navbar() {
   const { activeTab, setActiveTab, currentUser, handleLogout, userProfile, isAdmin, theme, setTheme } = useAppContext();
+  const { mode } = useTheme();
+  const logo = getLogo(mode);
   const onLogout = handleLogout;
 
   const getInitials = (name) => {
@@ -37,16 +41,13 @@ export default function Navbar() {
       <header className="app-top-header">
         <div className="app-top-header-container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', maxWidth: '1200px', margin: '0 auto', padding: '0 16px', height: '64px' }}>
           
-          {/* Logo — símbolo SVG oficial e texto da marca */}
-          <div className="navbar-brand" style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, justifyContent: 'flex-start', cursor: 'pointer' }} onClick={() => setActiveTab('home')}>
+          {/* Logo — SVG oficial já contém ícone + texto "MyFlowDay" */}
+          <div className="navbar-brand" style={{ display: 'flex', alignItems: 'center', flex: 1, justifyContent: 'flex-start', cursor: 'pointer' }} onClick={() => setActiveTab('home')}>
             <img 
-              src={theme === 'dark' ? '/branding/logo-dark.svg' : '/branding/logo.svg'}
-              alt="MyFlowDay Logo" 
+              src={logo.src}
+              alt={logo.alt} 
               style={{ height: '38px', width: 'auto', objectFit: 'contain', background: 'transparent', border: 'none', boxShadow: 'none', padding: 0 }}
             />
-            <span style={{ fontSize: '18px', fontWeight: 800, color: 'var(--text-main)', letterSpacing: '-0.5px', fontFamily: 'var(--font-display)' }}>
-              MyFlowDay
-            </span>
           </div>
 
           {/* Navegação */}

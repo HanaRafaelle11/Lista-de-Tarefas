@@ -31,10 +31,13 @@ import {
   HelpCircle as QuestionIcon
 } from 'lucide-react';
 import { useAppContext } from '../contexts/AppContext';
+import { getLogo } from '../design-system/branding/logo';
+import { Container } from '../design-system/layout/Container';
 
 export default function LandingPage({ onEnterApp }) {
   const { handleStartDemoMode } = useAppContext();
   const [scrolled, setScrolled] = useState(false);
+  const logo = getLogo('dark', 'legal'); // Landing page header/footer has dark background
   
   const heroImages = [
     { src: '/assets/dashboard.png', alt: 'Dashboard do MyFlowDay', fallback: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1200&q=80', label: 'dashboard' },
@@ -133,35 +136,21 @@ export default function LandingPage({ onEnterApp }) {
           padding: scrolled ? '12px 24px' : '24px 24px',
         }}
       >
-        <div 
+        <Container 
           className="landing-header-container"
           style={{ 
-            maxWidth: '1100px', 
-            margin: '0 auto', 
             display: 'flex', 
             alignItems: 'center', 
             justifyContent: 'space-between' 
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <div style={{ display: 'flex', alignItems: 'center' }}>
             <img
-              src="/branding/logo.svg"
-              alt="MyFlowDay Logo"
+              src={logo.src}
+              alt={logo.alt}
               style={{ height: '32px', width: 'auto' }}
               onError={(e) => { e.target.style.display = 'none'; }}
             />
-            <span 
-              className="brand-text-hide-mobile"
-              style={{ 
-                fontSize: '20px', 
-                fontWeight: 800, 
-                letterSpacing: '-0.75px', 
-                color: '#F8FAFC', 
-                fontFamily: 'var(--font-display)' 
-              }}
-            >
-              MyFlowDay
-            </span>
           </div>
           
           <div className="landing-nav-links" style={{ display: 'flex', alignItems: 'center', gap: '28px' }}>
@@ -175,7 +164,7 @@ export default function LandingPage({ onEnterApp }) {
             <button onClick={onEnterApp} className="nav-btn-secondary" style={{ padding: '8px 16px', borderRadius: '20px', background: 'transparent', color: '#F8FAFC', fontWeight: 600, fontSize: '13.5px', cursor: 'pointer', border: '1px solid rgba(255, 255, 255, 0.15)', transition: 'all 0.2s' }}>Faça login</button>
             <button onClick={onEnterApp} className="nav-btn-primary" style={{ padding: '8px 20px', borderRadius: '20px', background: 'var(--primary)', color: 'white', fontWeight: 700, fontSize: '13.5px', cursor: 'pointer', border: 'none', transition: 'all 0.2s', boxShadow: '0 4px 12px rgba(37,99,235,0.25)' }}>Criar Conta</button>
           </div>
-        </div>
+        </Container>
       </header>
 
       {/* ══════════════════════════════════════════════════════════════════
@@ -1187,10 +1176,9 @@ export default function LandingPage({ onEnterApp }) {
           textAlign: 'center',
         }}
       >
-        <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', marginBottom: '24px' }}>
-            <img src="/branding/logo.svg" alt="MyFlowDay Logo" style={{ height: '28px' }} onError={e => e.target.style.display = 'none'} />
-            <span style={{ fontWeight: 800, color: '#FFFFFF', fontSize: '16.5px' }}>MyFlowDay</span>
+        <Container>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '24px' }}>
+            <img src={logo.src} alt={logo.alt} style={{ height: '28px' }} onError={e => e.target.style.display = 'none'} />
           </div>
           
           <p style={{ fontSize: '13.5px', color: '#64748B', marginBottom: '32px', maxWidth: '500px', margin: '0 auto 32px', lineHeight: '1.6' }}>
@@ -1230,7 +1218,7 @@ export default function LandingPage({ onEnterApp }) {
           <p style={{ fontSize: '12px', color: '#475569' }}>
             © 2026 MyFlowDay. Todos os direitos reservados.
           </p>
-        </div>
+        </Container>
       </footer>
 
       <style>{`
@@ -1349,11 +1337,7 @@ export default function LandingPage({ onEnterApp }) {
           }
         }
 
-        @media (max-width: 480px) {
-          .brand-text-hide-mobile {
-            display: none !important;
-          }
-        }
+
       `}
       </style>
     </div>

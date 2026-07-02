@@ -1,30 +1,138 @@
-import React, { useState } from 'react';
-import { Shield, Lock, Mail, User, CheckCircle2, ArrowLeft } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { Shield, Lock, Mail, User, CheckCircle2, ArrowLeft, Send, KeyRound, Loader2 } from 'lucide-react';
 import { supabase, REDIRECT_URL } from '../supabaseClient';
 import { eventsService } from '../services/eventsService';
 
 import { useAppContext } from '../contexts/AppContext';
+import { useTheme } from '../design-system/theme/useTheme';
+import { getLogo } from '../design-system/branding/logo';
 
+// ── Helpers ──────────────────────────────────────────────────────────
+const isValidEmail = (v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+
+/** Traduz mensagens de erro do Supabase para português amigável */
+const friendlyError = (msg) => {
+  if (!msg) return 'Ocorreu um erro inesperado. Tente novamente.';
+  const m = msg.toLowerCase();
+  if (m.includes('invalid login credentials') || m.includes('invalid_credentials'))
+    return 'E-mail ou senha incorretos. Verifique e tente novamente.';
+  if (m.includes('email not confirmed') || m.includes('confirmed'))
+    return 'Seu e-mail ainda não foi confirmado. Ative sua conta pelo link enviado para sua caixa de entrada.';
+  if (m.includes('user not found') || m.includes('no user'))
+    return 'Não encontramos uma conta com este e-mail.';
+  if (m.includes('rate limit') || m.includes('too many'))
+    return 'Muitas tentativas. Aguarde alguns instantes antes de tentar novamente.';
+  if (m.includes('password') && m.includes('least'))
+    return 'A senha deve ter pelo menos 6 caracteres.';
+  if (m.includes('already registered') || m.includes('already been registered'))
+    return 'Este e-mail já está cadastrado. Tente fazer login.';
+  if (m.includes('network') || m.includes('fetch'))
+    return 'Erro de conexão. Verifique sua internet e tente novamente.';
+  return msg;
+};
+
+// ── Spinner inline para botões ───────────────────────────────────────
+const BtnSpinner = () => (
+  <Loader2 size={18} style={{ animation: 'spin 1s linear infinite' }} />
+);
+
+// ── Component ────────────────────────────────────────────────────────
 export default function Auth({ onLoginSuccess, initialMode = 'login', onBackToLanding }) {
-  const { theme, handleStartDemoMode } = useAppContext();
+  const { theme, handleStartDemoMode, logAuthEvent } = useAppContext();
+  const [cooldown, setCooldown] = useState(0);
+
+  useEffect(() => {
+    if (import.meta.env.PROD && REDIRECT_URL.includes('localhost')) {
+      console.error('[CRITICAL] REDIRECT_URL points to localhost in production!');
+      alert('[CRITICAL ERROR] A URL de redirecionamento está configurada como localhost em ambiente de produção. Por favor, ajuste as variáveis de ambiente.');
+    }
+  }, []);
+
+  useEffect(() => {
+    const checkCooldown = () => {
+      const stored = localStorage.getItem('otp_cooldown_timestamp');
+      if (stored) {
+        const remaining = Math.ceil((parseInt(stored, 10) - Date.now()) / 1000);
+        if (remaining > 0) {
+          setCooldown(remaining);
+          return remaining;
+        } else {
+          localStorage.removeItem('otp_cooldown_timestamp');
+        }
+      }
+      return 0;
+    };
+
+    const initialRemaining = checkCooldown();
+    if (initialRemaining > 0) {
+      const timer = setInterval(() => {
+        const remaining = checkCooldown();
+        if (remaining <= 0) {
+          clearInterval(timer);
+          setCooldown(0);
+        }
+      }, 1000);
+      return () => clearInterval(timer);
+    }
+  }, []);
+
+  const triggerCooldown = () => {
+    const future = Date.now() + 60 * 1000;
+    localStorage.setItem('otp_cooldown_timestamp', String(future));
+    setCooldown(60);
+    const timer = setInterval(() => {
+      const stored = localStorage.getItem('otp_cooldown_timestamp');
+      if (stored) {
+        const remaining = Math.ceil((parseInt(stored, 10) - Date.now()) / 1000);
+        if (remaining > 0) {
+          setCooldown(remaining);
+        } else {
+          localStorage.removeItem('otp_cooldown_timestamp');
+          setCooldown(0);
+          clearInterval(timer);
+        }
+      } else {
+        setCooldown(0);
+        clearInterval(timer);
+      }
+    }, 1000);
+  };
   const [mode, setMode] = useState(initialMode); // 'login', 'signup', 'recovery', 'updatePassword'
+  const [loginMethod, setLoginMethod] = useState('password'); // 'password' | 'magicLink'
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [isWaitingConfirmation, setIsWaitingConfirmation] = useState(false);
+  const [isMagicLinkSent, setIsMagicLinkSent] = useState(false);
   const [showResendButton, setShowResendButton] = useState(false);
   const [loading, setLoading] = useState(false);
   const [mfaFactorId, setMfaFactorId] = useState(null);
   const [mfaCode, setMfaCode] = useState('');
   const [mfaUserObj, setMfaUserObj] = useState(null);
+  
+  const { mode: themeMode } = useTheme();
+  const logo = getLogo(themeMode);
+
+  const emailRef = useRef(null);
+  const passwordRef = useRef(null);
+
+  // Auto-focus no campo de email ao entrar na tela
+  useEffect(() => {
+    if (mode === 'login' || mode === 'signup') {
+      setTimeout(() => emailRef.current?.focus(), 150);
+    }
+  }, [mode]);
+
+  // ── Handlers ─────────────────────────────────────────────────────
 
   const handleGoogleSignIn = async () => {
     setError('');
     setSuccess('');
     setLoading(true);
     try {
+      logAuthEvent('google_login_started', '');
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
@@ -36,11 +144,52 @@ export default function Auth({ onLoginSuccess, initialMode = 'login', onBackToLa
         },
       });
       if (error) {
-        setError(error.message);
+        setError(friendlyError(error.message));
+        logAuthEvent('google_login_failed', '', { error: error.message });
       }
-      // Supabase irá lidar com o redirecionamento, então nenhuma ação adicional aqui em caso de sucesso
     } catch (err) {
       setError('Erro ao autenticar com Google: ' + err.message);
+      logAuthEvent('google_login_failed', '', { error: err.message });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleMagicLink = async () => {
+    setError('');
+    setSuccess('');
+    if (cooldown > 0) {
+      setError(`Aguarde ${cooldown} segundos para reenviar o e-mail.`);
+      return;
+    }
+    if (!email) {
+      setError('Por favor, informe seu e-mail.');
+      return;
+    }
+    if (!isValidEmail(email)) {
+      setError('Por favor, informe um e-mail válido.');
+      return;
+    }
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+        options: {
+          emailRedirectTo: REDIRECT_URL,
+        },
+      });
+      if (error) {
+        setError(friendlyError(error.message));
+        logAuthEvent('magic_link_failed', email, { error: error.message });
+      } else {
+        setIsMagicLinkSent(true);
+        setSuccess(`Enviamos um link de acesso para ${email}. Verifique sua caixa de entrada.`);
+        logAuthEvent('magic_link_requested', email);
+        triggerCooldown();
+      }
+    } catch (err) {
+      setError('Erro ao enviar link mágico: ' + err.message);
+      logAuthEvent('magic_link_failed', email, { error: err.message });
     } finally {
       setLoading(false);
     }
@@ -52,9 +201,18 @@ export default function Auth({ onLoginSuccess, initialMode = 'login', onBackToLa
     setSuccess('');
     setShowResendButton(false);
 
+    // ── Recovery ───────────────────────────────────────────────────
     if (mode === 'recovery') {
+      if (cooldown > 0) {
+        setError(`Aguarde ${cooldown} segundos para solicitar novamente.`);
+        return;
+      }
       if (!email) {
         setError('Por favor, informe seu e-mail.');
+        return;
+      }
+      if (!isValidEmail(email)) {
+        setError('Por favor, informe um e-mail válido.');
         return;
       }
       setLoading(true);
@@ -63,18 +221,23 @@ export default function Auth({ onLoginSuccess, initialMode = 'login', onBackToLa
           redirectTo: REDIRECT_URL + '/#type=recovery',
         });
         if (error) {
-          setError(error.message);
+          setError(friendlyError(error.message));
+          logAuthEvent('password_reset_failed', email, { error: error.message });
         } else {
           setSuccess('E-mail de recuperação enviado! Verifique sua caixa de entrada.');
+          logAuthEvent('password_reset_requested', email);
+          triggerCooldown();
         }
       } catch (err) {
         setError('Erro ao processar: ' + err.message);
+        logAuthEvent('password_reset_failed', email, { error: err.message });
       } finally {
         setLoading(false);
       }
       return;
     }
 
+    // ── Update Password ───────────────────────────────────────────
     if (mode === 'updatePassword') {
       if (!password || password.length < 6) {
         setError('A senha deve ter pelo menos 6 caracteres.');
@@ -84,21 +247,39 @@ export default function Auth({ onLoginSuccess, initialMode = 'login', onBackToLa
       try {
         const { error } = await supabase.auth.updateUser({ password });
         if (error) {
-          setError(error.message);
+          setError(friendlyError(error.message));
+          logAuthEvent('password_update_failed', '', { error: error.message });
         } else {
           setSuccess('Senha atualizada com sucesso! Você já pode acessar sua conta.');
+          logAuthEvent('password_update_success', '');
           setTimeout(() => setMode('login'), 2000);
         }
       } catch (err) {
         setError('Erro ao atualizar: ' + err.message);
+        logAuthEvent('password_update_failed', '', { error: err.message });
       } finally {
         setLoading(false);
       }
       return;
     }
 
-    if (!email || !password || (mode === 'signup' && !name)) {
+    // ── Magic Link (via form submit) ──────────────────────────────
+    if (mode === 'login' && loginMethod === 'magicLink') {
+      handleMagicLink();
+      return;
+    }
+
+    // ── Login / Signup validation ─────────────────────────────────
+    if (!email || (mode !== 'recovery' && loginMethod === 'password' && !password) || (mode === 'signup' && !name)) {
       setError('Por favor, preencha todos os campos.');
+      return;
+    }
+    if (!isValidEmail(email)) {
+      setError('Por favor, informe um e-mail válido.');
+      return;
+    }
+    if (mode !== 'recovery' && loginMethod === 'password' && password.length < 6) {
+      setError('A senha deve ter pelo menos 6 caracteres.');
       return;
     }
 
@@ -106,18 +287,19 @@ export default function Auth({ onLoginSuccess, initialMode = 'login', onBackToLa
 
     try {
       if (mode === 'login') {
-        // Processo de Login no Supabase
+        // ── Login com senha ─────────────────────────────────────
         const { data, error } = await supabase.auth.signInWithPassword({
           email,
           password
         });
 
         if (error) {
+          logAuthEvent('login_failed', email, { error: error.message, method: 'password' });
           if (error.message.includes('Email not confirmed') || error.message.includes('confirmar') || error.message.includes('confirmed')) {
             setError('Seu e-mail ainda não foi confirmado. Por favor, ative sua conta pelo link enviado para sua caixa de entrada.');
             setShowResendButton(true);
           } else {
-            setError(error.message || 'E-mail ou senha incorretos.');
+            setError(friendlyError(error.message));
           }
         } else if (data?.user) {
           // Check if MFA is required
@@ -154,7 +336,7 @@ export default function Auth({ onLoginSuccess, initialMode = 'login', onBackToLa
             name: data.user.user_metadata?.name || data.user.email.split('@')[0],
             user_metadata: data.user.user_metadata || {},
           };
-          // Growth event: session_started no login explícito
+          logAuthEvent('login_success', email, { method: 'password', user_id: data.user.id });
           eventsService.logEvent(data.user.id, 'session_started', {
             method: 'login',
             ts: new Date().toISOString(),
@@ -164,6 +346,7 @@ export default function Auth({ onLoginSuccess, initialMode = 'login', onBackToLa
           }, 1000);
         }
       } else if (mode === 'signup') {
+        // ── Cadastro ─────────────────────────────────────────────
         const { data, error } = await supabase.auth.signUp({
           email,
           password,
@@ -175,25 +358,21 @@ export default function Auth({ onLoginSuccess, initialMode = 'login', onBackToLa
           }
         });
 
-        console.log("SIGNUP RESPONSE", data);
-        console.log("SIGNUP ERROR", error);
-
         if (error) {
-          setError(error.message || 'Erro ao criar conta.');
+          setError(friendlyError(error.message));
+          logAuthEvent('signup_failed', email, { error: error.message });
         } else if (data?.user) {
-          // Growth event: signup_completed com metadados enriquecidos
+          logAuthEvent('signup_success', email, { user_id: data.user.id });
           eventsService.logEvent(data.user.id, 'signup_completed', {
             method: 'email',
             name: name,
             ts: new Date().toISOString(),
             platform: navigator.userAgent?.includes('Mobile') ? 'mobile' : 'desktop',
           });
-          // Evento de onboarding iniciado automaticamente
           eventsService.logEvent(data.user.id, 'onboarding_started', {
             ts: new Date().toISOString()
           });
 
-          // Se o Supabase já retornar a sessão confirmada
           if (data.session && (data.user.email_confirmed_at || data.user.user_metadata?.email_verified)) {
             setSuccess('Conta criada e confirmada automaticamente! Entrando...');
             const userObj = {
@@ -206,7 +385,6 @@ export default function Auth({ onLoginSuccess, initialMode = 'login', onBackToLa
               onLoginSuccess(userObj);
             }, 1500);
           } else {
-            // Se precisar confirmar e-mail
             if (data.session) await supabase.auth.signOut();
             setIsWaitingConfirmation(true);
             setSuccess('Conta criada! Enviamos um e-mail de confirmação.');
@@ -223,6 +401,10 @@ export default function Auth({ onLoginSuccess, initialMode = 'login', onBackToLa
   const handleResendConfirmation = async () => {
     setError('');
     setSuccess('');
+    if (cooldown > 0) {
+      setError(`Aguarde ${cooldown} segundos para reenviar.`);
+      return;
+    }
     try {
       const { error } = await supabase.auth.resend({
         type: 'signup',
@@ -233,11 +415,15 @@ export default function Auth({ onLoginSuccess, initialMode = 'login', onBackToLa
       });
       if (error) {
         setError('Erro ao reenviar e-mail: ' + error.message);
+        logAuthEvent('resend_confirmation_failed', email, { error: error.message });
       } else {
         setSuccess('E-mail de confirmação reenviado com sucesso! Verifique sua caixa de entrada.');
+        logAuthEvent('resend_confirmation_success', email);
+        triggerCooldown();
       }
     } catch (e) {
       setError('Erro ao reenviar: ' + e.message);
+      logAuthEvent('resend_confirmation_failed', email, { error: e.message });
     }
   };
 
@@ -294,6 +480,26 @@ export default function Auth({ onLoginSuccess, initialMode = 'login', onBackToLa
     }
   };
 
+  const switchMode = (newMode) => {
+    setMode(newMode);
+    setError('');
+    setSuccess('');
+    setShowResendButton(false);
+    setIsMagicLinkSent(false);
+  };
+
+  // Determina se o botão de submit deve estar habilitado
+  const isSubmitDisabled = () => {
+    if (loading) return true;
+    if (mode === 'login' && loginMethod === 'magicLink') return !email || !isValidEmail(email) || cooldown > 0;
+    if (mode === 'login' && loginMethod === 'password') return !email || !password;
+    if (mode === 'signup') return !email || !password || !name;
+    if (mode === 'recovery') return !email || cooldown > 0;
+    if (mode === 'updatePassword') return !password || password.length < 6;
+    return false;
+  };
+
+  // ── Render: MFA Challenge ──────────────────────────────────────
   if (mode === 'mfaChallenge') {
     return (
       <div style={styles.authContainer} className="animate-fade-in">
@@ -332,7 +538,7 @@ export default function Auth({ onLoginSuccess, initialMode = 'login', onBackToLa
               </div>
 
               <button type="submit" className="btn-primary-glow" style={styles.submitBtn} disabled={loading}>
-                {loading ? 'Verificando...' : 'Confirmar'}
+                {loading ? <><BtnSpinner /> Verificando...</> : 'Confirmar'}
               </button>
 
               <button 
@@ -351,7 +557,7 @@ export default function Auth({ onLoginSuccess, initialMode = 'login', onBackToLa
     );
   }
 
-  // Tela de espera de confirmação de e-mail (Bloco 3 - Seção 6)
+  // ── Render: Waiting Email Confirmation ─────────────────────────
   if (isWaitingConfirmation) {
     return (
       <div style={styles.authContainer} className="animate-fade-in">
@@ -360,7 +566,7 @@ export default function Auth({ onLoginSuccess, initialMode = 'login', onBackToLa
             <div style={{ fontSize: '56px', marginBottom: '16px', color: 'var(--primary)' }}>✉️</div>
             <h2 style={{ fontSize: '22px', fontWeight: '700', color: 'var(--text-main)', marginBottom: '8px' }}>Confirme seu E-mail</h2>
             <p style={{ fontSize: '14px', color: 'var(--text-muted)', lineHeight: '1.6', marginBottom: '24px' }}>
-              Enviamos um link de confirmação para <strong>{email}</strong>. Acesse seu e-mail e clique no link para ativar sua conta do <strong>Flowday</strong>.
+              Enviamos um link de confirmação para <strong>{email}</strong>. Acesse seu e-mail e clique no link para ativar sua conta do <strong>MyFlowDay</strong>.
             </p>
             
             {success && <div style={{ ...styles.successMessage, marginBottom: '20px' }}>{success}</div>}
@@ -377,8 +583,62 @@ export default function Auth({ onLoginSuccess, initialMode = 'login', onBackToLa
               <button 
                 onClick={() => {
                   setIsWaitingConfirmation(false);
-                  setMode('login');
-                  setError('');
+                  switchMode('login');
+                }} 
+                style={{ ...styles.toggleBtn, padding: '12px', fontSize: '14px', alignSelf: 'center' }}
+              >
+                Voltar para o Login
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Render: Magic Link Sent ────────────────────────────────────
+  if (isMagicLinkSent) {
+    return (
+      <div style={styles.authContainer} className="animate-fade-in">
+        <div style={styles.authCard}>
+          <div style={{ textAlign: 'center', padding: '20px 0' }}>
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}>
+              <div style={{ 
+                width: '64px', height: '64px', borderRadius: '50%',
+                background: 'linear-gradient(135deg, var(--primary), #6366f1)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center'
+              }}>
+                <Send size={28} style={{ color: 'white' }} />
+              </div>
+            </div>
+            <h2 style={{ fontSize: '22px', fontWeight: '700', color: 'var(--text-main)', marginBottom: '8px' }}>
+              Link enviado!
+            </h2>
+            <p style={{ fontSize: '14px', color: 'var(--text-muted)', lineHeight: '1.6', marginBottom: '8px' }}>
+              Enviamos um link de acesso para:
+            </p>
+            <p style={{ fontSize: '15px', fontWeight: '700', color: 'var(--primary)', marginBottom: '24px' }}>
+              {email}
+            </p>
+            <p style={{ fontSize: '13px', color: 'var(--text-light)', lineHeight: '1.6', marginBottom: '28px' }}>
+              Verifique sua caixa de entrada e clique no link para entrar no MyFlowDay. O link expira em 1 hora.
+            </p>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <button 
+                onClick={() => {
+                  setIsMagicLinkSent(false);
+                  handleMagicLink();
+                }} 
+                className="btn-primary-glow"
+                style={{ ...styles.submitBtn, marginTop: 0 }}
+                disabled={loading}
+              >
+                {loading ? <><BtnSpinner /> Reenviando...</> : 'Reenviar Link'}
+              </button>
+              <button 
+                onClick={() => {
+                  setIsMagicLinkSent(false);
                   setSuccess('');
                 }} 
                 style={{ ...styles.toggleBtn, padding: '12px', fontSize: '14px', alignSelf: 'center' }}
@@ -392,6 +652,7 @@ export default function Auth({ onLoginSuccess, initialMode = 'login', onBackToLa
     );
   }
 
+  // ── Render: Main Auth Form ─────────────────────────────────────
   return (
     <div style={styles.authContainer} className="animate-fade-in">
       <div style={styles.authCard}>
@@ -423,19 +684,51 @@ export default function Auth({ onLoginSuccess, initialMode = 'login', onBackToLa
             <span>Voltar ao início</span>
           </button>
         )}
-        {/* Top Header com Gradiente */}
+
+        {/* Top Header — Logo */}
         <div style={{ position: 'relative', ...styles.cardHeader, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
           <div style={{ marginTop: '0', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px' }} className="auth-brand-container">
             <img 
-              src={theme === 'dark' ? '/branding/logo-dark.svg' : '/branding/logo.svg'} 
-              alt="MyFlowDay Logo" 
+              src={logo.src} 
+              alt={logo.alt} 
               style={{ height: '64px', width: 'auto', objectFit: 'contain', marginBottom: '8px', background: 'transparent', border: 'none', boxShadow: 'none', padding: 0 }} 
             />
             <p style={{ fontSize: '15px', color: 'var(--text-muted)', margin: '0 0 24px 0', letterSpacing: '0.5px', fontWeight: '500', textAlign: 'center' }}>
-              {mode === 'updatePassword' ? 'Crie sua nova senha de acesso.' : 'Planeje. Execute. Evolua.'}
+              {mode === 'updatePassword' ? 'Crie sua nova senha de acesso.' :
+               mode === 'recovery' ? 'Recupere o acesso à sua conta.' :
+               mode === 'signup' ? 'Crie sua conta e comece a evoluir.' :
+               'Planeje. Execute. Evolua.'}
             </p>
           </div>
         </div>
+
+        {/* ── Login Method Tabs ─────────────────────────────────── */}
+        {mode === 'login' && (
+          <div style={styles.tabContainer}>
+            <button
+              type="button"
+              onClick={() => { setLoginMethod('password'); setError(''); setSuccess(''); }}
+              style={{
+                ...styles.tab,
+                ...(loginMethod === 'password' ? styles.tabActive : {}),
+              }}
+            >
+              <KeyRound size={15} />
+              Senha
+            </button>
+            <button
+              type="button"
+              onClick={() => { setLoginMethod('magicLink'); setError(''); setSuccess(''); }}
+              style={{
+                ...styles.tab,
+                ...(loginMethod === 'magicLink' ? styles.tabActive : {}),
+              }}
+            >
+              <Send size={15} />
+              Link Mágico
+            </button>
+          </div>
+        )}
 
         {/* Formulário */}
         <form onSubmit={handleSubmit} style={styles.form}>
@@ -466,6 +759,7 @@ export default function Auth({ onLoginSuccess, initialMode = 'login', onBackToLa
               <div style={styles.inputWrapper}>
                 <span style={styles.inputIcon}><Mail size={18} /></span>
                 <input
+                  ref={emailRef}
                   type="email"
                   placeholder="usuario@email.com"
                   value={email}
@@ -473,17 +767,20 @@ export default function Auth({ onLoginSuccess, initialMode = 'login', onBackToLa
                   style={styles.input}
                   className="form-input"
                   disabled={loading}
+                  autoComplete="email"
                 />
               </div>
             </div>
           )}
 
-          {mode !== 'recovery' && (
+          {/* Campos de senha — visíveis quando NÃO é recovery e NÃO é magic link no modo login */}
+          {mode !== 'recovery' && !(mode === 'login' && loginMethod === 'magicLink') && (
             <div style={styles.inputGroup}>
               <label style={styles.label}>{mode === 'updatePassword' ? 'Nova Senha' : 'Senha'}</label>
               <div style={styles.inputWrapper}>
                 <span style={styles.inputIcon}><Lock size={18} /></span>
                 <input
+                  ref={passwordRef}
                   type="password"
                   placeholder="••••••••"
                   value={password}
@@ -491,17 +788,31 @@ export default function Auth({ onLoginSuccess, initialMode = 'login', onBackToLa
                   style={styles.input}
                   className="form-input"
                   disabled={loading}
+                  autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
                 />
               </div>
-              {mode === 'login' && (
+              {/* Indicador de força da senha para signup */}
+              {(mode === 'signup' || mode === 'updatePassword') && password && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
+                  <div style={{ flex: 1, height: '3px', borderRadius: '2px', backgroundColor: 'var(--border-light)', overflow: 'hidden' }}>
+                    <div style={{ 
+                      width: password.length < 6 ? '33%' : password.length < 10 ? '66%' : '100%',
+                      height: '100%',
+                      borderRadius: '2px',
+                      backgroundColor: password.length < 6 ? '#ef4444' : password.length < 10 ? '#f59e0b' : '#22c55e',
+                      transition: 'all 0.3s',
+                    }} />
+                  </div>
+                  <span style={{ fontSize: '11px', color: password.length < 6 ? '#ef4444' : password.length < 10 ? '#f59e0b' : '#22c55e', fontWeight: 600 }}>
+                    {password.length < 6 ? 'Fraca' : password.length < 10 ? 'Média' : 'Forte'}
+                  </span>
+                </div>
+              )}
+              {mode === 'login' && loginMethod === 'password' && (
                 <button 
                   type="button" 
-                  onClick={() => {
-                    setMode('recovery');
-                    setError('');
-                    setSuccess('');
-                  }}
-                  style={{ ...styles.toggleBtn, alignSelf: 'flex-end', marginTop: '4px', fontSize: '12px' }}
+                  onClick={() => switchMode('recovery')}
+                  style={{ ...styles.toggleBtn, alignSelf: 'flex-end', marginTop: '4px', fontSize: '12px', marginLeft: 0 }}
                 >
                   Esqueci minha senha
                 </button>
@@ -509,61 +820,106 @@ export default function Auth({ onLoginSuccess, initialMode = 'login', onBackToLa
             </div>
           )}
 
-          <button type="submit" className="btn-primary-glow" style={styles.submitBtn} disabled={loading}>
-            {loading ? 'Processando...' : 
-             mode === 'recovery' ? 'Enviar Link de Recuperação' : 
-             mode === 'updatePassword' ? 'Redefinir Senha' :
-             mode === 'login' ? 'Acessar Conta' : 'Criar Conta'}
+          {/* Dica de magic link */}
+          {mode === 'login' && loginMethod === 'magicLink' && (
+            <div style={{ 
+              padding: '14px 16px', borderRadius: 'var(--radius-sm)',
+              backgroundColor: 'rgba(37, 99, 235, 0.06)', border: '1px solid rgba(37, 99, 235, 0.15)',
+              fontSize: '13px', color: 'var(--text-muted)', lineHeight: '1.5'
+            }}>
+              <strong style={{ color: 'var(--text-main)' }}>Como funciona?</strong><br/>
+              Enviaremos um link para seu e-mail. Basta clicar nele para entrar automaticamente, sem precisar de senha.
+            </div>
+          )}
+
+          <button 
+            type="submit" 
+            className="btn-primary-glow" 
+            style={{ 
+              ...styles.submitBtn, 
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+              opacity: isSubmitDisabled() ? 0.6 : 1,
+              cursor: isSubmitDisabled() ? 'not-allowed' : 'pointer',
+            }} 
+            disabled={isSubmitDisabled()}
+          >
+            {loading ? (
+              <><BtnSpinner /> Processando...</>
+            ) : mode === 'recovery' ? (
+              cooldown > 0 ? `Aguarde ${cooldown}s` : 'Enviar Link de Recuperação'
+            ) : mode === 'updatePassword' ? (
+              'Redefinir Senha'
+            ) : mode === 'login' && loginMethod === 'magicLink' ? (
+              cooldown > 0 ? `Aguarde ${cooldown}s` : <><Send size={16} /> Enviar Link Mágico</>
+            ) : mode === 'login' ? (
+              'Acessar Conta'
+            ) : (
+              'Criar Conta'
+            )}
           </button>
 
+          {/* Divisor + Google + Demo */}
           {(mode === 'login' || mode === 'signup') && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '20px' }}>
-              <button
-                type="button"
-                onClick={handleGoogleSignIn}
-                disabled={loading}
-                style={{
-                  ...styles.submitBtn,
-                  backgroundColor: '#4285F4', // Google blue
-                  color: 'white',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '10px',
-                  marginTop: 0
-                }}
-              >
-                Entrar com o Google
-              </button>
-              <button
-                type="button"
-                onClick={handleStartDemoMode}
-                disabled={loading}
-                style={{
-                  ...styles.submitBtn,
-                  backgroundColor: 'transparent',
-                  border: '1.5px solid var(--border-medium)',
-                  color: 'var(--text-main)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '10px',
-                  marginTop: 0
-                }}
-              >
-                🎮 Experimentar sem criar conta
-              </button>
-            </div>
+            <>
+              <div style={styles.divider}>
+                <div style={styles.dividerLine} />
+                <span style={styles.dividerText}>ou</span>
+                <div style={styles.dividerLine} />
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <button
+                  type="button"
+                  onClick={handleGoogleSignIn}
+                  disabled={loading}
+                  style={{
+                    ...styles.submitBtn,
+                    backgroundColor: 'var(--bg-card)',
+                    color: 'var(--text-main)',
+                    border: '1.5px solid var(--border-medium)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '10px',
+                    marginTop: 0,
+                    transition: 'all 0.2s',
+                  }}
+                  className="auth-google-btn"
+                >
+                  <svg width="18" height="18" viewBox="0 0 48 48">
+                    <path fill="#FFC107" d="M43.611 20.083H42V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 12.955 4 4 12.955 4 24s8.955 20 20 20 20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z"/>
+                    <path fill="#FF3D00" d="m6.306 14.691 6.571 4.819C14.655 15.108 18.961 12 24 12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 16.318 4 9.656 8.337 6.306 14.691z"/>
+                    <path fill="#4CAF50" d="M24 44c5.166 0 9.86-1.977 13.409-5.192l-6.19-5.238A11.91 11.91 0 0 1 24 36c-5.202 0-9.619-3.317-11.283-7.946l-6.522 5.025C9.505 39.556 16.227 44 24 44z"/>
+                    <path fill="#1976D2" d="M43.611 20.083H42V20H24v8h11.303a12.04 12.04 0 0 1-4.087 5.571l.003-.002 6.19 5.238C36.971 39.205 44 34 44 24c0-1.341-.138-2.65-.389-3.917z"/>
+                  </svg>
+                  Entrar com o Google
+                </button>
+                <button
+                  type="button"
+                  onClick={handleStartDemoMode}
+                  disabled={loading}
+                  style={{
+                    ...styles.submitBtn,
+                    backgroundColor: 'transparent',
+                    border: '1.5px solid var(--border-medium)',
+                    color: 'var(--text-main)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '10px',
+                    marginTop: 0
+                  }}
+                >
+                  🎮 Experimentar sem criar conta
+                </button>
+              </div>
+            </>
           )}
 
           {(mode === 'recovery' || mode === 'updatePassword') && (
             <button 
               type="button" 
-              onClick={() => {
-                setMode('login');
-                setError('');
-                setSuccess('');
-              }} 
+              onClick={() => switchMode('login')} 
               style={{ ...styles.toggleBtn, margin: '8px auto 0', display: 'flex', alignItems: 'center', gap: '4px' }}
             >
               <ArrowLeft size={14} /> Voltar para o Login
@@ -585,23 +941,38 @@ export default function Auth({ onLoginSuccess, initialMode = 'login', onBackToLa
         {mode !== 'updatePassword' && (
           <div style={styles.cardFooter}>
             <p style={styles.footerText}>
-              {mode === 'login' ? 'Não tem uma conta?' : 'Já possui uma conta?'}
-              <button
-                onClick={() => {
-                  setMode(mode === 'login' ? 'signup' : 'login');
-                  setError('');
-                  setSuccess('');
-                  setShowResendButton(false);
-                }}
-                style={styles.toggleBtn}
-                disabled={loading}
-              >
-                {mode === 'login' ? 'Cadastre-se' : 'Faça Login'}
-              </button>
+              {mode === 'login' ? 'Não tem uma conta?' :
+               mode === 'recovery' ? '' :
+               'Já possui uma conta?'}
+              {mode !== 'recovery' && (
+                <button
+                  onClick={() => switchMode(mode === 'login' ? 'signup' : 'login')}
+                  style={styles.toggleBtn}
+                  disabled={loading}
+                >
+                  {mode === 'login' ? 'Cadastre-se' : 'Faça Login'}
+                </button>
+              )}
             </p>
           </div>
         )}
       </div>
+
+      {/* Inline styles for spinner animation */}
+      <style>{`
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+        .auth-google-btn:hover {
+          background-color: var(--bg-app) !important;
+          border-color: var(--primary) !important;
+        }
+        .auth-back-btn:hover {
+          background: rgba(255, 255, 255, 0.1) !important;
+          border-color: rgba(255, 255, 255, 0.2) !important;
+        }
+      `}</style>
     </div>
   );
 }
@@ -625,31 +996,42 @@ const styles = {
     width: '100%',
     maxWidth: '480px',
     overflow: 'hidden',
-    padding: '60px 32px 40px 32px', // increased top padding for back button spacing
+    padding: '60px 32px 40px 32px',
   },
   cardHeader: {
     textAlign: 'center',
-    marginBottom: '32px',
+    marginBottom: '24px',
   },
-  logoContainer: {
+  tabContainer: {
+    display: 'flex',
+    gap: '4px',
+    padding: '4px',
+    borderRadius: '12px',
+    backgroundColor: 'var(--bg-app)',
+    border: '1px solid var(--border-light)',
+    marginBottom: '24px',
+  },
+  tab: {
+    flex: 1,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: '8px',
-    marginBottom: '12px',
-  },
-  logoText: {
-    fontSize: '28px',
-    fontFamily: 'var(--font-display)',
-    fontWeight: '800',
-    background: 'linear-gradient(135deg, var(--primary) 0%, #6366f1 100%)',
-    WebkitBackgroundClip: 'text',
-    WebkitTextFillColor: 'transparent',
-  },
-  subtitle: {
+    gap: '6px',
+    padding: '10px 16px',
+    borderRadius: '9px',
+    border: 'none',
+    backgroundColor: 'transparent',
     color: 'var(--text-muted)',
-    fontSize: '14px',
-    fontFamily: 'var(--font-body)',
+    fontSize: '13.5px',
+    fontWeight: 600,
+    cursor: 'pointer',
+    transition: 'all 0.2s ease',
+    fontFamily: 'var(--font-display)',
+  },
+  tabActive: {
+    backgroundColor: 'var(--bg-card)',
+    color: 'var(--primary)',
+    boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
   },
   form: {
     display: 'flex',
@@ -692,6 +1074,25 @@ const styles = {
     marginTop: '10px',
     border: 'none',
     cursor: 'pointer',
+    transition: 'all 0.2s',
+  },
+  divider: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+    margin: '4px 0',
+  },
+  dividerLine: {
+    flex: 1,
+    height: '1px',
+    backgroundColor: 'var(--border-light)',
+  },
+  dividerText: {
+    fontSize: '12px',
+    fontWeight: 600,
+    color: 'var(--text-light)',
+    textTransform: 'uppercase',
+    letterSpacing: '0.5px',
   },
   errorMessage: {
     backgroundColor: '#fef2f2',
@@ -741,5 +1142,25 @@ const styles = {
     backgroundColor: 'var(--bg-app)',
     padding: '6px 12px',
     borderRadius: '99px',
-  }
+  },
+  logoContainer: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '8px',
+    marginBottom: '12px',
+  },
+  logoText: {
+    fontSize: '28px',
+    fontFamily: 'var(--font-display)',
+    fontWeight: '800',
+    background: 'linear-gradient(135deg, var(--primary) 0%, #6366f1 100%)',
+    WebkitBackgroundClip: 'text',
+    WebkitTextFillColor: 'transparent',
+  },
+  subtitle: {
+    color: 'var(--text-muted)',
+    fontSize: '14px',
+    fontFamily: 'var(--font-body)',
+  },
 };

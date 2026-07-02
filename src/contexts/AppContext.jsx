@@ -1752,6 +1752,28 @@ export function AppProvider({ children }) {
     });
   }, [currentUser, tasks, logEvent]);
 
+  const handleUpdateProfileFields = useCallback(async (fields) => {
+    if (!currentUser?.id) return;
+    const { data } = await profilesService.updateProfileFields(currentUser.id, fields);
+    if (data) {
+      setUserProfile(data);
+    }
+  }, [currentUser?.id]);
+
+  const logAuthEvent = useCallback(async (eventType, email, details = {}) => {
+    try {
+      const uId = currentUser?.id || null;
+      await supabase.from('auth_logs').insert([{
+        user_id: uId,
+        event_type: eventType,
+        email,
+        details
+      }]);
+    } catch (e) {
+      console.warn('[AppContext] Erro ao gravar log de auth:', e.message);
+    }
+  }, [currentUser]);
+
   const handleUpdateProfile = useCallback(async (profileData) => {
     if (!currentUser?.id) return;
     const { data } = await profilesService.updateProfile(currentUser.id, profileData);
@@ -2923,8 +2945,10 @@ export function AppProvider({ children }) {
     // Profiles additions
     userProfile,
     handleUpdateProfile,
+    handleUpdateProfileFields,
     handleUploadAvatar,
     handleDeleteAvatar,
+    logAuthEvent,
 
     // Sync / Resiliência
     syncStatus,

@@ -3,6 +3,7 @@ import { AppProvider, useAppContext } from './contexts/AppContext';
 import { useNotifications } from './hooks/useNotifications';
 import { supabase } from './supabaseClient';
 import Auth from './components/Auth';
+import CreatePasswordModal from './components/CreatePasswordModal';
 import Navbar from './components/Navbar';
 import LandingPage from './components/LandingPage';
 import PrivacyView from './components/PrivacyView';
@@ -166,8 +167,45 @@ function AppLayout() {
     isAdmin,
     undoAction,
     triggerUndo,
-    handleLogout
+    handleLogout,
+    userProfile
   } = useAppContext();
+
+  // ── Create Password Modal ──────────────────────────────────────
+  const [showCreatePasswordModal, setShowCreatePasswordModal] = React.useState(false);
+
+  useEffect(() => {
+    if (!currentUser || currentUser.isDemo) return;
+    
+    // Se já tem senha ou se descartou o prompt (no banco ou localStorage), não exibe
+    const hasPassword = userProfile?.has_password;
+    const dismissed = userProfile?.dismissed_password_prompt || localStorage.getItem('dismissed_password_prompt') === 'true';
+    if (hasPassword || dismissed) {
+      setShowCreatePasswordModal(false);
+      return;
+    }
+
+    const meta = currentUser.user_metadata || {};
+    if (meta.password_created) return; // Já criou senha antes
+    
+    // Verifica o provider — se é google ou email sem senha
+    const checkProvider = async () => {
+      try {
+        const { data } = await supabase.auth.getUser();
+        if (!data?.user) return;
+        const identities = data.user.identities || [];
+        const hasGoogleProvider = identities.some(i => i.provider === 'google');
+        // Se entrou por Google, ou se tem email sem ter definido senha explicitamente
+        // e não tem a flag password_created
+        if (hasGoogleProvider && !data.user.user_metadata?.password_created) {
+          setShowCreatePasswordModal(true);
+        }
+      } catch (e) {
+        console.warn('Erro ao verificar provider:', e);
+      }
+    };
+    checkProvider();
+  }, [currentUser, userProfile]);
 
 
 
@@ -400,6 +438,12 @@ function AppLayout() {
 
       <AchievementToastManager queue={toastQueue} onDismiss={dismissToast} />
       <PaywallModal />
+      {showCreatePasswordModal && (
+        <CreatePasswordModal
+          onClose={() => setShowCreatePasswordModal(false)}
+          onSuccess={() => setShowCreatePasswordModal(false)}
+        />
+      )}
       <Suspense fallback={null}>
         <GuidedTour />
         <NotificationEngine />

@@ -1,8 +1,10 @@
 import React from 'react';
 import { ArrowLeft, ShieldCheck, Mail, Building2, Eye, Lock, FileText, Database, ShieldAlert, Calendar, Globe } from 'lucide-react';
+import { getLogo } from '../design-system/branding/logo';
 
 export default function TermsView({ onGoBack, onNavigateToPrivacy }) {
   // Garantimos que a visualização legal use o padrão escuro/dark theme do MyFlowDay
+  const logo = getLogo('dark', 'legal');
   return (
     <div className="dark" style={{ minHeight: '100vh', backgroundColor: '#0F172A', color: '#F8FAFC', fontFamily: 'var(--font-body)', paddingBottom: '60px' }}>
       
@@ -11,13 +13,10 @@ export default function TermsView({ onGoBack, onNavigateToPrivacy }) {
         <div style={{ maxWidth: '800px', margin: '0 auto', height: '64px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }} onClick={onGoBack}>
             <img 
-              src="/branding/logo-dark.svg" 
-              alt="MyFlowDay" 
+              src={logo.src} 
+              alt={logo.alt} 
               style={{ height: '36px', width: 'auto', objectFit: 'contain' }} 
             />
-            <span style={{ fontSize: '18px', fontWeight: 800, color: '#F8FAFC', letterSpacing: '-0.5px', fontFamily: 'var(--font-display)' }}>
-              MyFlowDay
-            </span>
           </div>
           
           <button 
