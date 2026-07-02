@@ -1271,10 +1271,14 @@ export default function LandingPage({ onEnterApp }) {
         @media (max-width: 768px) {
           .landing-hero-benefits {
             flex-direction: column;
-            align-items: flex-start;
-            width: max-content;
+            align-items: center;
+            justify-content: center;
             margin: 0 auto 36px !important;
             gap: 12px !important;
+            width: 100%;
+          }
+          .landing-hero-benefits span {
+            justify-content: center;
           }
         }
 
