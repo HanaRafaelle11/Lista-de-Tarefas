@@ -18,18 +18,25 @@ export function Button({ variant = 'primary', style = {}, ...props }) {
 
   const variants = {
     primary: {
-      background: 'var(--primary)',
-      color: '#FFFFFF',
-      boxShadow: 'var(--shadow-sm)'
+      background: 'var(--gradient-primary)',
+      color: '#FBFAFC',
+      boxShadow: '0 4px 14px rgba(94, 96, 206, 0.3)',
+      border: 'none'
+    },
+    secondary: {
+      background: 'transparent',
+      border: '1.5px solid var(--secondary)',
+      color: 'var(--secondary)'
     },
     danger: {
-      background: 'var(--prio-alta-bg)',
-      color: 'var(--prio-alta-text)'
+      background: 'var(--danger)',
+      color: '#FBFAFC',
+      border: 'none'
     },
     ghost: {
       background: 'transparent',
-      border: '1.5px solid var(--border-medium)',
-      color: 'var(--text-main)'
+      border: 'none',
+      color: 'var(--text-light)'
     }
   };
 

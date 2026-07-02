@@ -1009,7 +1009,11 @@ export default function TodoView() {
               return (
                 <div key={cat.id} className="category-item-row">
                   <div className="category-item-info">
-                    <span style={{ fontSize: '16px' }}>{cat.emoji}</span>
+                    {cat.iconName ? (
+                      <MFIcon name={cat.iconName} size={16} style={{ color: cat.color }} />
+                    ) : (
+                      <span style={{ fontSize: '16px' }}>{cat.emoji || '💼'}</span>
+                    )}
                     <span style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-main)' }}>{cat.name}</span>
                     <span className="category-item-color-dot" style={{ backgroundColor: cat.color }} />
                   </div>
@@ -1108,8 +1112,10 @@ export default function TodoView() {
                 key={cat.id}
                 onClick={() => setCategoryFilter(cat.id)}
                 className={`tasks-cat-pill ${categoryFilter === cat.id ? 'active' : ''}`}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}
               >
-                {cat.emoji} {cat.name}
+                {cat.iconName ? <MFIcon name={cat.iconName} size={12} /> : <span>{cat.emoji || '💼'}</span>}
+                <span>{cat.name}</span>
               </button>
             ))}
           </div>
@@ -1683,9 +1689,12 @@ export default function TodoView() {
                     onChange={e => setCategory(e.target.value)}
                     className="todo-modal-select"
                   >
-                    {categories.map(cat => (
-                      <option key={cat.id} value={cat.id}>{cat.emoji} {cat.name}</option>
-                    ))}
+                    {categories.map(cat => {
+                      const fallbackEmoji = cat.emoji || (cat.id === 'Trabalho' ? '💼' : cat.id === 'Pessoal' ? '🏠' : cat.id === 'Estudos' ? '📚' : cat.id === 'Lazer' ? '✈️' : cat.id === 'Pets' ? '🐾' : '💼');
+                      return (
+                        <option key={cat.id} value={cat.id}>{fallbackEmoji} {cat.name}</option>
+                      );
+                    })}
                   </select>
                 </div>
 

@@ -3,40 +3,49 @@
 
 
 :root {
-  /* Cores Globais (Modo Claro - MyFlowDay 4.0 Linear Style) */
+  /* Cores Globais (Modo Claro - MyFlowDay Oficial) */
   --bg-app: #F8FAFC;
   --bg-app-glass: rgba(248, 250, 252, 0.85);
   --bg-nav-glass: rgba(255, 255, 255, 0.85);
   --bg-card: #FFFFFF;
-  --bg-card-hover: #F8FAFC;
-  --text-main: #0F172A;
+  --bg-card-hover: #F1F5F9;
+  --text-main: #0B0E11;
   --text-muted: #475569;
   --text-light: #64748B;
   
-  --border-light: #F1F5F9;
-  --border-medium: #E2E8F0;
+  --border-light: #E2E8F0;
+  --border-medium: #CBD5E1;
   
-  --primary: #2563EB;
-  --primary-light: #DBEAFE;
-  --primary-hover: #1D4ED8;
-  --primary-glow: transparent;
+  --primary: #5E60CE;
+  --primary-light: rgba(94, 96, 206, 0.1);
+  --primary-hover: #4F51B5;
+  --primary-glow: rgba(94, 96, 206, 0.15);
   
-  --secondary: #22D3EE;
-  
+  --secondary: #7B7FEA;
+  --accent: #A5B4FC;
+  --focus: #00E5C3;
+  --success: #22C55E;
+  --warning: #F59E0B;
   --danger: #EF4444;
   --danger-hover: #DC2626;
+
+  /* Gradientes Oficiais MyFlowDay */
+  --gradient-primary: linear-gradient(135deg, #5E60CE 0%, #00E5C3 100%);
+  --gradient-blue: linear-gradient(135deg, #5E60CE 0%, #7B7FEA 100%);
+  --gradient-focus: linear-gradient(135deg, #00E5C3 0%, #A5B4FC 100%);
+  --gradient-indigo: linear-gradient(135deg, #7B7FEA 0%, #5E60CE 100%);
   
   /* Cores de Categorias */
-  --cat-trabalho: #6B7F8A;
-  --cat-trabalho-bg: #F0F4F6;
-  --cat-pessoal: #7A8B7B;
-  --cat-pessoal-bg: #F1F4F1;
-  --cat-estudos: #B09E86;
-  --cat-estudos-bg: #F7F5F0;
-  --cat-lazer: #A88891;
-  --cat-lazer-bg: #F6F1F3;
-  --cat-pets: #B5A296;
-  --cat-pets-bg: #F7F5F3;
+  --cat-trabalho: #5E60CE;
+  --cat-trabalho-bg: rgba(94, 96, 206, 0.08);
+  --cat-pessoal: #7B7FEA;
+  --cat-pessoal-bg: rgba(123, 127, 234, 0.08);
+  --cat-estudos: #A5B4FC;
+  --cat-estudos-bg: rgba(165, 180, 252, 0.08);
+  --cat-lazer: #00E5C3;
+  --cat-lazer-bg: rgba(0, 229, 195, 0.08);
+  --cat-pets: #22C55E;
+  --cat-pets-bg: rgba(34, 197, 94, 0.08);
   
   /* Cores de Prioridades */
   --prio-alta-text: #EF4444;
@@ -52,17 +61,17 @@
   --prio-baixa-border: #F1F5F9;
 
   /* Efeitos e Sombras Orgânicas */
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  --shadow-sm: 0 1px 2px rgba(94, 96, 206, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(94, 96, 206, 0.1), 0 2px 4px -1px rgba(94, 96, 206, 0.06);
+  --shadow-lg: 0 10px 15px -3px rgba(94, 96, 206, 0.1), 0 4px 6px -2px rgba(94, 96, 206, 0.05);
   --shadow-glow: none;
   --radius-sm: 8px;
   --radius-md: 12px; 
   --radius-lg: 20px; 
   
   /* Fontes elegantes e limpas (Plus Jakarta Sans) */
-  --font-display: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  --font-body: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-display: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-body: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   
   /* Grid & Spacing */
   --space-1: 4px;
@@ -4378,50 +4387,50 @@ button[title="Sair do MyFlowDay"]:hover {
    ================================================================ */
 .dark {
   /* Fundos */
-  --bg-app:           #0F172A;
-  --bg-app-glass:     rgba(15, 23, 42, 0.85);
-  --bg-nav-glass:     rgba(15, 23, 42, 0.85);
-  --bg-card:          #1E293B;
-  --bg-card-hover:    #334155;
+  --bg-app:           #0B0E11;
+  --bg-app-glass:     rgba(11, 14, 17, 0.85);
+  --bg-nav-glass:     rgba(18, 22, 26, 0.85);
+  --bg-card:          #1A1F26;
+  --bg-card-hover:    #232A33;
 
   /* Textos */
-  --text-main:        #F8FAFC;
-  --text-muted:       #94A3B8;
-  --text-light:       #94A3B8;
+  --text-main:        #FBFAFC;
+  --text-muted:       #A1A7B3;
+  --text-light:       #717B8A;
 
   /* Bordas */
-  --border-light:     #334155;
-  --border-medium:    #475569;
+  --border-light:     #232A33;
+  --border-medium:    #2D3745;
 
-  /* Primário adaptado ao dark (Cor Secundária Cyan) */
-  --primary:          #22D3EE;
-  --primary-light:    rgba(34, 211, 238, 0.12);
-  --primary-hover:    #06B6D4;
-  --primary-glow:     rgba(34, 211, 238, 0.15);
+  /* Primário e estados oficiais (consistentes com o design system) */
+  --primary:          #5E60CE;
+  --primary-light:    rgba(94, 96, 206, 0.12);
+  --primary-hover:    #4F51B5;
+  --primary-glow:     rgba(94, 96, 206, 0.15);
   
-  --danger:           #F87171;
-  --danger-hover:     #EF4444;
+  --danger:           #EF4444;
+  --danger-hover:     #DC2626;
 
   /* Categorias dark */
-  --cat-trabalho-bg:  #1A2025;
-  --cat-pessoal-bg:   #1A201A;
-  --cat-estudos-bg:   #201E18;
-  --cat-lazer-bg:     #201A1C;
-  --cat-pets-bg:      #221E1C;
+  --cat-trabalho-bg:  rgba(94, 96, 206, 0.15);
+  --cat-pessoal-bg:   rgba(123, 127, 234, 0.15);
+  --cat-estudos-bg:   rgba(165, 180, 252, 0.15);
+  --cat-lazer-bg:     rgba(0, 229, 195, 0.15);
+  --cat-pets-bg:      rgba(34, 197, 94, 0.15);
 
   /* Prioridades dark */
-  --prio-alta-bg:     #200F0F;
-  --prio-alta-border: #3D1F1F;
-  --prio-media-bg:    #201808;
-  --prio-media-border:#3D2F10;
-  --prio-baixa-bg:    #181A18;
-  --prio-baixa-border:#2D302D;
+  --prio-alta-bg:     rgba(239, 68, 68, 0.1);
+  --prio-alta-border: rgba(239, 68, 68, 0.2);
+  --prio-media-bg:    rgba(245, 158, 11, 0.1);
+  --prio-media-border:rgba(245, 158, 11, 0.2);
+  --prio-baixa-bg:    rgba(113, 123, 138, 0.1);
+  --prio-baixa-border:rgba(113, 123, 138, 0.2);
 
   /* Sombras dark */
   --shadow-sm:        0 1px 3px rgba(0, 0, 0, 0.3);
   --shadow-md:        0 8px 30px rgba(0, 0, 0, 0.4);
   --shadow-lg:        0 16px 40px rgba(0, 0, 0, 0.5);
-  --shadow-glow:      0 0 15px rgba(109, 184, 118, 0.08);
+  --shadow-glow:      rgba(94, 96, 206, 0.08);
 }
 
 /* Dark theme overrides for task cards, empty states, and warnings */

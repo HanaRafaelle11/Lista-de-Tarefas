@@ -7,7 +7,8 @@
   </linearGradient>
 
   </defs>
-  <g transform="translate(200, 250) scale(0.575)">
+  <rect width="1024" height="1024" rx="220" fill="#12161A" />
+  <g transform="translate(245, 290) scale(0.48)">
     <path d="M 100 700 L 280 340 L 430 540 L 580 340 L 730 540 L 880 340" fill="none" stroke="url(#flow)" stroke-width="130" stroke-linecap="round" stroke-linejoin="round" />
     <circle cx="950" cy="200" r="70" fill="#00E5C3" />
   </g>

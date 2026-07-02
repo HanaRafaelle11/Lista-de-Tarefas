@@ -11,15 +11,12 @@ export default function PrivacyView({ onGoBack, onNavigateToTerms }) {
       {/* ── Top Header ─────────────────────────────────────────────────── */}
       <header style={{ position: 'sticky', top: 0, zIndex: 100, backgroundColor: 'rgba(15, 23, 42, 0.95)', backdropFilter: 'blur(12px)', borderBottom: '1px solid #334155', padding: '0 24px' }}>
         <div style={{ maxWidth: '800px', margin: '0 auto', height: '64px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }} onClick={onGoBack}>
+          <div style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }} onClick={onGoBack}>
             <img 
               src={logo.src} 
               alt={logo.alt} 
-              style={{ height: '32px', width: 'auto', objectFit: 'contain' }} 
+              style={{ height: '36px', width: 'auto', objectFit: 'contain' }} 
             />
-            <span style={{ fontSize: '18px', fontWeight: 800, color: '#F8FAFC', letterSpacing: '-0.5px', fontFamily: 'var(--font-display)' }}>
-              MyFlowDay
-            </span>
           </div>
           
           <button 

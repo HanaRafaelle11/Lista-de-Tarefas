@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 1200" width="1200" height="1200">
+  <defs>
+    
+  <linearGradient id="flow" x1="0%" y1="100%" x2="100%" y2="0%">
+    <stop offset="0%" stop-color="#5E60CE" />
+    <stop offset="100%" stop-color="#00E5C3" />
+  </linearGradient>
+
+  </defs>
+  <g transform="translate(340, 100) scale(0.55)">
+    <path d="M 100 700 L 280 340 L 430 540 L 580 340 L 730 540 L 880 340" fill="none" stroke="url(#flow)" stroke-width="130" stroke-linecap="round" stroke-linejoin="round" />
+    <circle cx="950" cy="200" r="70" fill="#00E5C3" />
+  </g>
+  <text x="50%" y="740" text-anchor="middle" font-family="'Plus Jakarta Sans', sans-serif" font-size="120px" font-weight="800" fill="#FBFAFC" letter-spacing="-3px">MyFlowDay</text>
+  <text x="50%" y="840" text-anchor="middle" font-family="'Plus Jakarta Sans', sans-serif" font-size="30px" font-weight="700" fill="#A1A7B3" letter-spacing="6px">FOCO • CONSISTÊNCIA • EVOLUÇÃO</text>
+</svg>

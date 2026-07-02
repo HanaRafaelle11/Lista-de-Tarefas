@@ -153,27 +153,33 @@ export default defineConfig({
         name: 'MyFlowDay',
         short_name: 'MyFlowDay',
         description: 'Plataforma de Progresso Pessoal',
-        theme_color: '#0F172A',
-        background_color: '#0F172A',
+        theme_color: '#0B0E11',
+        background_color: '#0B0E11',
         display: 'standalone',
         orientation: 'portrait',
         icons: [
           {
-            src: 'icon.svg',
+            src: '/branding/icon-192.png',
             sizes: '192x192',
-            type: 'image/svg+xml',
+            type: 'image/png',
             purpose: 'any'
           },
           {
-            src: 'icon.svg',
+            src: '/branding/icon-512.png',
             sizes: '512x512',
-            type: 'image/svg+xml',
+            type: 'image/png',
             purpose: 'any'
           },
           {
-            src: 'icon.svg',
-            sizes: '192x192 512x512',
-            type: 'image/svg+xml',
+            src: '/branding/icon-192.png',
+            sizes: '192x192',
+            type: 'image/png',
+            purpose: 'maskable'
+          },
+          {
+            src: '/branding/icon-512.png',
+            sizes: '512x512',
+            type: 'image/png',
             purpose: 'maskable'
           }
         ]

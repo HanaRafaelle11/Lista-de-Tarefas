@@ -1,22 +1,8 @@
 import React from 'react';
-import { 
-  Briefcase, 
-  Home, 
-  HeartPulse, 
-  BookOpen, 
-  Coins, 
-  Book, 
-  Dumbbell, 
-  Users, 
-  Sparkles, 
-  PawPrint, 
-  Layers, 
-  Calendar,
-  FolderOpen
-} from 'lucide-react';
+import MFIcon from './MFIcon';
 
 export default function CategoryIcon({ categoryId, size = 18, className = '' }) {
-  if (!categoryId) return <FolderOpen size={size} className={className} />;
+  if (!categoryId) return <MFIcon name="tasks" size={size} className={className} />;
 
   // Normalize name: lowercase, trim, remove accents
   const normalize = (str) => {
@@ -29,66 +15,76 @@ export default function CategoryIcon({ categoryId, size = 18, className = '' }) 
 
   const key = normalize(categoryId);
 
-  // Mapeamento de categorias para componentes Lucide
+  // Mapeamento de categorias para ícones do MFIcon
   const map = {
-    trabalho: Briefcase,
-    work: Briefcase,
-    job: Briefcase,
+    trabalho: 'career',
+    work: 'career',
+    job: 'career',
+    carreira: 'career',
     
-    casa: Home,
-    home: Home,
-    pessoal: Home,
-    personal: Home,
+    casa: 'home',
+    home: 'home',
+    pessoal: 'home',
+    personal: 'home',
     
-    saude: HeartPulse,
-    health: HeartPulse,
-    vida: HeartPulse,
+    saude: 'health',
+    health: 'health',
+    vida: 'health',
     
-    estudos: BookOpen,
-    study: BookOpen,
-    estudo: BookOpen,
-    education: BookOpen,
+    estudos: 'studies',
+    study: 'studies',
+    estudo: 'studies',
+    education: 'studies',
     
-    financeiro: Coins,
-    finance: Coins,
-    dinheiro: Coins,
-    money: Coins,
+    financeiro: 'finance',
+    finance: 'finance',
+    dinheiro: 'finance',
+    money: 'finance',
+    financas: 'finance',
     
-    leitura: Book,
-    reading: Book,
-    books: Book,
-    book: Book,
+    leitura: 'reading',
+    reading: 'reading',
+    books: 'reading',
+    book: 'reading',
     
-    exercicios: Dumbbell,
-    exercise: Dumbbell,
-    exercises: Dumbbell,
-    academia: Dumbbell,
-    fitness: Dumbbell,
+    exercicios: 'fitness',
+    exercise: 'fitness',
+    exercises: 'fitness',
+    academia: 'fitness',
+    fitness: 'fitness',
     
-    familia: Users,
-    family: Users,
-    parentes: Users,
+    familia: 'family',
+    family: 'family',
+    parentes: 'family',
     
-    lazer: Sparkles,
-    leisure: Sparkles,
-    game: Sparkles,
-    musica: Sparkles,
+    lazer: 'travel',
+    leisure: 'travel',
+    game: 'travel',
+    musica: 'travel',
+    viagem: 'travel',
     
-    pets: PawPrint,
-    pet: PawPrint,
-    animal: PawPrint,
+    pets: 'pets',
+    pet: 'pets',
+    animal: 'pets',
     
-    projetos: Layers,
-    projects: Layers,
-    projeto: Layers,
-    project: Layers,
-    
-    rotina: Calendar,
-    routine: Calendar,
-    diario: Calendar,
+    rotina: 'habits',
+    routine: 'habits',
+    diario: 'habits',
+    habitos: 'habits',
+
+    sono: 'sleep',
+    sleep: 'sleep',
+
+    alimentacao: 'nutrition',
+    nutrition: 'nutrition',
+    comida: 'nutrition',
+    food: 'nutrition',
+
+    objetivos: 'objectives',
+    goals: 'objectives',
   };
 
-  const IconComponent = map[key] || FolderOpen;
+  const iconName = map[key] || 'tasks';
 
-  return <IconComponent size={size} className={className} strokeWidth={2} />;
+  return <MFIcon name={iconName} size={size} className={className} />;
 }

@@ -78,11 +78,11 @@ export function calculateNextOccurrence(dueDateStr, recurrence) {
 
 // ─── Categorias Padrão ────────────────────────────────────────────────────────
 const defaultCategories = [
-  { id: 'Trabalho', name: 'Trabalho', emoji: '💼', color: '#6B7F8A' },
-  { id: 'Pessoal', name: 'Pessoal', emoji: '🏠', color: '#7A8B7B' },
-  { id: 'Estudos', name: 'Estudos', emoji: '📚', color: '#B09E86' },
-  { id: 'Lazer', name: 'Lazer', emoji: '🎸', color: '#A88891' },
-  { id: 'Pets', name: 'Pets', emoji: '🐾', color: '#B5A296' }
+  { id: 'Trabalho', name: 'Trabalho', iconName: 'career', color: 'var(--primary)' },
+  { id: 'Pessoal', name: 'Pessoal', iconName: 'home', color: 'var(--secondary)' },
+  { id: 'Estudos', name: 'Estudos', iconName: 'studies', color: 'var(--accent)' },
+  { id: 'Lazer', name: 'Lazer', iconName: 'travel', color: 'var(--focus)' },
+  { id: 'Pets', name: 'Pets', iconName: 'pets', color: 'var(--success)' }
 ];
 
 // ─── Context ──────────────────────────────────────────────────────────────────

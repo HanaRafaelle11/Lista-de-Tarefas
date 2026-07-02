@@ -117,7 +117,7 @@ export default function LandingPage({ onEnterApp }) {
       className="landing-root" 
       style={{ 
         minHeight: '100vh', 
-        background: '#0F172A',
+        background: '#0B0E11',
         color: '#F8FAFC', 
         fontFamily: 'var(--font-body)',
         overflowX: 'hidden',
@@ -145,16 +145,13 @@ export default function LandingPage({ onEnterApp }) {
             justifyContent: 'space-between' 
           }}
         >
-          <div className="landing-logo-container" style={{ display: 'flex', alignItems: 'center', gap: '8px', height: '40px' }}>
+          <div className="landing-logo-container" style={{ display: 'flex', alignItems: 'center', height: '40px' }}>
             <img
               src={logo.src}
               alt={logo.alt}
-              style={{ height: '28px', width: 'auto', objectFit: 'contain' }}
+              style={{ height: '32px', width: 'auto', objectFit: 'contain' }}
               onError={(e) => { e.target.style.display = 'none'; }}
             />
-            <span style={{ fontSize: '18px', fontWeight: 800, color: '#FFFFFF', letterSpacing: '-0.5px', fontFamily: 'Outfit, sans-serif' }}>
-              MyFlowDay
-            </span>
           </div>
           
           <div className="landing-nav-links" style={{ display: 'flex', alignItems: 'center', gap: '28px' }}>
@@ -314,7 +311,7 @@ export default function LandingPage({ onEnterApp }) {
             }}
           >
             <div style={{
-              background: '#0F172A',
+              background: '#0B0E11',
               borderRadius: '12px',
               border: '1px solid rgba(255, 255, 255, 0.05)',
               overflow: 'hidden'
@@ -345,7 +342,7 @@ export default function LandingPage({ onEnterApp }) {
                 </div>
                 <div style={{ width: '40px' }}></div>
               </div>
-              <div style={{ position: 'relative', width: '100%', overflow: 'hidden', background: '#0F172A' }}>
+              <div style={{ position: 'relative', width: '100%', overflow: 'hidden', background: '#0B0E11' }}>
                 {heroImages.map((img, idx) => (
                   <img
                     key={img.src}
@@ -381,7 +378,7 @@ export default function LandingPage({ onEnterApp }) {
         style={{
           padding: '110px 24px',
           background: '#FFFFFF',
-          color: '#0F172A',
+          color: '#0B0E11',
           borderTop: '1px solid #E2E8F0',
           borderBottom: '1px solid #E2E8F0',
           textAlign: 'center'
@@ -395,7 +392,7 @@ export default function LandingPage({ onEnterApp }) {
           }}>
             O problema das listas comuns
           </span>
-          <h2 style={{ fontSize: 'clamp(26px, 3.8vw, 38px)', fontWeight: 900, color: '#0F172A', letterSpacing: '-1.2px', marginTop: '16px', marginBottom: '24px', fontFamily: 'var(--font-display)' }}>
+          <h2 style={{ fontSize: 'clamp(26px, 3.8vw, 38px)', fontWeight: 900, color: '#0B0E11', letterSpacing: '-1.2px', marginTop: '16px', marginBottom: '24px', fontFamily: 'var(--font-display)' }}>
             Por que as ferramentas de produtividade comuns falham?
           </h2>
           <p style={{ fontSize: '16px', color: '#475569', lineHeight: '1.6', marginBottom: '48px', maxWidth: '720px', margin: '0 auto 48px' }}>
@@ -405,7 +402,7 @@ export default function LandingPage({ onEnterApp }) {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '24px', textAlign: 'left' }}>
             <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '16px', padding: '32px' }}>
               <div style={{ color: 'var(--danger)', marginBottom: '16px' }}><AlertTriangle size={24} /></div>
-              <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#0F172A', marginBottom: '10px' }}>Cobrança Infinita</h3>
+              <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#0B0E11', marginBottom: '10px' }}>Cobrança Infinita</h3>
               <p style={{ fontSize: '13.5px', color: '#475569', lineHeight: '1.5', margin: 0 }}>
                 Eles apenas empilham tarefas. Se você não cumpre tudo no prazo, a resposta é frustração, sem levar em conta suas prioridades ou seu cansaço.
               </p>
@@ -413,7 +410,7 @@ export default function LandingPage({ onEnterApp }) {
 
             <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '16px', padding: '32px' }}>
               <div style={{ color: 'var(--danger)', marginBottom: '16px' }}><Clock size={24} /></div>
-              <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#0F172A', marginBottom: '10px' }}>Sem contexto da sua rotina</h3>
+              <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#0B0E11', marginBottom: '10px' }}>Sem contexto da sua rotina</h3>
               <p style={{ fontSize: '13.5px', color: '#475569', lineHeight: '1.5', margin: 0 }}>
                 Ignoram que seu foco varia ao longo do dia. Exigem a mesma atenção e produtividade de forma mecânica e sem aprendizado.
               </p>
@@ -421,7 +418,7 @@ export default function LandingPage({ onEnterApp }) {
 
             <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '16px', padding: '32px' }}>
               <div style={{ color: 'var(--danger)', marginBottom: '16px' }}><Brain size={24} /></div>
-              <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#0F172A', marginBottom: '10px' }}>Sem aprender com seu comportamento</h3>
+              <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#0B0E11', marginBottom: '10px' }}>Sem aprender com seu comportamento</h3>
               <p style={{ fontSize: '13.5px', color: '#475569', lineHeight: '1.5', margin: 0 }}>
                 Não mostram o que está funcionando. Você repete hábitos improdutivos porque a ferramenta não rastreia seus horários de maior rendimento.
               </p>
@@ -437,7 +434,7 @@ export default function LandingPage({ onEnterApp }) {
         id="solucao"
         style={{
           padding: '110px 24px',
-          background: 'linear-gradient(180deg, #0F172A 0%, rgba(37, 99, 235, 0.04) 50%, #0F172A 100%)',
+          background: 'linear-gradient(180deg, #0B0E11 0%, rgba(37, 99, 235, 0.04) 50%, #0B0E11 100%)',
         }}
       >
         <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
@@ -491,7 +488,7 @@ export default function LandingPage({ onEnterApp }) {
               }}
             >
               <div style={{
-                background: '#0F172A',
+                background: '#0B0E11',
                 borderRadius: '12px',
                 overflow: 'hidden',
                 border: '1px solid rgba(255, 255, 255, 0.05)',
@@ -568,7 +565,7 @@ export default function LandingPage({ onEnterApp }) {
                   color: '#E2E8F0', 
                   lineHeight: '1.8', 
                   padding: '20px',
-                  backgroundColor: '#0F172A',
+                  backgroundColor: '#0B0E11',
                   borderRadius: '12px',
                   border: '1px solid rgba(255, 255, 255, 0.05)',
                   marginBottom: '24px',
@@ -658,7 +655,7 @@ export default function LandingPage({ onEnterApp }) {
         style={{
           padding: '110px 24px',
           background: '#F8FAFC',
-          color: '#0F172A',
+          color: '#0B0E11',
           borderTop: '1px solid #E2E8F0',
           borderBottom: '1px solid #E2E8F0',
           textAlign: 'center'
@@ -668,7 +665,7 @@ export default function LandingPage({ onEnterApp }) {
           <span style={{ fontSize: '12px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.15em', color: 'var(--primary)' }}>
             Timeline do usuário
           </span>
-          <h2 style={{ fontSize: 'clamp(26px, 3.8vw, 38px)', fontWeight: 900, color: '#0F172A', letterSpacing: '-1.5px', marginTop: '8px', marginBottom: '16px' }}>
+          <h2 style={{ fontSize: 'clamp(26px, 3.8vw, 38px)', fontWeight: 900, color: '#0B0E11', letterSpacing: '-1.5px', marginTop: '8px', marginBottom: '16px' }}>
             Como funciona a evolução da sua rotina
           </h2>
           <p style={{ fontSize: '15px', color: '#475569', marginBottom: '48px', maxWidth: '600px', margin: '0 auto 48px' }}>
@@ -733,7 +730,7 @@ export default function LandingPage({ onEnterApp }) {
                 </div>
 
                 <div>
-                  <h3 style={{ fontSize: '22px', fontWeight: 900, color: '#0F172A', marginBottom: '8px', fontFamily: 'var(--font-display)', letterSpacing: '-0.5px' }}>
+                  <h3 style={{ fontSize: '22px', fontWeight: 900, color: '#0B0E11', marginBottom: '8px', fontFamily: 'var(--font-display)', letterSpacing: '-0.5px' }}>
                     {step.title}
                   </h3>
                   <p style={{ fontSize: '15px', color: '#475569', lineHeight: '1.6', margin: 0 }}>
@@ -753,7 +750,7 @@ export default function LandingPage({ onEnterApp }) {
         id="comparativo"
         style={{
           padding: '110px 24px',
-          background: '#0F172A',
+          background: '#0B0E11',
           textAlign: 'center'
         }}
       >
@@ -846,7 +843,7 @@ export default function LandingPage({ onEnterApp }) {
         style={{
           padding: '110px 24px',
           background: '#FFFFFF',
-          color: '#0F172A',
+          color: '#0B0E11',
           borderTop: '1px solid #E2E8F0',
           borderBottom: '1px solid #E2E8F0',
           textAlign: 'center'
@@ -856,7 +853,7 @@ export default function LandingPage({ onEnterApp }) {
           <span style={{ fontSize: '12px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--primary)' }}>
             Simulação
           </span>
-          <h2 style={{ fontSize: 'clamp(26px, 4vw, 38px)', fontWeight: 900, color: '#0F172A', letterSpacing: '-1.5px', marginTop: '12px', marginBottom: '16px' }}>
+          <h2 style={{ fontSize: 'clamp(26px, 4vw, 38px)', fontWeight: 900, color: '#0B0E11', letterSpacing: '-1.5px', marginTop: '12px', marginBottom: '16px' }}>
             Quanto tempo você gostaria de recuperar todos os dias?
           </h2>
           <p style={{ fontSize: '15px', color: '#475569', marginBottom: '32px', lineHeight: '1.6' }}>
@@ -909,7 +906,7 @@ export default function LandingPage({ onEnterApp }) {
         id="precos"
         style={{
           padding: '110px 24px',
-          background: '#0F172A',
+          background: '#0B0E11',
           textAlign: 'center'
         }}
       >
@@ -1019,7 +1016,7 @@ export default function LandingPage({ onEnterApp }) {
         style={{
           padding: '110px 24px',
           background: '#F8FAFC',
-          color: '#0F172A',
+          color: '#0B0E11',
           borderTop: '1px solid #E2E8F0',
           borderBottom: '1px solid #E2E8F0',
         }}
@@ -1029,7 +1026,7 @@ export default function LandingPage({ onEnterApp }) {
             <span style={{ fontSize: '12.5px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.15em', color: 'var(--primary)' }}>
               Dúvidas
             </span>
-            <h2 style={{ fontSize: 'clamp(26px, 4vw, 38px)', fontWeight: 900, color: '#0F172A', letterSpacing: '-1.5px', marginTop: '8px' }}>
+            <h2 style={{ fontSize: 'clamp(26px, 4vw, 38px)', fontWeight: 900, color: '#0B0E11', letterSpacing: '-1.5px', marginTop: '8px' }}>
               Perguntas Frequentes
             </h2>
           </div>
@@ -1074,7 +1071,7 @@ export default function LandingPage({ onEnterApp }) {
                   style={{
                     width: '100%', padding: '24px', background: 'transparent', border: 'none',
                     textAlign: 'left', display: 'flex', justifyContent: 'space-between',
-                    alignItems: 'center', cursor: 'pointer', color: '#0F172A',
+                    alignItems: 'center', cursor: 'pointer', color: '#0B0E11',
                     fontWeight: 750, fontSize: '15px'
                   }}
                 >
@@ -1183,11 +1180,8 @@ export default function LandingPage({ onEnterApp }) {
         }}
       >
         <Container>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '24px' }}>
-            <img src={logo.src} alt={logo.alt} style={{ height: '28px', width: 'auto', objectFit: 'contain' }} onError={e => e.target.style.display = 'none'} />
-            <span style={{ fontSize: '18px', fontWeight: 800, color: '#FFFFFF', letterSpacing: '-0.5px', fontFamily: 'Outfit, sans-serif' }}>
-              MyFlowDay
-            </span>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '24px' }}>
+            <img src={logo.src} alt={logo.alt} style={{ height: '32px', width: 'auto', objectFit: 'contain' }} onError={e => e.target.style.display = 'none'} />
           </div>
           
           <p style={{ fontSize: '13.5px', color: '#64748B', marginBottom: '32px', maxWidth: '500px', margin: '0 auto 32px', lineHeight: '1.6' }}>

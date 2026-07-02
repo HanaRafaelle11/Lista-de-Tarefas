@@ -7,8 +7,9 @@
  * @returns {object} { src, alt }
  */
 export function getLogo(theme, context = 'default') {
+  const isDarkBackground = theme === 'dark' || context === 'legal';
   return {
-    src: '/icon.svg',
+    src: isDarkBackground ? '/branding/logo-light.svg' : '/branding/logo-dark.svg',
     alt: 'MyFlowDay Logo'
   };
 }
