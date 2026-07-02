@@ -127,6 +127,7 @@ export default function LandingPage({ onEnterApp }) {
     >
       {/* ── HEADER / NAVBAR ────────────────────────────────────────────── */}
       <header
+        className="landing-header"
         style={{
           position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100,
           background: scrolled ? 'rgba(15, 23, 42, 0.95)' : 'transparent',
@@ -144,11 +145,11 @@ export default function LandingPage({ onEnterApp }) {
             justifyContent: 'space-between' 
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center' }}>
+          <div className="landing-logo-container" style={{ display: 'flex', alignItems: 'center', height: '40px' }}>
             <img
               src={logo.src}
               alt={logo.alt}
-              style={{ height: '32px', width: 'auto' }}
+              style={{ height: '32px', width: 'auto', objectFit: 'contain' }}
               onError={(e) => { e.target.style.display = 'none'; }}
             />
           </div>
@@ -208,6 +209,7 @@ export default function LandingPage({ onEnterApp }) {
               color: '#FFFFFF',
               fontFamily: 'var(--font-display)',
               marginBottom: '24px',
+              textAlign: 'center',
             }}
           >
             Organize sua rotina e{' '}
@@ -227,8 +229,9 @@ export default function LandingPage({ onEnterApp }) {
               color: '#94A3B8',
               maxWidth: '820px',
               lineHeight: 1.55,
-              marginBottom: '28px',
-              fontWeight: 500
+              margin: '0 auto 28px',
+              fontWeight: 500,
+              textAlign: 'center',
             }}
           >
             O MyFlowDay reúne tarefas, agenda, foco e insights em um único lugar para ajudar você a entender como trabalha melhor.
@@ -1302,9 +1305,17 @@ export default function LandingPage({ onEnterApp }) {
         }
 
         @media (max-width: 768px) {
+          .landing-header {
+            padding-top: max(18px, env(safe-area-inset-top, 0px)) !important;
+            padding-bottom: 12px !important;
+            padding-left: 16px !important;
+            padding-right: 16px !important;
+          }
           .landing-header-container {
             height: auto !important;
             padding: 0 !important;
+            display: flex !important;
+            align-items: center !important;
           }
           .landing-nav-links {
             display: none !important;
