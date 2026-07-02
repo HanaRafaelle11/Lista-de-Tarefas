@@ -35,11 +35,5 @@
         }
       ]
     }
-  ],
-  "crons": [
-    {
-      "path": "/api/workers/worker-loop",
-      "schedule": "* * * * *"
-    }
   ]
 }
