@@ -59,12 +59,13 @@ Deno.serve(async (req) => {
 
       webpush.setVapidDetails('mailto:admin@myflowday.com', vapidPublicKey, vapidPrivateKey);
 
-      // ── Fetch ALL subscriptions for the user (no artificial limit) ──
+      // ── Fetch subscriptions for the user (max 10 most recent) ──
       const { data: subscriptions, error: fetchError } = await supabase
         .from('push_subscriptions')
         .select('*')
         .eq('user_id', user_id)
-        .order('updated_at', { ascending: false, nullsFirst: false });
+        .order('updated_at', { ascending: false, nullsFirst: false })
+        .limit(10);
 
       if (fetchError) {
         console.error(`[Push] Error fetching subscriptions for ${user_id}: ${fetchError.message}`);
@@ -170,12 +171,22 @@ Deno.serve(async (req) => {
         }
       }
 
-      // ── CLEANUP: Remove dead endpoints from the database ──
-      for (const deadEp of deadEndpoints) {
-        try {
-          await supabase.from('push_subscriptions').delete().eq('endpoint', deadEp);
-          console.log(`[Push Cleanup] Removed dead endpoint: ${deadEp.substring(0, 50)}…`);
-        } catch (_) { /* best-effort cleanup */ }
+      // ── CLEANUP: Remove dead endpoints (410/404/403) from the database ──
+      if (deadEndpoints.length > 0) {
+        console.log(`[Push Cleanup] Removing ${deadEndpoints.length} dead endpoints (410/404/403)...`);
+        for (const deadEp of deadEndpoints) {
+          try {
+            const { error: delErr, count } = await supabase
+              .from('push_subscriptions')
+              .delete()
+              .eq('endpoint', deadEp);
+            if (delErr) {
+              console.error(`[Push Cleanup] Failed to delete endpoint: ${delErr.message}`);
+            } else {
+              console.log(`[Push Cleanup] ✅ Removed dead endpoint: ${deadEp.substring(0, 60)}…`);
+            }
+          } catch (_) { /* best-effort cleanup */ }
+        }
       }
 
       // ── AUDIT RESPONSE: ok=true ONLY when at least 1 notification was delivered ──
@@ -287,6 +298,32 @@ Deno.serve(async (req) => {
       }
 
       console.log(`[Push Register] New subscription created. ID: ${insertRes.id}`);
+
+      // ── CAP: Keep max 5 subscriptions per user, delete oldest beyond that ──
+      try {
+        const { data: allUserSubs } = await supabase
+          .from('push_subscriptions')
+          .select('id')
+          .eq('user_id', user_id)
+          .order('updated_at', { ascending: false });
+
+        const MAX_SUBS_PER_USER = 5;
+        if (allUserSubs && allUserSubs.length > MAX_SUBS_PER_USER) {
+          const idsToDelete = allUserSubs.slice(MAX_SUBS_PER_USER).map((s: any) => s.id);
+          const { error: capErr } = await supabase
+            .from('push_subscriptions')
+            .delete()
+            .in('id', idsToDelete);
+          if (capErr) {
+            console.warn(`[Push Register] Cap cleanup warning: ${capErr.message}`);
+          } else {
+            console.log(`[Push Register] Capped subscriptions: removed ${idsToDelete.length} oldest for user ${user_id}`);
+          }
+        }
+      } catch (capErr: any) {
+        console.warn(`[Push Register] Cap cleanup error (non-fatal): ${capErr?.message || capErr}`);
+      }
+
       return new Response(JSON.stringify({ ok: true, registered: true, action: 'registro criado', id: insertRes.id }), {
         status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json; charset=utf-8' }
