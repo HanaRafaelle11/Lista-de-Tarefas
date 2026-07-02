@@ -18,7 +18,7 @@ Deno.serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
 
     if (!supabaseUrl || !supabaseServiceKey) {
-      return new Response(JSON.stringify({ error: 'Falta chaves de sistema SUPABASE' }), {
+      return new Response(JSON.stringify({ ok: false, error: 'Falta chaves de sistema SUPABASE' }), {
         status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json; charset=utf-8' }
       });
@@ -32,7 +32,7 @@ Deno.serve(async (req) => {
       const decoded = new TextDecoder('utf-8').decode(buffer);
       reqBody = JSON.parse(decoded);
     } catch (_) {
-      return new Response(JSON.stringify({ error: 'JSON inválido ou codificação incorreta' }), { 
+      return new Response(JSON.stringify({ ok: false, error: 'JSON inválido ou codificação incorreta' }), { 
         status: 200, 
         headers: { ...corsHeaders, 'Content-Type': 'application/json; charset=utf-8' } 
       });
@@ -47,40 +47,40 @@ Deno.serve(async (req) => {
     if (isSendOp) {
       const { user_id, title, body, url } = dataContainer;
       if (!user_id) {
-        return new Response(JSON.stringify({ error: 'Falta user_id' }), { status: 200, headers: corsHeaders });
+        return new Response(JSON.stringify({ ok: false, error: 'Falta user_id' }), { status: 200, headers: corsHeaders });
       }
 
       const vapidPublicKey = Deno.env.get('VAPID_PUBLIC_KEY') || Deno.env.get('VITE_PUBLIC_VAPID_KEY') || '';
       const vapidPrivateKey = Deno.env.get('VAPID_PRIVATE_KEY') || Deno.env.get('PRIVATE_VAPID_KEY') || '';
 
       if (!vapidPublicKey || !vapidPrivateKey) {
-        return new Response(JSON.stringify({ error: 'Falta chaves VAPID no servidor' }), { status: 200, headers: corsHeaders });
+        return new Response(JSON.stringify({ ok: false, error: 'Falta chaves VAPID no servidor' }), { status: 200, headers: corsHeaders });
       }
 
       webpush.setVapidDetails('mailto:admin@myflowday.com', vapidPublicKey, vapidPrivateKey);
 
-      // ── PRIORITIZE: Fetch only the 3 most recent subscriptions per user ──
+      // ── Fetch ALL subscriptions for the user (no artificial limit) ──
       const { data: subscriptions, error: fetchError } = await supabase
         .from('push_subscriptions')
         .select('*')
         .eq('user_id', user_id)
-        .order('updated_at', { ascending: false, nullsFirst: false })
-        .limit(3);
+        .order('updated_at', { ascending: false, nullsFirst: false });
 
       if (fetchError) {
-        console.error(`[Push Server Error] Error fetching subscriptions for ${user_id}: ${fetchError.message}`);
-      }
-
-      console.log(`[Push Server] Found ${subscriptions?.length || 0} subscriptions for user ${user_id}`);
-      if (subscriptions) {
-        subscriptions.forEach((sub, i) => {
-          console.log(`[Push Server] Sub #${i+1}: ID=${sub.id}, updated_at=${sub.updated_at}, endpoint=${sub.endpoint.substring(0, 60)}...`);
+        console.error(`[Push] Error fetching subscriptions for ${user_id}: ${fetchError.message}`);
+        return new Response(JSON.stringify({ ok: false, error: `DB error: ${fetchError.message}`, sent: 0 }), {
+          status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json; charset=utf-8' }
         });
       }
 
-      if (!subscriptions || subscriptions.length === 0) {
-        console.warn(`[Push Server] No subscriptions found for user ${user_id}`);
-        return new Response(JSON.stringify({ ok: true, sent: 0, note: 'no_subscriptions' }), { status: 200, headers: corsHeaders });
+      const totalFound = subscriptions?.length || 0;
+      console.log(`[Push] Found ${totalFound} subscriptions for user ${user_id}`);
+
+      if (!subscriptions || totalFound === 0) {
+        console.warn(`[Push] No subscriptions found for user ${user_id}`);
+        return new Response(JSON.stringify({ ok: false, sent: 0, error: 'no_subscriptions', total_found: 0 }), {
+          status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json; charset=utf-8' }
+        });
       }
 
       const payloadObj = {
@@ -97,12 +97,10 @@ Deno.serve(async (req) => {
 
       let sentCount = 0;
       const deadEndpoints: string[] = [];
+      const errors: string[] = [];
 
       for (const sub of subscriptions) {
         try {
-          console.log(`[Push Server] Sending webpush to endpoint: ${sub.endpoint.substring(0, 60)}...`);
-          console.log(`[Push Server] Payload to send: ${JSON.stringify(payloadObj)}`);
-          
           const result = await webpush.sendNotification(
             {
               endpoint: sub.endpoint,
@@ -120,13 +118,16 @@ Deno.serve(async (req) => {
             }
           );
           
-          console.log(`[Push Server] WebPush success. StatusCode: ${result.statusCode}, Body: ${result.body || 'empty'}`);
+          console.log(`[Push] Success → endpoint=${sub.endpoint.substring(0, 50)}… status=${result.statusCode}`);
           sentCount++;
         } catch (err) {
-          console.error(`[Push Server Error] User: ${user_id}, Endpoint: ${sub.endpoint?.substring(0, 60)}..., StatusCode: ${err.statusCode}, Msg: ${err.message || err}, Headers: ${JSON.stringify(err.headers || {})}, Body: ${err.body || ''}`);
+          const statusCode = err.statusCode || 0;
+          const errMsg = `status=${statusCode} msg=${err.message || err}`;
+          console.error(`[Push] Failed → endpoint=${sub.endpoint?.substring(0, 50)}… ${errMsg}`);
+          errors.push(errMsg);
           
-          // Remove dead endpoints (404, 410, or any 4xx/5xx that indicates permanent failure)
-          if (err.statusCode === 404 || err.statusCode === 410 || err.statusCode === 403) {
+          // Remove permanently dead endpoints (404, 410, 403)
+          if (statusCode === 404 || statusCode === 410 || statusCode === 403) {
             deadEndpoints.push(sub.endpoint);
           }
         }
@@ -136,17 +137,20 @@ Deno.serve(async (req) => {
       for (const deadEp of deadEndpoints) {
         try {
           await supabase.from('push_subscriptions').delete().eq('endpoint', deadEp);
-          console.log(`[Push Cleanup] Removed dead endpoint: ${deadEp.substring(0, 60)}...`);
+          console.log(`[Push Cleanup] Removed dead endpoint: ${deadEp.substring(0, 50)}…`);
         } catch (_) { /* best-effort cleanup */ }
       }
 
-      // IMPORTANT: Always return ok:true so the caller (process-notification-queue)
-      // never treats push delivery issues as a reason to keep retrying forever.
+      // ── AUDIT RESPONSE: ok=true ONLY when at least 1 notification was delivered ──
+      const isSuccess = sentCount > 0;
+      
       return new Response(JSON.stringify({ 
-        ok: true, 
+        ok: isSuccess, 
         sent: sentCount,
-        total_endpoints: subscriptions.length,
-        dead_removed: deadEndpoints.length
+        total_found: totalFound,
+        dead_removed: deadEndpoints.length,
+        errors: isSuccess ? undefined : errors.slice(0, 5),
+        error: isSuccess ? undefined : `0/${totalFound} endpoints succeeded`
       }), { 
         status: 200, 
         headers: { ...corsHeaders, 'Content-Type': 'application/json; charset=utf-8' } 
@@ -161,10 +165,30 @@ Deno.serve(async (req) => {
     const keys = dataContainer.keys;
 
     if (!endpoint || !user_id) {
-      return new Response(JSON.stringify({ error: 'Falta user_id ou endpoint no payload enviado' }), {
+      return new Response(JSON.stringify({ ok: false, error: 'Falta user_id ou endpoint no payload enviado' }), {
         status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json; charset=utf-8' }
       });
+    }
+
+    // ── DEDUP: Delete stale subscriptions older than 30 days for this user.
+    //    This prevents indefinite growth of the push_subscriptions table
+    //    while preserving multi-device support. ──
+    try {
+      const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+      const { error: cleanupErr } = await supabase
+        .from('push_subscriptions')
+        .delete()
+        .eq('user_id', user_id)
+        .lt('updated_at', thirtyDaysAgo);
+
+      if (cleanupErr) {
+        console.warn(`[Push Register] Stale cleanup warning: ${cleanupErr.message}`);
+      } else {
+        console.log(`[Push Register] Cleaned subscriptions older than 30 days for user ${user_id}`);
+      }
+    } catch (cleanupErr) {
+      console.warn(`[Push Register] Cleanup error (non-fatal): ${cleanupErr.message}`);
     }
 
     const { error: upsertError } = await supabase
@@ -180,7 +204,7 @@ Deno.serve(async (req) => {
       });
 
     if (upsertError) {
-      return new Response(JSON.stringify({ error: 'Erro de banco Postgres', details: upsertError.message }), {
+      return new Response(JSON.stringify({ ok: false, error: 'Erro de banco Postgres', details: upsertError.message }), {
         status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json; charset=utf-8' }
       });
@@ -192,7 +216,7 @@ Deno.serve(async (req) => {
     });
 
   } catch (err) {
-    return new Response(JSON.stringify({ error: 'Crash interno capturado', message: String(err.message || err) }), {
+    return new Response(JSON.stringify({ ok: false, error: 'Crash interno capturado', message: String(err.message || err) }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json; charset=utf-8' },
       status: 200
     });

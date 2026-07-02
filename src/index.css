@@ -1199,7 +1199,8 @@ button[title="Sair do MyFlowDay"]:hover {
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border-bottom: 1px solid var(--border-light);
-  padding: 0;
+  /* Respeitar área segura do dispositivo (notch, status bar, etc.) */
+  padding: env(safe-area-inset-top, 0px) 0 0 0;
   box-sizing: border-box;
 }
 

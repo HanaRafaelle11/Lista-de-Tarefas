@@ -926,7 +926,7 @@ export default function TodoView() {
       <form onSubmit={handleQuickAddSubmit} className="quick-inbox-container">
         <input 
           type="text" 
-          placeholder="Captura rápida: digite uma tarefa e pressione Enter..."
+          placeholder="Digite uma tarefa e pressione Enter..."
           value={quickTitle}
           onChange={e => setQuickTitle(e.target.value)}
           onKeyDown={e => {
