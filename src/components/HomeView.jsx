@@ -6,6 +6,9 @@ import AuraAssistantWidget from './AuraAssistantWidget';
 import Skeleton from './Skeleton';
 import { useAppContext } from '../contexts/AppContext';
 import MFIcon from './MFIcon';
+import { EVOLUTION_CATEGORIES, EVOLUTION_CATEGORY_LIST } from '../config/evolutionConfig';
+import { getEvolutionStage } from '../utils/getEvolutionStage';
+import EvolutionStageImage from './EvolutionStageImage';
 // Formata data amigável
 function formatFriendlyDate(dateStr) {
   if (!dateStr) return '';
@@ -633,66 +636,12 @@ export default function HomeView() {
             {(() => {
               const weeklyTotal = ritmoSemanal.reduce((acc, d) => acc + d.count, 0);
 
-              const PET_EVOLUTIONS = {
-                plant: {
-                  name: 'Plantinha',
-                  iconName: 'seedling',
-                  spritesheet: '/assets/evolution/plant-stages.png',
-                  gridLayout: '2x2', // Stage 1=TL, 2=TR, 3=BL, 4=BR
-                  stages: [
-                    { level: 1, title: 'Broto Inicial', iconName: 'seedling', badge: 'Nível 1 • Início', color: '#3b82f6', desc: 'De acordo com a sua constância e conclusão de tarefas e objetivos, sua plantinha vai evoluindo!' },
-                    { level: 2, title: 'Planta em Crescimento', iconName: 'seedling', badge: 'Nível 2 • Em Evolução', color: 'var(--primary)', desc: 'Sua constância está dando frutos! Mantenha a sequência de tarefas para fazer sua árvore crescer.' },
-                    { level: 3, title: 'Árvore Frondosa', iconName: 'forest', badge: 'Nível 3 • Alta Performance', color: '#10b981', desc: 'Excelente progresso! Suas metas e constância diária fortaleceram suas raízes.' },
-                    { level: 4, title: 'Árvore Florida Master', iconName: 'sparkle', badge: 'Nível 4 • Consistência Lendária', color: '#ec4899', desc: 'Sua dedicação é extraordinária! Sua árvore floresceu totalmente com o seu foco e metas alcançadas.' }
-                  ]
-                },
-                baby: {
-                  name: 'Bebê',
-                  iconName: 'profile',
-                  spritesheet: '/assets/evolution/baby-stages.png',
-                  gridLayout: '2x2',
-                  stages: [
-                    { level: 1, title: 'Recém-nascido', iconName: 'profile', badge: 'Nível 1 • Primeiros Passos', color: '#3b82f6', desc: 'Sua jornada de foco começou! Conclua tarefas para ajudar seu bebê a crescer forte e saudável.' },
-                    { level: 2, title: 'Bebê Engatinhando', iconName: 'profile', badge: 'Nível 2 • Aprendendo', color: 'var(--primary)', desc: 'Ganhando mobilidade e foco! Continue a sequência diária para comemorar cada nova conquista.' },
-                    { level: 3, title: 'Criança Ativa', iconName: 'profile', badge: 'Nível 3 • Curiosa & Forte', color: '#10b981', desc: 'Seus objetivos concluídos deram muita energia para aprender e explorar novos hábitos!' },
-                    { level: 4, title: 'Jovem Campeão', iconName: 'sparkle', badge: 'Nível 4 • Brilhante Master', color: '#f59e0b', desc: 'Consistência incrível! Seu jovem campeão está no topo do desenvolvimento e autoconhecimento!' }
-                  ]
-                },
-                dog: {
-                  name: 'Cachorrinho',
-                  iconName: 'paw',
-                  spritesheet: '/assets/evolution/dog-stages.png',
-                  gridLayout: '1x4', // Stage 1→2→3→4 horizontal
-                  stages: [
-                    { level: 1, title: 'Filhotinho', iconName: 'paw', badge: 'Nível 1 • Novo Amigo', color: '#3b82f6', desc: 'Seu filhotinho chegou! Complete tarefas e objetivos diários para dar energia e carinho a ele.' },
-                    { level: 2, title: 'Cão Brincalhão', iconName: 'paw', badge: 'Nível 2 • Ativo & Feliz', color: 'var(--primary)', desc: 'Sua constância deixa seu pet cheio de saúde! Continue realizando seus compromissos.' },
-                    { level: 3, title: 'Cão Leal & Forte', iconName: 'paw', badge: 'Nível 3 • Companheiro', color: '#10b981', desc: 'Foco impecável! Seu cão se tornou um verdadeiro protetor e parceiro da sua rotina produtiva.' },
-                    { level: 4, title: 'Cão Campeão', iconName: 'crown', badge: 'Nível 4 • Nobreza & Foco', color: '#8b5cf6', desc: 'Desempenho espetacular! Seu pet alcançou o nível máximo de lealdade e vitórias diárias!' }
-                  ]
-                },
-                cat: {
-                  name: 'Gatinho',
-                  iconName: 'paw',
-                  spritesheet: '/assets/evolution/cat-stages.png',
-                  gridLayout: '2x2',
-                  stages: [
-                    { level: 1, title: 'Filhote Curioso', iconName: 'paw', badge: 'Nível 1 • Despertando', color: '#3b82f6', desc: 'Seu gatinho está curioso! Crie e cumpra metas para desenvolver a agilidade e sabedoria dele.' },
-                    { level: 2, title: 'Gato Ágil', iconName: 'paw', badge: 'Nível 2 • Em Movimento', color: 'var(--primary)', desc: 'Movimentos precisos e rotina em dia! Mantenha seus hábitos para preservar o equilíbrio.' },
-                    { level: 3, title: 'Gato Majestoso', iconName: 'paw', badge: 'Nível 3 • Presença Forte', color: '#10b981', desc: 'Sua constância deu um porte majestoso ao seu pet. Foco e elegância total no seu dia a dia!' },
-                    { level: 4, title: 'Gato Rei Master', iconName: 'crown', badge: 'Nível 4 • Soberano Master', color: '#ec4899', desc: 'Foco supremo! Seu gatinho reina sobre a sua produtividade e paz de espírito.' }
-                  ]
-                }
-              };
-
-              const currentPetData = PET_EVOLUTIONS[growthPet] || PET_EVOLUTIONS.plant;
-              let stageIndex = 0;
-              if (weeklyTotal >= 15 || currentStreak >= 7 || completedGoalsCount >= 2) {
-                stageIndex = 3;
-              } else if (weeklyTotal >= 7 || currentStreak >= 4 || completedGoalsCount >= 1) {
-                stageIndex = 2;
-              } else if (weeklyTotal >= 2 || currentStreak >= 2) {
-                stageIndex = 1;
-              }
+              const currentPetData = EVOLUTION_CATEGORIES[growthPet] || EVOLUTION_CATEGORIES.plant;
+              const stageIndex = getEvolutionStage({
+                weeklyTotal,
+                currentStreak,
+                completedGoalsCount
+              }, currentPetData.stages.length);
               const currentStage = currentPetData.stages[stageIndex];
 
               return (
@@ -703,12 +652,7 @@ export default function HomeView() {
                       
                       {/* Seleção de Pet / Tipo de Crescimento */}
                       <div className="home-ritmo-pets-selector">
-                        {[
-                          { id: 'plant', label: 'Plantinha', iconName: 'seedling' },
-                          { id: 'baby', label: 'Bebê', iconName: 'profile' },
-                          { id: 'dog', label: 'Cachorrinho', iconName: 'paw' },
-                          { id: 'cat', label: 'Gatinho', iconName: 'paw' }
-                        ].map(pet => (
+                        {EVOLUTION_CATEGORY_LIST.map(pet => (
                           <button
                             key={pet.id}
                             onClick={() => handleSelectGrowthPet(pet.id)}
@@ -728,10 +672,10 @@ export default function HomeView() {
                               boxShadow: growthPet === pet.id ? '0 2px 8px rgba(0,0,0,0.15)' : 'none',
                               flexShrink: 0
                             }}
-                            title={`Escolher ${pet.label}`}
+                            title={`Escolher ${pet.name}`}
                           >
                             <MFIcon name={pet.iconName} size={14} />
-                            <span>{pet.label}</span>
+                            <span>{pet.name}</span>
                           </button>
                         ))}
                       </div>
@@ -832,42 +776,12 @@ export default function HomeView() {
                       <div className="wave wave-1" />
                       <div className="wave wave-2" />
                       <div className="wave wave-3" />
-                      {(() => {
-                        // Calcula background-position para recortar o estágio correto do spritesheet
-                        const layout = currentPetData.gridLayout;
-                        let bgSize, bgPosition;
-                        if (layout === '1x4') {
-                          // Dog: 4 colunas horizontais (cada estágio = 25% da largura)
-                          bgSize = '400% 100%';
-                          bgPosition = `${stageIndex * (100 / 3)}% 50%`;
-                        } else {
-                          // 2x2 grid: TL(0), TR(1), BL(2), BR(3)
-                          const col = stageIndex % 2;
-                          const row = Math.floor(stageIndex / 2);
-                          bgSize = '200% 200%';
-                          bgPosition = `${col * 100}% ${row * 100}%`;
-                        }
-                        return (
-                          <div
-                            key={`${growthPet}-${stageIndex}`}
-                            className="evolution-stage-image animate-fade-in"
-                            style={{
-                              width: '100%',
-                              maxWidth: '180px',
-                              aspectRatio: '1 / 1',
-                              backgroundImage: `url(${currentPetData.spritesheet})`,
-                              backgroundSize: bgSize,
-                              backgroundPosition: bgPosition,
-                              backgroundRepeat: 'no-repeat',
-                              borderRadius: '16px',
-                              zIndex: 2,
-                              filter: `drop-shadow(0 4px 20px ${currentStage.color}40)`,
-                              transition: 'background-position 0.4s ease, filter 0.4s ease',
-                            }}
-                            title={`${currentPetData.name} — ${currentStage.title}`}
-                          />
-                        );
-                      })()}
+                      <EvolutionStageImage
+                        asset={currentStage.asset}
+                        alt={currentStage.alt}
+                        color={currentStage.color}
+                        animationKey={`${growthPet}-${stageIndex}`}
+                      />
                       <span style={{ fontSize: '10px', fontWeight: '800', color: 'var(--text-main)', backgroundColor: 'var(--bg-card)', padding: '2px 8px', borderRadius: '10px', boxShadow: 'var(--shadow-sm)', border: '1px solid var(--border-light)', zIndex: 2, marginTop: '4px' }}>{currentStage.title}</span>
                     </div>
                   </div>
