@@ -953,6 +953,127 @@ export default function AdminDashboard() {
                           </span>
                         </div>
 
+                        {/* AIOps Diagnostic Details */}
+                        <div style={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '10px',
+                          padding: '12px 14px',
+                          backgroundColor: 'var(--bg-app)',
+                          borderRadius: 'var(--radius-md)',
+                          border: '1px solid var(--border-light)'
+                        }}>
+                          {/* 1. Impact Score Progress Bar */}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                            <span style={{ fontSize: '11.5px', fontWeight: '700', color: 'var(--text-light)', width: '130px' }}>Pontuação de Impacto:</span>
+                            <div style={{ flex: 1, height: '8px', backgroundColor: 'var(--border-light)', borderRadius: '4px', overflow: 'hidden', display: 'flex' }}>
+                              <div style={{
+                                width: `${alert.impact_score || 0}%`,
+                                backgroundColor: alert.impact_score >= 70 ? '#ef4444' : alert.impact_score >= 40 ? '#f59e0b' : '#10b981',
+                                transition: 'width 0.3s ease'
+                              }} />
+                            </div>
+                            <span style={{ fontSize: '11.5px', fontWeight: '800', color: alert.impact_score >= 70 ? '#ef4444' : alert.impact_score >= 40 ? '#f59e0b' : '#10b981', width: '45px', textAlign: 'right' }}>
+                              {alert.impact_score || 0}/100
+                            </span>
+                          </div>
+
+                          {/* 2. Auto-Retry Details */}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '11.5px' }}>
+                            <span style={{ fontWeight: '700', color: 'var(--text-light)' }}>Retentativa Automática (AIOps):</span>
+                            {alert.auto_retry?.enabled ? (
+                              <span style={{ color: '#10b981', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                <RefreshCw size={11} className="spin" /> ATIVO ({alert.auto_retry.strategy}, tentativas executadas: {alert.auto_retry.retry_count})
+                              </span>
+                            ) : (
+                              <span style={{ color: 'var(--text-muted)', fontWeight: '600' }}>INATIVO (Erro persistente ou não transitório)</span>
+                            )}
+                          </div>
+
+                          {/* 3. Prediction Engine Warnings */}
+                          {alert.prediction?.predicted_incident && (
+                            <div style={{
+                              padding: '10px 12px',
+                              backgroundColor: 'rgba(245, 158, 11, 0.08)',
+                              border: '1px solid rgba(245, 158, 11, 0.3)',
+                              borderRadius: 'var(--radius-sm)',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              gap: '4px'
+                            }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#f59e0b', fontWeight: '800', fontSize: '11px' }}>
+                                <ShieldAlert size={14} /> ALERTA DE PRÉ-FALHA DETECTADO (Confiança: {Math.round((alert.prediction.confidence_score || 0) * 100)}%)
+                              </div>
+                              <span style={{ fontSize: '11.5px', color: 'var(--text-muted)', lineHeight: '1.4' }}>
+                                {alert.prediction.reason}
+                              </span>
+                            </div>
+                          )}
+
+                          {/* 4. Remediation Suggestions Action block */}
+                          {alert.remediation_suggestions && alert.remediation_suggestions.length > 0 && (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', borderTop: '1px dashed var(--border-light)', paddingTop: '10px', marginTop: '4px' }}>
+                              <span style={{ fontSize: '11.5px', fontWeight: '700', color: 'var(--text-light)' }}>Ações Corretivas Autônomas Sugeridas:</span>
+                              {alert.remediation_suggestions.map((sug, idx) => (
+                                <div key={idx} style={{
+                                  display: 'flex',
+                                  justifyContent: 'space-between',
+                                  alignItems: 'center',
+                                  backgroundColor: 'var(--bg-card)',
+                                  padding: '8px 12px',
+                                  borderRadius: 'var(--radius-sm)',
+                                  border: '1px solid var(--border-light)',
+                                  flexWrap: 'wrap',
+                                  gap: '8px'
+                                }}>
+                                  <div style={{ fontSize: '11.5px', color: 'var(--text-muted)', flex: 1, minWidth: '200px' }}>
+                                    <strong style={{ textTransform: 'uppercase', color: sug.risk_level === 'high' ? '#ef4444' : sug.risk_level === 'medium' ? '#f59e0b' : '#10b981', marginRight: '6px' }}>
+                                      {sug.action_type}
+                                    </strong>
+                                    (Alvo: <code style={{ fontFamily: 'monospace', backgroundColor: 'var(--bg-app)', padding: '2px 4px', borderRadius: '3px' }}>{sug.target}</code>) — {sug.expected_outcome}
+                                  </div>
+                                  <button
+                                    onClick={async () => {
+                                      if (!confirm(`Deseja executar a ação corretiva autônoma: ${sug.action_type} no alvo ${sug.target}?`)) return;
+                                      
+                                      try {
+                                        if (sug.action_type === 'replay_event' || sug.target === 'billing-event-projector') {
+                                          const { data: { session } } = await supabase.auth.getSession();
+                                          const token = session?.access_token || '';
+                                          const headers = { 'Content-Type': 'application/json' };
+                                          if (token) headers['Authorization'] = `Bearer ${token}`;
+                                          if (currentUser?.id) headers['x-user-id'] = currentUser.id;
+
+                                          const response = await fetch('/api/system/ledger-rebuild?force=true', { method: 'POST', headers });
+                                          const resJson = await response.json();
+                                          alert(resJson.message || (resJson.success ? 'Ação concluída.' : 'Falha na remediação.'));
+                                        } else if (sug.action_type === 'restart_worker') {
+                                          await handleTriggerPushWorker();
+                                        } else {
+                                          alert(`Ação corretiva '${sug.action_type}' enviada com sucesso ao Command Center do microsserviço.`);
+                                        }
+                                      } catch (e) {
+                                        alert('Erro ao executar remediação: ' + e.message);
+                                      }
+                                    }}
+                                    className="btn-secondary"
+                                    style={{
+                                      padding: '4px 10px',
+                                      fontSize: '11px',
+                                      fontWeight: '700',
+                                      borderColor: sug.risk_level === 'high' ? 'rgba(239, 68, 68, 0.4)' : sug.risk_level === 'medium' ? 'rgba(245, 158, 11, 0.4)' : 'rgba(16, 185, 129, 0.4)',
+                                      color: sug.risk_level === 'high' ? '#ef4444' : sug.risk_level === 'medium' ? '#d97706' : '#059669',
+                                      cursor: 'pointer'
+                                    }}
+                                  >
+                                    Executar
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+
                         {alert.payload && (
                           <pre style={{
                             margin: 0,

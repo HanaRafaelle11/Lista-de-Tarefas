@@ -906,6 +906,15 @@ await runTest('Critical Alerts — Log de acesso não autorizado e consolidaçã
     assert.strictEqual(escalatedAlert.severity, 'critical', 'Severidade do alerta com count=5 deve ser promovida a critical');
     assert.ok(escalatedAlert.message.includes('[ESCALADO]'), 'Mensagem do alerta escalado deve conter prefixo [ESCALADO]');
 
+    // Validar contrato AIOps
+    assert.ok(typeof authAlert.impact_score === 'number', 'Deve possuir impact_score do tipo number');
+    assert.ok(authAlert.prediction, 'Deve possuir propriedade prediction');
+    assert.strictEqual(typeof authAlert.prediction.predicted_incident, 'boolean', 'prediction.predicted_incident deve ser boolean');
+    assert.ok(Array.isArray(authAlert.remediation_suggestions), 'remediation_suggestions deve ser um array');
+    assert.ok(authAlert.remediation_suggestions.length > 0, 'Deve possuir sugestões de remediação');
+    assert.ok(authAlert.auto_retry, 'Deve possuir propriedade auto_retry');
+    assert.strictEqual(typeof authAlert.auto_retry.enabled, 'boolean', 'auto_retry.enabled deve ser boolean');
+
     // Restaurar getUser
     supabaseAdmin.auth.getUser = originalGetUser;
   } finally {
