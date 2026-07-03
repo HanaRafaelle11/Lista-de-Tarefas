@@ -696,13 +696,17 @@ const handleLedgerRebuild = withAdminAuth(async (req, res) => {
     }
 });
 
+let driftCache = null;
+let driftCacheTime = 0;
+const DRIFT_CACHE_TTL_MS = 60 * 1000; // 60s
+
 const handleSystemAlerts = withAdminAuth(async (req, res) => {
     try {
         if (!supabaseAdmin) {
             return res.status(500).json({ error: 'SupabaseAdmin não configurado.' });
         }
 
-        const alerts = [];
+        const rawAlerts = [];
 
         // 1. Query Security Access Attempts (unauthorized_admin_access) in last 7 days
         try {
@@ -716,7 +720,7 @@ const handleSystemAlerts = withAdminAuth(async (req, res) => {
 
             if (securityEvents && securityEvents.length > 0) {
                 securityEvents.forEach(evt => {
-                    alerts.push({
+                    rawAlerts.push({
                         id: evt.id || `auth_${evt.created_at}`,
                         severity: 'critical',
                         origin: 'auth',
@@ -742,7 +746,7 @@ const handleSystemAlerts = withAdminAuth(async (req, res) => {
 
             if (webhookErrors && webhookErrors.length > 0) {
                 webhookErrors.forEach(err => {
-                    alerts.push({
+                    rawAlerts.push({
                         id: err.id || `webhook_${err.created_at}`,
                         severity: 'critical',
                         origin: 'billing',
@@ -768,7 +772,7 @@ const handleSystemAlerts = withAdminAuth(async (req, res) => {
 
             if (billingErrors && billingErrors.length > 0) {
                 billingErrors.forEach(err => {
-                    alerts.push({
+                    rawAlerts.push({
                         id: err.id || `billing_${err.created_at}`,
                         severity: 'medium',
                         origin: 'billing',
@@ -795,7 +799,7 @@ const handleSystemAlerts = withAdminAuth(async (req, res) => {
             if (workerErrors && workerErrors.length > 0) {
                 workerErrors.forEach(err => {
                     if (err.event_type !== 'unauthorized_admin_access') {
-                        alerts.push({
+                        rawAlerts.push({
                             id: err.id || `worker_${err.created_at}`,
                             severity: 'medium',
                             origin: 'sync',
@@ -810,57 +814,116 @@ const handleSystemAlerts = withAdminAuth(async (req, res) => {
             console.error('Alerts - Worker check failed:', e);
         }
 
-        // 5. Query Ledger Drift in Real Time
-        try {
-            const nowIso = new Date().toISOString();
-            const { data: activeSubs } = await supabaseAdmin
-                .from('subscriptions')
-                .select('user_id, current_period_end')
-                .eq('status', 'active')
-                .gt('current_period_end', nowIso);
+        // 5. Query/Check Ledger Drift in Real Time (with in-memory cache)
+        const nowMs = Date.now();
+        let driftAlerts = [];
 
-            const { data: activeEnts } = await supabaseAdmin
-                .from('user_entitlements')
-                .select('user_id, valid_until')
-                .eq('feature', 'pro_features')
-                .eq('status', 'active')
-                .gt('valid_until', nowIso);
+        if (driftCache && (nowMs - driftCacheTime < DRIFT_CACHE_TTL_MS)) {
+            driftAlerts = [...driftCache];
+        } else {
+            try {
+                const nowIso = new Date().toISOString();
+                const { data: activeSubs } = await supabaseAdmin
+                    .from('subscriptions')
+                    .select('user_id, current_period_end')
+                    .eq('status', 'active')
+                    .gt('current_period_end', nowIso);
 
-            const subUsers = new Set((activeSubs || []).map(s => s.user_id));
-            const entUsers = new Set((activeEnts || []).map(e => e.user_id));
+                const { data: activeEnts } = await supabaseAdmin
+                    .from('user_entitlements')
+                    .select('user_id, valid_until')
+                    .eq('feature', 'pro_features')
+                    .eq('status', 'active')
+                    .gt('valid_until', nowIso);
 
-            const subWithoutEnt = (activeSubs || []).filter(s => !entUsers.has(s.user_id));
-            const entWithoutSub = (activeEnts || []).filter(e => !subUsers.has(e.user_id));
+                const subUsers = new Set((activeSubs || []).map(s => s.user_id));
+                const entUsers = new Set((activeEnts || []).map(e => e.user_id));
 
-            if (subWithoutEnt.length > 0) {
-                alerts.push({
-                    id: `drift_sub_without_ent_${nowIso}`,
-                    severity: 'critical',
-                    origin: 'ledger',
-                    message: `${subWithoutEnt.length} usuários possuem assinatura ativa no gateway mas sem entitlements Pro.`,
-                    payload: { users: subWithoutEnt.map(s => ({ userId: s.user_id, expires: s.current_period_end })) },
-                    created_at: nowIso
-                });
+                const subWithoutEnt = (activeSubs || []).filter(s => !entUsers.has(s.user_id));
+                const entWithoutSub = (activeEnts || []).filter(e => !subUsers.has(e.user_id));
+
+                if (subWithoutEnt.length > 0) {
+                    driftAlerts.push({
+                        id: `drift_sub_without_ent_${nowIso}`,
+                        severity: 'critical',
+                        origin: 'ledger',
+                        message: `${subWithoutEnt.length} usuários possuem assinatura ativa no gateway mas sem entitlements Pro.`,
+                        payload: { users: subWithoutEnt.map(s => ({ userId: s.user_id, expires: s.current_period_end })) },
+                        created_at: nowIso
+                    });
+                }
+
+                if (entWithoutSub.length > 0) {
+                    driftAlerts.push({
+                        id: `drift_ent_without_sub_${nowIso}`,
+                        severity: 'medium',
+                        origin: 'ledger',
+                        message: `${entWithoutSub.length} usuários com acesso Pro ativo no Supabase, mas sem assinatura ativa no gateway.`,
+                        payload: { users: entWithoutSub.map(e => ({ userId: e.user_id, expires: e.valid_until })) },
+                        created_at: nowIso
+                    });
+                }
+
+                // Update cache
+                driftCache = driftAlerts;
+                driftCacheTime = nowMs;
+            } catch (e) {
+                console.error('Alerts - Drift check failed:', e);
             }
-
-            if (entWithoutSub.length > 0) {
-                alerts.push({
-                    id: `drift_ent_without_sub_${nowIso}`,
-                    severity: 'medium',
-                    origin: 'ledger',
-                    message: `${entWithoutSub.length} usuários com acesso Pro ativo no Supabase, mas sem assinatura ativa no gateway.`,
-                    payload: { users: entWithoutSub.map(e => ({ userId: e.user_id, expires: e.valid_until })) },
-                    created_at: nowIso
-                });
-            }
-        } catch (e) {
-            console.error('Alerts - Drift check failed:', e);
         }
 
-        // Ordenar cronologicamente decrescente
-        alerts.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+        // Deduplication & Aggregation (Spam Control) logic for raw alerts
+        const aggregated = new Map();
+        for (const alert of rawAlerts) {
+            let key = `${alert.origin}_${alert.severity}_`;
+            if (alert.origin === 'auth') {
+                key += `${alert.payload?.email || 'anon'}_${alert.payload?.path || 'unknown'}`;
+            } else if (alert.origin === 'billing') {
+                key += `${alert.payload?.event_id || alert.payload?.resource_id || alert.payload?.payment_id || 'unknown'}`;
+            } else if (alert.origin === 'sync') {
+                key += `${alert.payload?.event_type || 'unknown'}`;
+            } else {
+                key += `${alert.message}`;
+            }
 
-        return res.status(200).json(alerts);
+            if (aggregated.has(key)) {
+                const existing = aggregated.get(key);
+                existing.count = (existing.count || 1) + 1;
+                // Get earliest/oldest first_seen
+                if (new Date(alert.created_at) < new Date(existing.first_seen)) {
+                    existing.first_seen = alert.created_at;
+                }
+                // Get newest last_seen
+                if (new Date(alert.created_at) > new Date(existing.created_at)) {
+                    existing.created_at = alert.created_at;
+                    existing.last_seen = alert.created_at;
+                }
+                if (Array.isArray(existing.payloads)) {
+                    existing.payloads.push(alert.payload);
+                } else {
+                    existing.payloads = [existing.payload, alert.payload];
+                }
+            } else {
+                aggregated.set(key, {
+                    ...alert,
+                    count: 1,
+                    first_seen: alert.created_at,
+                    last_seen: alert.created_at,
+                    status: 'open'
+                });
+            }
+        }
+
+        // Combine logs with runtime computed drift alerts (drift alerts are not aggregated)
+        const finalAlerts = [
+            ...Array.from(aggregated.values()),
+            ...driftAlerts.map(d => ({ ...d, count: 1, first_seen: d.created_at, last_seen: d.created_at, status: 'open' }))
+        ];
+
+        // Ordenar cronologicamente decrescente
+        finalAlerts.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+        return res.status(200).json(finalAlerts);
     } catch (error) {
         return res.status(500).json({ error: 'Erro ao consolidar alertas.', message: error.message });
     }

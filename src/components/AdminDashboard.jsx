@@ -865,7 +865,7 @@ export default function AdminDashboard() {
                         }}
                       >
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px' }}>
-                          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                          <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
                             <span 
                               style={{ 
                                 fontSize: '10px', 
@@ -891,10 +891,32 @@ export default function AdminDashboard() {
                             >
                               {alert.origin.toUpperCase()}
                             </span>
+                            {alert.count > 1 && (
+                              <span 
+                                style={{ 
+                                  fontSize: '10px', 
+                                  fontWeight: '800', 
+                                  padding: '3px 8px', 
+                                  borderRadius: '4px', 
+                                  backgroundColor: '#F3F4F6', 
+                                  color: '#1F2937',
+                                  border: '1px solid #D1D5DB'
+                                }}
+                              >
+                                x{alert.count} REPETIÇÕES
+                              </span>
+                            )}
                             <strong style={{ fontSize: '14px', color: 'var(--text-main)' }}>{alert.message}</strong>
                           </div>
-                          <span style={{ fontSize: '11.5px', color: 'var(--text-muted)' }}>
-                            {new Date(alert.created_at).toLocaleString('pt-BR')}
+                          <span style={{ fontSize: '11.5px', color: 'var(--text-muted)', display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                            {alert.count > 1 ? (
+                              <>
+                                <span>Primeiro: {new Date(alert.first_seen).toLocaleString('pt-BR')}</span>
+                                <span>Último: {new Date(alert.last_seen).toLocaleString('pt-BR')}</span>
+                              </>
+                            ) : (
+                              new Date(alert.created_at).toLocaleString('pt-BR')
+                            )}
                           </span>
                         </div>
 

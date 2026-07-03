@@ -730,12 +730,20 @@ await runTest('Critical Alerts — Log de acesso não autorizado e consolidaçã
                       return {
                         order() {
                           return Promise.resolve({
-                            data: [{
-                              id: 'auth_alert_1',
-                              event_type: 'unauthorized_admin_access',
-                              metadata: { email: 'malicious@hacker.com' },
-                              created_at: new Date().toISOString()
-                            }],
+                            data: [
+                              {
+                                id: 'auth_alert_1',
+                                event_type: 'unauthorized_admin_access',
+                                metadata: { email: 'malicious@hacker.com', path: '/api/admin/some-secret-route' },
+                                created_at: new Date(Date.now() - 10000).toISOString()
+                              },
+                              {
+                                id: 'auth_alert_2',
+                                event_type: 'unauthorized_admin_access',
+                                metadata: { email: 'malicious@hacker.com', path: '/api/admin/some-secret-route' },
+                                created_at: new Date().toISOString()
+                              }
+                            ],
                             error: null
                           });
                         }
@@ -799,11 +807,6 @@ await runTest('Critical Alerts — Log de acesso não autorizado e consolidaçã
     // Importar dinamicamente a rota para testar o handler handleSystemAlerts
     const routesModule = await import('../api/[...routes].js');
     
-    // Obter a função handleSystemAlerts do modulo
-    let handleSystemAlertsFn = null;
-    const routesFileContent = await import('fs');
-    const path = await import('path');
-    
     // Para chamar o handler de rotas principal, simulamos a rota 'admin/system-alerts'
     const routerHandler = routesModule.default;
     
@@ -845,6 +848,12 @@ await runTest('Critical Alerts — Log de acesso não autorizado e consolidaçã
     assert.ok(webhookAlert, 'Deve conter o alerta de webhook (billing)');
     assert.strictEqual(authAlert.severity, 'critical', 'Severidade do alerta de auth deve ser critical');
     assert.strictEqual(webhookAlert.severity, 'critical', 'Severidade do alerta de webhook deve ser critical');
+    
+    // Validar a deduplicação / agrupamento de spam
+    assert.strictEqual(authAlert.count, 2, 'Dois eventos idênticos de auth devem ser agrupados com count = 2');
+    assert.ok(authAlert.first_seen, 'Deve possuir propriedade first_seen');
+    assert.ok(authAlert.last_seen, 'Deve possuir propriedade last_seen');
+    assert.strictEqual(authAlert.status, 'open', 'Deve possuir status open');
 
     // Restaurar getUser
     supabaseAdmin.auth.getUser = originalGetUser;
