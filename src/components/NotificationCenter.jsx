@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Bell, Check, Trash2, Search, Filter } from 'lucide-react';
 import { useAppContext } from '../contexts/AppContext';
+import MFIcon from './MFIcon';
 
 export default function NotificationCenter() {
   const {
@@ -80,13 +81,13 @@ export default function NotificationCenter() {
 
   const getNotificationIcon = (type) => {
     switch (type) {
-      case 'achievement': return '🏆';
-      case 'goal': return '🎯';
-      case 'habit': return '🌱';
-      case 'task': return '📋';
-      case 'focus': case 'pomodoro': return '🍅';
-      case 'system': case 'billing': return '🔔';
-      default: return '🔔';
+      case 'achievement': return <MFIcon name="trophy" size={14} color="#eab308" />;
+      case 'goal': return <MFIcon name="target" size={14} color="var(--primary)" />;
+      case 'habit': return <MFIcon name="sprout" size={14} color="#10b981" />;
+      case 'task': return <MFIcon name="check" size={14} color="var(--primary)" />;
+      case 'focus': case 'pomodoro': return <MFIcon name="bolt" size={14} color="var(--primary)" />;
+      case 'system': case 'billing': return <MFIcon name="bell" size={14} color="var(--primary)" />;
+      default: return <MFIcon name="bell" size={14} color="var(--text-light)" />;
     }
   };
 
@@ -194,7 +195,7 @@ export default function NotificationCenter() {
                 >
                   <div className="notification-item-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12.5px', fontWeight: '600' }}>
                     <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <span>{getNotificationIcon(n.type)}</span>
+                      <span style={{ display: 'inline-flex', alignItems: 'center' }}>{getNotificationIcon(n.type)}</span>
                       <span style={{ color: 'var(--text-main)' }}>{n.title}</span>
                     </span>
                     <span className="notification-item-time" style={{ fontSize: '10.5px', color: 'var(--text-muted)' }}>

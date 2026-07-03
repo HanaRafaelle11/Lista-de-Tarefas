@@ -16,7 +16,8 @@ export default function FocusView() {
     isAmbientPlaying,
     setIsAmbientPlaying,
     audioBlocked,
-    setAudioBlocked
+    setAudioBlocked,
+    openCustomAlert
   } = useAppContext();
   const pendingTasks = tasks.filter(t => !t.completed);
 
@@ -52,12 +53,7 @@ export default function FocusView() {
   const [tempFocus, setTempFocus] = useState(focusTime);
   const [tempBreak, setTempBreak] = useState(breakTime);
 
-  useEffect(() => {
-    if (showConfig) {
-      setTempFocus(focusTime);
-      setTempBreak(breakTime);
-    }
-  }, [showConfig, focusTime, breakTime]);
+
 
   const timerRef = useRef(null);
 
@@ -188,11 +184,11 @@ export default function FocusView() {
     const breakVal = parseInt(tempBreak, 10);
 
     if (isNaN(focusVal) || focusVal < 1 || focusVal > 120) {
-      alert('O tempo de foco deve ser entre 1 e 120 minutos.');
+      openCustomAlert('O tempo de foco deve ser entre 1 e 120 minutos.');
       return;
     }
     if (isNaN(breakVal) || breakVal < 1 || breakVal > 60) {
-      alert('O tempo de pausa deve ser entre 1 e 60 minutos.');
+      openCustomAlert('O tempo de pausa deve ser entre 1 e 60 minutos.');
       return;
     }
 
@@ -259,13 +255,13 @@ export default function FocusView() {
   const activeTask = pendingTasks.find(t => t.id === selectedTaskId);
 
   const ambientSounds = [
-    { value: 'none',            label: 'Nenhum',       emoji: '🔇' },
-    { value: 'rain.wav',        label: 'Chuva',        emoji: '🌧️' },
-    { value: 'forest.wav',      label: 'Floresta',     emoji: '🌲' },
-    { value: 'cafe.wav',        label: 'Cafeteria',    emoji: '☕' },
-    { value: 'ocean.wav',       label: 'Ondas do Mar', emoji: '🌊' },
-    { value: 'fireplace.wav',   label: 'Lareira',      emoji: '🔥' },
-    { value: 'white-noise.wav', label: 'Ruído Branco', emoji: '🤍' },
+    { value: 'none',            label: 'Nenhum' },
+    { value: 'rain.wav',        label: 'Chuva' },
+    { value: 'forest.wav',      label: 'Floresta' },
+    { value: 'cafe.wav',        label: 'Cafeteria' },
+    { value: 'ocean.wav',       label: 'Ondas do Mar' },
+    { value: 'fireplace.wav',   label: 'Lareira' },
+    { value: 'white-noise.wav', label: 'Ruído Branco' },
   ];
 
 
@@ -287,7 +283,13 @@ export default function FocusView() {
         <div className="focus-card-panel left-panel" style={{ backgroundColor: 'var(--bg-card)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-light)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
           
           <button 
-            onClick={() => setShowConfig(!showConfig)}
+            onClick={() => {
+              if (!showConfig) {
+                setTempFocus(focusTime);
+                setTempBreak(breakTime);
+              }
+              setShowConfig(!showConfig);
+            }}
             style={{ position: 'absolute', top: '20px', right: '20px', padding: '8px', color: 'var(--text-light)', background: 'transparent', cursor: 'pointer' }}
             title="Ajustar Tempos"
           >
@@ -418,7 +420,7 @@ export default function FocusView() {
                   style={{ width: '100%', padding: '8px', border: '1px solid var(--border-medium)', borderRadius: '6px', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)', fontSize: '13px' }}
                 >
                   {ambientSounds.map(sound => (
-                    <option key={sound.value} value={sound.value}>{sound.emoji} {sound.label}</option>
+                    <option key={sound.value} value={sound.value}>{sound.label}</option>
                   ))}
                 </select>
               </div>
@@ -472,7 +474,7 @@ export default function FocusView() {
                   backgroundColor: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)',
                   fontSize: '12px', color: '#92400e',
                 }}>
-                  <span>🔇</span>
+                  <VolumeX size={16} style={{ flexShrink: 0, color: '#92400e' }} />
                   <span>
                     <strong>Clique para ativar o som.</strong>{' '}
                     O navegador bloqueou a reprodução automática. Clique no botão ▶ acima para iniciar.
@@ -561,7 +563,7 @@ export default function FocusView() {
                 onClick={() => openPaywall('focus_bottom_upsell')}
                 style={{ padding: '6px 12px', fontSize: '10px', fontWeight: '600', backgroundColor: 'var(--primary-light)', color: 'var(--primary)', borderRadius: '6px', width: '100%', cursor: 'pointer' }}
               >
-                Testar Pro Grátis ⚡
+                Testar Pro Grátis
               </button>
             </div>
           )}

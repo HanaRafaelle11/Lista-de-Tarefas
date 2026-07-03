@@ -54,12 +54,12 @@ export default function PaywallModal() {
 
   const renderCheckoutForm = () => {
     const features = [
-      { t: "Coach MyFlowDay 🧠", d: "Insights profundos de IA baseados em dados reais, melhores ações recomendadas e análises comportamentais." },
-      { t: "Análises Avançadas 📊", d: "Gráficos interativos por categoria, prioridade e consistência no painel de Evolução." },
-      { t: "Google Calendar 📅", d: "Sincronização reativa de suas tarefas diretamente com a sua agenda externa do Google." },
-      { t: "Exportação de Dados 📁", d: "Exporte seus relatórios estruturados a qualquer momento em PDF, CSV ou imagem PNG." },
-      { t: "Histórico Ilimitado ♾️", d: "Elimine a barreira de 30 dias do plano gratuito. Visualize todos os seus dados desde o início." },
-      { t: "Foco Sem Limites ⏳", d: "Pomodoro customizável superior a 25 minutos para longas sessões de hiperfoco." }
+      { t: "Coach MyFlowDay", d: "Insights profundos de IA baseados em dados reais, melhores ações recomendadas e análises comportamentais." },
+      { t: "Análises Avançadas", d: "Gráficos interativos por categoria, prioridade e consistência no painel de Evolução." },
+      { t: "Google Calendar", d: "Sincronização reativa de suas tarefas diretamente com a sua agenda externa do Google." },
+      { t: "Exportação de Dados", d: "Exporte seus relatórios estruturados a qualquer momento em PDF, CSV ou imagem PNG." },
+      { t: "Histórico Ilimitado", d: "Elimine a barreira de 30 dias do plano gratuito. Visualize todos os seus dados desde o início." },
+      { t: "Foco Sem Limites", d: "Pomodoro customizável superior a 25 minutos para longas sessões de hiperfoco." }
     ];
 
     return (
@@ -69,7 +69,7 @@ export default function PaywallModal() {
             <Award size={36} />
           </div>
           <h2 style={{ fontSize: '24px', fontWeight: '800', color: '#ffffff', margin: '0 0 6px', fontFamily: 'var(--font-display)', letterSpacing: '-0.5px' }}>
-            MyFlowDay Pro ⚡
+            MyFlowDay Pro
           </h2>
           <p style={{ fontSize: '14px', color: '#e5e7eb', margin: 0, maxWidth: '440px', marginLeft: 'auto', marginRight: 'auto', lineHeight: '1.5' }}>
             Tenha acesso completo a ferramentas premium de autoconhecimento e acompanhe a sua evolução consciente.
@@ -114,7 +114,7 @@ export default function PaywallModal() {
               <span style={{ fontSize: '11px', color: '#3b82f6', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
                 {isReactivation ? 'Oferta de Reativação Pro' : 'Plano Mensal Recorrente'}
               </span>
-              <strong style={{ display: 'block', fontSize: '15px', color: '#ffffff', marginTop: '2px' }}>Acesso Total Pro ⚡</strong>
+              <strong style={{ display: 'block', fontSize: '15px', color: '#ffffff', marginTop: '2px' }}>Acesso Total Pro</strong>
             </div>
             <div style={{ textAlign: 'right' }}>
               {isReactivation ? (
@@ -162,7 +162,7 @@ export default function PaywallModal() {
           >
             {(isPro || userProfile?.plano === 'premium') 
               ? 'Você já possui uma assinatura Premium ativa' 
-              : (isReactivation ? 'Retomar MyFlowDay Pro com Desconto ⚡' : 'Assinar MyFlowDay Pro ⚡')}
+              : (isReactivation ? 'Retomar MyFlowDay Pro com Desconto' : 'Assinar MyFlowDay Pro')}
             <ExternalLink size={16} />
           </button>
 
@@ -206,7 +206,7 @@ export default function PaywallModal() {
           <Sparkles size={52} />
         </div>
         <h2 style={{ fontSize: '26px', fontWeight: '800', color: '#ffffff', margin: 0, fontFamily: 'var(--font-display)', letterSpacing: '-0.5px' }}>
-          🎉 Bem-vinda ao MyFlowDay Pro ⚡
+          Bem-vinda ao MyFlowDay Pro
         </h2>
         
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxWidth: '460px' }}>
@@ -235,7 +235,7 @@ export default function PaywallModal() {
               boxShadow: '0 4px 15px rgba(0,0,0,0.2)' 
             }}
           >
-            Explorar Recursos Pro 🚀
+            Explorar Recursos Pro
           </button>
         </div>
       </div>

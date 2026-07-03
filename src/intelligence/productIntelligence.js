@@ -17,7 +17,7 @@ export function generateInsights(tasks = [], events = []) {
   if (completed.length < 7) {
     return [{
       type: 'info',
-      emoji: '📊',
+      emoji: 'chart',
       confidence: 1.0,
       confidenceLevel: 'alta',
       sampleSize: tasks.length || 1,
@@ -44,7 +44,7 @@ export function generateInsights(tasks = [], events = []) {
   if (daysSinceLastCompletion > 5 && daysSinceLastCompletion !== Infinity) {
     insights.push({
       type: "risk",
-      emoji: "⚠️",
+      emoji: "warning",
       confidence: 0.85,
       message: `Detectamos inatividade superior a 5 dias. Que tal concluir uma tarefa simples hoje para recuperar o ritmo?`,
       action: "tasks"
@@ -70,7 +70,7 @@ export function generateInsights(tasks = [], events = []) {
     if (pctDrop > 0.40) {
       insights.push({
         type: "risk",
-        emoji: "⚠️",
+        emoji: "warning",
         confidence: 0.85,
         message: `Sua taxa de conclusão de tarefas caiu ${Math.round(pctDrop * 100)}% esta semana em comparação com a semana anterior. Que tal retomar o foco?`,
         action: "tasks"
@@ -100,7 +100,7 @@ export function generateInsights(tasks = [], events = []) {
   if (emergenteTitle) {
     insights.push({
       type: 'habit',
-      emoji: '🔥',
+      emoji: 'fire',
       confidence: 0.90,
       message: `Você completou a tarefa "${emergenteTitle}" ${emergenteCount} vezes recentemente. Que tal transformá-la em um Hábito diário oficial para ganhar mais pontos?`,
       action: 'habits'
@@ -133,7 +133,7 @@ export function generateInsights(tasks = [], events = []) {
     if (confidence >= 0.5) {
       insights.push({
         type: 'achievement',
-        emoji: '⚡',
+        emoji: 'bolt',
         confidence,
         message: `Foco Máximo: Você é mais produtivo no período da ${bestPeriod} (${Math.round(confidence * 100)}% das suas conclusões). Agende suas tarefas difíceis para este horário!`
       });
@@ -202,7 +202,7 @@ export function generateInsights(tasks = [], events = []) {
   if (bestDayIdx !== -1 && bestRate >= 0.6) {
     insights.push({
       type: "achievement",
-      emoji: "📅",
+      emoji: "calendar",
       confidence: bestRate,
       message: `Dia de Foco: ${dayNames[bestDayIdx]} é seu dia mais produtivo, com uma taxa de conclusão de ${Math.round(bestRate * 100)}% (de ${tasksScheduledPerDay[bestDayIdx]} tarefas).`,
       sampleSize: tasksScheduledPerDay[bestDayIdx]
@@ -215,7 +215,7 @@ export function generateInsights(tasks = [], events = []) {
     const failRate = totalScheduled > 0 ? worstCount / totalScheduled : 0;
     insights.push({
       type: "risk",
-      emoji: "📉",
+      emoji: "chart",
       confidence: failRate > 1 ? 1 : failRate,
       message: `Ritmo de Atenção: ${dayNames[worstDayIdx]} é o dia com mais tarefas atrasadas ou pendentes (${worstCount} de ${totalScheduled} tarefas). Tente programar menos atividades para este dia.`,
       sampleSize: totalScheduled
@@ -247,7 +247,7 @@ export function generateInsights(tasks = [], events = []) {
   if (bestCat && bestPct >= 0.75) {
     insights.push({
       type: 'achievement',
-      emoji: '🏆',
+      emoji: 'trophy',
       confidence: bestPct,
       message: `Alta Performance na categoria "${bestCat}": você conclui ${Math.round(bestPct * 100)}% das tarefas propostas. Excelente trabalho!`,
       sampleSize: catTotal[bestCat]
@@ -258,7 +258,7 @@ export function generateInsights(tasks = [], events = []) {
   if (insights.length === 0) {
     insights.push({
       type: 'suggestion',
-      emoji: '💡',
+      emoji: 'bulb',
       confidence: 0.60,
       message: 'Estamos analisando seus padrões. Organizar suas tarefas por prioridade (Alta, Média, Baixa) ajuda a reduzir a fadiga de decisão no início do dia.',
       sampleSize: tasks.length || 1
@@ -280,7 +280,7 @@ export function generateInsights(tasks = [], events = []) {
       } else if (ins.message?.includes('Foco Máximo')) {
         sampleSize = totalHourStats;
       } else if (ins.message?.includes('Dia de Foco')) {
-        sampleSize = totalDayStats;
+        sampleSize = ins.sampleSize || 1;
       } else if (ins.message?.includes('Performance')) {
         sampleSize = bestCat ? catTotal[bestCat] : completed.length;
       } else {

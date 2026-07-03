@@ -171,11 +171,11 @@ function defaultUserState() {
 // ─── Labels para UI ───────────────────────────────────────────────────────────
 
 export const STAGE_LABELS = {
-  new:       { label: 'Novo',       color: '#6366f1', emoji: '🌱' },
-  activated: { label: 'Ativado',    color: '#10b981', emoji: '⚡' },
-  engaged:   { label: 'Engajado',   color: '#f59e0b', emoji: '🔥' },
-  at_risk:   { label: 'Em Risco',   color: '#ef4444', emoji: '⚠️' },
-  churned:   { label: 'Inativo',    color: '#6b7280', emoji: '💤' },
+  new:       { label: 'Novo',       color: '#6366f1', iconName: 'seedling' },
+  activated: { label: 'Ativado',    color: '#10b981', iconName: 'bolt' },
+  engaged:   { label: 'Engajado',   color: '#f59e0b', iconName: 'fire' },
+  at_risk:   { label: 'Em Risco',   color: '#ef4444', iconName: 'warning' },
+  churned:   { label: 'Inativo',    color: '#6b7280', iconName: 'zzz' },
 };
 
 export function getUserStageLabel(stage) {

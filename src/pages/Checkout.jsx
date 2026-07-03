@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Zap, CreditCard, Copy, Hourglass, AlertCircle, Check, Sparkles } from 'lucide-react';
 import { useAppContext } from '../contexts/AppContext';
 import { profilesService } from '../services/profilesService';
@@ -81,7 +81,10 @@ export default function Checkout() {
   const { currentUser, isPro, userProfile, checkServerAccess } = useAppContext();
 
   // ID de sessão único gerado no mount para correlacionar eventos deste checkout
-  const sessionIdRef = useRef(Math.random().toString(36).substring(2) + Date.now().toString(36));
+  const sessionIdRef = useRef('');
+  useEffect(() => {
+    sessionIdRef.current = Math.random().toString(36).substring(2) + Date.now().toString(36);
+  }, []);
 
   // Aba selecionada: 'pix' | 'card'
   const [paymentMethod, setPaymentMethod] = useState('pix');
@@ -132,27 +135,35 @@ export default function Checkout() {
     } catch (e) {
       console.warn('[Checkout Log Error]', e);
     }
-  }, [currentUser?.id, paymentMethod, email]);
+  }, [currentUser, paymentMethod, email]);
 
   // Sincronização de usuário logado
   useEffect(() => {
     if (currentUser?.email && !email) {
-      setEmail(currentUser.email);
+      setTimeout(() => {
+        setEmail(currentUser.email);
+      }, 0);
     }
-  }, [currentUser?.email, email]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUser?.email]);
+
+  const hasInitializedName = useRef(false);
 
   useEffect(() => {
-    if (userProfile && !firstName && !lastName) {
+    if (userProfile && !hasInitializedName.current) {
       const fullName = userProfile.name || userProfile.nickname || '';
       if (fullName) {
         const parts = fullName.trim().split(/\s+/);
         const first = parts[0] || '';
         const last = parts.slice(1).join(' ') || '';
-        if (isValidName(first)) setFirstName(first);
-        if (isValidName(last)) setLastName(last);
+        setTimeout(() => {
+          if (isValidName(first)) setFirstName(first);
+          if (isValidName(last)) setLastName(last);
+        }, 0);
+        hasInitializedName.current = true;
       }
     }
-  }, [userProfile, firstName, lastName]);
+  }, [userProfile]);
 
   // Polling automático de confirmação de Pagamento (Pix ou Cartão)
   useEffect(() => {
@@ -312,7 +323,6 @@ export default function Checkout() {
           setStatus('success');
         } else {
           setStatus('card_pending');
-          startPaymentMonitor(data.invoiceId || data.id);
         }
       }
     } catch (err) {
@@ -329,7 +339,6 @@ export default function Checkout() {
       <div style={{ marginBottom: '24px' }}>
         <button 
           onClick={() => {
-            clearPaymentMonitors();
             window.location.href = '/?app=1';
           }}
           style={{ background: 'none', border: 'none', color: 'rgba(255, 255, 255, 0.6)', fontSize: '13px', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
@@ -432,7 +441,7 @@ export default function Checkout() {
               onClick={() => setPaymentMethod('pix')}
               style={{ flex: 1, padding: '12px', borderRadius: '10px', border: '1px solid', borderColor: paymentMethod === 'pix' ? '#10b981' : 'rgba(255, 255, 255, 0.1)', backgroundColor: paymentMethod === 'pix' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(255, 255, 255, 0.03)', color: '#ffffff', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
             >
-              <span>❖</span> Pix
+              Pix
             </button>
             <button
               type="button"

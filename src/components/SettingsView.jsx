@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Settings, User, LogOut, Sun, Moon, Check, Database, RefreshCw, X, FileText, ChevronRight, Download, Award, Target, LayoutGrid, Calendar, Inbox, Trash2, Bell, Smartphone, Palette, Globe, Book, Monitor, Shield, MessageSquare, AlertTriangle, AlertCircle, Paperclip } from 'lucide-react';
+import { Settings, User, LogOut, Sun, Moon, Check, Database, RefreshCw, X, FileText, ChevronRight, Download, Award, Target, LayoutGrid, Calendar, Inbox, Trash2, Bell, Smartphone, Palette, Globe, Book, Monitor, Shield, MessageSquare, AlertTriangle, AlertCircle, Paperclip, BellOff, CheckCircle, BellRing } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import { useNotifications } from '../hooks/useNotifications';
+import MFIcon from './MFIcon';
 import { useAppContext } from '../contexts/AppContext';
 import { exportAllTasksToCalendar } from '../services/googleCalendarService';
 import { calcStreak } from '../hooks/useAchievements';
@@ -247,37 +248,31 @@ export default function SettingsView() {
     }
   };
 
-  const handleMfaDisable = async () => {
-    if (!window.confirm('Tem certeza que deseja desativar a Autenticação em Duas Etapas (MFA)? Sua conta ficará menos protegida.')) return;
-    setLoading(true);
-    setMfaError(null);
-    setMfaSuccess(null);
-    try {
-      const { error } = await supabase.auth.mfa.unenroll({ factorId: mfaFactorId });
-      if (error) throw error;
-      
-      setMfaSuccess('MFA desativado com sucesso.');
-      setMfaFactorId(null);
-      setMfaStatus('unconfigured');
-    } catch (err) {
-      setMfaError('Erro ao desativar MFA: ' + err.message);
-    } finally {
-      setLoading(false);
-    }
+  const handleMfaDisable = () => {
+    openCustomConfirm(
+      'Tem certeza que deseja desativar a Autenticação em Duas Etapas (MFA)? Sua conta ficará menos protegida.',
+      'Desativar MFA',
+      async () => {
+        setLoading(true);
+        setMfaError(null);
+        setMfaSuccess(null);
+        try {
+          const { error } = await supabase.auth.mfa.unenroll({ factorId: mfaFactorId });
+          if (error) throw error;
+          
+          setMfaSuccess('MFA desativado com sucesso.');
+          setMfaFactorId(null);
+          setMfaStatus('unconfigured');
+        } catch (err) {
+          setMfaError('Erro ao desativar MFA: ' + err.message);
+        } finally {
+          setLoading(false);
+        }
+      }
+    );
   };
 
-  const handlePasswordReset = async () => {
-    setLoading(true);
-    try {
-      const { error } = await supabase.auth.resetPasswordForEmail(currentUser.email);
-      if (error) throw error;
-      alert('Email de redefinição de senha enviado!');
-    } catch (e) {
-      alert('Erro ao enviar email: ' + e.message);
-    } finally {
-      setLoading(false);
-    }
-  };
+
 
   const handleDeleteAccount = async () => {
     openCustomConfirm(
@@ -314,13 +309,21 @@ export default function SettingsView() {
   };
 
   const handleExportGoogleCalendar = () => {
-    exportAllTasksToCalendar(tasks);
-    window.open('https://calendar.google.com/calendar/r/settings/export', '_blank');
+    try {
+      exportAllTasksToCalendar(tasks);
+      window.open('https://calendar.google.com/calendar/r/settings/export', '_blank');
+    } catch (err) {
+      openCustomAlert(err.message, "Calendário");
+    }
     setIsSyncModalOpen(false);
   };
 
   const handleExportIcsOnly = () => {
-    exportAllTasksToCalendar(tasks);
+    try {
+      exportAllTasksToCalendar(tasks);
+    } catch (err) {
+      openCustomAlert(err.message, "Calendário");
+    }
     setIsSyncModalOpen(false);
   };
 
@@ -358,7 +361,7 @@ export default function SettingsView() {
     }
     const printWindow = window.open("", "_blank");
     if (!printWindow) {
-      alert("Por favor, libere popups para gerar o relatório em PDF.");
+      openCustomAlert("Por favor, libere popups para gerar o relatório em PDF.");
       return;
     }
 
@@ -372,14 +375,14 @@ export default function SettingsView() {
         <td style="padding: 8px; border-bottom: 1px solid #ddd; font-size: 13px;">${t.title}</td>
         <td style="padding: 8px; border-bottom: 1px solid #ddd; font-size: 13px;">${t.category || 'Geral'}</td>
         <td style="padding: 8px; border-bottom: 1px solid #ddd; font-size: 13px;">${t.priority}</td>
-        <td style="padding: 8px; border-bottom: 1px solid #ddd; font-size: 13px;">${t.completed ? 'Concluída ✅' : 'Pendente ⏳'}</td>
+        <td style="padding: 8px; border-bottom: 1px solid #ddd; font-size: 13px;">${t.completed ? 'Concluída' : 'Pendente'}</td>
       </tr>
     `).join('');
 
     const goalsHtml = goalsList.map(g => `
       <tr>
-        <td style="padding: 8px; border-bottom: 1px solid #ddd; font-size: 13px;">${g.icon || '🎯'} ${g.title}</td>
-        <td style="padding: 8px; border-bottom: 1px solid #ddd; font-size: 13px;">${g.status === 'completed' ? 'Alcançado 🏆' : 'Ativo ⚡'}</td>
+        <td style="padding: 8px; border-bottom: 1px solid #ddd; font-size: 13px;">${g.title}</td>
+        <td style="padding: 8px; border-bottom: 1px solid #ddd; font-size: 13px;">${g.status === 'completed' ? 'Alcançado' : 'Ativo'}</td>
       </tr>
     `).join('');
 
@@ -405,7 +408,7 @@ export default function SettingsView() {
           </style>
         </head>
         <body>
-          <h1>Relatório de Evolução MyFlowDay ⚡</h1>
+          <h1>Relatório de Evolução MyFlowDay</h1>
           <div class="subtitle">Gerado em: ${today} | Score de Consistência Atual: ${consistencyScore}/100</div>
 
           <h2>Objetivos</h2>
@@ -486,7 +489,7 @@ export default function SettingsView() {
     // Header Branding
     ctx.fillStyle = '#ffffff';
     ctx.font = 'bold 24px sans-serif';
-    ctx.fillText("MyFlowDay ⚡", 40, 60);
+    ctx.fillText("MyFlowDay", 40, 60);
 
     ctx.fillStyle = '#94a3b8';
     ctx.font = '14px sans-serif';
@@ -549,7 +552,7 @@ export default function SettingsView() {
 
     drawStat("Tarefas Concluídas", completedTasksCount, 160);
     drawStat("Objetivos Ativos", activeGoalsCount, 240);
-    drawStat("Streak Atual", `${streak} ${streak === 1 ? 'dia' : 'dias'} 🔥`, 320);
+    drawStat("Streak Atual", `${streak} ${streak === 1 ? 'dia' : 'dias'}`, 320);
 
     // Footer message
     ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
@@ -569,15 +572,15 @@ export default function SettingsView() {
   const handleSendFeedback = async () => {
     const trimmed = feedbackText.trim();
     if (!trimmed) {
-      alert('Por favor, escreva seu feedback antes de enviar.');
+      openCustomAlert('Por favor, escreva seu feedback antes de enviar.');
       return;
     }
     if (trimmed.length < 5) {
-      alert('Por favor, digite um feedback com pelo menos 5 caracteres para nos ajudar a entender.');
+      openCustomAlert('Por favor, digite um feedback com pelo menos 5 caracteres para nos ajudar a entender.');
       return;
     }
     if (trimmed.length > 2000) {
-      alert('O feedback é longo demais (máximo 2000 caracteres).');
+      openCustomAlert('O feedback é longo demais (máximo 2000 caracteres).');
       return;
     }
 
@@ -724,16 +727,56 @@ export default function SettingsView() {
 
   const renderTrashTab = () => {
     const hasItems = deletedTasks.length > 0 || deletedGoals.length > 0;
+
+    const handleDeleteAll = () => {
+      openCustomConfirm(
+        `Tem certeza que deseja excluir permanentemente todos os ${deletedTasks.length + deletedGoals.length} itens da lixeira? Esta ação não pode ser desfeita.`,
+        'Excluir tudo permanentemente',
+        async () => {
+          for (const task of deletedTasks) {
+            await handleDeleteTaskPermanent(task.id, true);
+          }
+          for (const goal of deletedGoals) {
+            await handleDeleteGoalPermanent(goal.id, true);
+          }
+        }
+      );
+    };
     
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-        <div style={{ padding: '16px', backgroundColor: 'rgba(239, 68, 68, 0.05)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(239, 68, 68, 0.1)', fontSize: '13px', color: 'var(--text-muted)' }}>
-          ⚠️ Os itens excluídos permanecem na lixeira por 30 dias antes de serem eliminados permanentemente de forma automática.
+        <div style={{ padding: '16px', backgroundColor: 'rgba(239, 68, 68, 0.05)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(239, 68, 68, 0.1)', fontSize: '13px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <MFIcon name="warning" size={16} color="var(--prio-alta-text)" /> Os itens excluídos permanecem na lixeira por 30 dias antes de serem eliminados permanentemente de forma automática.
         </div>
+
+        {hasItems && (
+          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+            <button
+              onClick={handleDeleteAll}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '10px 18px',
+                fontSize: '13px',
+                fontWeight: '700',
+                color: '#ffffff',
+                backgroundColor: 'var(--danger)',
+                border: 'none',
+                borderRadius: 'var(--radius-sm, 8px)',
+                cursor: 'pointer',
+                boxShadow: '0 2px 8px rgba(239, 68, 68, 0.3)',
+                transition: 'all 0.2s'
+              }}
+            >
+              <Trash2 size={14} /> Excluir tudo
+            </button>
+          </div>
+        )}
 
         {!hasItems ? (
           <div style={{ textAlign: 'center', padding: '48px 24px', backgroundColor: 'var(--bg-card)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-light)' }}>
-            <span style={{ fontSize: '32px' }}>🗑️</span>
+            <MFIcon name="trash" size={32} color="var(--text-light)" />
             <h3 style={{ fontSize: '16px', fontWeight: '700', marginTop: '12px', color: 'var(--text-main)' }}>Lixeira Vazia</h3>
             <p style={{ fontSize: '13px', color: 'var(--text-light)', marginTop: '4px' }}>
               Nenhuma tarefa ou objetivo foi removido recentemente.
@@ -862,13 +905,7 @@ export default function SettingsView() {
               <span style={{ fontSize: '12px', color: 'var(--text-light)', textTransform: 'uppercase' }}>Email</span>
               <p style={{ fontSize: '15px', color: 'var(--text-main)', fontWeight: '500' }}>{currentUser.email}</p>
             </div>
-            <button 
-              onClick={handlePasswordReset} 
-              disabled={loading}
-              style={{ alignSelf: 'flex-start', marginTop: '16px', color: 'var(--primary)', fontWeight: '600', fontSize: '14px', padding: '8px 16px', backgroundColor: 'var(--primary-light)', borderRadius: '6px' }}
-            >
-              Redefinir Senha
-            </button>
+
           </div>
         </Card>
 
@@ -1420,7 +1457,7 @@ export default function SettingsView() {
                   </div>
                   <button
                     id="notifications-test-btn"
-                    onClick={() => notifications.sendNotification('Flowday 🔔', {
+                    onClick={() => notifications.sendNotification('Flowday', {
                       body: 'Notificações estão funcionando! Você será avisado sobre suas tarefas.',
                       tag: 'flowday-test',
                     })}
@@ -1516,8 +1553,8 @@ export default function SettingsView() {
             }}
           >
             {feedbackStatus === 'sending' && <><span>Enviando...</span></>}
-            {feedbackStatus === 'sent' && <><span>✅ Enviado!</span></>}
-            {feedbackStatus === 'error' && <><span>❌ Erro!</span></>}
+            {feedbackStatus === 'sent' && <><span>Enviado!</span></>}
+            {feedbackStatus === 'error' && <><span>Erro!</span></>}
             {feedbackStatus === 'idle' && <><span>Enviar Feedback</span></>}
           </button>
           {feedbackStatus === 'sent' && <p style={{ fontSize: '12px', color: '#22c55e', marginTop: '8px' }}>Obrigado pelo seu feedback!</p>}
@@ -1640,7 +1677,7 @@ export default function SettingsView() {
                   width: '100%',
                 }}
               >
-                <span style={{ fontSize: '24px' }}>📥</span>
+                <div style={{ color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Download size={24} /></div>
                 <div>
                   <strong style={{ display: 'block', fontSize: '13px', color: 'var(--text-main)' }}>Baixar arquivo .ics</strong>
                   <span style={{ fontSize: '11px', color: 'var(--text-light)' }}>Apenas exporta e baixa o arquivo de calendário para programas locais.</span>
@@ -1667,7 +1704,7 @@ export default function SettingsView() {
                 onClick={async () => {
                   setIsDeleteAllTasksModalOpen(false);
                   await handleDeleteAllTasks();
-                  alert('Todas as tarefas foram excluídas com sucesso.');
+                  openCustomAlert('Todas as tarefas foram excluídas com sucesso.');
                 }} 
                 style={{ padding: '8px 16px', borderRadius: '6px', background: '#ef4444', color: 'white', border: 'none', cursor: 'pointer' }}
               >

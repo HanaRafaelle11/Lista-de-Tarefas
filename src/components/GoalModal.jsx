@@ -72,7 +72,7 @@ function getLocalDateString(date = new Date()) {
 }
 
 export default function GoalModal({ isOpen, onClose, onSave, onDelete, editingGoal }) {
-  const { currentUser } = useAppContext();
+  const { currentUser, openCustomAlert } = useAppContext();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [color, setColor] = useState('hsl(243, 75%, 59%)');
@@ -96,7 +96,7 @@ export default function GoalModal({ isOpen, onClose, onSave, onDelete, editingGo
       const { goalsService } = await import('../services/goalsService');
       const result = await goalsService.uploadAttachment(currentUser.id, file);
       if (result.error) {
-        alert('Erro ao fazer upload do arquivo: ' + result.error.message);
+        openCustomAlert('Erro ao fazer upload do arquivo: ' + result.error.message);
       } else {
         setAttachments(prev => [...prev, {
           name: result.name,
@@ -107,7 +107,7 @@ export default function GoalModal({ isOpen, onClose, onSave, onDelete, editingGo
         }]);
       }
     } catch (err) {
-      alert('Erro inesperado: ' + err.message);
+      openCustomAlert('Erro inesperado: ' + err.message);
     } finally {
       setUploading(false);
       e.target.value = '';
@@ -158,7 +158,7 @@ export default function GoalModal({ isOpen, onClose, onSave, onDelete, editingGo
     if (!editingGoal && targetDate) {
       const todayStr = getLocalDateString();
       if (targetDate < todayStr) {
-        alert('Objetivos não podem ser criados em datas passadas.');
+        openCustomAlert('Objetivos não podem ser criados em datas passadas.');
         return;
       }
     }
@@ -167,7 +167,7 @@ export default function GoalModal({ isOpen, onClose, onSave, onDelete, editingGo
       const start = new Date(`1970-01-01T${startTime}:00`);
       const end = new Date(`1970-01-01T${endTime}:00`);
       if (end <= start) {
-        alert('O horário final deve ser posterior ao horário inicial.');
+        openCustomAlert('O horário final deve ser posterior ao horário inicial.');
         return;
       }
     }
@@ -289,7 +289,13 @@ export default function GoalModal({ isOpen, onClose, onSave, onDelete, editingGo
                   transition: 'border-color 0.2s'
                 }}
               >
-                {uploading ? 'Fazendo upload...' : '📎 Escolher arquivo / imagem (Max 5MB)'}
+                {uploading ? (
+                  'Fazendo upload...'
+                ) : (
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                    <LucideIcons.Paperclip size={14} /> Escolher arquivo / imagem (Max 5MB)
+                  </span>
+                )}
               </label>
 
               {attachments.length > 0 && (

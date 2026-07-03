@@ -1,4 +1,5 @@
-import { useAppContext } from '../../contexts/AppContext';
+import { useContext } from 'react';
+import { AppContext } from '../../contexts/AppContext';
 import { tokens } from './tokens';
 
 /**
@@ -6,12 +7,7 @@ import { tokens } from './tokens';
  * dynamically resolved for dark/light modes.
  */
 export function useTheme() {
-  let context = null;
-  try {
-    context = useAppContext();
-  } catch (e) {
-    // Defensively handle outside AppProvider (e.g. static layouts)
-  }
+  const context = useContext(AppContext);
 
   const theme = context?.theme || 'dark'; // Default to dark as primary brand mode
   const isDark = theme === 'dark' || (theme === 'system' && typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches);

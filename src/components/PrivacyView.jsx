@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowLeft, ShieldCheck, Mail, Building2, Eye, Lock, FileText, Database, ShieldAlert, Calendar, Globe } from 'lucide-react';
+import { ArrowLeft, ShieldCheck, Mail, Building2, Eye, Lock, FileText, Database, ShieldAlert, Calendar, Globe, Check } from 'lucide-react';
 import { getLogo } from '../design-system/branding/logo';
 
 export default function PrivacyView({ onGoBack, onNavigateToTerms }) {
@@ -15,7 +15,7 @@ export default function PrivacyView({ onGoBack, onNavigateToTerms }) {
             <img 
               src={logo.src} 
               alt={logo.alt} 
-              style={{ height: '36px', width: 'auto', objectFit: 'contain' }} 
+              style={{ height: '42px', width: 'auto', objectFit: 'contain' }} 
             />
           </div>
           
@@ -165,7 +165,7 @@ export default function PrivacyView({ onGoBack, onNavigateToTerms }) {
             <li>Suporte e atendimento ao cliente.</li>
           </ul>
           <div style={{ borderLeft: '3px solid #10B981', backgroundColor: 'rgba(16, 185, 129, 0.05)', borderRadius: '0 8px 8px 0', padding: '14px 18px', fontSize: '14px', color: '#10B981', fontWeight: '500' }}>
-            ✦ Nós nunca utilizamos seus dados pessoais para fins de publicidade, e jamais vendemos ou compartilhamos informações para remarketing comportamental.
+            Nós nunca utilizamos seus dados pessoais para fins de publicidade, e jamais vendemos ou compartilhamos informações para remarketing comportamental.
           </div>
         </section>
 
@@ -277,7 +277,7 @@ export default function PrivacyView({ onGoBack, onNavigateToTerms }) {
               <div style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', color: '#22D3EE', marginBottom: '2px' }}>Você está aqui</div>
               <div style={{ fontSize: '15px', fontWeight: 600, color: '#22D3EE' }}>Política de Privacidade</div>
             </div>
-            <div style={{ marginLeft: 'auto', color: '#22D3EE', fontSize: '18px' }}>✓</div>
+            <div style={{ marginLeft: 'auto', color: '#22D3EE', display: 'flex', alignItems: 'center' }}><Check size={18} /></div>
           </div>
           
           <div 

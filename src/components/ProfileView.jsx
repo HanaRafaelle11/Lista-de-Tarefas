@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { User, Shield, Briefcase, FileText, Camera, Trash2, CheckCircle2 } from 'lucide-react';
+import { User, Shield, Briefcase, FileText, Camera, Trash2, CheckCircle2, Sun, Moon, Palette } from 'lucide-react';
 import { useAppContext } from '../contexts/AppContext';
 import DefaultAvatar from './DefaultAvatar';
 
@@ -11,7 +11,8 @@ export default function ProfileView() {
     handleUploadAvatar, 
     handleDeleteAvatar,
     theme,
-    setTheme
+    setTheme,
+    openCustomConfirm
   } = useAppContext();
 
   // Estados locais do form
@@ -47,7 +48,7 @@ export default function ProfileView() {
         profession,
         bio
       });
-      setSuccessMsg('Perfil atualizado com sucesso! ⚡');
+      setSuccessMsg('Perfil atualizado com sucesso!');
       setTimeout(() => setSuccessMsg(''), 3000);
     } catch (err) {
       setErrorMsg('Erro ao atualizar perfil: ' + err.message);
@@ -66,7 +67,7 @@ export default function ProfileView() {
 
     try {
       await handleUploadAvatar(file);
-      setSuccessMsg('Avatar atualizado com sucesso! 📸');
+      setSuccessMsg('Avatar atualizado com sucesso!');
       setTimeout(() => setSuccessMsg(''), 3000);
     } catch (err) {
       setErrorMsg(err.message || 'Erro ao carregar imagem de avatar.');
@@ -75,21 +76,26 @@ export default function ProfileView() {
     }
   };
 
-  const handleDeletePhoto = async () => {
-    if (!window.confirm('Deseja remover sua foto de perfil?')) return;
-    setErrorMsg('');
-    setSuccessMsg('');
-    setLoading(true);
+  const handleDeletePhoto = () => {
+    openCustomConfirm(
+      'Deseja remover sua foto de perfil?',
+      'Remover Foto',
+      async () => {
+        setErrorMsg('');
+        setSuccessMsg('');
+        setLoading(true);
 
-    try {
-      await handleDeleteAvatar();
-      setSuccessMsg('Foto de perfil removida!');
-      setTimeout(() => setSuccessMsg(''), 3000);
-    } catch (err) {
-      setErrorMsg('Erro ao remover foto.');
-    } finally {
-      setLoading(false);
-    }
+        try {
+          await handleDeleteAvatar();
+          setSuccessMsg('Foto de perfil removida!');
+          setTimeout(() => setSuccessMsg(''), 3000);
+        } catch (err) {
+          setErrorMsg('Erro ao remover foto.');
+        } finally {
+          setLoading(false);
+        }
+      }
+    );
   };
 
   const getInitials = () => {
@@ -261,7 +267,7 @@ export default function ProfileView() {
         {/* Bloco de Aparência (Tema) */}
         <div style={{ backgroundColor: 'var(--bg-card)', padding: '24px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-light)', display: 'flex', flexDirection: 'column', gap: '12px' }}>
           <h3 style={{ fontSize: '16px', fontWeight: '700', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
-            🌓 Aparência
+            <Palette size={18} /> Aparência
           </h3>
           <p style={{ fontSize: '12.5px', color: 'var(--text-light)', margin: 0 }}>
             Escolha o tema do aplicativo (salvo localmente).
@@ -282,7 +288,7 @@ export default function ProfileView() {
                 textAlign: 'center'
               }}
             >
-              ☀️ Claro
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}><Sun size={14} /> Claro</span>
             </button>
             <button
               type="button"
@@ -299,7 +305,7 @@ export default function ProfileView() {
                 textAlign: 'center'
               }}
             >
-              🌑 Escuro
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}><Moon size={14} /> Escuro</span>
             </button>
           </div>
         </div>

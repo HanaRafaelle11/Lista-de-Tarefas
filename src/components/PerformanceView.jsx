@@ -3,7 +3,7 @@ import {
   Award, TrendingUp, Clock, Calendar, ShieldAlert, Zap, BarChart2,
   CheckCircle2, AlertTriangle, ArrowUpRight, Flame, Trophy, Shield,
   Sunrise, Sun, Sunset, Moon, Radar, Target, Lightbulb, CalendarDays,
-  AlarmClock, Leaf, Activity
+  AlarmClock, Leaf, Activity, CheckCircle, Lock
 } from 'lucide-react';
 import { useAppContext } from '../contexts/AppContext';
 import Skeleton from './Skeleton';
@@ -143,7 +143,7 @@ export default function PerformanceView() {
     const maxVal = Math.max(...days, 1);
     const dayNames = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
     
-    // Map each day to a performance level (no emojis — use CSS/icon instead)
+    // Map each day to a performance level
     const radarData = days.map((val, idx) => {
       const pct = (val / maxVal) * 100;
       let level = 'low';    // red
@@ -242,9 +242,6 @@ export default function PerformanceView() {
       }
 
       // Cálculo de Saúde (reduz 5% por dia estagnado)
-      // NOTA TÉCNICA: A fórmula de Saúde possui peso de 70% para o progresso de tarefas (progressPct) 
-      // e 30% para a consistência (ritmo de atividade).
-      // A inatividade penaliza em 5% os 30% de consistência a cada dia inativo (daysStagnant).
       let health = Math.round(progressPct * 0.7 + (100 - Math.min(100, daysStagnant * 5)) * 0.3);
       
       // Se não há NENHUMA tarefa concluída ou vinculada, a saúde do objetivo não pode ser avaliada como positiva.
@@ -534,9 +531,6 @@ export default function PerformanceView() {
     return map[icon] || <Activity size={size} color="var(--primary)" />;
   };
 
-  // Zero state top-level: não há nenhuma tarefa concluída nem objetivo
-  const hasNoData = completedTasks.length === 0 && activeGoals.length === 0;
-
   return (
     <div className="performance-view-container animate-fade-in" style={{ padding: '24px 0' }}>
       
@@ -628,21 +622,21 @@ export default function PerformanceView() {
               onClick={() => setShowHealthExplanation(!showHealthExplanation)}
               type="button"
             >
-              <span>🎯 Detalhamento do Score</span>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}><Target size={14} /> Detalhamento do Score</span>
               <span>{showHealthExplanation ? '▲' : '▼'}</span>
             </button>
             {showHealthExplanation && (
               <div className="health-accordion-content animate-fade-in" style={{ padding: '16px', background: 'var(--bg-card)', border: '1px solid var(--border-light)', borderRadius: '0 0 var(--radius-md) var(--radius-md)' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                   <p style={{ fontSize: '13px', color: 'var(--text-main)', fontStyle: 'italic', margin: '0 0 6px 0', borderBottom: '1px dashed var(--border-light)', paddingBottom: '8px', lineHeight: '1.4' }}>
-                    💡 "{consistencyScoreExplanation.motivationalMessage}"
+                    <span style={{ display: 'inline-flex', alignItems: 'flex-start', gap: '6px' }}><Lightbulb size={14} style={{ flexShrink: 0, marginTop: '2px', color: '#f59e0b' }} /> "{consistencyScoreExplanation.motivationalMessage}"</span>
                   </p>
                   
                   {consistencyScoreExplanation.breakdown && Object.entries(consistencyScoreExplanation.breakdown).map(([key, item]) => (
                     <div key={key} style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '12.5px' }}>
                         <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontWeight: '600', color: 'var(--text-main)' }}>
-                          <span style={{ fontSize: '11px' }}>{item.ok ? '✅' : '⬜'}</span>
+                          <span style={{ display: 'inline-flex', alignItems: 'center', color: item.ok ? '#10b981' : 'var(--border-medium)', marginRight: '2px' }}>{item.ok ? <CheckCircle size={13} /> : <div style={{ width: '13px', height: '13px', borderRadius: '50%', border: '1px solid var(--border-medium)' }} />}</span>
                           {item.label}
                         </span>
                         <span style={{ fontWeight: '700', color: item.ok ? 'var(--primary)' : 'var(--text-light)' }}>
@@ -750,12 +744,12 @@ export default function PerformanceView() {
                   { label: 'Noturno (18h - 00h)', pct: productivityHours.noturnoPct, color: '#6B7F8A' },
                   { label: 'Madrugada (00h - 06h)', pct: productivityHours.madrugadaPct, color: '#C06C6C' }
                 ].map(period => {
-                  let semaforo = '🔴';
-                  if (period.pct >= 40) semaforo = '🟢';
-                  else if (period.pct >= 15) semaforo = '🟡';
+                  let semaforoColor = 'var(--danger)';
+                  if (period.pct >= 40) semaforoColor = '#10b981';
+                  else if (period.pct >= 15) semaforoColor = '#f59e0b';
                   return (
                     <div key={period.label} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      <span style={{ fontSize: '16px' }}>{semaforo}</span>
+                      <div style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: semaforoColor, flexShrink: 0 }} />
                       <div style={{ flex: 1 }}>
                         <span style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-main)' }}>{period.label}</span>
                         <div style={{ height: '8px', width: '100%', backgroundColor: 'var(--bg-app)', borderRadius: '4px', overflow: 'hidden', marginTop: '4px' }}>
@@ -768,7 +762,7 @@ export default function PerformanceView() {
                 })}
               </div>
               <p style={{ fontSize: '12px', color: 'var(--text-light)', borderTop: '1px solid var(--border-light)', paddingTop: '10px' }}>
-                💡 <strong>Recomendação:</strong> {productivityHours.recommendation}
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><Lightbulb size={12} color="#f59e0b" /> <strong>Recomendação:</strong> {productivityHours.recommendation}</span>
               </p>
             </>
           )}
@@ -857,7 +851,7 @@ export default function PerformanceView() {
                           onClick={() => openPaywall('goal_health')}
                           style={{ fontSize: '11px', fontWeight: 'bold', color: 'var(--primary)', backgroundColor: 'var(--primary-light)', padding: '2px 6px', borderRadius: '4px', display: 'inline-flex', alignItems: 'center', gap: '2px', cursor: 'pointer' }}
                         >
-                          🔒 Pro
+                          <Lock size={10} /> Pro
                         </span>
                       )}
                     </div>
@@ -865,15 +859,15 @@ export default function PerformanceView() {
                     <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
                       <span>Progresso: {goal.doneTasks}/{goal.totalTasks} tarefas</span>
                       {isPro ? (
-                        <span style={{ display: 'block', marginTop: '2px', color: goal.daysStagnant > 5 ? '#C06C6C' : 'var(--text-light)' }}>
-                          🕒 {goal.daysStagnant === 0 ? 'Movimentado hoje' : `${goal.daysStagnant} dias sem novas ações`}
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', marginTop: '4px', color: goal.daysStagnant > 5 ? '#C06C6C' : 'var(--text-light)' }}>
+                          <Clock size={11} /> {goal.daysStagnant === 0 ? 'Movimentado hoje' : `${goal.daysStagnant} dias sem novas ações`}
                         </span>
                       ) : (
                         <span 
                           onClick={() => openPaywall('goal_health')}
-                          style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px', color: 'var(--text-light)', cursor: 'pointer' }}
+                          style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', marginTop: '4px', color: 'var(--text-light)', cursor: 'pointer' }}
                         >
-                          🕒 🔒 Requer Pro
+                          <Clock size={11} /> <Lock size={10} /> Requer Pro
                         </span>
                       )}
                     </div>
@@ -939,7 +933,7 @@ export default function PerformanceView() {
                 className="btn-primary-glow"
                 style={{ padding: '8px 18px', fontSize: '13px', fontWeight: 'bold' }}
               >
-                Conhecer Planos Pro ⚡
+                Conhecer Planos Pro
               </button>
             </div>
           )}

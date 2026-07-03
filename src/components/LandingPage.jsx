@@ -149,7 +149,7 @@ export default function LandingPage({ onEnterApp }) {
             <img
               src={logo.src}
               alt={logo.alt}
-              style={{ height: '32px', width: 'auto', objectFit: 'contain' }}
+              style={{ height: '44px', width: 'auto', objectFit: 'contain' }}
               onError={(e) => { e.target.style.display = 'none'; }}
             />
           </div>
@@ -290,9 +290,9 @@ export default function LandingPage({ onEnterApp }) {
           </div>
 
           <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap', justifyContent: 'center', fontSize: '12px', color: '#64748B', fontWeight: 600 }}>
-            <span>✓ Plano gratuito disponível</span>
-            <span>✓ Sem cartão de crédito</span>
-            <span>✓ Funciona offline</span>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><Check size={12} /> Plano gratuito disponível</span>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><Check size={12} /> Sem cartão de crédito</span>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><Check size={12} /> Funciona offline</span>
           </div>
 
 
@@ -428,7 +428,7 @@ export default function LandingPage({ onEnterApp }) {
       </section>
 
       {/* ══════════════════════════════════════════════════════════════════
-          3. ⭐ A SOLUÇÃO: CENTRAL DE INSIGHTS PREMIUM (SEÇÃO ESCURA)
+          3. A SOLUÇÃO: CENTRAL DE INSIGHTS PREMIUM (SEÇÃO ESCURA)
           ══════════════════════════════════════════════════════════════════ */}
       <section
         id="solucao"
@@ -554,7 +554,7 @@ export default function LandingPage({ onEnterApp }) {
                   alignItems: 'center',
                   gap: '4px'
                 }}>
-                  <span>⚡</span> Coach Pro Ativo
+                  <Zap size={10} /> Coach Pro Ativo
                 </div>
               </div>
 
@@ -637,7 +637,7 @@ export default function LandingPage({ onEnterApp }) {
                   onMouseEnter={e => { e.target.style.transform = 'translateY(-2px)'; e.target.style.boxShadow = '0 8px 20px rgba(37,99,235,0.35)'; }}
                   onMouseLeave={e => { e.target.style.transform = 'none'; e.target.style.boxShadow = '0 4px 12px rgba(37,99,235,0.25)'; }}
                 >
-                  Desbloquear Analista Pro ⚡
+                  Desbloquear Analista Pro
                 </button>
               </div>
 
@@ -1181,7 +1181,7 @@ export default function LandingPage({ onEnterApp }) {
       >
         <Container>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '24px' }}>
-            <img src={logo.src} alt={logo.alt} style={{ height: '32px', width: 'auto', objectFit: 'contain' }} onError={e => e.target.style.display = 'none'} />
+            <img src={logo.src} alt={logo.alt} style={{ height: '44px', width: 'auto', objectFit: 'contain' }} onError={e => e.target.style.display = 'none'} />
           </div>
           
           <p style={{ fontSize: '13.5px', color: '#64748B', marginBottom: '32px', maxWidth: '500px', margin: '0 auto 32px', lineHeight: '1.6' }}>

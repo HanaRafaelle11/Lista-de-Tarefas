@@ -106,7 +106,7 @@ export default function AccountReactivationModal({ isOpen, deletedAt, onReactiva
             }}
           >
             <RefreshCw size={18} />
-            Reativar Minha Conta 🚀
+            Reativar Minha Conta
           </button>
 
           <button
@@ -129,7 +129,7 @@ export default function AccountReactivationModal({ isOpen, deletedAt, onReactiva
             }}
           >
             <LogOut size={17} />
-            Confirmar Exclusão e Sair 🚪
+            Confirmar Exclusão e Sair
           </button>
         </div>
       </div>

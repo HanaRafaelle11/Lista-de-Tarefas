@@ -21,7 +21,10 @@ export default function SubscriptionBreakdown({ breakdown }) {
     padding: '24px',
     boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.37)',
     color: '#ffffff',
-    marginBottom: '30px'
+    marginBottom: '30px',
+    overflowX: 'auto',
+    WebkitOverflowScrolling: 'touch',
+    overscrollBehaviorX: 'contain'
   };
 
   const legendItemStyle = {

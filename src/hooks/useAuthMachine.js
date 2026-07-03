@@ -37,11 +37,11 @@
  *   TIMEOUT           — fallback de 3s disparou sem resposta do Supabase
  *
  * Garantias por design:
- *   ✔ executa exatamente 1 vez por lifecycle da app (ref de guarda)
- *   ✔ timer de fallback sobrevive a cleanup de useEffect (StrictMode-safe)
- *   ✔ reducer é pure function — sem side effects, 100% previsível
- *   ✔ onAuthStateChange é o único subscriber de eventos externos
- *   ✔ loading infinito é impossível: qualquer caminho converge em ≤3s
+ *   [OK] executa exatamente 1 vez por lifecycle da app (ref de guarda)
+ *   [OK] timer de fallback sobrevive a cleanup de useEffect (StrictMode-safe)
+ *   [OK] reducer é pure function — sem side effects, 100% previsível
+ *   [OK] onAuthStateChange é o único subscriber de eventos externos
+ *   [OK] loading infinito é impossível: qualquer caminho converge em ≤3s
  */
 
 import { useReducer, useEffect, useRef, useCallback } from 'react';

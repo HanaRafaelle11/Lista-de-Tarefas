@@ -59,7 +59,7 @@ export default function GrowthOSDashboard() {
       {/* QUADROS PRINCIPAIS */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem', marginBottom: '2rem' }}>
         
-        {/* 🧨 1. RISK CENTER */}
+        {/* 1. RISK CENTER */}
         <div style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '14px', padding: '1.5rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem', marginBottom: '1.2rem' }}>
             <AlertTriangle color="#ef4444" size={24} />
@@ -85,7 +85,7 @@ export default function GrowthOSDashboard() {
           </ul>
         </div>
 
-        {/* 💰 2. REVENUE LEAKS */}
+        {/* 2. REVENUE LEAKS */}
         <div style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '14px', padding: '1.5rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem', marginBottom: '1.2rem' }}>
             <DollarSign color="#f59e0b" size={24} />
@@ -106,7 +106,7 @@ export default function GrowthOSDashboard() {
           </div>
         </div>
 
-        {/* ⚡ 3. ACTION CENTER & CLOSED-LOOP */}
+        {/* 3. ACTION CENTER & CLOSED-LOOP */}
         <div style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '14px', padding: '1.5rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem', marginBottom: '1.2rem' }}>
             <Zap color="#a855f7" size={24} />

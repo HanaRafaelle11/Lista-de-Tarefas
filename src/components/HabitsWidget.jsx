@@ -1,5 +1,7 @@
 import React, { useState, useMemo } from 'react';
-import { Plus, Check, MoreVertical, Trash2, Sprout } from 'lucide-react';
+import { Plus, Check, Trash2 } from 'lucide-react';
+import { useAppContext } from '../contexts/AppContext';
+import MFIcon from './MFIcon';
 
 // Formatar datas recentes (Últimos 7 dias)
 const getLast7Days = () => {
@@ -21,6 +23,7 @@ const getLast7Days = () => {
 };
 
 export default function HabitsWidget({ habitsManager, goals }) {
+  const { openCustomConfirm } = useAppContext();
   const { habits, habitLogs, toggleHabitLog, addHabit, deleteHabit, loading } = habitsManager;
   const [isAdding, setIsAdding] = useState(false);
   const [newTitle, setNewTitle] = useState('');
@@ -38,7 +41,7 @@ export default function HabitsWidget({ habitsManager, goals }) {
       title: newTitle.trim(),
       goal_id: newGoalId || null,
       frequency: 'daily', // Simplificado para versão 1.0
-      icon: '✨'
+      icon: 'sparkles'
     });
 
     setNewTitle('');
@@ -62,7 +65,7 @@ export default function HabitsWidget({ habitsManager, goals }) {
     <div className="habits-widget-container animate-fade-in">
       <div className="goals-section-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
         <h3 className="goals-section-eyebrow" style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-light)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <Sprout size={14} style={{ color: 'var(--success)' }} /> Seus Hábitos Diários
+          <MFIcon name="sprout" size={14} style={{ color: 'var(--success)' }} /> Seus Hábitos Diários
         </h3>
         {!isAdding && (
           <button 
@@ -119,7 +122,7 @@ export default function HabitsWidget({ habitsManager, goals }) {
                 {/* Info do Hábito */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1, minWidth: '200px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span style={{ fontSize: '16px' }}>{habit.icon}</span>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', color: 'var(--success)' }}><MFIcon name="sprout" size={16} /></span>
                     <span style={{ fontWeight: '600', fontSize: '14px', color: 'var(--text-main)' }}>{habit.title}</span>
                   </div>
                   {goal && (
@@ -167,7 +170,13 @@ export default function HabitsWidget({ habitsManager, goals }) {
                   </div>
 
                   <button 
-                    onClick={() => { if(window.confirm('Excluir este hábito?')) deleteHabit(habit.id); }}
+                    onClick={() => {
+                      openCustomConfirm(
+                        'Excluir este hábito?',
+                        'Excluir Hábito',
+                        () => deleteHabit(habit.id)
+                      );
+                    }}
                     style={{ color: 'var(--text-light)', padding: '4px', borderRadius: '4px' }}
                     className="delete-btn"
                   >

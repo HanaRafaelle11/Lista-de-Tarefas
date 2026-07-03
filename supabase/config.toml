@@ -1,0 +1,21 @@
+# Configuration for Supabase Local Development & Deployment
+
+[auth]
+site_url = "https://myflowday.com.br"
+additional_redirect_urls = ["https://myflowday.com.br/login", "https://myflowday.com.br/dashboard"]
+
+[auth.email.template.confirmation]
+subject = "Confirme seu e-mail - MyFlowDay"
+content_path = "./supabase/templates/confirmation.html"
+
+[auth.email.template.recovery]
+subject = "Recupere sua senha - MyFlowDay"
+content_path = "./supabase/templates/recovery.html"
+
+[auth.email.template.magic_link]
+subject = "Seu link mágico de acesso - MyFlowDay"
+content_path = "./supabase/templates/magic_link.html"
+
+[auth.email.template.email_change]
+subject = "Confirme a alteração de e-mail - MyFlowDay"
+content_path = "./supabase/templates/email_change.html"

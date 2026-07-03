@@ -5,8 +5,10 @@ import BillingHistory from './BillingHistory';
 import BillingDetails from './BillingDetails';
 import BillingSupportCard from './BillingSupportCard';
 import { billingCopy } from './billingCopywriting';
+import { useAppContext } from '../../contexts/AppContext';
 
 export default function BillingOverview({ userId, onManageSubscription, onUpgradePlan }) {
+  const { openCustomAlert } = useAppContext();
   const [loading, setLoading] = useState(true);
   const [billingData, setBillingData] = useState(null);
   const [selectedTransaction, setSelectedTransaction] = useState(null);
@@ -128,8 +130,8 @@ export default function BillingOverview({ userId, onManageSubscription, onUpgrad
 
       {/* Support */}
       <BillingSupportCard
-        onOpenSupport={() => alert('Abrindo canal de atendimento ao cliente...')}
-        onReportIssue={() => alert('Iniciando relatório de contestação de cobrança...')}
+        onOpenSupport={() => openCustomAlert('Abrindo canal de atendimento ao cliente...')}
+        onReportIssue={() => openCustomAlert('Iniciando relatório de contestação de cobrança...')}
       />
 
       {/* Details Modal */}

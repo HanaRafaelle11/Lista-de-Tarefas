@@ -86,7 +86,8 @@ const defaultCategories = [
 ];
 
 // ─── Context ──────────────────────────────────────────────────────────────────
-const AppContext = createContext(null);
+export const AppContext = createContext(null);
+const APP_MOUNT_TIME = Date.now();
 
 export const useAppContext = () => {
   const ctx = useContext(AppContext);
@@ -411,6 +412,12 @@ export function AppProvider({ children }) {
     });
   }, []);
 
+  useEffect(() => {
+    window.alert = (msg) => {
+      openCustomAlert(String(msg), '');
+    };
+  }, [openCustomAlert]);
+
   // ═══════════════════════════════════════════════════════════════════════════
   // AUTH ACTIONS
   // ═══════════════════════════════════════════════════════════════════════════
@@ -715,9 +722,9 @@ export function AppProvider({ children }) {
       setGoalTasks(parsed.goalTasks);
     } else {
       const mockGoals = [
-        { id: 'dg1', user_id: currentUser.id, title: '🚀 Dominar o React', description: 'Ficar proficiente em React, hooks e Next.js', color: '#6366f1', icon: '💻', target_date: '', status: 'active', deletedAt: null },
-        { id: 'dg2', user_id: currentUser.id, title: '🏃‍♂️ Corrida 10K', description: 'Treinar para correr 10km direto sem paradas', color: '#10b981', icon: '👟', target_date: '', status: 'active', deletedAt: null },
-        { id: 'dg3', user_id: currentUser.id, title: '📚 Hábito de Leitura', description: 'Ler pelo menos 1 livro por mês este ano', color: '#f59e0b', icon: '📖', target_date: '', status: 'active', deletedAt: null }
+        { id: 'dg1', user_id: currentUser.id, title: 'Dominar o React', description: 'Ficar proficiente em React, hooks e Next.js', color: '#6366f1', icon: 'target', target_date: '', status: 'active', deletedAt: null },
+        { id: 'dg2', user_id: currentUser.id, title: 'Corrida 10K', description: 'Treinar para correr 10km direto sem paradas', color: '#10b981', icon: 'target', target_date: '', status: 'active', deletedAt: null },
+        { id: 'dg3', user_id: currentUser.id, title: 'Hábito de Leitura', description: 'Ler pelo menos 1 livro por mês este ano', color: '#f59e0b', icon: 'book', target_date: '', status: 'active', deletedAt: null }
       ];
       const mockGoalTasks = [
         { goal_id: 'dg1', task_id: 'dt1' },
@@ -1154,7 +1161,7 @@ export function AppProvider({ children }) {
       }
       setShowReactivationModal(false);
       logEvent('account_reactivated', { userId: currentUser.id });
-      addNotification('system', 'Conta Reativada 🚀', 'Sua conta foi reativada com sucesso! Todos os seus dados continuam intactos.');
+      addNotification('system', 'Conta Reativada', 'Sua conta foi reativada com sucesso! Todos os seus dados continuam intactos.');
     } catch (err) {
       console.error('Erro ao reativar conta:', err);
     }
@@ -1841,7 +1848,7 @@ export function AppProvider({ children }) {
       title: `${origin.title} (Cópia)`,
       description: origin.description || '',
       color: origin.color || '#4A654E',
-      icon: origin.icon || '🎯',
+      icon: origin.icon || 'target',
       target_date: origin.target_date || null,
       start_time: origin.start_time || null,
       end_time: origin.end_time || null,
@@ -2058,7 +2065,7 @@ export function AppProvider({ children }) {
         title: goalPayload.title,
         description: goalPayload.description || '',
         color: goalPayload.color || '#4A654E',
-        icon: goalPayload.icon || '🎯',
+        icon: goalPayload.icon || 'target',
         target_date: goalPayload.target_date || null,
         start_time: goalPayload.start_time || null,
         end_time: goalPayload.end_time || null,
@@ -2109,7 +2116,7 @@ export function AppProvider({ children }) {
       title: goalPayload.title,
       description: goalPayload.description || '',
       color: goalPayload.color || '#4A654E',
-      icon: goalPayload.icon || '🎯',
+      icon: goalPayload.icon || 'target',
       target_date: goalPayload.target_date || null,
       start_time: goalPayload.start_time || null,
       end_time: goalPayload.end_time || null,
@@ -2429,7 +2436,7 @@ export function AppProvider({ children }) {
     
     if (currentCustom.some(c => c.id.toLowerCase() === newCat.id.toLowerCase()) || 
         defaultCategories.some(c => c.id.toLowerCase() === newCat.id.toLowerCase())) {
-      alert('Essa categoria já existe.');
+      openCustomAlert('Essa categoria já existe.');
       return;
     }
     const updatedCustom = [...currentCustom, newCat];
@@ -2532,60 +2539,62 @@ export function AppProvider({ children }) {
       }
     } catch (e) {
       console.error('Erro ao cancelar assinatura:', e);
-      alert('Não foi possível cancelar sua assinatura automaticamente: ' + e.message);
+      openCustomAlert('Não foi possível cancelar sua assinatura automaticamente: ' + e.message);
     }
   }, [currentUser, userProfile, setIsPro, addNotification, logEvent]);
 
   // ═══════════════════════════════════════════════════════════════════════════
   // HABITS — interface compatível com useHabits anterior
   // ═══════════════════════════════════════════════════════════════════════════
-  const habitsManager = {
-    habits,
-    habitLogs,
-    loading: habitsLoading,
-    addHabit: useCallback(async (habitData) => {
-      if (!currentUser?.id) return null;
-      const { data } = await habitsService.create(currentUser.id, habitData);
-      if (data) {
-        setHabits((prev) => [data, ...prev]);
-        logEvent('habit_created', { title: habitData.title });
+  const habitsManager = useMemo(() => {
+    return {
+      habits,
+      habitLogs,
+      loading: habitsLoading,
+      addHabit: async (habitData) => {
+        if (!currentUser?.id) return null;
+        const { data } = await habitsService.create(currentUser.id, habitData);
+        if (data) {
+          setHabits((prev) => [data, ...prev]);
+          logEvent('habit_created', { title: habitData.title });
+        }
+        return data;
+      },
+      updateHabit: async (id, updates) => {
+        if (!currentUser?.id) return null;
+        const { data } = await habitsService.update(currentUser.id, id, updates);
+        if (data) {
+          setHabits((prev) => prev.map((h) => h.id === id ? data : h));
+          logEvent('habit_updated', { habit_id: id });
+        }
+        return data;
+      },
+      deleteHabit: async (id) => {
+        if (!currentUser?.id) return false;
+        const { error } = await habitsService.delete(currentUser.id, id);
+        if (!error) {
+          setHabits((prev) => prev.filter((h) => h.id !== id));
+          setHabitLogs((prev) => prev.filter((l) => l.habit_id !== id));
+          logEvent('habit_deleted', { habit_id: id });
+        }
+        return !error;
+      },
+      toggleHabitLog: async (habitId, dateStr) => {
+        if (!currentUser?.id) return false;
+        const existing = habitLogs.find((l) => l.habit_id === habitId && l.completed_date === dateStr);
+        const { data: checked, logData } = await habitsService.toggleLog(
+          currentUser.id, habitId, dateStr, existing?.id ?? null
+        );
+        if (checked === false && existing) {
+          setHabitLogs((prev) => prev.filter((l) => l.id !== existing.id));
+        } else if (checked === true && logData) {
+          setHabitLogs((prev) => [...prev, logData]);
+          logEvent('habit_completed', { habit_id: habitId, date: dateStr });
+        }
+        return checked ?? false;
       }
-      return data;
-    }, [currentUser?.id, logEvent]),
-    updateHabit: useCallback(async (id, updates) => {
-      if (!currentUser?.id) return null;
-      const { data } = await habitsService.update(currentUser.id, id, updates);
-      if (data) {
-        setHabits((prev) => prev.map((h) => h.id === id ? data : h));
-        logEvent('habit_updated', { habit_id: id });
-      }
-      return data;
-    }, [currentUser?.id, logEvent]),
-    deleteHabit: useCallback(async (id) => {
-      if (!currentUser?.id) return false;
-      const { error } = await habitsService.delete(currentUser.id, id);
-      if (!error) {
-        setHabits((prev) => prev.filter((h) => h.id !== id));
-        setHabitLogs((prev) => prev.filter((l) => l.habit_id !== id));
-        logEvent('habit_deleted', { habit_id: id });
-      }
-      return !error;
-    }, [currentUser?.id, logEvent]),
-    toggleHabitLog: useCallback(async (habitId, dateStr) => {
-      if (!currentUser?.id) return false;
-      const existing = habitLogs.find((l) => l.habit_id === habitId && l.completed_date === dateStr);
-      const { data: checked, logData } = await habitsService.toggleLog(
-        currentUser.id, habitId, dateStr, existing?.id ?? null
-      );
-      if (checked === false && existing) {
-        setHabitLogs((prev) => prev.filter((l) => l.id !== existing.id));
-      } else if (checked === true && logData) {
-        setHabitLogs((prev) => [...prev, logData]);
-        logEvent('habit_completed', { habit_id: habitId, date: dateStr });
-      }
-      return checked ?? false;
-    }, [currentUser?.id, habitLogs, logEvent]),
-  };
+    };
+  }, [habits, habitLogs, habitsLoading, currentUser, logEvent]);
 
   // ═══════════════════════════════════════════════════════════════════════════
   // USER STATE INTELLIGENCE — Re-hidratação baseada em eventos (Event Sourcing)
@@ -2593,9 +2602,11 @@ export function AppProvider({ children }) {
   useEffect(() => {
     if (!currentUser?.id || currentUser.isDemo) return;
 
-    rehydrateUserState(currentUser.id).then((state) => {
-      if (state?.has_first_success) firstSuccessLogged.current = true;
-    });
+    setTimeout(() => {
+      rehydrateUserState(currentUser.id).then((state) => {
+        if (state?.has_first_success) firstSuccessLogged.current = true;
+      });
+    }, 0);
 
     const unsub = eventEmitter.on('*', () => {
       rehydrateUserState(currentUser.id).then((state) => {
@@ -2666,23 +2677,34 @@ export function AppProvider({ children }) {
     addNotification('system', 'Tarefa restaurada', 'A tarefa foi movida de volta à lista ativa.');
   }, [currentUser, tasks, addNotification]);
 
-  const handleDeleteTaskPermanent = useCallback(async (id) => {
+  const handleDeleteTaskPermanent = useCallback((id, force = false) => {
     if (!currentUser?.id) return;
-    if (!window.confirm('Excluir esta tarefa permanentemente? Esta ação não pode ser desfeita.')) return;
     
-    setTasks(prev => prev.filter(t => t.id !== id));
-    setGoalTasks(prev => prev.filter(gt => gt.task_id !== id));
-    
-    if (currentUser.isDemo) {
-      const updated = tasks.filter(t => t.id !== id);
-      const updatedGT = goalTasks.filter(gt => gt.task_id !== id);
-      localStorage.setItem(`flowday_demo_tasks_${currentUser.id}`, JSON.stringify(updated));
-      localStorage.setItem(`flowday_demo_goals_${currentUser.id}`, JSON.stringify({ goals, goalTasks: updatedGT }));
-      return;
+    const proceed = async () => {
+      setTasks(prev => prev.filter(t => t.id !== id));
+      setGoalTasks(prev => prev.filter(gt => gt.task_id !== id));
+      
+      if (currentUser.isDemo) {
+        const updated = tasks.filter(t => t.id !== id);
+        const updatedGT = goalTasks.filter(gt => gt.task_id !== id);
+        localStorage.setItem(`flowday_demo_tasks_${currentUser.id}`, JSON.stringify(updated));
+        localStorage.setItem(`flowday_demo_goals_${currentUser.id}`, JSON.stringify({ goals, goalTasks: updatedGT }));
+        return;
+      }
+      await tasksService.deletePermanent(currentUser.id, id);
+      addNotification('system', 'Tarefa excluída', 'A tarefa foi removida em definitivo.');
+    };
+
+    if (force) {
+      proceed();
+    } else {
+      openCustomConfirm(
+        'Excluir esta tarefa permanentemente? Esta ação não pode ser desfeita.',
+        'Excluir Tarefa',
+        proceed
+      );
     }
-    await tasksService.deletePermanent(currentUser.id, id);
-    addNotification('system', 'Tarefa excluída', 'A tarefa foi removida em definitivo.');
-  }, [currentUser, tasks, goalTasks, goals, addNotification]);
+  }, [currentUser, tasks, goalTasks, goals, addNotification, openCustomConfirm]);
 
   const handleRestoreGoal = useCallback(async (id) => {
     if (!currentUser?.id) return;
@@ -2697,22 +2719,33 @@ export function AppProvider({ children }) {
     addNotification('system', 'Objetivo restaurado', 'O objetivo foi restaurado com sucesso.');
   }, [currentUser, goals, goalTasks, addNotification]);
 
-  const handleDeleteGoalPermanent = useCallback(async (id) => {
+  const handleDeleteGoalPermanent = useCallback((id, force = false) => {
     if (!currentUser?.id) return;
-    if (!window.confirm('Excluir este objetivo permanentemente? Isso removerá todas as referências dele.')) return;
     
-    setGoals(prev => prev.filter(g => g.id !== id));
-    setGoalTasks(prev => prev.filter(gt => gt.goal_id !== id));
-    
-    if (currentUser.isDemo) {
-      const mockGoals = goals.filter(g => g.id !== id);
-      const updatedGT = goalTasks.filter(gt => gt.goal_id !== id);
-      localStorage.setItem(`flowday_demo_goals_${currentUser.id}`, JSON.stringify({ goals: mockGoals, goalTasks: updatedGT }));
-      return;
+    const proceed = async () => {
+      setGoals(prev => prev.filter(g => g.id !== id));
+      setGoalTasks(prev => prev.filter(gt => gt.goal_id !== id));
+      
+      if (currentUser.isDemo) {
+        const mockGoals = goals.filter(g => g.id !== id);
+        const updatedGT = goalTasks.filter(gt => gt.goal_id !== id);
+        localStorage.setItem(`flowday_demo_goals_${currentUser.id}`, JSON.stringify({ goals: mockGoals, goalTasks: updatedGT }));
+        return;
+      }
+      await goalsService.deletePermanent(currentUser.id, id);
+      addNotification('system', 'Objetivo excluído', 'O objetivo foi removido em definitivo.');
+    };
+
+    if (force) {
+      proceed();
+    } else {
+      openCustomConfirm(
+        'Excluir este objetivo permanentemente? Isso removerá todas as referências dele.',
+        'Excluir Objetivo',
+        proceed
+      );
     }
-    await goalsService.deletePermanent(currentUser.id, id);
-    addNotification('system', 'Objetivo excluído', 'O objetivo foi removido em definitivo.');
-  }, [currentUser, goals, goalTasks, addNotification]);
+  }, [currentUser, goals, goalTasks, addNotification, openCustomConfirm]);
 
   // ── Explicação Detalhada do Health Score (Consistency Score) ──
   const consistencyScoreExplanation = useMemo(() => {
@@ -2892,24 +2925,24 @@ export function AppProvider({ children }) {
   const visibleTasks = useMemo(() => {
     const activeTasks = tasks.filter(t => !t.deletedAt);
     if (isPro) return activeTasks;
-    const limit = Date.now() - 30 * 24 * 60 * 60 * 1000;
+    const limit = APP_MOUNT_TIME - 30 * 24 * 60 * 60 * 1000;
     return activeTasks.filter(task => {
       const dateStr = task.completedAt || task.dueDate || task.createdAt;
       if (!dateStr) return true;
       const time = new Date(dateStr).getTime();
-      return time >= limit || time > Date.now();
+      return time >= limit || time > APP_MOUNT_TIME;
     });
   }, [tasks, isPro]);
 
   const visibleGoals = useMemo(() => {
     const activeGoals = goals.filter(g => !g.deletedAt);
     if (isPro) return activeGoals;
-    const limit = Date.now() - 30 * 24 * 60 * 60 * 1000;
+    const limit = APP_MOUNT_TIME - 30 * 24 * 60 * 60 * 1000;
     return activeGoals.filter(goal => {
       const dateStr = goal.updated_at || goal.created_at;
       if (!dateStr) return true;
       const time = new Date(dateStr).getTime();
-      return time >= limit || time > Date.now();
+      return time >= limit || time > APP_MOUNT_TIME;
     });
   }, [goals, isPro]);
 

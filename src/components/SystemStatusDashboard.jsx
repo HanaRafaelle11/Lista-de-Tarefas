@@ -50,9 +50,9 @@ export default function SystemStatusDashboard() {
   const { statusOverall, health, notifications, billing, events, latencyMs } = data || {};
 
   const statusColors = {
-    healthy: { bg: '#10b98122', text: '#34d399', border: '#10b981', label: '🟢 Sistema Saudável (Healthy)', icon: CheckCircle2 },
-    degraded: { bg: '#f59e0b22', text: '#fbbf24', border: '#f59e0b', label: '🟡 Desempenho Degradado (Degraded)', icon: AlertTriangle },
-    critical: { bg: '#ef444422', text: '#f87171', border: '#ef4444', label: '🔴 Falha Crítica (Critical)', icon: XCircle }
+    healthy: { bg: '#10b98122', text: '#34d399', border: '#10b981', label: 'Sistema Saudável (Healthy)', icon: CheckCircle2 },
+    degraded: { bg: '#f59e0b22', text: '#fbbf24', border: '#f59e0b', label: 'Desempenho Degradado (Degraded)', icon: AlertTriangle },
+    critical: { bg: '#ef444422', text: '#f87171', border: '#ef4444', label: 'Falha Crítica (Critical)', icon: XCircle }
   };
 
   const currentStatus = statusColors[statusOverall || 'healthy'];
@@ -81,7 +81,7 @@ export default function SystemStatusDashboard() {
       {/* GRID DE METRICAS PRINCIPAIS */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem', marginBottom: '2rem' }}>
         
-        {/* 🟢 SYSTEM HEALTH */}
+        {/* SYSTEM HEALTH */}
         <div style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '14px', padding: '1.5rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem', marginBottom: '1rem' }}>
             <Activity color="#38bdf8" size={24} />
@@ -98,7 +98,7 @@ export default function SystemStatusDashboard() {
           </div>
         </div>
 
-        {/* 📬 NOTIFICATIONS */}
+        {/* NOTIFICATIONS */}
         <div style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '14px', padding: '1.5rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem', marginBottom: '1rem' }}>
             <Bell color="#a855f7" size={24} />
@@ -111,7 +111,7 @@ export default function SystemStatusDashboard() {
           </div>
         </div>
 
-        {/* 💳 BILLING */}
+        {/* BILLING */}
         <div style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '14px', padding: '1.5rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem', marginBottom: '1rem' }}>
             <CreditCard color="#f43f5e" size={24} />
@@ -125,7 +125,7 @@ export default function SystemStatusDashboard() {
         </div>
       </div>
 
-      {/* 📊 EVENT STREAM & LOGS */}
+      {/* EVENT STREAM & LOGS */}
       <div style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: '14px', padding: '1.5rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem', marginBottom: '1.2rem' }}>
           <Layers color="#fbbf24" size={24} />

@@ -98,7 +98,7 @@ export default function RevenueChart({ timeline }) {
         Evolução do MRR diário (Últimos 30 dias)
       </h3>
 
-      <div style={{ overflowX: 'auto' }}>
+      <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch', overscrollBehaviorX: 'contain' }}>
         <svg viewBox={`0 0 ${width} ${height}`} width="100%" height="100%" style={{ minWidth: '600px' }}>
           {/* Definições de Gradientes */}
           <defs>

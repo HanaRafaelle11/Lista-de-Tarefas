@@ -16,17 +16,21 @@ export default function ChurnChart({ churn }) {
     border: '1px solid rgba(255, 255, 255, 0.08)',
     padding: '24px',
     boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.37)',
-    color: '#ffffff'
+    color: '#ffffff',
+    overflowX: 'auto',
+    WebkitOverflowScrolling: 'touch',
+    overscrollBehaviorX: 'contain'
   };
 
   const cohortCardStyle = {
     backgroundColor: 'rgba(20, 20, 25, 0.8)',
     border: '1px solid rgba(255, 255, 255, 0.05)',
     borderRadius: '8px',
-    padding: '16px',
+    padding: '12px 8px',
     textAlign: 'center',
-    flex: '1',
-    minWidth: '100px'
+    flex: '1 1 80px',
+    minWidth: '80px',
+    boxSizing: 'border-box'
   };
 
   return (
@@ -95,13 +99,13 @@ export default function ChurnChart({ churn }) {
           gap: '8px'
         }}>
           <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#3b82f6' }}></span>
-          Churn por Coorte de Clientes
+          Churn por Cohort
         </h3>
         <p style={{ fontSize: '13px', color: 'rgba(255, 255, 255, 0.4)', marginBottom: '20px', lineHeight: '1.4' }}>
           Mede a porcentagem de usuários premium que cancelaram o serviço com base no tempo decorrido desde o upgrade.
         </p>
 
-        <div style={{ display: 'flex', gap: '12px', justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', gap: '8px', justifyContent: 'space-between', flexWrap: 'wrap' }}>
           {/* 7d Cohort */}
           <div style={cohortCardStyle}>
             <div style={{ fontSize: '11px', color: 'rgba(255, 255, 255, 0.4)', textTransform: 'uppercase', marginBottom: '8px' }}>7 Dias</div>

@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowLeft, ShieldCheck, Mail, Building2, Eye, Lock, FileText, Database, ShieldAlert, Calendar, Globe } from 'lucide-react';
+import { ArrowLeft, ShieldCheck, Mail, Building2, Eye, Lock, FileText, Database, ShieldAlert, Calendar, Globe, Check } from 'lucide-react';
 import { getLogo } from '../design-system/branding/logo';
 
 export default function TermsView({ onGoBack, onNavigateToPrivacy }) {
@@ -15,7 +15,7 @@ export default function TermsView({ onGoBack, onNavigateToPrivacy }) {
             <img 
               src={logo.src} 
               alt={logo.alt} 
-              style={{ height: '36px', width: 'auto', objectFit: 'contain' }} 
+              style={{ height: '42px', width: 'auto', objectFit: 'contain' }} 
             />
           </div>
           
@@ -95,7 +95,7 @@ export default function TermsView({ onGoBack, onNavigateToPrivacy }) {
             Bem-vindo ao <strong>MyFlowDay</strong>. Ao acessar, instalar ou utilizar a plataforma — seja via navegador web, Progressive Web App (PWA) ou qualquer outro meio de acesso disponibilizado — você declara ter lido, compreendido e concordado integralmente com estes Termos de Serviço.
           </p>
           <div style={{ borderLeft: '3px solid #22D3EE', backgroundColor: 'rgba(34, 211, 238, 0.05)', borderRadius: '0 8px 8px 0', padding: '14px 18px', fontSize: '14px', color: '#22D3EE', fontWeight: '500' }}>
-            ⚠️ Se você não concordar com qualquer parte destes termos, por favor, não utilize o MyFlowDay. O uso contínuo da plataforma constitui aceitação tácita destas condições.
+            Se você não concordar com qualquer parte destes termos, por favor, não utilize o MyFlowDay. O uso contínuo da plataforma constitui aceitação tácita destas condições.
           </div>
         </section>
 
@@ -211,7 +211,9 @@ export default function TermsView({ onGoBack, onNavigateToPrivacy }) {
             Caso tenha qualquer dúvida relacionada a este contrato de serviço, por favor entre em contato:
           </p>
           <div style={{ display: 'flex', alignItems: 'center', gap: '16px', backgroundColor: '#0F172A', border: '1px solid #334155', borderRadius: '10px', padding: '18px 20px' }}>
-            <div style={{ width: '44px', height: '44px', borderRadius: '50%', backgroundColor: '#22D3EE', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0F172A', fontWeight: 'bold', fontSize: '18px' }}>✉️</div>
+            <div style={{ width: '44px', height: '44px', borderRadius: '50%', backgroundColor: '#22D3EE', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0F172A' }}>
+              <Mail size={20} />
+            </div>
             <div>
               <div style={{ fontWeight: 600, fontSize: '15px', color: '#F8FAFC' }}>Equipe de Suporte Institucional</div>
               <div style={{ fontSize: '13px', color: '#22D3EE' }}><a href="mailto:suporte@myflowday.com.br" style={{ color: '#22D3EE', textDecoration: 'none' }}>suporte@myflowday.com.br</a></div>
@@ -245,7 +247,7 @@ export default function TermsView({ onGoBack, onNavigateToPrivacy }) {
               <div style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', color: '#22D3EE', marginBottom: '2px' }}>Você está aqui</div>
               <div style={{ fontSize: '15px', fontWeight: 600, color: '#22D3EE' }}>Termos de Serviço</div>
             </div>
-            <div style={{ marginLeft: 'auto', color: '#22D3EE', fontSize: '18px' }}>✓</div>
+            <div style={{ marginLeft: 'auto', color: '#22D3EE', display: 'flex', alignItems: 'center' }}><Check size={18} /></div>
           </div>
         </div>
 

@@ -1,13 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, ChevronRight, Check, X, Target, Star, ListCollapse, Trash2, Flame } from 'lucide-react';
+import { Calendar, ChevronRight, Check, X, Target, Star, ListCollapse, Trash2, Flame, Sparkles, Download } from 'lucide-react';
 import { useAppContext } from '../contexts/AppContext';
 import { supabase } from '../supabaseClient';
 import { exportAllTasksToCalendar } from '../services/googleCalendarService';
 
 export default function WeeklyPlannerModal({ isOpen, onClose, tasks, onUpdateTask }) {
-  if (!isOpen) return null;
-
-  const { goals, currentUser, setCurrentUser, logEvent, isPro, openPaywall } = useAppContext();
+  const { goals, currentUser, setCurrentUser, logEvent, isPro, openPaywall, openCustomConfirm, openCustomAlert } = useAppContext();
   
   // Tab ativa
   const [plannerTab, setPlannerTab] = useState('focus'); // focus, schedule
@@ -61,10 +59,14 @@ export default function WeeklyPlannerModal({ isOpen, onClose, tasks, onUpdateTas
 
   const handleRemovePriority = (index) => {
     const val = criticalPriorities[index];
-    if (window.confirm(`Excluir a prioridade "${val || 'sem nome'}"?`)) {
-      const next = criticalPriorities.filter((_, i) => i !== index);
-      setCriticalPriorities(next.length === 0 ? [''] : next);
-    }
+    openCustomConfirm(
+      `Excluir a prioridade "${val || 'sem nome'}"?`,
+      'Excluir Prioridade',
+      () => {
+        const next = criticalPriorities.filter((_, i) => i !== index);
+        setCriticalPriorities(next.length === 0 ? [''] : next);
+      }
+    );
   };
 
   const [selectedTask, setSelectedTask] = useState(null);
@@ -141,7 +143,7 @@ export default function WeeklyPlannerModal({ isOpen, onClose, tasks, onUpdateTas
       
       logEvent('weekly_plan_saved', { goals_selected: selectedGoals.length });
       logEvent('weekly_plan_completed', { goals_selected: selectedGoals.length });
-      alert('Seu planejamento semanal foi salvo com sucesso! ⚡');
+      openCustomAlert('Seu planejamento semanal foi salvo com sucesso!');
       setPlannerTab('schedule'); // Avança para o agendamento de tarefas
     } catch (err) {
       console.error('[WeeklyPlannerModal] Erro ao salvar plano semanal:', err);
@@ -159,10 +161,10 @@ export default function WeeklyPlannerModal({ isOpen, onClose, tasks, onUpdateTas
             weekly_plan: planData
           }
         }));
-        alert('Planejamento salvo localmente (sem sincronização). ⚡');
+        openCustomAlert('Planejamento salvo localmente (sem sincronização).');
         setPlannerTab('schedule');
       } else {
-        alert('Erro ao salvar planejamento. Tente novamente.');
+        openCustomAlert('Erro ao salvar planejamento. Tente novamente.');
       }
     } finally {
       setSaving(false);
@@ -218,8 +220,12 @@ export default function WeeklyPlannerModal({ isOpen, onClose, tasks, onUpdateTas
       openPaywall('google_calendar');
       return;
     }
-    exportAllTasksToCalendar(tasks);
-    window.open('https://calendar.google.com/calendar/r/settings/export', '_blank');
+    try {
+      exportAllTasksToCalendar(tasks);
+      window.open('https://calendar.google.com/calendar/r/settings/export', '_blank');
+    } catch (err) {
+      openCustomAlert(err.message, "Calendário");
+    }
     setIsSyncModalOpen(false);
     logEvent('weekly_planner_calendar_google_sync_clicked');
   };
@@ -229,7 +235,11 @@ export default function WeeklyPlannerModal({ isOpen, onClose, tasks, onUpdateTas
       openPaywall('google_calendar');
       return;
     }
-    exportAllTasksToCalendar(tasks);
+    try {
+      exportAllTasksToCalendar(tasks);
+    } catch (err) {
+      openCustomAlert(err.message, "Calendário");
+    }
     setIsSyncModalOpen(false);
     logEvent('weekly_planner_calendar_ics_sync_clicked');
   };
@@ -243,6 +253,8 @@ export default function WeeklyPlannerModal({ isOpen, onClose, tasks, onUpdateTas
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
+
+  if (!isOpen) return null;
 
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -439,7 +451,7 @@ export default function WeeklyPlannerModal({ isOpen, onClose, tasks, onUpdateTas
                 style={{ width: '100%', padding: '12px', fontSize: '15px', fontWeight: 'bold' }}
                 disabled={saving || !weeklyFocus.trim() || criticalPriorities.filter(p => p.trim()).length === 0}
               >
-                {saving ? 'Salvando...' : 'Salvar Planejamento e Avançar ➔'}
+                {saving ? 'Salvando...' : 'Salvar Planejamento e Avançar'}
               </button>
               <button 
                 type="button" 
@@ -468,7 +480,7 @@ export default function WeeklyPlannerModal({ isOpen, onClose, tasks, onUpdateTas
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 {unscheduledTasks.length === 0 ? (
                   <div style={{ padding: '24px', textAlign: 'center', backgroundColor: 'var(--bg-app)', borderRadius: 'var(--radius-md)' }}>
-                    <span style={{ fontSize: '24px' }}>✨</span>
+                    <div style={{ display: 'flex', justifyContent: 'center', color: 'var(--primary)' }}><Sparkles size={24} /></div>
                     <p style={{ fontSize: '14px', color: 'var(--text-main)', fontWeight: '600', marginTop: '8px' }}>Tudo planejado!</p>
                     <p style={{ fontSize: '12px', color: 'var(--text-light)' }}>Todas as suas tarefas pendentes possuem data.</p>
                   </div>
@@ -652,7 +664,7 @@ export default function WeeklyPlannerModal({ isOpen, onClose, tasks, onUpdateTas
                   width: '100%',
                 }}
               >
-                <span style={{ fontSize: '24px' }}>📅</span>
+                <div style={{ color: 'var(--primary)', display: 'flex', alignItems: 'center' }}><Calendar size={24} /></div>
                 <div>
                   <strong style={{ display: 'block', fontSize: '13px', color: 'var(--text-main)' }}>Google Calendar (Recomendado)</strong>
                   <span style={{ fontSize: '11px', color: 'var(--text-light)' }}>Exporta o arquivo .ics e abre a página de importação do Google.</span>
@@ -675,7 +687,7 @@ export default function WeeklyPlannerModal({ isOpen, onClose, tasks, onUpdateTas
                   width: '100%',
                 }}
               >
-                <span style={{ fontSize: '24px' }}>📥</span>
+                <div style={{ color: 'var(--primary)', display: 'flex', alignItems: 'center' }}><Download size={24} /></div>
                 <div>
                   <strong style={{ display: 'block', fontSize: '13px', color: 'var(--text-main)' }}>Baixar arquivo .ics</strong>
                   <span style={{ fontSize: '11px', color: 'var(--text-light)' }}>Apenas exporta e baixa o arquivo de calendário para programas locais.</span>

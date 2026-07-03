@@ -1,5 +1,5 @@
 import React, { useMemo, useState, lazy, Suspense } from 'react';
-import { CheckCircle, Clock, AlertTriangle, BarChart3, PieChart, Target, Star, Award, ShieldAlert, Zap, Calendar } from 'lucide-react';
+import { CheckCircle, Clock, AlertTriangle, BarChart3, PieChart, Target, Star, Award, ShieldAlert, Zap, Calendar, X } from 'lucide-react';
 import { ACHIEVEMENTS, calcStats, calcStreak } from '../hooks/useAchievements';
 import { useAppContext } from '../contexts/AppContext';
 import CategoryIcon from './CategoryIcon';
@@ -93,7 +93,7 @@ function AchievementBadge({ achievement, unlocked, unlockedAt }) {
         border: unlocked ? `2px solid ${info.color}` : '2px dashed var(--border-medium)',
         flexShrink: 0
       }}>
-        {unlocked ? achievement.emoji : '🔒'}
+        {unlocked ? <MFIcon name={achievement.icon} size={20} color={info.color} /> : <MFIcon name="lock" size={20} />}
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '4px' }}>
@@ -118,7 +118,7 @@ function AchievementBadge({ achievement, unlocked, unlockedAt }) {
         </p>
         {unlocked && unlockedAt && (
           <span style={{ fontSize: '9.5px', color: 'var(--text-light)', display: 'block', marginTop: '6px' }}>
-            🏆 Desbloqueado em {formatDate(unlockedAt)}
+            Desbloqueado em {formatDate(unlockedAt)}
           </span>
         )}
         {!unlocked && (
@@ -396,7 +396,7 @@ export default function EvolutionView() {
       <div className="evo-view animate-fade-in">
         {/* Banner motivacional mesmo no empty state */}
         <section className="evo-motivation-banner">
-          <div className="evo-motivation-icon">📊</div>
+          <div className="evo-motivation-icon" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}><MFIcon name="chart" size={24} /></div>
           <div>
             <h2 className="evo-motivation-title">Sua jornada começa aqui.</h2>
             <p className="evo-motivation-desc">Registre suas primeiras tarefas para desbloquear seus insights de evolução.</p>
@@ -421,7 +421,7 @@ export default function EvolutionView() {
             border: '2px solid var(--primary-light)',
             marginBottom: '24px',
           }}>
-            <span style={{ fontSize: '40px', lineHeight: 1 }}>📈</span>
+            <MFIcon name="chart" size={40} color="var(--primary)" />
             <div style={{
               position: 'absolute', width: '100%', height: '100%', borderRadius: '50%',
               border: '1px solid rgba(99,102,241,0.2)',
@@ -528,7 +528,7 @@ export default function EvolutionView() {
                 border: '3px solid var(--border-medium)',
                 flexShrink: 0
               }}>
-                👑
+                <MFIcon name="trophy" size={28} color="#eab308" />
               </div>
               <div style={{ flex: 1 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -586,7 +586,7 @@ export default function EvolutionView() {
             style={{ position: 'absolute', top: '12px', right: '12px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}
             aria-label="Fechar guia"
           >
-            ✕
+            <X size={16} />
           </button>
           <h3 style={{ fontSize: '15px', fontWeight: 'bold', marginBottom: '8px', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '6px' }}>
             <Star size={16} style={{ color: 'var(--primary)' }} /> Sua evolução em números
@@ -731,7 +731,7 @@ export default function EvolutionView() {
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', padding: '16px 0' }}>
             <p style={{ fontSize: '12.5px', color: 'var(--text-muted)', fontStyle: 'italic', textAlign: 'center' }}>
-              Nenhum planejamento semanal ativo. Descarregue sua mente e planeje sua semana agora! ⚡
+              Nenhum planejamento semanal ativo. Descarregue sua mente e planeje sua semana agora!
             </p>
             <button 
               onClick={() => setIsWeeklyPlannerOpen(true)}
@@ -852,7 +852,7 @@ export default function EvolutionView() {
               boxShadow: unlockedCount === ACHIEVEMENTS.length ? '0 0 12px rgba(0, 210, 255, 0.2)' : 'none',
               flexShrink: 0
             }}>
-              👑
+              <MFIcon name="trophy" size={24} color="#00d2ff" />
             </div>
             <div style={{ flex: 1 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -873,9 +873,9 @@ export default function EvolutionView() {
                 Desbloqueie todas as outras 10 conquistas para alcançar a maestria absoluta.
               </p>
               {unlockedCount === ACHIEVEMENTS.length ? (
-                <span style={{ fontSize: '11px', color: '#22c55e', display: 'block', marginTop: '8px', fontWeight: '700' }}>
-                  ✨ Coleção 100% Concluída! Você é uma lenda da produtividade.
-                </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#10b981', fontWeight: '700', fontSize: '13px', margin: '8px 0 0' }}>
+                  <MFIcon name="sparkle" size={14} color="#10b981" /> Coleção 100% Concluída! Você é uma lenda da produtividade.
+                </div>
               ) : (
                 <span style={{ fontSize: '11px', color: 'var(--text-light)', display: 'block', marginTop: '8px', fontStyle: 'italic' }}>
                   Faltam {ACHIEVEMENTS.length - unlockedCount} conquistas para liberar.
@@ -936,7 +936,7 @@ export default function EvolutionView() {
               className="btn-primary-glow"
               style={{ padding: '8px 16px', fontSize: '13px', cursor: 'pointer' }}
             >
-              Ativar Flowday Pro ⚡
+              Ativar Flowday Pro
             </button>
           </div>
         )}

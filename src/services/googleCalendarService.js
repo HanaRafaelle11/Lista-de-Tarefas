@@ -22,8 +22,7 @@ export function exportAllTasksToCalendar(tasks) {
 
   const scheduledTasks = tasks.filter(t => t.dueDate && !t.completed);
   if (scheduledTasks.length === 0) {
-    alert("Você não possui tarefas ativas agendadas no momento.");
-    return;
+    throw new Error("Você não possui tarefas ativas agendadas no momento.");
   }
 
   const now = new Date();

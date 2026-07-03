@@ -90,7 +90,7 @@ export default function PwaInstallPrompt() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <div style={{ padding: '2px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <img src={getLogo(theme).src} alt={getLogo(theme).alt} style={{ height: '36px', width: 'auto', background: 'transparent', objectFit: 'contain' }} />
+            <img src={getLogo(theme).src} alt={getLogo(theme).alt} style={{ height: '42px', width: 'auto', background: 'transparent', objectFit: 'contain' }} />
           </div>
           <div>
             <h4 style={{ margin: 0, fontSize: '15px', fontWeight: '700', color: 'var(--text-main)', fontFamily: 'var(--font-display)' }}>Instalar MyFlowDay</h4>
@@ -107,8 +107,8 @@ export default function PwaInstallPrompt() {
       {isIOS ? (
         <div style={{ fontSize: '13px', color: 'var(--text-main)', backgroundColor: 'var(--bg-app)', padding: '12px', borderRadius: '8px', lineHeight: '1.5' }}>
           No iPhone/iPad:<br />
-          1. Toque no ícone Compartilhar 📤<br />
-          2. Selecione <strong>Adicionar à Tela de Início ➕</strong>
+          1. Toque no ícone Compartilhar<br />
+          2. Selecione <strong>Adicionar à Tela de Início</strong>
         </div>
       ) : (
         deferredPrompt && (
@@ -117,7 +117,7 @@ export default function PwaInstallPrompt() {
             className="btn-primary-glow"
             style={{ width: '100%', padding: '10px', fontWeight: '600', cursor: 'pointer' }}
           >
-            Instalar App Na Tela Inicial 🚀
+            Instalar App Na Tela Inicial
           </button>
         )
       )}

@@ -56,7 +56,7 @@ export default function Navbar() {
             <img 
               src={logo.src}
               alt={logo.alt} 
-              style={{ height: '36px', width: 'auto', objectFit: 'contain', background: 'transparent', border: 'none', boxShadow: 'none', padding: 0 }}
+              style={{ height: '42px', width: 'auto', objectFit: 'contain', background: 'transparent', border: 'none', boxShadow: 'none', padding: 0 }}
             />
           </div>
 

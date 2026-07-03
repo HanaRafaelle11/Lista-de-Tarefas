@@ -19,7 +19,7 @@ function truncateId(id) {
 }
 
 export default function AdminNotificationDashboard() {
-  const { currentUser } = useAppContext();
+  const { currentUser, openCustomAlert } = useAppContext();
   const [loading, setLoading] = useState(true);
   const [testLoading, setTestLoading] = useState(false);
   const [testResult, setTestResult] = useState(null);
@@ -120,7 +120,7 @@ export default function AdminNotificationDashboard() {
 
   const handleSendTestPush = async () => {
     if (!currentUser?.id) {
-      alert('Administrador não identificado.');
+      openCustomAlert('Administrador não identificado.');
       return;
     }
 
@@ -266,8 +266,8 @@ export default function AdminNotificationDashboard() {
             </button>
             
             {browserPermission !== 'granted' && (
-              <span style={{ fontSize: '12px', color: 'var(--danger)', fontWeight: '600' }}>
-                ⚠️ Por favor, conceda permissões de notificação a este site para testar.
+              <span style={{ fontSize: '12px', color: 'var(--danger)', fontWeight: '600', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                <AlertTriangle size={14} /> Por favor, conceda permissões de notificação a este site para testar.
               </span>
             )}
           </div>

@@ -115,7 +115,7 @@ export const eventReplayer = {
             break;
 
           case 'task_updated':
-          case 'task_update':
+          case 'task_update': {
             const updId = normMetadata && (normMetadata.taskId || normMetadata.task_id);
             if (updId) {
               const task = projection.tasks.list.find(t => t.id === updId);
@@ -125,14 +125,16 @@ export const eventReplayer = {
               }
             }
             break;
+          }
 
           case 'task_deleted':
-          case 'task_delete':
+          case 'task_delete': {
             const delId = normMetadata && (normMetadata.taskId || normMetadata.task_id);
             if (delId) {
               projection.tasks.list = projection.tasks.list.filter(t => t.id !== delId);
             }
             break;
+          }
 
           case 'habit_created':
             projection.habits.createdCount += 1;

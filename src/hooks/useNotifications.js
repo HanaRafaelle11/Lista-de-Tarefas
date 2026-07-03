@@ -23,18 +23,22 @@ function urlBase64ToUint8Array(base64String) {
  * useNotifications — Hook para gerenciar browser notifications (foreground) e Web Push (background)
  */
 export function useNotifications() {
-  if (typeof window !== 'undefined' && window.location.search.includes('mock_push=true')) {
-    try {
-      Object.defineProperty(window.Notification, 'permission', { get: () => 'granted', configurable: true });
-      window.Notification.requestPermission = async () => 'granted';
-    } catch (_) {}
-  }
-
   const isSupported = typeof window !== 'undefined' && 'Notification' in window;
 
-  const [permission, setPermission] = useState(
-    isSupported ? Notification.permission : 'denied'
-  );
+  const [permission, setPermission] = useState(() => {
+    if (!isSupported) return 'denied';
+    if (typeof window !== 'undefined' && window.location.search.includes('mock_push=true')) return 'granted';
+    return Notification.permission;
+  });
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.location.search.includes('mock_push=true')) {
+      try {
+        Object.defineProperty(window.Notification, 'permission', { get: () => 'granted', configurable: true });
+        window.Notification.requestPermission = async () => 'granted';
+      } catch (_) {}
+    }
+  }, []);
 
   const [isEnabled, setIsEnabled] = useState(() => {
     if (!isSupported) return false;
@@ -49,9 +53,15 @@ export function useNotifications() {
   // Sincroniza o estado se a permissão mudar externamente
   useEffect(() => {
     if (!isSupported) return;
-    setPermission(Notification.permission);
+    if (permission !== Notification.permission) {
+      setTimeout(() => {
+        setPermission(Notification.permission);
+      }, 0);
+    }
     if (Notification.permission !== 'granted') {
-      setIsEnabled(false);
+      setTimeout(() => {
+        setIsEnabled(false);
+      }, 0);
       localStorage.setItem(STORAGE_KEY, 'false');
     }
 
@@ -74,7 +84,7 @@ export function useNotifications() {
     return () => {
       if (permissionStatus) permissionStatus.onchange = null;
     };
-  }, [isSupported]);
+  }, [isSupported, permission]);
 
   // Helper to log diagnostics directly to the database
   const logDiagnostic = async (userId, step, status, errorMsg = null) => {

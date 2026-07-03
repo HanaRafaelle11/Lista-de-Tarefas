@@ -19,7 +19,7 @@ self.addEventListener('push', (event) => {
   console.log('[SW Debug] Push event received!', event);
   try {
     let data = {
-      title: 'MyFlowDay ⚡',
+      title: 'MyFlowDay',
       body: 'Você possui um novo compromisso agendado!',
       url: '/tasks',
       tag: `flowday_push_${Date.now()}`
@@ -38,7 +38,7 @@ self.addEventListener('push', (event) => {
       console.warn('[SW Debug] Push event received but NO data payload exists!');
     }
 
-    const title = data.title || 'MyFlowDay ⚡';
+    const title = data.title || 'MyFlowDay';
     const options = {
       body: data.body || '',
       icon: '/icon.svg',
@@ -49,9 +49,9 @@ self.addEventListener('push', (event) => {
       silent: false,
       tag: data.tag || `notif_${Date.now()}`,
       actions: [
-        { action: 'open', title: '👁️ Abrir' },
-        { action: 'complete', title: '✅ Concluir' },
-        { action: 'snooze_10', title: '⏰ Adiar 10 min' }
+        { action: 'open', title: 'Abrir' },
+        { action: 'complete', title: 'Concluir' },
+        { action: 'snooze_10', title: 'Adiar 10 min' }
       ],
       data: {
         url: data.url || '/',

@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Lock, TrendingUp, AlertOctagon, Award, AlertTriangle } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Lock, TrendingUp, AlertOctagon, Award, AlertTriangle, X } from 'lucide-react';
 import { useAppContext } from '../contexts/AppContext';
 import RevenueKPI from '../components/metrics/RevenueKPI';
 import RevenueChart from '../components/metrics/RevenueChart';
@@ -136,8 +136,8 @@ export default function RevenueDashboard() {
   if (error) {
     return (
       <div style={{ padding: '32px', textAlign: 'center', maxWidth: '500px', margin: '40px auto', backgroundColor: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: '12px', color: '#ef4444' }}>
-        <span style={{ fontSize: '32px' }}>⚠️</span>
-        <h3 style={{ fontSize: '18px', margin: '16px 0 8px', fontWeight: '700' }}>Erro ao Carregar Dashboard</h3>
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}><AlertTriangle size={32} /></div>
+        <h3 style={{ fontSize: '18px', margin: '0 0 8px', fontWeight: '700' }}>Erro ao Carregar Dashboard</h3>
         <p style={{ fontSize: '14px', opacity: 0.8, lineHeight: 1.6 }}>{error}</p>
       </div>
     );
@@ -166,9 +166,9 @@ export default function RevenueDashboard() {
       {/* Stripe-style Insights / Alertas */}
       {alertsList.length > 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '30px' }}>
-          {alertsList.map((alert) => (
+          {alertsList.map((alert, index) => (
             <div
-              key={alert.id || Math.random()}
+              key={alert.id || index}
               style={{
                 backgroundColor: alert.type === 'danger' ? 'rgba(239, 68, 68, 0.1)' : alert.type === 'success' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(245, 158, 11, 0.1)',
                 border: alert.type === 'danger' ? '1px solid rgba(239, 68, 68, 0.25)' : alert.type === 'success' ? '1px solid rgba(16, 185, 129, 0.25)' : '1px solid rgba(245, 158, 11, 0.25)',
@@ -198,7 +198,7 @@ export default function RevenueDashboard() {
       <RevenueKPI kpis={kpisData} />
 
       {/* Gráficos e Tabelas Responsivos */}
-      <div style={{ width: '100%', overflowX: 'auto', WebkitOverflowScrolling: 'touch', paddingBottom: '12px' }}>
+      <div style={{ width: '100%', overflow: 'visible', paddingBottom: '12px' }}>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '20px', width: '100%' }}>
           {/* Gráfico Principal de MRR */}
           <div id="mrr-chart-section">
@@ -284,7 +284,7 @@ export default function RevenueDashboard() {
                   padding: '8px'
                 }}
               >
-                ✕
+                <X size={18} />
               </button>
             </div>
 
@@ -339,7 +339,7 @@ export default function RevenueDashboard() {
                   
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', borderLeft: '2px solid rgba(255, 255, 255, 0.05)', marginLeft: '12px', paddingLeft: '20px', position: 'relative' }}>
                     {timelineData.timeline && timelineData.timeline.length > 0 ? (
-                      timelineData.timeline.map((item, idx) => (
+                      timelineData.timeline.map((item) => (
                         <div key={item.id} style={{ position: 'relative' }}>
                           {/* Dot indicador na linha temporal */}
                           <span style={{

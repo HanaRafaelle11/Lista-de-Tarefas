@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Shield, Lock, Mail, User, CheckCircle2, ArrowLeft, Send, KeyRound, Loader2 } from 'lucide-react';
+import { Shield, Lock, Mail, User, CheckCircle2, ArrowLeft, Send, KeyRound, Loader2, Sparkles } from 'lucide-react';
 import { supabase, REDIRECT_URL } from '../supabaseClient';
 import { eventsService } from '../services/eventsService';
 
@@ -38,15 +38,15 @@ const BtnSpinner = () => (
 
 // ── Component ────────────────────────────────────────────────────────
 export default function Auth({ onLoginSuccess, initialMode = 'login', onBackToLanding }) {
-  const { theme, handleStartDemoMode, logAuthEvent } = useAppContext();
+  const { theme, handleStartDemoMode, logAuthEvent, openCustomAlert } = useAppContext();
   const [cooldown, setCooldown] = useState(0);
 
   useEffect(() => {
     if (import.meta.env.PROD && REDIRECT_URL.includes('localhost')) {
       console.error('[CRITICAL] REDIRECT_URL points to localhost in production!');
-      alert('[CRITICAL ERROR] A URL de redirecionamento está configurada como localhost em ambiente de produção. Por favor, ajuste as variáveis de ambiente.');
+      openCustomAlert('[CRITICAL ERROR] A URL de redirecionamento está configurada como localhost em ambiente de produção. Por favor, ajuste as variáveis de ambiente.');
     }
-  }, []);
+  }, [openCustomAlert]);
 
   useEffect(() => {
     const checkCooldown = () => {
@@ -563,7 +563,9 @@ export default function Auth({ onLoginSuccess, initialMode = 'login', onBackToLa
       <div style={styles.authContainer} className="animate-fade-in">
         <div style={styles.authCard}>
           <div style={{ textAlign: 'center', padding: '20px 0' }}>
-            <div style={{ fontSize: '56px', marginBottom: '16px', color: 'var(--primary)' }}>✉️</div>
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px', color: 'var(--primary)' }}>
+              <Mail size={56} />
+            </div>
             <h2 style={{ fontSize: '22px', fontWeight: '700', color: 'var(--text-main)', marginBottom: '8px' }}>Confirme seu E-mail</h2>
             <p style={{ fontSize: '14px', color: 'var(--text-muted)', lineHeight: '1.6', marginBottom: '24px' }}>
               Enviamos um link de confirmação para <strong>{email}</strong>. Acesse seu e-mail e clique no link para ativar sua conta do <strong>MyFlowDay</strong>.
@@ -911,7 +913,7 @@ export default function Auth({ onLoginSuccess, initialMode = 'login', onBackToLa
                     marginTop: 0
                   }}
                 >
-                  🎮 Experimentar sem criar conta
+                  <Sparkles size={17} /> Experimentar sem criar conta
                 </button>
               </div>
             </>

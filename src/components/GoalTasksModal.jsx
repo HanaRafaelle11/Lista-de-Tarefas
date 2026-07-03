@@ -44,7 +44,7 @@ const priorityColors = { Alta: '#ef4444', Média: '#f59e0b', Baixa: '#10b981' };
 
 export default function GoalTasksModal({ isOpen, onClose, goal, tasks, linkedTaskIds, onLink, onUnlink, onDeleteTask }) {
   console.log('[GoalTasksModal] isOpen:', isOpen, 'goal:', goal?.title, 'tasksCount:', tasks?.length, 'linkedTaskIds:', linkedTaskIds);
-  const { handleAddTask } = useAppContext();
+  const { handleAddTask, openCustomConfirm } = useAppContext();
   const [search, setSearch] = useState('');
   const [quickTaskTitle, setQuickTaskTitle] = useState('');
   const [isCreatingQuickTask, setIsCreatingQuickTask] = useState(false);
@@ -215,9 +215,11 @@ export default function GoalTasksModal({ isOpen, onClose, goal, tasks, linkedTas
                           className="goal-task-action-btn delete"
                           onClick={e => {
                             e.stopPropagation();
-                            if (window.confirm("Deseja realmente apagar esta tarefa por completo? Ela será removida de toda a lista de tarefas.")) {
-                              onDeleteTask(task.id);
-                            }
+                            openCustomConfirm(
+                              "Deseja realmente apagar esta tarefa por completo? Ela será removida de toda a lista de tarefas.",
+                              "Excluir Tarefa",
+                              () => onDeleteTask(task.id)
+                            );
                           }}
                           title="Excluir tarefa por completo"
                           style={{

@@ -111,7 +111,7 @@ export default function CustomerHealthTable({ customers, onUserClick }) {
         Saúde do Cliente & Score de Churn
       </h3>
 
-      <div style={{ overflowX: 'auto' }}>
+      <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch', overscrollBehaviorX: 'contain' }}>
         <table style={tableStyle}>
           <thead>
             <tr>

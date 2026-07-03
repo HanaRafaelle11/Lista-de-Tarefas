@@ -1,19 +1,19 @@
 // Base de Dados Oficial da Central de Ajuda & FAQ do MyFlowDay
 export const HELP_CATEGORIES = [
-  { id: 'onboarding', title: '🚀 Primeiros Passos', icon: 'Rocket' },
-  { id: 'tasks', title: '✅ Tarefas', icon: 'CheckSquare' },
-  { id: 'goals', title: '🎯 Metas & Objetivos', icon: 'Target' },
-  { id: 'habits', title: '🔥 Hábitos & Streaks', icon: 'Flame' },
-  { id: 'focus', title: '🍅 Foco Pomodoro & Lo-Fi', icon: 'Clock' },
-  { id: 'ai', title: '🤖 IA (Coach MyFlowDay)', icon: 'Sparkles' },
-  { id: 'gamification', title: '🐶 Gamificação & Mascotes', icon: 'Award' },
-  { id: 'billing', title: '💳 Assinaturas & Pagamentos', icon: 'CreditCard' },
-  { id: 'account', title: '👤 Conta & Privacidade', icon: 'User' },
-  { id: 'technical', title: '📱 PWA, Offline & Notificações', icon: 'Wifi' },
+  { id: 'onboarding', title: 'Primeiros Passos', icon: 'Rocket' },
+  { id: 'tasks', title: 'Tarefas', icon: 'CheckSquare' },
+  { id: 'goals', title: 'Metas & Objetivos', icon: 'Target' },
+  { id: 'habits', title: 'Hábitos & Streaks', icon: 'Flame' },
+  { id: 'focus', title: 'Foco Pomodoro & Lo-Fi', icon: 'Clock' },
+  { id: 'ai', title: 'IA (Coach MyFlowDay)', icon: 'Sparkles' },
+  { id: 'gamification', title: 'Gamificação & Mascotes', icon: 'Award' },
+  { id: 'billing', title: 'Assinaturas & Pagamentos', icon: 'CreditCard' },
+  { id: 'account', title: 'Conta & Privacidade', icon: 'User' },
+  { id: 'technical', title: 'PWA, Offline & Notificações', icon: 'Wifi' },
 ];
 
 export const HELP_ARTICLES = [
-  // 🚀 PRIMEIROS PASSOS
+  // PRIMEIROS PASSOS
   {
     id: 'create-account',
     categoryId: 'onboarding',
@@ -55,7 +55,7 @@ export const HELP_ARTICLES = [
     faq: 'O link de recuperação expira? Sim, por motivos de segurança o link é válido por 24 horas.'
   },
 
-  // ✅ TAREFAS
+  // TAREFAS
   {
     id: 'tasks-create',
     categoryId: 'tasks',
@@ -78,7 +78,7 @@ export const HELP_ARTICLES = [
     faq: 'Como funciona a notificação? O Service Worker dispara um alerta nativo com som 15 min antes do prazo.'
   },
 
-  // 🎯 METAS
+  // METAS
   {
     id: 'goals-guide',
     categoryId: 'goals',
@@ -100,7 +100,7 @@ export const HELP_ARTICLES = [
     faq: 'O que acontece ao concluir todas as tarefas vinculadas? O objetivo é automaticamente marcado como concluído!'
   },
 
-  // 🔥 HÁBITOS
+  // HÁBITOS
   {
     id: 'habits-guide',
     categoryId: 'habits',
@@ -122,7 +122,7 @@ export const HELP_ARTICLES = [
     faq: 'Se eu esquecer de marcar um dia, perco a sequência? Sim, a sequência (streak) reinicia para incentivar a consistência real.'
   },
 
-  // 🍅 FOCO
+  // FOCO
   {
     id: 'focus-guide',
     categoryId: 'focus',
@@ -144,14 +144,14 @@ export const HELP_ARTICLES = [
     faq: 'O som continua tocando se eu mudar de aba? Sim, o reprodutor de áudio foi otimizado para rodar em segundo plano.'
   },
 
-  // 🤖 IA (COACH MYFLOWDAY)
+  // IA (COACH MYFLOWDAY)
   {
     id: 'ai-guide',
     categoryId: 'ai',
     title: 'Tudo sobre o Coach MyFlowDay: Seu assistente de produtividade com IA',
     whatIs: 'Um motor de inteligência comportamental exclusivo do Plano Pro que analisa sua rotina.',
     purpose: 'Oferece insights valiosos e sugestões personalizadas sobre como otimizar seu tempo e energia.',
-    howToAccess: 'Acesse a aba "Coach" no menu (exclusivo assinantes Pro⚡).',
+    howToAccess: 'Acesse a aba "Coach" no menu (exclusivo assinantes Pro).',
     howToUse: 'Converse diretamente com o Coach MyFlowDay ou clique nos botões de análise rápida para obter relatórios comportamentais.',
     fieldGuide: [
       { field: 'Caixa de Mensagem / Prompt', tip: 'Seja específico sobre o que deseja analisar ou melhorar na sua rotina.' }
@@ -165,7 +165,7 @@ export const HELP_ARTICLES = [
     faq: 'Meus dados são compartilhados com terceiros? Não! Toda a análise é processada de forma restrita e segura.'
   },
 
-  // 🐶 GAMIFICAÇÃO
+  // GAMIFICAÇÃO
   {
     id: 'gamification-guide',
     categoryId: 'gamification',
@@ -173,7 +173,7 @@ export const HELP_ARTICLES = [
     whatIs: 'Um sistema motivacional completo com ganho de pontos de experiência (XP), badges e pets de crescimento.',
     purpose: 'Transforma a conclusão de tarefas e hábitos em um jogo divertido e gratificante.',
     howToAccess: 'Na tela inicial (Home), visualize o card "Seu ritmo de crescimento".',
-    howToUse: 'Escolha seu mascote favorito (🌱 Plantinha, 👶 Bebê, 🐶 Cachorrinho ou 🐱 Gatinho). Conclua tarefas e hábitos para ganhar XP e evoluir seu pet por 4 estágios únicos!',
+    howToUse: 'Escolha seu mascote favorito (Plantinha, Bebê, Cachorrinho ou Gatinho). Conclua tarefas e hábitos para ganhar XP e evoluir seu pet por 4 estágios únicos!',
     fieldGuide: [
       { field: 'Seleção de Pet', tip: 'Escolha a identidade visual que mais se conecta com o seu momento atual.' }
     ],
@@ -186,18 +186,18 @@ export const HELP_ARTICLES = [
     faq: 'Como ganho mais XP? Concluindo tarefas antes do prazo e mantendo sequências longas nos hábitos.'
   },
 
-  // 💳 ASSINATURAS E PAGAMENTOS (CATEGORIA EXCLUSIVA)
+  // ASSINATURAS E PAGAMENTOS (CATEGORIA EXCLUSIVA)
   {
     id: 'billing-plans',
     categoryId: 'billing',
-    title: 'Diferença entre o Plano Free e o Plano Pro⚡',
+    title: 'Diferença entre o Plano Free e o Plano Pro',
     whatIs: 'O comparativo oficial dos recursos disponíveis na versão gratuita e na versão premium.',
     purpose: 'Permite escolher a opção ideal para a sua jornada de progresso pessoal.',
     howToAccess: 'Acesse Configurações > Planos ou clique no banner "Quero ser Pro".',
     howToUse: 'Analise os recursos e faça o upgrade para desbloquear inteligência artificial e sincronizações avançadas.',
     fieldGuide: [
       { field: 'Plano Free', tip: 'Gratuito para sempre. Inclui tarefas, hábitos, metas e temporizador Pomodoro.' },
-      { field: 'Plano Pro⚡', tip: 'R$ 14,90/mês. Inclui Coach de IA, Google Calendar Sync e relatórios ilimitados.' }
+      { field: 'Plano Pro', tip: 'R$ 14,90/mês. Inclui Coach de IA, Google Calendar Sync e relatórios ilimitados.' }
     ],
     examples: {
       bad: 'Achar que o Plano Free expira após alguns dias. O Free é gratuito para sempre!',
@@ -251,7 +251,7 @@ export const HELP_ARTICLES = [
     title: 'Como cancelar sua assinatura e politica de acesso',
     whatIs: 'O procedimento para interromper a renovação automática da sua assinatura Pro.',
     purpose: 'Dá total controle ao usuário para encerrar cobranças futuras quando desejar.',
-    howToAccess: 'Vá em Configurações ⚙️ > Minha Assinatura > Cancelar Assinatura.',
+    howToAccess: 'Vá em Configurações > Minha Assinatura > Cancelar Assinatura.',
     howToUse: 'Clique no botão de cancelamento e confirme a ação na tela.',
     fieldGuide: [
       { field: 'Confirmação de Cancelamento', tip: 'Leia os detalhes exibidos antes de confirmar.' }
@@ -285,14 +285,14 @@ export const HELP_ARTICLES = [
     faq: 'Existe cobrança duplicada? Não! Nosso sistema possui travas rigorosas de idempotência contra pagamentos duplicados.'
   },
 
-  // 👤 CONTA
+  // CONTA
   {
     id: 'account-privacy',
     categoryId: 'account',
     title: 'Privacidade de Dados, LGPD e Exclusão de Conta',
     whatIs: 'As políticas e ferramentas de proteção e controle sobre seus dados pessoais.',
     purpose: 'Assegura total conformidade com a Lei Geral de Proteção de Dados (LGPD).',
-    howToAccess: 'Acesse Configurações ⚙️ > Privacidade.',
+    howToAccess: 'Acesse Configurações > Privacidade.',
     howToUse: 'Você pode solicitar o download de todos os seus dados ou clicar em "Excluir Minha Conta" para apagar permanentemente seus registros dos nossos servidores.',
     fieldGuide: [
       { field: 'Excluir Conta', tip: 'Ação irreversível. Apaga todas as tarefas, hábitos, metas e históricos salvos.' }
@@ -311,8 +311,8 @@ export const HELP_ARTICLES = [
     title: 'Como excluir sua conta permanentemente',
     whatIs: 'O procedimento para apagar de forma definitiva sua conta e todos os dados associados do MyFlowDay.',
     purpose: 'Garante o direito ao esquecimento e a eliminação completa dos seus dados pessoais em conformidade com as leis de privacidade.',
-    howToAccess: 'Acesso pelo menu lateral ou superior: Configurações ⚙️ > aba "Privacidade" (ou "Minha Conta") > botão "Excluir Minha Conta".',
-    howToUse: 'Acesse a tela de Configurações ⚙️, selecione a aba de "Privacidade" (ou "Perfil"), role até a base e clique no botão vermelho "Excluir Minha Conta". Por segurança, confirme o processo digitando a palavra "EXCLUIR".',
+    howToAccess: 'Acesso pelo menu lateral ou superior: Configurações > aba "Privacidade" (ou "Minha Conta") > botão "Excluir Minha Conta".',
+    howToUse: 'Acesse a tela de Configurações, selecione a aba de "Privacidade" (ou "Perfil"), role até a base e clique no botão vermelho "Excluir Minha Conta". Por segurança, confirme o processo digitando a palavra "EXCLUIR".',
     fieldGuide: [
       { field: 'Confirmação', tip: 'Digite exatamente a palavra chave em maiúsculas "EXCLUIR" para efetivar a remoção.' }
     ],
@@ -325,7 +325,7 @@ export const HELP_ARTICLES = [
     faq: 'Posso reativar uma conta excluída? Não. Uma vez excluída, os dados e o histórico de streaks são apagados permanentemente.'
   },
 
-  // 📱 TÉCNICA
+  // TÉCNICA
   {
     id: 'tech-pwa-offline',
     categoryId: 'technical',

@@ -135,7 +135,7 @@ function ArticleCard({ article }) {
           {/* FAQ Específica */}
           {article.faq && (
             <div style={{ marginTop: '16px', paddingTop: '12px', borderTop: '1px solid rgba(255,255,255,0.1)', fontSize: '14px', color: '#34d399' }}>
-              ❓ <strong>Dúvida Frequente:</strong> <span style={{ color: '#f8fafc' }}>{article.faq}</span>
+              <HelpCircle size={14} style={{ display: 'inline', marginRight: '4px', verticalAlign: 'middle' }} /> <strong>Dúvida Frequente:</strong> <span style={{ color: '#f8fafc' }}>{article.faq}</span>
             </div>
           )}
 
@@ -199,7 +199,7 @@ export default function FaqView({ onGoBack }) {
             <ArrowLeft size={16} /> Voltar
           </button>
           <span style={{ fontSize: '16px', fontWeight: '700', fontFamily: 'var(--font-display, sans-serif)' }}>
-            Central de Ajuda & FAQ 📘
+            Central de Ajuda & FAQ
           </span>
         </div>
       </div>
@@ -258,7 +258,7 @@ export default function FaqView({ onGoBack }) {
               color: selectedCategory === 'all' ? '#ffffff' : 'rgba(255, 255, 255, 0.7)'
             }}
           >
-            🌟 Todas as Categorias
+            Todas as Categorias
           </button>
           {HELP_CATEGORIES.map(cat => {
             const isSel = selectedCategory === cat.id;

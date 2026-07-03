@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect, useRef, lazy, Suspense } from 'rea
 import { 
   Plus, Search, X, Calendar, ChevronDown, ChevronRight, 
   List, Columns, Grid, Trash2, Edit2, AlertCircle, ArrowLeft, ArrowRight,
-  Sparkles, Award, Sprout, Pin, Zap, CheckCircle, Moon, Sun, Tag, AlertTriangle, RotateCcw, Copy
+  Sparkles, Award, Sprout, Pin, Zap, CheckCircle, Moon, Sun, Tag, AlertTriangle, RotateCcw, Copy, Check, Download
 } from 'lucide-react';
 import EmojiPicker from 'emoji-picker-react';
 import CategoryIcon from './CategoryIcon';
@@ -76,52 +76,7 @@ function formatFriendlyDate(dateStr) {
   return `${parts[2]} de ${months[parseInt(parts[1]) - 1]} de ${parts[0]}`;
 }
 
-function getGoalIconEmoji(iconName) {
-  if (!iconName) return '🎯';
-  const isEmoji = /\p{Emoji}/u.test(iconName) && !/^[a-zA-Z0-9-]+$/.test(iconName);
-  if (isEmoji) return iconName;
 
-  const emojiMap = {
-    target: '🎯',
-    rocket: '🚀',
-    book: '📖',
-    dollar: '💰',
-    home: '🏠',
-    globe: '🌐',
-    dumbbell: '💪',
-    brain: '🧠',
-    heart: '❤️',
-    palette: '🎨',
-    music: '🎵',
-    plane: '✈️',
-    sprout: '🌱',
-    trending: '📈',
-    star: '⭐',
-    users: '👥',
-  };
-
-  return emojiMap[iconName.toLowerCase()] || '🎯';
-}
-
-function getCategoryEmoji(iconName) {
-  if (!iconName) return '🎯';
-  const emojiMap = {
-    briefcase: '💼',
-    user: '👤',
-    book: '📚',
-    dumbbell: '🏋️',
-    heart: '❤️',
-    palette: '🎨',
-    music: '🎵',
-    plane: '✈️',
-    sprout: '🌱',
-    trending: '📈',
-    star: '⭐',
-    users: '👥',
-  };
-
-  return emojiMap[iconName.toLowerCase()] || '🎯';
-}
 
 const formatarDataBR = (str) => {
   return formatTaskDateDisplay(str);
@@ -338,7 +293,8 @@ export default function TodoView() {
     deletedTasks,
     setActiveTab,
     setSettingsTab,
-    handleDuplicateTask: onDuplicateTask
+    handleDuplicateTask: onDuplicateTask,
+    openCustomAlert
   } = useAppContext();
 
   // Estados locais
@@ -370,7 +326,7 @@ export default function TodoView() {
 
   // Categorias customizadas
   const [newCatName, setNewCatName] = useState('');
-  const [newCatEmoji, setNewCatEmoji] = useState('🏷️');
+  const [newCatIcon, setNewCatIcon] = useState('briefcase');
   const [newCatColor, setNewCatColor] = useState('#6B7F8A');
 
   // Formulário de tarefa
@@ -382,7 +338,6 @@ export default function TodoView() {
   const [dueTime, setDueTime] = useState('');
   const [recurrence, setRecurrence] = useState('nenhuma');
   const [linkedGoal, setLinkedGoal] = useState('');
-  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
 
   // Salva modo de visualização e rastreia analytics
   useEffect(() => {
@@ -508,7 +463,7 @@ export default function TodoView() {
         setAchievementData({
           title: 'Primeira do Dia!',
           message: 'Você completou sua primeira tarefa de hoje. Parabéns pelo foco!',
-          icon: '🏆'
+          icon: 'trophy'
         });
         setShowAchievementModal(true);
       }
@@ -526,7 +481,7 @@ export default function TodoView() {
     handleAddCategory({
       id: catId,
       name: newCatName.trim(),
-      emoji: newCatEmoji,
+      emoji: newCatIcon,
       color: newCatColor
     });
     setNewCatName('');
@@ -547,7 +502,7 @@ export default function TodoView() {
 
   const handleLoadTemplate = (template) => {
     if (activeTemplates.has(template.title)) {
-      alert(`O modelo "${template.title}" já está ativo em sua lista.`);
+      openCustomAlert(`O modelo "${template.title}" já está ativo em sua lista.`);
       return;
     }
     setCustomizingTemplate({
@@ -621,7 +576,7 @@ export default function TodoView() {
     if (!customizingTemplate) return;
     const enabledTasks = customizingTemplate.tasks.filter(t => t.enabled && t.title.trim());
     if (enabledTasks.length === 0) {
-      alert("Selecione ou preencha pelo menos uma tarefa com título.");
+      openCustomAlert("Selecione ou preencha pelo menos uma tarefa com título.");
       return;
     }
 
@@ -652,8 +607,12 @@ export default function TodoView() {
       setIsSyncModalOpen(false);
       return;
     }
-    exportAllTasksToCalendar(tasks);
-    window.open('https://calendar.google.com/calendar/r/settings/export', '_blank');
+    try {
+      exportAllTasksToCalendar(tasks);
+      window.open('https://calendar.google.com/calendar/r/settings/export', '_blank');
+    } catch (err) {
+      openCustomAlert(err.message, "Calendário");
+    }
     setIsSyncModalOpen(false);
     logEvent('calendar_google_sync_clicked');
   };
@@ -664,7 +623,11 @@ export default function TodoView() {
       setIsSyncModalOpen(false);
       return;
     }
-    exportAllTasksToCalendar(tasks);
+    try {
+      exportAllTasksToCalendar(tasks);
+    } catch (err) {
+      openCustomAlert(err.message, "Calendário");
+    }
     setIsSyncModalOpen(false);
     logEvent('calendar_ics_sync_clicked');
   };
@@ -853,7 +816,7 @@ export default function TodoView() {
             {active > 0
               ? `${active} pendente${active > 1 ? 's' : ''} · ${rate}% concluído`
               : rate === 100 && total > 0
-              ? '🎉 Tudo concluído!'
+              ? 'Tudo concluído!'
               : 'Nenhuma tarefa ainda'}
           </p>
         </div>
@@ -918,7 +881,7 @@ export default function TodoView() {
             onMouseEnter={e => e.target.style.opacity = 0.9}
             onMouseLeave={e => e.target.style.opacity = 1}
           >
-            Desbloquear Histórico Pro ⚡
+            Desbloquear Histórico Pro
           </button>
         </div>
       )}
@@ -1010,10 +973,10 @@ export default function TodoView() {
               return (
                 <div key={cat.id} className="category-item-row">
                   <div className="category-item-info">
-                    {cat.iconName ? (
-                      <MFIcon name={cat.iconName} size={16} style={{ color: cat.color }} />
+                    {cat.iconName || cat.emoji ? (
+                      <MFIcon name={cat.iconName || cat.emoji} size={16} style={{ color: cat.color }} />
                     ) : (
-                      <span style={{ fontSize: '16px' }}>{cat.emoji || '💼'}</span>
+                      <MFIcon name="briefcase" size={16} style={{ color: cat.color }} />
                     )}
                     <span style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-main)' }}>{cat.name}</span>
                     <span className="category-item-color-dot" style={{ backgroundColor: cat.color }} />
@@ -1043,20 +1006,26 @@ export default function TodoView() {
               required
             />
             <div style={{ position: 'relative' }}>
-              <button 
-                type="button"
-                onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                className="form-input category-input-emoji"
-                style={{ width: '40px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, cursor: 'pointer' }}
-                title="Selecionar Emoji"
+              <select
+                value={newCatIcon}
+                onChange={e => setNewCatIcon(e.target.value)}
+                className="form-input"
+                style={{ width: '110px', height: '36px', padding: '0 8px', cursor: 'pointer', fontSize: '12px' }}
+                title="Selecionar Ícone"
               >
-                {newCatEmoji || '😀'}
-              </button>
-              {showEmojiPicker && (
-                <div style={{ position: 'absolute', zIndex: 100, bottom: '100%', left: 0, marginBottom: '8px' }}>
-                  <EmojiPicker onEmojiClick={(e) => { setNewCatEmoji(e.emoji); setShowEmojiPicker(false); }} theme="auto" />
-                </div>
-              )}
+                <option value="briefcase">Trabalho</option>
+                <option value="user">Pessoal</option>
+                <option value="book">Estudos</option>
+                <option value="dumbbell">Saúde</option>
+                <option value="heart">Bem-estar</option>
+                <option value="palette">Criatividade</option>
+                <option value="music">Música</option>
+                <option value="plane">Viagem</option>
+                <option value="sprout">Crescimento</option>
+                <option value="trending">Finanças</option>
+                <option value="star">Favorito</option>
+                <option value="users">Social</option>
+              </select>
             </div>
             <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
               {['#6B7F8A', '#7A8B7B', '#B09E86', '#A88891', '#4A654E', '#9B6B5A', '#5A6B7A', '#8A6B8A'].map(color => (
@@ -1240,7 +1209,7 @@ export default function TodoView() {
                   <TaskSection
                     key={templateName}
                     title={templateName}
-                    icon={goal ? <span style={{ fontSize: '14px' }}>{getGoalIconEmoji(goal.icon)}</span> : <Sparkles size={15} style={{ color: 'var(--primary)' }} />}
+                    icon={goal ? <MFIcon name={goal.icon || 'target'} size={15} color="var(--primary)" /> : <Sparkles size={15} style={{ color: 'var(--primary)' }} />}
                     tasks={templateTasks}
                     onEdit={openEditTaskModal}
                     onDelete={setTaskToDelete}
@@ -1308,7 +1277,7 @@ export default function TodoView() {
                             className="todo-item-action-btn edit-btn"
                             style={{ display: 'flex', alignItems: 'center', gap: '2px', fontSize: '11px', padding: '4px 8px' }}
                           >
-                            Fazer ➔
+                            Fazer
                           </button>
                           <div style={{ display: 'flex', gap: '4px' }}>
                             <button onClick={() => onDuplicateTask(task.id)} className="todo-item-action-btn duplicate-btn" title="Duplicar"><Copy size={13} /></button>
@@ -1358,7 +1327,7 @@ export default function TodoView() {
                               <ArrowLeft size={12} />
                             </button>
                             <button onClick={() => handleMoveKanban(task, 'completed')} className="todo-item-action-btn edit-btn" style={{ fontSize: '11px', padding: '4px 8px' }}>
-                              Concluir ➔
+                              Concluir
                             </button>
                           </div>
                           <div style={{ display: 'flex', gap: '4px' }}>
@@ -1444,7 +1413,7 @@ export default function TodoView() {
                         width: '100%'
                       }}
                     >
-                      👁️ {kanbanTasks.completed.length} tarefas concluídas ocultas
+                      <span>{kanbanTasks.completed.length} tarefas concluídas ocultas</span>
                       <span style={{ display: 'block', fontSize: '11px', fontWeight: '400', marginTop: '4px', color: 'var(--text-muted)' }}>Clique para visualizar</span>
                     </div>
                   ) : (
@@ -1615,9 +1584,11 @@ export default function TodoView() {
                           padding: 0
                         }}
                       >
-                        {isCompleted && '✓'}
+                        {isCompleted && <Check size={10} />}
                       </button>
-                      <span style={{ fontSize: '13px', color: 'var(--text-main)', flex: 1 }}>{habit.emoji} {habit.title}</span>
+                      <span style={{ fontSize: '13px', color: 'var(--text-main)', flex: 1, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <Sprout size={13} style={{ color: 'var(--success)' }} /> {habit.title}
+                      </span>
                     </div>
                   );
                 })
@@ -1645,7 +1616,7 @@ export default function TodoView() {
           <div className="modal-content tasks-modal animate-scale-up" onClick={e => e.stopPropagation()}>
             <div className="todo-modal-header">
               <div className="tasks-modal-title-wrap">
-                <span className="tasks-modal-icon">{editingTask ? '✏️' : '✨'}</span>
+                <div style={{ color: 'var(--primary)', display: 'flex', alignItems: 'center' }}>{editingTask ? <Edit2 size={16} /> : <Sparkles size={16} />}</div>
                 <h2 className="todo-modal-title">
                   {editingTask ? 'Editar Tarefa' : 'Nova Tarefa'}
                 </h2>
@@ -1690,12 +1661,9 @@ export default function TodoView() {
                     onChange={e => setCategory(e.target.value)}
                     className="todo-modal-select"
                   >
-                    {categories.map(cat => {
-                      const fallbackEmoji = cat.emoji || (cat.id === 'Trabalho' ? '💼' : cat.id === 'Pessoal' ? '🏠' : cat.id === 'Estudos' ? '📚' : cat.id === 'Lazer' ? '✈️' : cat.id === 'Pets' ? '🐾' : '💼');
-                      return (
-                        <option key={cat.id} value={cat.id}>{fallbackEmoji} {cat.name}</option>
-                      );
-                    })}
+                    {categories.map(cat => (
+                      <option key={cat.id} value={cat.id}>{cat.name}</option>
+                    ))}
                   </select>
                 </div>
 
@@ -1707,9 +1675,9 @@ export default function TodoView() {
                     onChange={e => setPriority(e.target.value)}
                     className="todo-modal-select"
                   >
-                    <option value="Alta">🔴 Alta</option>
-                    <option value="Média">🟡 Média</option>
-                    <option value="Baixa">🟢 Baixa</option>
+                    <option value="Alta">Alta</option>
+                    <option value="Média">Média</option>
+                    <option value="Baixa">Baixa</option>
                   </select>
                 </div>
               </div>
@@ -1725,7 +1693,7 @@ export default function TodoView() {
                   >
                     <option value="">Nenhum objetivo</option>
                     {goals.filter(g => g.status === 'active').map(g => (
-                      <option key={g.id} value={g.id}>{getGoalIconEmoji(g.icon)} {g.title}</option>
+                      <option key={g.id} value={g.id}>{g.title}</option>
                     ))}
                   </select>
                 </div>
@@ -1769,9 +1737,9 @@ export default function TodoView() {
                   className="todo-modal-select"
                 >
                   <option value="nenhuma">Não repetir</option>
-                  <option value="diaria">🔄 Diária</option>
-                  <option value="semanal">🔄 Semanal</option>
-                  <option value="mensal">🔄 Mensal</option>
+                  <option value="diaria">Diária</option>
+                  <option value="semanal">Semanal</option>
+                  <option value="mensal">Mensal</option>
                 </select>
               </div>
 
@@ -1856,7 +1824,7 @@ export default function TodoView() {
                 }}
                 className="calendar-sync-option"
               >
-                <span style={{ fontSize: '24px' }}>📅</span>
+                <div style={{ color: 'var(--primary)', display: 'flex', alignItems: 'center' }}><Calendar size={24} /></div>
                 <div>
                   <strong style={{ display: 'block', fontSize: '13px', color: 'var(--text-main)' }}>Google Calendar (Recomendado)</strong>
                   <span style={{ fontSize: '11px', color: 'var(--text-light)' }}>Exporta o arquivo .ics e abre a página de importação do Google.</span>
@@ -1880,7 +1848,7 @@ export default function TodoView() {
                 }}
                 className="calendar-sync-option"
               >
-                <span style={{ fontSize: '24px' }}>📥</span>
+                <div style={{ color: 'var(--primary)', display: 'flex', alignItems: 'center' }}><Download size={24} /></div>
                 <div>
                   <strong style={{ display: 'block', fontSize: '13px', color: 'var(--text-main)' }}>Baixar arquivo .ics</strong>
                   <span style={{ fontSize: '11px', color: 'var(--text-light)' }}>Apenas exporta e baixa o arquivo de calendário para programas locais.</span>
@@ -2011,12 +1979,12 @@ export default function TodoView() {
                 {TASK_TEMPLATES.map(template => {
                   const isAlreadyActive = activeTemplates.has(template.title);
                   const templateIconMap = {
-                    'Pets': '🐾',
-                    'Trabalho': '💼',
-                    'Estudos': '📚',
-                    'Lazer': '🎸',
+                    'Pets': 'target',
+                    'Trabalho': 'briefcase',
+                    'Estudos': 'book',
+                    'Lazer': 'heart',
                   };
-                  const icon = templateIconMap[template.category] || '🏠';
+                  const iconName = templateIconMap[template.category] || 'briefcase';
 
                   return (
                     <div 
@@ -2024,7 +1992,7 @@ export default function TodoView() {
                       className={`template-persona-card ${isAlreadyActive ? 'template-disabled-card' : ''}`}
                     >
                       <h4 className="template-persona-title">
-                        <span style={{ fontSize: '16px', marginRight: '6px' }}>{icon}</span>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', marginRight: '6px' }}><MFIcon name={iconName} size={16} /></span>
                         {template.title}
                       </h4>
                       <p className="template-persona-desc">{template.description}</p>

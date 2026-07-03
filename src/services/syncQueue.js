@@ -2,12 +2,12 @@
  * syncQueue.js — Fila de sincronização resiliente do MyFlowDay
  *
  * Garantias:
- * ✔ Zero perda de dados (localStorage persistente)
- * ✔ Exponential backoff (não bombardeia o servidor)
- * ✔ Idempotency keys (zero duplicatas em retry)
- * ✔ Client-generated IDs (tasks funcionam offline com IDs reais)
- * ✔ Detecção de online/offline em tempo real
- * ✔ Status granular: supabase, pendingOps, lastSync
+ * [OK] Zero perda de dados (localStorage persistente)
+ * [OK] Exponential backoff (não bombardeia o servidor)
+ * [OK] Idempotency keys (zero duplicatas em retry)
+ * [OK] Client-generated IDs (tasks funcionam offline com IDs reais)
+ * [OK] Detecção de online/offline em tempo real
+ * [OK] Status granular: supabase, pendingOps, lastSync
  */
 
 import { supabase } from '../supabaseClient';
@@ -752,7 +752,7 @@ async function trySend(item) {
           title:       goalData.title,
           description: goalData.description || '',
           color:       goalData.color || '#4A654E',
-          icon:        goalData.icon || '🎯',
+          icon:        goalData.icon || 'target',
           target_date: goalData.target_date || null,
           start_time:  goalData.start_time || null,
           end_time:    goalData.end_time || null,
@@ -777,7 +777,7 @@ async function trySend(item) {
               title:       goalData.title,
               description: enrichedDescription,
               color:       goalData.color || '#4A654E',
-              icon:        goalData.icon || '🎯',
+              icon:        goalData.icon || 'target',
               target_date: goalData.target_date || null,
               status:      'active'
             }], { onConflict: 'id' });

@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { Sparkles, Brain, Clock, ShieldAlert, Award, ArrowUpRight, Zap, Target } from 'lucide-react';
+import { Sparkles, Brain, Clock, ShieldAlert, Award, ArrowUpRight, Zap, Target, Lock } from 'lucide-react';
 import { useAppContext } from '../contexts/AppContext';
 import { generateCoachMessage } from '../intelligence/coachEngine';
 import { supabase } from '../supabaseClient';
@@ -107,7 +107,15 @@ export default function CoachView() {
             transition: 'all 0.2s'
           }}
         >
-          {isPro ? '⚡ Coach Pro Ativo' : '🔒 Desbloquear Coach Pro'}
+          {isPro ? (
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+              <Zap size={13} style={{ color: 'var(--primary)' }} /> Coach Pro Ativo
+            </span>
+          ) : (
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+              <Lock size={13} /> Desbloquear Coach Pro
+            </span>
+          )}
         </div>
       </div>
 
@@ -352,7 +360,7 @@ export default function CoachView() {
             <Zap size={24} className="text-primary" />
             <div>
               <h4 style={{ fontSize: '14.5px', fontWeight: '750', color: 'var(--text-main)', margin: '0 0 6px 0' }}>
-                Desbloqueie o Coach MyFlowDay Pro ⚡
+                Desbloqueie o Coach MyFlowDay Pro
               </h4>
               <p style={{ fontSize: '12px', color: 'var(--text-muted)', maxWidth: '520px', margin: '0 auto', lineHeight: '1.5' }}>
                 Inicie hoje sua jornada Pro para habilitar análises comportamentais quinzenais ou mensais profundas, alertas preditivos de estagnação e conselhos de IA totalmente customizados.

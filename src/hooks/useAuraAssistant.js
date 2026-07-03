@@ -107,5 +107,5 @@ export function useAuraAssistant(tasks = [], goals = [], goalTasks = [], streak 
       summary,
       insight
     };
-  }, [tasks, goals, goalTasks, streak, unlockedCount]);
+  }, [tasks, goals, goalTasks, streak]);
 }

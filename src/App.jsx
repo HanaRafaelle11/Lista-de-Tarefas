@@ -24,6 +24,7 @@ import ProfileView from './components/ProfileView';
 import AdminDashboard from './components/AdminDashboard';
 import SettingsView from './components/SettingsView';
 import CoachView from './components/CoachView';
+import MFIcon from './components/MFIcon';
 
 const RevenueDashboard = lazy(() => import('./pages/RevenueDashboard'));
 const Checkout = lazy(() => import('./pages/Checkout'));
@@ -88,7 +89,7 @@ class GlobalErrorBoundary extends React.Component {
             textAlign: 'center',
             boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.5)'
           }}>
-            <div style={{ fontSize: '48px', marginBottom: '16px' }}>⚡</div>
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}><MFIcon name="bolt" size={48} color="var(--primary)" /></div>
             <h2 style={{ margin: '0 0 12px', fontSize: '22px', fontWeight: '700', color: '#f8fafc' }}>
               MyFlowDay
             </h2>
@@ -111,7 +112,7 @@ class GlobalErrorBoundary extends React.Component {
                 transition: 'transform 0.1s ease'
               }}
             >
-              Atualizar e Carregar Aplicativo 🚀
+              Atualizar e Carregar Aplicativo
             </button>
           </div>
         </div>
@@ -319,7 +320,7 @@ function AppLayout() {
   if (supabaseConfigError) {
     return (
       <div className="app-loading-container" style={{ padding: '32px', textAlign: 'center', maxWidth: '480px', margin: '100px auto' }}>
-        <span style={{ fontSize: '48px' }}>⚠️</span>
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}><MFIcon name="warning" size={48} color="var(--prio-alta-text)" /></div>
         <h2 style={{ fontSize: '20px', margin: '16px 0 8px', color: 'var(--prio-alta-text)' }}>Erro de Configuração</h2>
         <p style={{ fontSize: '14px', color: 'var(--text-muted)', lineHeight: '1.6' }}>
           As variáveis de ambiente `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY` não foram encontradas.
@@ -388,7 +389,7 @@ function AppLayout() {
               cursor: 'pointer'
             }}
           >
-            Quero ser Pro ⚡
+            Quero ser Pro
           </button>
         </div>
       )}

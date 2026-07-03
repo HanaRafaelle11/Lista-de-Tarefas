@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { X } from 'lucide-react';
+import MFIcon from './MFIcon';
 
 // Toast individual
 function Toast({ achievement, onDismiss }) {
@@ -43,7 +44,7 @@ function Toast({ achievement, onDismiss }) {
       {/* Conteúdo */}
       <div className="achievement-toast-inner">
         <div className="achievement-toast-header">
-          <span className="achievement-toast-label">✨ Conquista Desbloqueada!</span>
+          <span className="achievement-toast-label"><MFIcon name="sparkle" size={14} style={{ marginRight: '4px' }} /> Conquista Desbloqueada!</span>
           <button
             onClick={handleDismiss}
             className="achievement-toast-close"
@@ -55,9 +56,7 @@ function Toast({ achievement, onDismiss }) {
 
         <div className="achievement-toast-body">
           <div className="achievement-toast-emoji-wrap">
-            <span className="achievement-toast-emoji" role="img" aria-label={achievement.title}>
-              {achievement.emoji}
-            </span>
+            <MFIcon name={achievement.icon} size={28} title={achievement.title} />
           </div>
           <div className="achievement-toast-text">
             <p className="achievement-toast-title">{achievement.title}</p>
@@ -70,7 +69,7 @@ function Toast({ achievement, onDismiss }) {
             onClick={handleDismiss}
             className="achievement-toast-btn"
           >
-            ✓ Entendi
+            <MFIcon name="check" size={14} style={{ marginRight: '4px' }} /> Entendi
           </button>
         </div>
       </div>

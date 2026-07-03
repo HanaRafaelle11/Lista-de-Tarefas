@@ -19,7 +19,7 @@ function exportTaskToCalendar(task) {
 
 export default function TodoItem({ item, onToggleComplete, onDelete, onEdit, goalId, onUnlinkGoal, onDuplicate }) {
   const [calExported, setCalExported] = useState(false);
-  const { isPro, openPaywall } = useAppContext();
+  const { isPro, openPaywall, openCustomConfirm } = useAppContext();
 
   const handleExportCalendar = () => {
     if (!isPro) {
@@ -141,9 +141,11 @@ export default function TodoItem({ item, onToggleComplete, onDelete, onEdit, goa
         {goalId && onUnlinkGoal && (
           <button 
             onClick={() => {
-              if (window.confirm("Deseja realmente desvincular esta tarefa do objetivo? Ela voltará para a lista de tarefas gerais.")) {
-                onUnlinkGoal(goalId, item.id);
-              }
+              openCustomConfirm(
+                "Deseja realmente desvincular esta tarefa do objetivo? Ela voltará para a lista de tarefas gerais.",
+                "Desvincular Tarefa",
+                () => onUnlinkGoal(goalId, item.id)
+              );
             }}
             className="todo-item-action-btn unlink-btn"
             title="Desvincular do objetivo"

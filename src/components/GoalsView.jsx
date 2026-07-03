@@ -75,7 +75,8 @@ export default function GoalsView() {
     deletedGoals,
     setActiveTab,
     setSettingsTab,
-    handleDuplicateGoal
+    handleDuplicateGoal,
+    openCustomConfirm
   } = useAppContext();
   const [filter, setFilter] = useState('active');
   const [isGoalModalOpen, setIsGoalModalOpen] = useState(false);
@@ -176,11 +177,15 @@ export default function GoalsView() {
 
   // Confirmar e excluir objetivo
   const handleDeleteGoalWithConfirm = (id) => {
-    if (window.confirm("Tem certeza que deseja excluir este objetivo por completo?")) {
-      onDeleteGoal(id);
-      setIsGoalModalOpen(false);
-      setEditingGoal(null);
-    }
+    openCustomConfirm(
+      "Tem certeza que deseja excluir este objetivo por completo?",
+      "Excluir Objetivo",
+      () => {
+        onDeleteGoal(id);
+        setIsGoalModalOpen(false);
+        setEditingGoal(null);
+      }
+    );
   };
 
   // Abrir modal de gerenciamento de tarefas
@@ -368,7 +373,7 @@ export default function GoalsView() {
                   onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border-medium)'; e.currentTarget.style.color = 'var(--text-muted)'; }}
                   title={`Apagar os ${counts.completed} objetivos concluídos`}
                 >
-                  <span>🗑 Limpar concluídos ({counts.completed})</span>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><Trash2 size={13} /> Limpar concluídos ({counts.completed})</span>
                 </button>
               )}
             </div>
@@ -427,7 +432,7 @@ export default function GoalsView() {
                   onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border-medium)'; e.currentTarget.style.color = 'var(--text-muted)'; }}
                   title="Apagar todos os objetivos"
                 >
-                  <span>🗑 Apagar todos ({counts.all})</span>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><Trash2 size={13} /> Apagar todos ({counts.all})</span>
                 </button>
               )}
             </div>
@@ -597,7 +602,7 @@ export default function GoalsView() {
               style={{ maxWidth: '420px', padding: '28px' }}
               onClick={e => e.stopPropagation()}
             >
-              <div style={{ fontSize: '32px', marginBottom: '16px' }}>🏆</div>
+              <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px', color: '#eab308' }}><Award size={32} /></div>
               <h3 style={{ fontSize: '17px', fontWeight: '700', color: 'var(--text-main)', marginBottom: '12px' }}>
                 Concluir objetivo
               </h3>

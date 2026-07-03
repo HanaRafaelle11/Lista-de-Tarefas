@@ -65,14 +65,16 @@ export default function CustomDialogModal({ isOpen, type = 'alert', title, messa
             {getIcon()}
           </div>
           <div style={{ flex: 1 }}>
-            <h4 style={{
-              margin: '0 0 6px',
-              fontSize: '17px',
-              fontWeight: '700',
-              color: 'var(--text-main)'
-            }}>
-              {title || 'MyFlowDay'}
-            </h4>
+            {title && (
+              <h4 style={{
+                margin: '0 0 6px',
+                fontSize: '17px',
+                fontWeight: '700',
+                color: 'var(--text-main)'
+              }}>
+                {title}
+              </h4>
+            )}
             <p style={{
               margin: 0,
               fontSize: '14px',

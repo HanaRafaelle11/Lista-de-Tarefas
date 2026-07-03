@@ -89,7 +89,7 @@ export const GOAL_TEMPLATES = [
     title: 'Tutor de Pet Perfeito',
     category: 'Pets',
     description: 'Criar uma rotina consistente de cuidados, saúde e bem-estar para o seu animal de estimação.',
-    icon: '🐾',
+    icon: 'target',
     color: '#B5A296',
     actions: [
       'Agendar consulta de rotina no veterinário',
@@ -103,7 +103,7 @@ export const GOAL_TEMPLATES = [
     title: 'Organizar Finanças Pessoais',
     category: 'Pessoal',
     description: 'Alcançar controle total sobre receitas, despesas e poupar para investimentos.',
-    icon: '💰',
+    icon: 'dollar',
     color: '#10b981',
     actions: [
       'Registrar todos os gastos mensais fixos',
@@ -117,7 +117,7 @@ export const GOAL_TEMPLATES = [
     title: 'Transição de Carreira',
     category: 'Trabalho',
     description: 'Migrar para uma nova área profissional definindo plano de estudos e networking.',
-    icon: '🚀',
+    icon: 'rocket',
     color: '#6366f1',
     actions: [
       'Mapear principais habilidades exigidas no mercado',
@@ -131,7 +131,7 @@ export const GOAL_TEMPLATES = [
     title: 'Rotina de Cuidados com o Bebê',
     category: 'Pessoal',
     description: 'Criar uma rotina saudável e organizada de cuidados com o recém-nascido ou lactente.',
-    icon: '👶',
+    icon: 'target',
     color: '#F472B6',
     actions: [
       'Organizar estoque de fraldas',
@@ -145,7 +145,7 @@ export const GOAL_TEMPLATES = [
     title: 'Vida Saudável e Treinos',
     category: 'Pessoal',
     description: 'Estabelecer hábitos consistentes de exercícios físicos, alimentação balanceada e hidratação.',
-    icon: '💪',
+    icon: 'dumbbell',
     color: '#F97316',
     actions: [
       'Mapear treinos com profissional',
@@ -159,7 +159,7 @@ export const GOAL_TEMPLATES = [
     title: 'Excelência Acadêmica',
     category: 'Estudos',
     description: 'Desenvolver uma rotina eficiente de estudos para provas, trabalhos e projetos acadêmicos.',
-    icon: '📚',
+    icon: 'book',
     color: '#3B82F6',
     actions: [
       'Criar calendário de entregas',
@@ -173,7 +173,7 @@ export const GOAL_TEMPLATES = [
     title: 'Aprovação em Concurso Público',
     category: 'Estudos',
     description: 'Dedicar-se de forma sistemática à preparação para o cargo dos sonhos com ciclos estruturados.',
-    icon: '⚖️',
+    icon: 'globe',
     color: '#EAB308',
     actions: [
       'Analisar o edital e pesos',

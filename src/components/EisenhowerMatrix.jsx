@@ -191,7 +191,7 @@ export default function EisenhowerMatrix({ tasks, onEditTask, onDeleteTask, onUp
       >
         <AlertCircle size={18} style={{ color: 'var(--primary)', flexShrink: 0, marginTop: '2px' }} />
         <div>
-          <strong style={{ display: 'block', marginBottom: '2px', fontWeight: '700' }}>💡 Como funciona a Matriz de Eisenhower?</strong>
+          <strong style={{ display: 'block', marginBottom: '2px', fontWeight: '700' }}>Como funciona a Matriz de Eisenhower?</strong>
           Por padrão, tarefas sem prazo e com prioridade normal começam em <strong style={{ color: 'hsl(180, 75%, 45%)' }}>Eliminar (Q4)</strong>. 
           Arraste e solte os cartões de tarefas entre os quadrantes para ajustar automaticamente seus prazos e prioridades de acordo com a sua importância real.
         </div>

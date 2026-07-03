@@ -50,11 +50,11 @@ Continue construindo seu ritmo.`,
     };
   }
 
-  // 3. Gerar mensagem altamente personalizada para o plano PRO ⚡
+  // 3. Gerar mensagem altamente personalizada para o plano PRO
 
   // 3.1. Sessões de foco (Pomodoros) na última semana
   // Contabilizamos via tarefas concluídas em modo foco ou um cálculo derivado do progresso real
-  let recentFocusCount = 0;
+  let recentFocusCount;
   if (currentUser?.isDemo) {
     recentFocusCount = Math.max(1, Math.round(completedRecentTasks.length * 0.4) + 1);
   } else {
@@ -122,14 +122,14 @@ Continue construindo seu ritmo.`,
   }
 
   // Montagem da mensagem estruturada
-  const proMessage = `${greetingWord} ${userName} ☀️
+  const proMessage = `${greetingWord} ${userName}
 
 Na última semana:
-✅ ${completedRecentTasks.length} tarefas concluídas
-✅ ${recentFocusCount} sessões de foco
-✅ ${consistencyText}
-⚠ ${stagnantGoalName} está parado há ${stagnantDaysCount} dias
-⭐ ${bestDayName} continuam sendo seu dia de maior produtividade.
+• ${completedRecentTasks.length} tarefas concluídas
+• ${recentFocusCount} sessões de foco
+• ${consistencyText}
+• [Atenção] ${stagnantGoalName} está parado há ${stagnantDaysCount} dias
+• [Destaque] ${bestDayName} continuam sendo seu dia de maior produtividade.
 
 Sugestão:
 Reserve 20 minutos hoje para retomar o objetivo ${stagnantGoalName}.
@@ -137,7 +137,7 @@ Pequenos avanços criam grandes transformações.`;
 
   return {
     isPro: true,
-    greeting: `${greetingWord} ${userName} ☀️`,
+    greeting: `${greetingWord} ${userName}`,
     message: proMessage,
     stats: {
       completedTasks: completedRecentTasks.length,

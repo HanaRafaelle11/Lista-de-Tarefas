@@ -289,7 +289,7 @@ export default function HomeView() {
       <section className="home-greeting-section" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '20px', flexWrap: 'wrap' }}>
         <div>
           <h2 className="home-greeting-title" style={{ fontSize: '24px', fontWeight: '800' }}>
-            Olá, {currentUser?.name?.split(' ')[0] || 'usuário'} 👋
+            Olá, {currentUser?.name?.split(' ')[0] || 'usuário'}
           </h2>
           <p className="home-reflection-text" style={{ margin: '4px 0 0' }}>
             "Pequenos passos constroem grandes mudanças. Foque no agora e evolua continuamente."
@@ -315,21 +315,21 @@ export default function HomeView() {
           onClick={() => setShowHealthExplanation(!showHealthExplanation)}
           type="button"
         >
-          <span>🎯 Detalhamento do Score</span>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}><Target size={14} /> Detalhamento do Score</span>
           <span>{showHealthExplanation ? '▲' : '▼'}</span>
         </button>
         {showHealthExplanation && (
           <div className="health-accordion-content animate-fade-in" style={{ padding: '16px', background: 'var(--bg-card)', border: '1px solid var(--border-light)', borderRadius: '0 0 var(--radius-md) var(--radius-md)' }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <p style={{ fontSize: '13px', color: 'var(--text-main)', fontStyle: 'italic', margin: '0 0 6px 0', borderBottom: '1px dashed var(--border-light)', paddingBottom: '8px', lineHeight: '1.4' }}>
-                💡 "{consistencyScoreExplanation.motivationalMessage}"
+                <span style={{ display: 'inline-flex', alignItems: 'flex-start', gap: '6px' }}><Lightbulb size={14} style={{ flexShrink: 0, marginTop: '2px', color: '#f59e0b' }} /> "{consistencyScoreExplanation.motivationalMessage}"</span>
               </p>
               
               {consistencyScoreExplanation.breakdown && Object.entries(consistencyScoreExplanation.breakdown).map(([key, item]) => (
                 <div key={key} style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '12.5px' }}>
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontWeight: '600', color: 'var(--text-main)' }}>
-                      <span style={{ fontSize: '11px' }}>{item.ok ? '✅' : '⬜'}</span>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', color: item.ok ? '#10b981' : 'var(--border-medium)', marginRight: '2px' }}>{item.ok ? <CheckCircle size={13} /> : <div style={{ width: '13px', height: '13px', borderRadius: '50%', border: '1px solid var(--border-medium)' }} />}</span>
                       {item.label}
                     </span>
                     <span style={{ fontWeight: '700', color: item.ok ? 'var(--primary)' : 'var(--text-light)' }}>
@@ -386,7 +386,7 @@ export default function HomeView() {
             className="btn-primary-glow"
             style={{ padding: '12px 24px', fontSize: '14px', fontWeight: '600', width: 'auto', display: 'inline-flex', alignItems: 'center', gap: '8px' }}
           >
-            Começar meu dia ⚡
+            Começar meu dia
           </button>
         </section>
       )}
@@ -478,7 +478,7 @@ export default function HomeView() {
                 style={{ padding: '10px 20px', fontSize: '13.5px', display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--primary)', borderColor: 'var(--primary-light)', backgroundColor: 'transparent' }}
               >
                 <Sparkles size={15} />
-                Guia Rápido 🚀
+                Guia Rápido
               </button>
             </div>
           </div>
@@ -586,7 +586,7 @@ export default function HomeView() {
               {topGoals.length === 0 ? (
                 <div className="home-goals-empty">
                   <div className="home-goals-empty-glow" />
-                  <p className="home-goals-empty-symbol">✦</p>
+                  <Target size={24} style={{ color: 'var(--text-muted)', marginBottom: '12px' }} />
                   <h4 className="home-goals-empty-title">
                     {goals.length > 0 ? 'Foque em um novo objetivo.' : 'Grandes conquistas começam com um objetivo.'}
                   </h4>
@@ -628,50 +628,50 @@ export default function HomeView() {
                 </div>
               )}
             </section>
-
+            
             {/* Ritmo de Crescimento com Escolha de Pet / Tipo de Crescimento */}
             {(() => {
               const weeklyTotal = ritmoSemanal.reduce((acc, d) => acc + d.count, 0);
-              
+
               const PET_EVOLUTIONS = {
                 plant: {
                   name: 'Plantinha',
-                  icon: '🌱',
+                  iconName: 'seedling',
                   stages: [
-                    { level: 1, title: 'Broto Inicial', emoji: '🌱', badge: 'Nível 1 • Início', color: '#3b82f6', desc: 'De acordo com a sua constância e conclusão de tarefas e objetivos, sua plantinha vai evoluindo!' },
-                    { level: 2, title: 'Planta em Crescimento', emoji: '🌿', badge: 'Nível 2 • Em Evolução', color: 'var(--primary)', desc: 'Sua constância está dando frutos! Mantenha a sequência de tarefas para fazer sua árvore crescer.' },
-                    { level: 3, title: 'Árvore Frondosa', emoji: '🌳', badge: 'Nível 3 • Alta Performance', color: '#10b981', desc: 'Excelente progresso! Suas metas e constância diária fortaleceram suas raízes.' },
-                    { level: 4, title: 'Árvore Florida Master', emoji: '🌸', badge: 'Nível 4 • Consistência Lendária', color: '#ec4899', desc: 'Sua dedicação é extraordinária! Sua árvore floresceu totalmente com o seu foco e metas alcançadas.' }
+                    { level: 1, title: 'Broto Inicial', iconName: 'seedling', badge: 'Nível 1 • Início', color: '#3b82f6', desc: 'De acordo com a sua constância e conclusão de tarefas e objetivos, sua plantinha vai evoluindo!' },
+                    { level: 2, title: 'Planta em Crescimento', iconName: 'seedling', badge: 'Nível 2 • Em Evolução', color: 'var(--primary)', desc: 'Sua constância está dando frutos! Mantenha a sequência de tarefas para fazer sua árvore crescer.' },
+                    { level: 3, title: 'Árvore Frondosa', iconName: 'forest', badge: 'Nível 3 • Alta Performance', color: '#10b981', desc: 'Excelente progresso! Suas metas e constância diária fortaleceram suas raízes.' },
+                    { level: 4, title: 'Árvore Florida Master', iconName: 'sparkle', badge: 'Nível 4 • Consistência Lendária', color: '#ec4899', desc: 'Sua dedicação é extraordinária! Sua árvore floresceu totalmente com o seu foco e metas alcançadas.' }
                   ]
                 },
                 baby: {
                   name: 'Bebê',
-                  icon: '👶',
+                  iconName: 'profile',
                   stages: [
-                    { level: 1, title: 'Recém-nascido', emoji: '👶', badge: 'Nível 1 • Primeiros Passos', color: '#3b82f6', desc: 'Sua jornada de foco começou! Conclua tarefas para ajudar seu bebê a crescer forte e saudável.' },
-                    { level: 2, title: 'Bebê Engatinhando', emoji: '🍼', badge: 'Nível 2 • Aprendendo', color: 'var(--primary)', desc: 'Ganhando mobilidade e foco! Continue a sequência diária para comemorar cada nova conquista.' },
-                    { level: 3, title: 'Criança Ativa', emoji: '🧒', badge: 'Nível 3 • Curiosa & Forte', color: '#10b981', desc: 'Seus objetivos concluídos deram muita energia para aprender e explorar novos hábitos!' },
-                    { level: 4, title: 'Jovem Campeão', emoji: '🌟', badge: 'Nível 4 • Brilhante Master', color: '#f59e0b', desc: 'Consistência incrível! Seu jovem campeão está no topo do desenvolvimento e autoconhecimento!' }
+                    { level: 1, title: 'Recém-nascido', iconName: 'profile', badge: 'Nível 1 • Primeiros Passos', color: '#3b82f6', desc: 'Sua jornada de foco começou! Conclua tarefas para ajudar seu bebê a crescer forte e saudável.' },
+                    { level: 2, title: 'Bebê Engatinhando', iconName: 'profile', badge: 'Nível 2 • Aprendendo', color: 'var(--primary)', desc: 'Ganhando mobilidade e foco! Continue a sequência diária para comemorar cada nova conquista.' },
+                    { level: 3, title: 'Criança Ativa', iconName: 'profile', badge: 'Nível 3 • Curiosa & Forte', color: '#10b981', desc: 'Seus objetivos concluídos deram muita energia para aprender e explorar novos hábitos!' },
+                    { level: 4, title: 'Jovem Campeão', iconName: 'sparkle', badge: 'Nível 4 • Brilhante Master', color: '#f59e0b', desc: 'Consistência incrível! Seu jovem campeão está no topo do desenvolvimento e autoconhecimento!' }
                   ]
                 },
                 dog: {
                   name: 'Cachorrinho',
-                  icon: '🐶',
+                  iconName: 'paw',
                   stages: [
-                    { level: 1, title: 'Filhotinho', emoji: '🐶', badge: 'Nível 1 • Novo Amigo', color: '#3b82f6', desc: 'Seu filhotinho chegou! Complete tarefas e objetivos diários para dar energia e carinho a ele.' },
-                    { level: 2, title: 'Cão Brincalhão', emoji: '🐕', badge: 'Nível 2 • Ativo & Feliz', color: 'var(--primary)', desc: 'Sua constância deixa seu pet cheio de saúde! Continue realizando seus compromissos.' },
-                    { level: 3, title: 'Cão Leal & Forte', emoji: '🦮', badge: 'Nível 3 • Companheiro', color: '#10b981', desc: 'Foco impecável! Seu cão se tornou um verdadeiro protetor e parceiro da sua rotina produtiva.' },
-                    { level: 4, title: 'Cão Campeão', emoji: '👑', badge: 'Nível 4 • Nobreza & Foco', color: '#8b5cf6', desc: 'Desempenho espetacular! Seu pet alcançou o nível máximo de lealdade e vitórias diárias!' }
+                    { level: 1, title: 'Filhotinho', iconName: 'paw', badge: 'Nível 1 • Novo Amigo', color: '#3b82f6', desc: 'Seu filhotinho chegou! Complete tarefas e objetivos diários para dar energia e carinho a ele.' },
+                    { level: 2, title: 'Cão Brincalhão', iconName: 'paw', badge: 'Nível 2 • Ativo & Feliz', color: 'var(--primary)', desc: 'Sua constância deixa seu pet cheio de saúde! Continue realizando seus compromissos.' },
+                    { level: 3, title: 'Cão Leal & Forte', iconName: 'paw', badge: 'Nível 3 • Companheiro', color: '#10b981', desc: 'Foco impecável! Seu cão se tornou um verdadeiro protetor e parceiro da sua rotina produtiva.' },
+                    { level: 4, title: 'Cão Campeão', iconName: 'crown', badge: 'Nível 4 • Nobreza & Foco', color: '#8b5cf6', desc: 'Desempenho espetacular! Seu pet alcançou o nível máximo de lealdade e vitórias diárias!' }
                   ]
                 },
                 cat: {
                   name: 'Gatinho',
-                  icon: '🐱',
+                  iconName: 'paw',
                   stages: [
-                    { level: 1, title: 'Filhote Curioso', emoji: '🐱', badge: 'Nível 1 • Despertando', color: '#3b82f6', desc: 'Seu gatinho está curioso! Crie e cumpra metas para desenvolver a agilidade e sabedoria dele.' },
-                    { level: 2, title: 'Gato Ágil', emoji: '🐈', badge: 'Nível 2 • Em Movimento', color: 'var(--primary)', desc: 'Movimentos precisos e rotina em dia! Mantenha seus hábitos para preservar o equilíbrio.' },
-                    { level: 3, title: 'Gato Majestoso', emoji: '🦁', badge: 'Nível 3 • Presença Forte', color: '#10b981', desc: 'Sua constância deu um porte majestoso ao seu pet. Foco e elegância total no seu dia a dia!' },
-                    { level: 4, title: 'Gato Rei Master', emoji: '👑', badge: 'Nível 4 • Soberano Master', color: '#ec4899', desc: 'Foco supremo! Seu gatinho reina sobre a sua produtividade e paz de espírito.' }
+                    { level: 1, title: 'Filhote Curioso', iconName: 'paw', badge: 'Nível 1 • Despertando', color: '#3b82f6', desc: 'Seu gatinho está curioso! Crie e cumpra metas para desenvolver a agilidade e sabedoria dele.' },
+                    { level: 2, title: 'Gato Ágil', iconName: 'paw', badge: 'Nível 2 • Em Movimento', color: 'var(--primary)', desc: 'Movimentos precisos e rotina em dia! Mantenha seus hábitos para preservar o equilíbrio.' },
+                    { level: 3, title: 'Gato Majestoso', iconName: 'paw', badge: 'Nível 3 • Presença Forte', color: '#10b981', desc: 'Sua constância deu um porte majestoso ao seu pet. Foco e elegância total no seu dia a dia!' },
+                    { level: 4, title: 'Gato Rei Master', iconName: 'crown', badge: 'Nível 4 • Soberano Master', color: '#ec4899', desc: 'Foco supremo! Seu gatinho reina sobre a sua produtividade e paz de espírito.' }
                   ]
                 }
               };
@@ -696,10 +696,10 @@ export default function HomeView() {
                       {/* Seleção de Pet / Tipo de Crescimento */}
                       <div className="home-ritmo-pets-selector">
                         {[
-                          { id: 'plant', label: 'Plantinha', icon: '🌱' },
-                          { id: 'baby', label: 'Bebê', icon: '👶' },
-                          { id: 'dog', label: 'Cachorrinho', icon: '🐶' },
-                          { id: 'cat', label: 'Gatinho', icon: '🐱' }
+                          { id: 'plant', label: 'Plantinha', iconName: 'seedling' },
+                          { id: 'baby', label: 'Bebê', iconName: 'profile' },
+                          { id: 'dog', label: 'Cachorrinho', iconName: 'paw' },
+                          { id: 'cat', label: 'Gatinho', iconName: 'paw' }
                         ].map(pet => (
                           <button
                             key={pet.id}
@@ -715,14 +715,14 @@ export default function HomeView() {
                               cursor: 'pointer',
                               display: 'flex',
                               alignItems: 'center',
-                              gap: '4px',
+                              gap: '6px',
                               transition: 'all 0.2s ease',
                               boxShadow: growthPet === pet.id ? '0 2px 8px rgba(0,0,0,0.15)' : 'none',
                               flexShrink: 0
                             }}
                             title={`Escolher ${pet.label}`}
                           >
-                            <span>{pet.icon}</span>
+                            <MFIcon name={pet.iconName} size={14} />
                             <span>{pet.label}</span>
                           </button>
                         ))}
@@ -762,7 +762,7 @@ export default function HomeView() {
                           }}
                         >
                           <div className="home-ritmo-empty-illustration" style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '56px', height: '56px', borderRadius: '50%', background: 'rgba(74, 101, 78, 0.1)', color: 'var(--primary)', marginBottom: '4px' }}>
-                            <span style={{ fontSize: '28px', zIndex: 2 }}>{currentStage.emoji}</span>
+                            <MFIcon name={currentStage.iconName} size={28} style={{ zIndex: 2 }} color={currentStage.color} />
                             <div style={{ position: 'absolute', width: '100%', height: '100%', borderRadius: '50%', border: '1px solid rgba(74, 101, 78, 0.2)', animation: 'ping-animation 2s cubic-bezier(0, 0, 0.2, 1) infinite' }} />
                           </div>
                           <h4 style={{ fontSize: '15px', color: 'var(--text-main)', margin: 0, fontWeight: '700', fontFamily: 'var(--font-display)' }}>
@@ -825,7 +825,7 @@ export default function HomeView() {
                       <div className="wave wave-2" />
                       <div className="wave wave-3" />
                       <div style={{ fontSize: '40px', zIndex: 2, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
-                        <span>{currentStage.emoji}</span>
+                        <MFIcon name={currentStage.iconName} size={40} color={currentStage.color} />
                         <span style={{ fontSize: '10px', fontWeight: '800', color: 'var(--text-main)', backgroundColor: 'var(--bg-card)', padding: '2px 8px', borderRadius: '10px', boxShadow: 'var(--shadow-sm)', border: '1px solid var(--border-light)' }}>{currentStage.title}</span>
                       </div>
                     </div>
@@ -858,7 +858,7 @@ export default function HomeView() {
                   marginTop: '16px'
                 }}
               >
-                <div style={{ fontSize: '48px' }}>💡</div>
+                <div style={{ display: 'flex', justifyContent: 'center', color: 'var(--primary)' }}><Lightbulb size={48} /></div>
                 <h3 style={{ fontSize: '16px', fontWeight: '700', color: 'var(--text-main)', margin: 0 }}>
                   Você ainda não possui dados suficientes.
                 </h3>
@@ -920,7 +920,7 @@ export default function HomeView() {
               {suggestions && suggestions.length > 0 && (
                 <section className="engagement-suggestions-section animate-fade-in">
                   <h3 style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-main)', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span>⚡</span> Sugestões recomendadas para você
+                    <Sparkles size={16} style={{ color: 'var(--primary)' }} /> Sugestões recomendadas para você
                   </h3>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
                     {suggestions.map((sug) => (
@@ -1007,13 +1007,13 @@ export default function HomeView() {
                 </section>
               ) : (() => {
                 const insightIconMap = {
-                  '📊': <BarChart3 size={18} style={{ color: 'var(--primary)' }} />,
-                  '⚠️': <AlertTriangle size={18} style={{ color: '#ef4444' }} />,
-                  '🔥': <Flame size={18} style={{ color: '#f59e0b' }} />,
-                  '⚡': <Zap size={18} style={{ color: 'var(--primary)' }} />,
-                  '📅': <Calendar size={18} style={{ color: 'var(--primary)' }} />,
-                  '🏆': <Award size={18} style={{ color: '#eab308' }} />,
-                  '💡': <Lightbulb size={18} style={{ color: '#eab308' }} />,
+                  'chart': <MFIcon name="chart" size={18} color="var(--primary)" />,
+                  'warning': <MFIcon name="warning" size={18} color="#ef4444" />,
+                  'fire': <MFIcon name="fire" size={18} color="#f59e0b" />,
+                  'bolt': <MFIcon name="bolt" size={18} color="var(--primary)" />,
+                  'calendar': <MFIcon name="calendar" size={18} color="var(--primary)" />,
+                  'trophy': <MFIcon name="trophy" size={18} color="#eab308" />,
+                  'bulb': <MFIcon name="bulb" size={18} color="#eab308" />,
                 };
                 return (
                   <section className="behavioral-insights-section animate-fade-in">

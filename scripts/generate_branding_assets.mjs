@@ -55,7 +55,7 @@ const logoLightSvg = `
     ${iconDot}
   </g>
   <text x="720" y="440" font-family="'Plus Jakarta Sans', sans-serif" font-size="220px" font-weight="800" fill="#FBFAFC" letter-spacing="-6px">MyFlowDay</text>
-  <text x="730" y="580" font-family="'Plus Jakarta Sans', sans-serif" font-size="52px" font-weight="700" fill="#A1A7B3" letter-spacing="14px">FOCO • CONSISTÊNCIA • EVOLUÇÃO</text>
+  <text x="730" y="580" font-family="'Plus Jakarta Sans', sans-serif" font-size="68px" font-weight="800" fill="#A1A7B3" letter-spacing="14px">FOCO • CONSISTÊNCIA • EVOLUÇÃO</text>
 </svg>
 `;
 
@@ -70,7 +70,7 @@ const logoDarkSvg = `
     ${iconDot}
   </g>
   <text x="720" y="440" font-family="'Plus Jakarta Sans', sans-serif" font-size="220px" font-weight="800" fill="#0B0E11" letter-spacing="-6px">MyFlowDay</text>
-  <text x="730" y="580" font-family="'Plus Jakarta Sans', sans-serif" font-size="52px" font-weight="700" fill="#475569" letter-spacing="14px">FOCO • CONSISTÊNCIA • EVOLUÇÃO</text>
+  <text x="730" y="580" font-family="'Plus Jakarta Sans', sans-serif" font-size="68px" font-weight="800" fill="#475569" letter-spacing="14px">FOCO • CONSISTÊNCIA • EVOLUÇÃO</text>
 </svg>
 `;
 
@@ -85,7 +85,7 @@ const logoMonoSvg = `
     ${iconDotMono}
   </g>
   <text x="720" y="440" font-family="'Plus Jakarta Sans', sans-serif" font-size="220px" font-weight="800" fill="#FBFAFC" letter-spacing="-6px">MyFlowDay</text>
-  <text x="730" y="580" font-family="'Plus Jakarta Sans', sans-serif" font-size="52px" font-weight="700" fill="#FBFAFC" letter-spacing="14px">FOCO • CONSISTÊNCIA • EVOLUÇÃO</text>
+  <text x="730" y="580" font-family="'Plus Jakarta Sans', sans-serif" font-size="68px" font-weight="800" fill="#FBFAFC" letter-spacing="14px">FOCO • CONSISTÊNCIA • EVOLUÇÃO</text>
 </svg>
 `;
 
@@ -172,6 +172,18 @@ async function renderPng(svgContent, size, outputPath) {
   }
 }
 
+async function renderLogoPng(svgContent, width, height, outputPath) {
+  try {
+    await sharp(Buffer.from(svgContent.trim()))
+      .resize(width, height)
+      .png()
+      .toFile(outputPath);
+    console.log(`[Branding Generator] Renderizado Logo PNG: ${outputPath} (${width}x${height})`);
+  } catch (err) {
+    console.error(`[Branding Generator] Erro ao renderizar Logo PNG (${width}x${height}):`, err);
+  }
+}
+
 async function run() {
   // 1. Ícones do App (fundo sólido #12161A) em vários tamanhos
   const appIconSizes = [16, 32, 48, 64, 128, 192, 256, 512, 1024];
@@ -217,6 +229,10 @@ async function run() {
   `;
   await renderPng(badgeSvg, 96, path.join(brandingDir, 'notification-badge.png'));
   await renderPng(badgeSvg, 96, path.join(publicDir, 'notification-badge.png'));
+
+  // 5. Logotipos horizontais (Light e Dark)
+  await renderLogoPng(logoLightSvg, 1200, 400, path.join(brandingDir, 'logo-light.png'));
+  await renderLogoPng(logoDarkSvg, 1200, 400, path.join(brandingDir, 'logo-dark.png'));
 
   console.log('[Branding Generator] Todos os PNGs foram gerados com sucesso!');
 }
