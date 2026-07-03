@@ -32,18 +32,28 @@ export async function runBillingCycle() {
 
     for (const sub of activeSubs) {
       processed++;
+      const isCreditCard = sub.auto_renew === true || sub.billing_type === 'credit_card';
+      if (isCreditCard) {
+        console.log(`[Billing Cycle] Assinatura do usuário ${sub.user_id} é de cartão de crédito (auto_renew). Ignorando cobrança manual no ciclo.`);
+        continue;
+      }
       const paymentIdForAttempt = sub.last_payment_id || `sub_${sub.id}_${Date.now()}`;
       
       try {
         // 1. Registrar a tentativa de cobrança no ledger
-        await supabaseAdmin.from('payment_ledger').insert([{
-          payment_id: paymentIdForAttempt,
-          event_type: 'recurrent_charge_attempt',
-          status_raw: 'pending',
-          status_normalized: 'pending',
-          user_id: sub.user_id,
-          payload: { subscription_id: sub.id, price: sub.price || PLAN_PREMIUM_MONTHLY_PRICE }
-        }]);
+        try {
+          await supabaseAdmin.from('billing_events').insert([{
+            user_id: sub.user_id,
+            event_type: 'recurrent_charge_attempt',
+            status: 'pending',
+            payment_id: paymentIdForAttempt,
+            value: sub.price || PLAN_PREMIUM_MONTHLY_PRICE,
+            created_at: new Date().toISOString(),
+            metadata: { subscription_id: sub.id }
+          }]);
+        } catch (ledgerErr) {
+          console.warn('[Billing Cycle] Aviso ao inserir billing_event:', ledgerErr.message);
+        }
 
         const { data: profileRow } = await supabaseAdmin.from('profiles').select('*').eq('id', sub.user_id).maybeSingle();
         const customerId = await PaymentGateway.ensureCustomer(profileRow || { id: sub.user_id }, sub.metadata?.email, sub.metadata?.cpf);
@@ -52,31 +62,25 @@ export async function runBillingCycle() {
         const pixCharge = await PaymentGateway.createPixCharge({
           customerId,
           amount: Number(sub.price) || PLAN_PREMIUM_MONTHLY_PRICE,
-          description: "Recorrência MyFlowDay Premium ⚡",
+          description: "Recorrência MyFlowDay Premium",
           externalReference: `mfd_premium_${sub.user_id}`
         });
 
         successes++;
-        const nextExpiry = new Date();
-        nextExpiry.setDate(now.getDate() + 30);
+        console.log(`[Billing Cycle] Cobrança gerada para ${sub.user_id}: ${pixCharge.id}. Aguardando webhook de confirmação.`);
 
-        await BillingEngine.processPaymentSuccess({
-          userId: sub.user_id,
-          customerId,
-          paymentId: pixCharge.id,
-          billingType: 'pix',
-          value: Number(sub.price) || PLAN_PREMIUM_MONTHLY_PRICE,
-          periodDays: 30
-        });
-
-        await supabaseAdmin.from('payment_ledger').insert([{
-          payment_id: String(pixCharge.id),
-          event_type: 'recurrent_charge_success',
-          status_raw: pixCharge.status,
-          status_normalized: 'approved',
-          user_id: sub.user_id,
-          payload: pixCharge
-        }]);
+        // SECURITY FIX: Do NOT call processPaymentSuccess() here!
+        // The charge was GENERATED, not PAID. We must wait for the Asaas webhook
+        // (PAYMENT_RECEIVED / PAYMENT_CONFIRMED) to activate Pro access.
+        // Only update the last_payment_id for tracking.
+        try {
+          await supabaseAdmin.from('subscriptions').update({
+            last_payment_id: String(pixCharge.id),
+            updated_at: new Date().toISOString()
+          }).eq('user_id', sub.user_id);
+        } catch (updateErr) {
+          console.warn('[Billing Cycle] Aviso ao atualizar last_payment_id:', updateErr.message);
+        }
 
       } catch (err) {
         failures++;

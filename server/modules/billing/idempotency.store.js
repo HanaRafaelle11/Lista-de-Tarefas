@@ -3,19 +3,17 @@
  * 
  * Garante fisicamente que cada evento financeiro externo (ex: Asaas paymentId)
  * seja processado exatamente UMA VEZ no billing_ledger. Impedimento absoluto de duplicação.
+ * 
+ * RELIABILITY FIX: Removed in-memory Set cache. In serverless environments (Vercel/Edge),
+ * memory is NOT persisted between invocations, making the Set useless for deduplication.
+ * All checks now go through the database for reliable results.
  */
 import { supabaseAdmin } from '../../../lib/supabase.js';
-
-const memoryIdempotencySet = new Set();
 
 export const idempotencyStore = {
   async isProcessed(idempotencyKey) {
     if (!idempotencyKey) return false;
     const keyStr = String(idempotencyKey).trim();
-    
-    if (memoryIdempotencySet.has(keyStr)) {
-      return true;
-    }
 
     try {
       const { data: ledgerMatch } = await supabaseAdmin
@@ -26,7 +24,6 @@ export const idempotencyStore = {
         .maybeSingle();
 
       if (ledgerMatch) {
-        memoryIdempotencySet.add(keyStr);
         return true;
       }
 
@@ -38,7 +35,6 @@ export const idempotencyStore = {
         .maybeSingle();
 
       if (eventMatch) {
-        memoryIdempotencySet.add(keyStr);
         return true;
       }
     } catch (_) {}
@@ -46,9 +42,8 @@ export const idempotencyStore = {
     return false;
   },
 
-  markProcessed(idempotencyKey) {
-    if (idempotencyKey) {
-      memoryIdempotencySet.add(String(idempotencyKey).trim());
-    }
+  markProcessed(_idempotencyKey) {
+    // No-op: Deduplication is handled by the database queries in isProcessed().
+    // In-memory caching is unreliable in serverless environments.
   }
 };

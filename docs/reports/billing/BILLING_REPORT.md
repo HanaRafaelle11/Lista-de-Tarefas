@@ -6,7 +6,7 @@
 ---
 
 ## 1. OBJETIVO
-Auditar a resiliência, concorrência, idempotência e corretude lógica do motor de faturamento consolidado ([engine.js](file:///c:/Users/rafox/OneDrive/Documentos/07%20Lista%20de%20tarefas/lib/billing/engine.js)) integrado com Asaas e Mercado Pago.
+Auditar a resiliência, concorrência, idempotência e corretude lógica do motor de faturamento consolidado ([engine.js](file:///c:/Users/rafox/OneDrive/Documentos/07%20Lista%20de%20tarefas/lib/billing/engine.js)) integrado com Asaas.
 
 ---
 

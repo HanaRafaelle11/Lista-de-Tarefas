@@ -109,8 +109,13 @@ export function calcStreak(tasks) {
   const completedDates = [
     ...new Set(
       activeTasks
-        .filter(t => t.completed && (t.dueDate || t.createdAt))
-        .map(t => t.dueDate || t.createdAt.split('T')[0])
+        .filter(t => t.completed)
+        .map(t => {
+          if (t.completedAt) return t.completedAt.split('T')[0];
+          if (t.dueDate) return t.dueDate;
+          return t.createdAt ? t.createdAt.split('T')[0] : '';
+        })
+        .filter(d => d !== '')
     )
   ].sort().reverse();
 
@@ -143,8 +148,13 @@ export function calcActiveDays(tasks) {
   const activeTasks = (tasks || []).filter(t => !t.deletedAt);
   return new Set(
     activeTasks
-      .filter(t => t.completed && t.dueDate)
-      .map(t => t.dueDate)
+      .filter(t => t.completed)
+      .map(t => {
+        if (t.completedAt) return t.completedAt.split('T')[0];
+        if (t.dueDate) return t.dueDate;
+        return t.createdAt ? t.createdAt.split('T')[0] : '';
+      })
+      .filter(d => d !== '')
   ).size;
 }
 

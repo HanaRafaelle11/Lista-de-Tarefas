@@ -40,7 +40,7 @@ A idempotência é garantida em múltiplos níveis:
 
 ## 3. Auditoria Geral do Repositório (Checks Rápidos)
 
-* **Segredos expostos**: Nenhum segredo do Stripe, MercadoPago ou chaves VAPID privadas foi encontrado exposto no repositório. Arquivo `.env.local` devidamente listado no `.gitignore`.
+* **Segredos expostos**: Nenhum segredo do Asaas, Stripe ou chaves VAPID privadas foi encontrado exposto no repositório. Arquivo `.env.local` devidamente listado no `.gitignore`.
 * **URLs incorretas / localhost restante**: Todas as URLs são carregadas dinamicamente via variáveis de ambiente. As referências internas ao `localhost` no frontend são tratadas como fallbacks para ambiente de desenvolvimento local (Warnings dinâmicos).
 * **TODO / FIXME**: Localizado um único TODO de legabilidade em `src/services/goalsService.js` (referente a uma camada de compatibilidade deprecada da Fase 1, inofensivo para produção).
 * **console.log**: Logs do frontend estão normais. O Service Worker e o backend possuem loggers estruturados que ajudam na telemetria.

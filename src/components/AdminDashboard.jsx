@@ -687,13 +687,13 @@ export default function AdminDashboard() {
           {/* Main Navigation Tabs */}
           <div style={{ display: 'flex', borderBottom: '1px solid var(--border-medium)', gap: '16px', marginBottom: '8px' }}>
             {[
-              { id: 'metrics', label: '📊 Métricas SaaS', icon: <BarChart size={16} /> },
-              { id: 'status', label: '🟢 Status do Sistema', icon: <Activity size={16} /> },
-              { id: 'growth', label: '🧠 Growth OS', icon: <Brain size={16} /> },
-              { id: 'users', label: '👥 Diretório de Usuários', icon: <Users size={16} /> },
-              { id: 'funnels', label: '🎯 Funis de Conversão', icon: <Target size={16} /> },
-              { id: 'payments', label: '💳 Debug de Pagamentos', icon: <DollarSign size={16} /> },
-              { id: 'notifications', label: '🔔 Notificações Push', icon: <Bell size={16} /> }
+              { id: 'metrics', label: 'Métricas SaaS', icon: <BarChart size={16} /> },
+              { id: 'status', label: 'Status do Sistema', icon: <Activity size={16} /> },
+              { id: 'growth', label: 'Growth OS', icon: <Brain size={16} /> },
+              { id: 'users', label: 'Diretório de Usuários', icon: <Users size={16} /> },
+              { id: 'funnels', label: 'Funis de Conversão', icon: <Target size={16} /> },
+              { id: 'payments', label: 'Debug de Pagamentos', icon: <DollarSign size={16} /> },
+              { id: 'notifications', label: 'Notificações Push', icon: <Bell size={16} /> }
             ].map(tab => (
               <button
                 key={tab.id}
@@ -851,19 +851,19 @@ export default function AdminDashboard() {
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))', gap: '16px', alignItems: 'flex-end', minHeight: '180px', padding: '20px 10px 10px 10px', backgroundColor: 'var(--bg-app)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-light)' }}>
                   {[
-                    { label: 'Tarefas Criadas', count: metrics?.task_created || 19, max: 25, color: 'var(--primary)', icon: '💼' },
-                    { label: 'Tarefas Concluídas', count: metrics?.task_completed || 3, max: 25, color: '#10b981', icon: '✅' },
-                    { label: 'Hábitos Concluídos', count: metrics?.habits_completed || 2, max: 25, color: '#3B82F6', icon: '🌱' },
-                    { label: 'Pomodoros', count: metrics?.focus_completed || 0, max: 25, color: '#EC4899', icon: '⏱️' },
-                    { label: 'Metas Criadas', count: metrics?.goal_created || 0, max: 25, color: '#8B5CF6', icon: '🎯' },
-                    { label: 'Planejamentos', count: metrics?.weekly_plans || 0, max: 25, color: '#F59E0B', icon: '🗓️' }
+                    { label: 'Tarefas Criadas', count: metrics?.task_created || 19, max: 25, color: 'var(--primary)', icon: <CheckSquare size={13} /> },
+                    { label: 'Tarefas Concluídas', count: metrics?.task_completed || 3, max: 25, color: '#10b981', icon: <CheckCircle2 size={13} /> },
+                    { label: 'Hábitos Concluídos', count: metrics?.habits_completed || 2, max: 25, color: '#3B82F6', icon: <Activity size={13} /> },
+                    { label: 'Pomodoros', count: metrics?.focus_completed || 0, max: 25, color: '#EC4899', icon: <Clock size={13} /> },
+                    { label: 'Metas Criadas', count: metrics?.goal_created || 0, max: 25, color: '#8B5CF6', icon: <Target size={13} /> },
+                    { label: 'Planejamentos', count: metrics?.weekly_plans || 0, max: 25, color: '#F59E0B', icon: <Calendar size={13} /> }
                   ].map(bar => {
                     const heightPercent = Math.max(Math.min((bar.count / bar.max) * 100, 100), bar.count > 0 ? 15 : 6);
                     return (
                       <div key={bar.label} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', height: '100%', justifyContent: 'flex-end' }}>
                         <span style={{ fontSize: '12px', fontWeight: '800', color: bar.count > 0 ? bar.color : 'var(--text-muted)' }}>{bar.count}</span>
                         <div style={{ width: '100%', maxWidth: '44px', height: `${heightPercent}%`, backgroundColor: bar.count > 0 ? bar.color : 'var(--border-medium)', borderRadius: '6px 6px 0 0', opacity: bar.count > 0 ? 0.9 : 0.4, transition: 'all 0.3s ease', boxShadow: bar.count > 0 ? `0 4px 12px ${bar.color}40` : 'none' }}></div>
-                        <span style={{ fontSize: '11px', color: 'var(--text-light)', fontWeight: '600', textAlign: 'center', marginTop: '4px' }}>{bar.icon} {bar.label.split(' ')[0]}</span>
+                        <span style={{ fontSize: '11px', color: 'var(--text-light)', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px' }}>{bar.icon} <span>{bar.label.split(' ')[0]}</span></span>
                       </div>
                     );
                   })}
@@ -971,15 +971,15 @@ export default function AdminDashboard() {
                 </h2>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px' }}>
                   {[
-                    { title: 'Tarefas Criadas', value: metrics?.task_created, sub: `${metrics?.task_completed} concluídas`, emoji: '💼' },
-                    { title: 'Metas Criadas', value: metrics?.goal_created, sub: `${metrics?.goal_completed} concluídas`, emoji: '🎯' },
-                    { title: 'Pomodoros Concluídos', value: metrics?.focus_completed, sub: 'Ciclos de foco', emoji: '⏱️' },
-                    { title: 'Planejamentos', value: metrics?.weekly_plans, sub: 'Planos Semanais salvos', emoji: '🗓️' },
-                    { title: 'Agenda Calendário', value: metrics?.calendar_tasks, sub: 'Tarefas no calendário', emoji: '📆' },
-                    { title: 'Hábitos Concluídos', value: metrics?.habits_completed, sub: 'Dias com hábitos confirmados', emoji: '🌱' }
+                    { title: 'Tarefas Criadas', value: metrics?.task_created, sub: `${metrics?.task_completed} concluídas`, icon: <CheckSquare size={20} /> },
+                    { title: 'Metas Criadas', value: metrics?.goal_created, sub: `${metrics?.goal_completed} concluídas`, icon: <Target size={20} /> },
+                    { title: 'Pomodoros Concluídos', value: metrics?.focus_completed, sub: 'Ciclos de foco', icon: <Clock size={20} /> },
+                    { title: 'Planejamentos', value: metrics?.weekly_plans, sub: 'Planos Semanais salvos', icon: <Calendar size={20} /> },
+                    { title: 'Agenda Calendário', value: metrics?.calendar_tasks, sub: 'Tarefas no calendário', icon: <Calendar size={20} /> },
+                    { title: 'Hábitos Concluídos', value: metrics?.habits_completed, sub: 'Dias com hábitos confirmados', icon: <Activity size={20} /> }
                   ].map(feat => (
                     <div key={feat.title} style={{ padding: '16px', backgroundColor: 'var(--bg-card)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-light)', display: 'flex', alignItems: 'center', gap: '12px', boxShadow: 'var(--shadow-sm)' }}>
-                      <span style={{ fontSize: '24px' }}>{feat.emoji}</span>
+                      <span style={{ color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{feat.icon}</span>
                       <div>
                         <span style={{ fontSize: '11px', color: 'var(--text-light)', display: 'block', fontWeight: '600' }}>{feat.title}</span>
                         <strong style={{ fontSize: '18px', color: 'var(--text-main)' }}>{feat.value || 0}</strong>
@@ -1243,7 +1243,7 @@ export default function AdminDashboard() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
                 <div>
-                  <h3 style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-main)', margin: 0 }}>💳 Central de Faturamento & Observabilidade</h3>
+                  <h3 style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-main)', margin: 0 }}>Central de Faturamento & Observabilidade</h3>
                   <span style={{ fontSize: '13px', color: 'var(--text-light)', marginTop: '4px', display: 'block' }}>
                     Hierarquia de atenção em 3 camadas: respostas executivas instantâneas, diagnósticos de anomalia e dados brutos.
                   </span>
@@ -1252,9 +1252,9 @@ export default function AdminDashboard() {
                 {/* 3-Tier Human Attention Hierarchy Sub-Tabs */}
                 <div style={{ display: 'flex', backgroundColor: 'var(--bg-app)', padding: '4px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-medium)', gap: '4px' }}>
                   {[
-                    { id: 'overview', label: '🟢 Overview (Saúde + Dinheiro)' },
-                    { id: 'diagnostics', label: '🟡 Diagnostics (Problemas)' },
-                    { id: 'raw', label: '🔵 Raw Data (Verdade Bruta)' }
+                    { id: 'overview', label: 'Overview (Saúde + Dinheiro)' },
+                    { id: 'diagnostics', label: 'Diagnostics (Problemas)' },
+                    { id: 'raw', label: 'Raw Data (Verdade Bruta)' }
                   ].map(htab => (
                     <button
                       key={htab.id}
@@ -1623,7 +1623,7 @@ export default function AdminDashboard() {
                         ) : (
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', borderLeft: '2px solid var(--border-medium)', paddingLeft: '24px', marginLeft: '12px' }}>
                             {filteredPaymentEvents.map(evt => {
-                              const eventName = evt.event || evt.event_type || 'unknown_event';
+                              const eventName = evt.raw?.event || evt.raw?.type || evt.raw?.event_type || evt.event || evt.event_type || evt.type || 'unknown_event';
                               const eventTime = evt.timestamp || evt.created_at || new Date().toISOString();
                               const refId = evt.payment_id || evt.subscription_id || evt.reference_id;
 

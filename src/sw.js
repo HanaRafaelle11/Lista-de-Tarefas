@@ -42,10 +42,11 @@ self.addEventListener('push', (event) => {
     const options = {
       body: data.body || '',
       icon: '/icon.svg',
-      badge: '/favicon.svg',
+      badge: '/notification-badge.png',
       vibrate: [200, 100, 200, 100, 200],
       requireInteraction: true,
       renotify: true,
+      silent: false,
       tag: data.tag || `notif_${Date.now()}`,
       actions: [
         { action: 'open', title: '👁️ Abrir' },

@@ -353,7 +353,10 @@ function AppLayout() {
       {currentUser?.isDemo && (
         <div className="demo-banner">
           <span>Você está no Modo de Demonstração. Crie uma conta gratuita para salvar e sincronizar seus dados.</span>
-          <button className="demo-banner-btn" onClick={handleLogout}>Criar Conta</button>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button className="demo-banner-btn" onClick={() => handleLogout()}>Sair do modo teste</button>
+            <button className="demo-banner-btn" style={{ backgroundColor: '#10b981' }} onClick={() => { handleLogout(); }}>Criar Conta</button>
+          </div>
         </div>
       )}
       {!isInitializing && isAccessChecked && !isPro && (

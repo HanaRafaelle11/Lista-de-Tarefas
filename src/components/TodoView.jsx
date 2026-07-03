@@ -1115,7 +1115,7 @@ export default function TodoView() {
                 className={`tasks-cat-pill ${categoryFilter === cat.id ? 'active' : ''}`}
                 style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}
               >
-                {cat.iconName ? <MFIcon name={cat.iconName} size={12} /> : <span>{cat.emoji || '💼'}</span>}
+                {cat.iconName ? <MFIcon name={cat.iconName} size={12} /> : (cat.emoji ? <span>{cat.emoji}</span> : <MFIcon name="tasks" size={12} />)}
                 <span>{cat.name}</span>
               </button>
             ))}

@@ -312,8 +312,9 @@ a {
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(45, 49, 46, 0.15);
-  backdrop-filter: blur(6px);
+  background-color: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -646,12 +647,12 @@ button[title="Sair do MyFlowDay"]:hover {
 }
 
 .todo-item-action-btn.delete-btn {
-  color: var(--text-light);
+  color: var(--danger);
 }
 
 .todo-item-action-btn.delete-btn:hover {
-  color: #C06C6C;
-  background-color: #FAF0F0;
+  color: var(--danger-hover);
+  background-color: var(--prio-alta-bg);
 }
 
 /* Navbar Premium Clean Style */
@@ -925,9 +926,10 @@ button[title="Sair do MyFlowDay"]:hover {
 .todo-filter-btn {
   padding: 6px 14px;
   border-radius: calc(var(--radius-md) - 4px);
-  font-size: 13px;
-  font-weight: 550;
-  color: var(--text-muted);
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text-main);
+  opacity: 0.7;
   font-family: var(--font-display);
   border: none;
   background: none;
@@ -936,12 +938,14 @@ button[title="Sair do MyFlowDay"]:hover {
 }
 
 .todo-filter-btn:hover:not(.active-filter) {
+  opacity: 1;
   color: var(--primary);
 }
 
 .active-filter {
   background-color: var(--bg-card);
   color: var(--primary);
+  opacity: 1;
   box-shadow: var(--shadow-sm);
 }
 
@@ -4564,7 +4568,7 @@ button[title="Sair do MyFlowDay"]:hover {
 
 /* Modal overlay no dark */
 .dark .modal-overlay {
-  background-color: rgba(0, 0, 0, 0.55);
+  background-color: rgba(15, 23, 42, 0.75);
 }
 
 /* Logout button no dark */
@@ -4665,6 +4669,9 @@ button[title="Sair do MyFlowDay"]:hover {
   gap: var(--space-2);
   position: relative;
   transition: transform 0.2s, box-shadow 0.2s;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: pan-y;
 }
 .kanban-card:hover {
   transform: translateY(-2px);
@@ -5322,22 +5329,45 @@ body,
 
 /* Fase 4: Dashboard de Desempenho Grid */
 .perf-grid-container {
-  display: grid !important;
-  grid-template-columns: repeat(2, 1fr) !important;
-  gap: 24px !important;
-  align-items: start !important;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: 24px;
+  align-items: start;
 }
+
+/* Goal icon picker grid */
+.goal-icon-grid {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 8px;
+}
+
+@media (max-width: 768px) {
+  .goal-icon-grid {
+    grid-template-columns: repeat(6, 1fr);
+  }
+}
+
+@media (max-width: 480px) {
+  .goal-icon-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
 .perf-card-double-span {
-  grid-column: span 2 !important;
+  grid-column: span 2;
 }
+
+@media (max-width: 1024px) {
+  .perf-card-double-span {
+    grid-column: span 1;
+  }
+}
+
 @media (max-width: 768px) {
   .perf-grid-container {
-    grid-template-columns: 1fr !important;
-    gap: 16px !important;
-  }
-  .perf-card-double-span {
-    grid-column: span 1 !important;
-    width: 100% !important;
+    grid-template-columns: 1fr;
+    gap: 16px;
   }
 }
 
@@ -5369,6 +5399,14 @@ body,
     height: 32px !important;
     font-size: 12px !important;
     flex-shrink: 0 !important;
+  }
+  .header-btn {
+    min-width: 44px !important;
+    min-height: 44px !important;
+  }
+  .app-bottom-nav-btn {
+    min-height: 44px !important;
+    padding: 8px 10px !important;
   }
 }
 

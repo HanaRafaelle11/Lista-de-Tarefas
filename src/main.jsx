@@ -9,7 +9,8 @@ import { scrollBehaviourDragImageTranslateOverride } from "mobile-drag-drop/scro
 import "mobile-drag-drop/default.css";
 
 polyfill({
-    dragImageTranslateOverride: scrollBehaviourDragImageTranslateOverride
+    dragImageTranslateOverride: scrollBehaviourDragImageTranslateOverride,
+    holdToDrag: 250 // Permite scroll se o usuário apenas arrastar rápido; inicia o drag se ele segurar por 250ms
 });
 
 // Safari issue fix for drag and drop polyfill

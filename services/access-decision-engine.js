@@ -8,6 +8,7 @@
  * O cache local serve unicamente como telemetria secundária e nunca dita autorizações.
  */
 import { supabaseAdmin } from '../lib/supabase.js';
+import { EntitlementsService } from './entitlements.service.js';
 
 const isProCache = new Map();
 
@@ -24,40 +25,82 @@ export const AccessDecisionEngine = {
   },
 
   /**
+   * Obtém a resolução detalhada e canônica de acesso do usuário.
+   * Consulta direta e determinística na tabela de entitlements.
+   * 
+   * @param {string} userId
+   * @returns {Promise<Object>}
+   */
+  async getAccessResolution(userId) {
+    if (!userId) {
+      return {
+        plan: 'free',
+        status: 'free',
+        canAccessPro: false,
+        limits: {
+          ai_requests: 0,
+          tasks: 'limited'
+        },
+        reason: 'unauthenticated'
+      };
+    }
+
+    const nowIso = new Date().toISOString();
+    try {
+      // 1. Consulta estrita de direitos ativos em user_entitlements
+      const { data: entitlement, error } = await supabaseAdmin
+        .from('user_entitlements')
+        .select('status, valid_until')
+        .eq('user_id', userId)
+        .eq('feature', 'pro_features')
+        .eq('status', 'active')
+        .gt('valid_until', nowIso)
+        .maybeSingle();
+
+      if (error) {
+        console.error(`[AccessDecisionEngine DB Error] Falha ao consultar entitlements para ${userId}:`, error.message);
+        return {
+          plan: 'free',
+          status: 'free',
+          canAccessPro: false,
+          limits: { ai_requests: 0, tasks: 'limited' },
+          reason: 'database_error'
+        };
+      }
+
+      const canAccessPro = !!entitlement;
+      
+      return {
+        plan: canAccessPro ? 'premium' : 'free',
+        status: canAccessPro ? entitlement.status : 'free',
+        canAccessPro,
+        limits: {
+          ai_requests: canAccessPro ? 100 : 0,
+          tasks: canAccessPro ? 'unlimited' : '30_days_limit'
+        },
+        reason: canAccessPro ? 'subscription_active' : 'no_active_subscription'
+      };
+    } catch (err) {
+      console.error(`[AccessDecisionEngine Exception] Erro ao obter access resolution para ${userId}:`, err.message);
+      return {
+        plan: 'free',
+        status: 'free',
+        canAccessPro: false,
+        limits: { ai_requests: 0, tasks: 'limited' },
+        reason: 'exception'
+      };
+    }
+  },
+
+  /**
    * Função Canônica Determinística de Validação de Acesso Pro em Escala.
-   * SSOT Direta no Banco de Dados: status = 'active' AND provider = 'asaas' AND current_period_end > now()
    * 
    * @param {string} userId
    * @returns {Promise<boolean>}
    */
   async isPro(userId) {
-    if (!userId) return false;
-
-    const nowIso = new Date().toISOString();
-    try {
-      // TAREFA 1 & 6: Consulta direta e determinística ao banco primário (SSOT em Escala Horizontal)
-      const { data: activeSub, error } = await supabaseAdmin
-        .from('subscriptions')
-        .select('id')
-        .eq('user_id', userId)
-        .eq('status', 'active')
-        .eq('provider', 'asaas')
-        .gt('current_period_end', nowIso)
-        .order('updated_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      if (error) {
-        console.error(`[AccessDecisionEngine DB Error] Falha ao consultar isPro para ${userId}:`, error.message);
-        return false;
-      }
-
-      const result = !!activeSub;
-      return result;
-    } catch (err) {
-      console.error(`[AccessDecisionEngine Exception] Erro ao consultar isPro para ${userId}:`, err.message);
-      return false;
-    }
+    const res = await this.getAccessResolution(userId);
+    return res.canAccessPro;
   },
 
   /**

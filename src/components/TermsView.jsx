@@ -130,7 +130,7 @@ export default function TermsView({ onGoBack, onNavigateToPrivacy }) {
           </p>
           <ul style={{ paddingLeft: '20px', color: '#94A3B8', fontSize: '14px', lineHeight: '1.8', marginBottom: '16px' }}>
             <li>Utilizar o aplicativo para fins ilegais, difamatórios ou prejudiciais.</li>
-            <li>Tentar violar a segurança ou burlar o controle de dados do Supabase.</li>
+            <li>Tentar violar a segurança ou burlar o controle de dados da nossa plataforma.</li>
             <li>Automatizar acessos (bots, scrapers) abusivos de requisições.</li>
             <li>Engenharia reversa ou descompilação de pacotes do aplicativo.</li>
           </ul>
@@ -194,7 +194,7 @@ export default function TermsView({ onGoBack, onNavigateToPrivacy }) {
             Você pode cancelar sua assinatura Pro a qualquer momento no menu de configurações do app.
           </p>
           <p style={{ color: '#94A3B8', fontSize: '15px', lineHeight: '1.6' }}>
-            Para encerrar definitivamente sua conta e deletar os dados do Supabase, você pode enviar uma solicitação de exclusão ao nosso canal de atendimento por e-mail.
+            Para encerrar definitivamente sua conta e deletar os seus dados de forma permanente, você pode enviar uma solicitação de exclusão ao nosso canal de atendimento por e-mail.
           </p>
         </section>
 
@@ -211,9 +211,9 @@ export default function TermsView({ onGoBack, onNavigateToPrivacy }) {
             Caso tenha qualquer dúvida relacionada a este contrato de serviço, por favor entre em contato:
           </p>
           <div style={{ display: 'flex', alignItems: 'center', gap: '16px', backgroundColor: '#0F172A', border: '1px solid #334155', borderRadius: '10px', padding: '18px 20px' }}>
-            <div style={{ width: '44px', height: '44px', borderRadius: '50%', backgroundColor: '#22D3EE', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0F172A', fontWeight: 'bold', fontSize: '18px' }}>HR</div>
+            <div style={{ width: '44px', height: '44px', borderRadius: '50%', backgroundColor: '#22D3EE', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0F172A', fontWeight: 'bold', fontSize: '18px' }}>✉️</div>
             <div>
-              <div style={{ fontWeight: 600, fontSize: '15px', color: '#F8FAFC' }}>Hana Oliveira &mdash; Canal Fale com a Gente</div>
+              <div style={{ fontWeight: 600, fontSize: '15px', color: '#F8FAFC' }}>Equipe de Suporte Institucional</div>
               <div style={{ fontSize: '13px', color: '#22D3EE' }}><a href="mailto:suporte@myflowday.com.br" style={{ color: '#22D3EE', textDecoration: 'none' }}>suporte@myflowday.com.br</a></div>
             </div>
           </div>
@@ -227,7 +227,9 @@ export default function TermsView({ onGoBack, onNavigateToPrivacy }) {
             onMouseEnter={e => e.currentTarget.style.borderColor = '#22D3EE'}
             onMouseLeave={e => e.currentTarget.style.borderColor = '#334155'}
           >
-            <div style={{ fontSize: '20px' }}>🔒</div>
+            <div style={{ color: '#64748B', display: 'flex', alignItems: 'center' }}>
+              <Lock size={20} />
+            </div>
             <div>
               <div style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', color: '#64748B', marginBottom: '2px' }}>Leia também</div>
               <div style={{ fontSize: '15px', fontWeight: 600, color: '#F8FAFC' }}>Política de Privacidade</div>
@@ -236,7 +238,9 @@ export default function TermsView({ onGoBack, onNavigateToPrivacy }) {
           </div>
 
           <div style={{ flex: 1, minWidth: '220px', display: 'flex', alignItems: 'center', gap: '14px', backgroundColor: '#1E293B', border: '1px solid #22D3EE', borderRadius: '12px', padding: '20px 22px' }}>
-            <div style={{ fontSize: '20px' }}>📋</div>
+            <div style={{ color: '#22D3EE', display: 'flex', alignItems: 'center' }}>
+              <FileText size={20} />
+            </div>
             <div>
               <div style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', color: '#22D3EE', marginBottom: '2px' }}>Você está aqui</div>
               <div style={{ fontSize: '15px', fontWeight: 600, color: '#22D3EE' }}>Termos de Serviço</div>

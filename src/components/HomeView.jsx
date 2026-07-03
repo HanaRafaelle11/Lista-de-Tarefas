@@ -994,7 +994,9 @@ export default function HomeView() {
                       gap: '10px'
                     }}
                   >
-                    <div style={{ fontSize: '32px' }}>💡</div>
+                    <div style={{ color: 'var(--accent-yellow, #eab308)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <Lightbulb size={32} />
+                    </div>
                     <h3 style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-main)', margin: 0 }}>
                       Você ainda não possui dados suficientes.
                     </h3>

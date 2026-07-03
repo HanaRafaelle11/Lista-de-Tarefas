@@ -352,25 +352,12 @@ export function AppProvider({ children }) {
   }, [tasks, userState, currentUser?.id, currentUser?.user_metadata?.onboarding_completed]);
 
   // ── Feature Flags & Assinatura (SaaS) ───────────────────────────────────────
-  const [isPro, setIsProState] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('flowday_is_pro') === 'true';
-    }
-    return false;
-  });
-  const [isAccessChecked, setIsAccessChecked] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('flowday_access_checked') === 'true';
-    }
-    return false;
-  });
+  const [isPro, setIsProState] = useState(false);
+  const [isAccessChecked, setIsAccessChecked] = useState(false);
 
   const setIsPro = useCallback((valOrFn) => {
     setIsProState((prev) => {
       const next = typeof valOrFn === 'function' ? valOrFn(prev) : valOrFn;
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('flowday_is_pro', next ? 'true' : 'false');
-      }
       return next;
     });
   }, []);
@@ -451,8 +438,11 @@ export function AppProvider({ children }) {
         localStorage.removeItem(`flowday_demo_habits_${currentUser.id}`);
         localStorage.removeItem(`flowday_demo_achievements_${currentUser.id}`);
       }
-
-      window.location.href = window.location.origin + '/login';
+      if (currentUser?.isDemo) {
+        window.location.href = window.location.origin + '/';
+      } else {
+        window.location.href = window.location.origin + '/login';
+      }
       // Reset do guard de conquistas para o próximo login
       dataLoadedOnce.current = false;
       initialGoalsCount.current = -1;
@@ -603,22 +593,64 @@ export function AppProvider({ children }) {
 
   const addNotification = useCallback(async (type, title, description, metadata = {}) => {
     if (!currentUser?.id) return;
-    const newNotif = {
-      id: generateId(),
-      user_id: currentUser.id,
-      type,
-      title,
-      description,
-      timestamp: new Date().toISOString(),
-      read: false,
-      metadata
-    };
-    setNotifications(prev => [newNotif, ...prev]);
-    try {
-      await localDB.put('notifications', newNotif);
-    } catch (err) {
-      console.warn('[AppContext] Erro ao salvar notificação local:', err.message);
-    }
+    
+    const notifId = metadata?.notification_id || generateId();
+    
+    setNotifications(prev => {
+      // Evita duplicações por ID idêntico ou por conteúdo recente idêntico (5 segundos)
+      const isDuplicate = prev.some(n => 
+        n.id === notifId || 
+        (n.title === title && n.description === description && Math.abs(new Date(n.timestamp) - new Date()) < 5000)
+      );
+      if (isDuplicate) return prev;
+
+      const newNotif = {
+        id: notifId,
+        user_id: currentUser.id,
+        type,
+        title,
+        description,
+        timestamp: new Date().toISOString(),
+        read: false,
+        metadata
+      };
+
+      // Gravação assíncrona no IndexedDB local
+      localDB.put('notifications', newNotif).catch(err => {
+        console.warn('[AppContext] Erro ao salvar notificação local no IndexedDB:', err.message);
+      });
+
+      // Feedback sonoro sintetizado e vibração tátil (Android fallback)
+      try {
+        if (typeof navigator !== 'undefined' && navigator.vibrate) {
+          navigator.vibrate([100, 50, 100]);
+        }
+        
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        if (AudioContextClass) {
+          const audioCtx = new AudioContextClass();
+          const oscillator = audioCtx.createOscillator();
+          const gainNode = audioCtx.createGain();
+          
+          oscillator.connect(gainNode);
+          gainNode.connect(audioCtx.destination);
+          
+          oscillator.type = 'sine';
+          oscillator.frequency.setValueAtTime(587.33, audioCtx.currentTime); // Ré5
+          oscillator.frequency.setValueAtTime(880.00, audioCtx.currentTime + 0.12); // Lá5
+          
+          gainNode.gain.setValueAtTime(0.15, audioCtx.currentTime);
+          gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
+          
+          oscillator.start(audioCtx.currentTime);
+          oscillator.stop(audioCtx.currentTime + 0.4);
+        }
+      } catch (audioErr) {
+        console.warn('[AppContext] Falha ao tocar som sintetizado de notificação:', audioErr);
+      }
+
+      return [newNotif, ...prev];
+    });
   }, [currentUser?.id]);
 
   const markNotificationsAsRead = useCallback(async () => {
@@ -739,7 +771,8 @@ export function AppProvider({ children }) {
     setIsPro(true);
     setSubscriptionStatus('active');
     setSubscriptionPlan('pro');
-    setIsInitializing(false);
+    // isInitializing is derived from authMachine.isLoading — no setter needed.
+    // The machine transitions to AUTHENTICATED when setCurrentUser dispatches SIGNED_IN.
     
     // Notificação de boas vindas
     setTimeout(() => {
@@ -972,7 +1005,7 @@ export function AppProvider({ children }) {
   const checkServerAccess = useCallback(async (userId) => {
     if (!userId) {
       setIsPro(false);
-      setSubscriptionStatus('free');
+      setSubscriptionStatus('FREE');
       setSubscriptionPlan('free');
       setChurnScore(0);
       setChurnRisk('low');
@@ -982,12 +1015,12 @@ export function AppProvider({ children }) {
       const response = await fetch(`/api/access/check?userId=${userId}`);
       if (response.ok) {
         const data = await response.json();
-        const active = !!data.isPro;
+        const active = !!data.canAccessPro;
         
         // Só atualiza se realmente mudar, prevenindo loops de re-render
         setIsPro(prev => prev !== active ? active : prev);
         setSubscriptionStatus(prev => prev !== (data.status || 'free').toUpperCase() ? (data.status || 'free').toUpperCase() : prev);
-        setSubscriptionPlan(prev => prev !== (data.plano || 'free') ? (data.plano || 'free') : prev);
+        setSubscriptionPlan(prev => prev !== (data.plan || 'free') ? (data.plan || 'free') : prev);
         
         if (data.churn) {
           setChurnScore(prev => prev !== data.churn.score ? data.churn.score : prev);
@@ -1073,48 +1106,8 @@ export function AppProvider({ children }) {
     };
   }, [currentUser?.id, loadTasks, loadGoals, loadAchievements, loadHabits, loadProfile, loadSubscription, loadNotifications, rehydrateUserState, purgeTrash, checkServerAccess, setIsPro]);
 
-  // ── Projeção do Estado de Assinatura a partir do Perfil do Usuário ──
-  useEffect(() => {
-    if (userProfile) {
-      const plano = (userProfile.plano || 'free').toLowerCase();
-      const status = (userProfile.assinatura_status || 'free').toLowerCase();
-      const expiresAt = userProfile.assinatura_expira_em;
-      
-      // Valida se o plano é pro ou premium, status ativo e não expirou
-      const active = (plano === 'premium' || plano === 'pro') && 
-                     (status === 'active') && 
-                     (!expiresAt || new Date(expiresAt) > new Date());
-      
-      setIsPro(active);
-      setSubscriptionStatus(active ? 'active' : status);
-      setSubscriptionPlan(plano);
-      setIsAccessChecked(true);
-      if (typeof window !== 'undefined') localStorage.setItem('flowday_access_checked', 'true');
-    }
-  }, [userProfile, currentUser, setIsPro]);
-
-  // ── Temporizador de Expiração em Background para Revalidação Automática (Validade Real) ──
-  useEffect(() => {
-    if (!isPro || !userProfile?.assinatura_expira_em) return;
-
-    const checkExpiration = () => {
-      const expiresAt = new Date(userProfile.assinatura_expira_em);
-      if (expiresAt <= new Date()) {
-        console.log('[BillingEngine] Assinatura expirou em background. Invalidando acesso.');
-        setIsPro(false);
-        setSubscriptionStatus('CANCELED'); // Máquina de Estados
-        setSubscriptionPlan('free');
-      }
-    };
-
-    // Executa a cada 60 segundos
-    const intervalId = setInterval(checkExpiration, 60000);
-    
-    // Executa imediatamente na inicialização/mudança
-    checkExpiration();
-
-    return () => clearInterval(intervalId);
-  }, [isPro, userProfile?.assinatura_expira_em]);
+  // A validação de acesso PRO é feita exclusivamente via checkServerAccess()
+  // no carregamento e por realtime hooks ao detectar mudanças na tabela profiles.
 
   // ── Checagem de Período de Exclusão de Conta (Reativação de 0-30 dias) ──
   useEffect(() => {
@@ -1496,7 +1489,7 @@ export function AppProvider({ children }) {
         localStorage.setItem(`flowday_demo_goals_${currentUser.id}`, JSON.stringify({ goals, goalTasks: updatedGT }));
       }
       addNotification('task', 'Tarefa criada', payload.title);
-      return;
+      return newTask;
     }
 
     // Optimistic UI Update
@@ -1530,12 +1523,14 @@ export function AppProvider({ children }) {
           await goalsService.linkTask(goal_id, data.id);
           setGoalTasks((prev) => prev.map(gt => gt.task_id === tempId ? { goal_id, task_id: data.id } : gt));
         }
+        return data;
       } else {
         // Rollback
         setTasks((prev) => prev.filter(t => t.id !== tempId));
         if (goal_id) {
           setGoalTasks((prev) => prev.filter(gt => gt.task_id !== tempId));
         }
+        return null;
       }
     } catch (err) {
       // Rollback
@@ -1543,6 +1538,7 @@ export function AppProvider({ children }) {
       if (goal_id) {
         setGoalTasks((prev) => prev.filter(gt => gt.task_id !== tempId));
       }
+      return null;
     }
   }, [currentUser, tasks, goals, goalTasks, logEvent, addNotification]);
 
@@ -1693,6 +1689,37 @@ export function AppProvider({ children }) {
     return completedTasks.length;
   }, [currentUser, tasks, goals, goalTasks, undoAction, logEvent]);
 
+  const handleDeleteAllTasks = useCallback(async () => {
+    if (!currentUser?.id) return;
+    
+    // Check if there are tasks to delete
+    const tasksToDelete = tasks.filter(t => !t.deletedAt);
+    if (tasksToDelete.length === 0) return 0;
+    
+    const nowIso = new Date().toISOString();
+    const ids = tasksToDelete.map(t => t.id);
+    
+    // 1. Soft delete immediate on UI
+    setTasks(prev => prev.map(t => ids.includes(t.id) ? { ...t, deletedAt: nowIso } : t));
+    
+    // 2. Clear any undo action to prevent conflicts
+    if (undoAction?.timerId) clearTimeout(undoAction.timerId);
+    setUndoAction(null);
+    
+    // 3. Delete in backend or demo storage
+    if (currentUser.isDemo) {
+      const updatedList = tasks.map(t => ids.includes(t.id) ? { ...t, deletedAt: nowIso } : t);
+      localStorage.setItem(`flowday_demo_tasks_${currentUser.id}`, JSON.stringify(updatedList));
+      logEvent('all_tasks_deleted', { count: ids.length });
+    } else {
+      Promise.all(ids.map(id => tasksService.delete(currentUser.id, id))).then(() => {
+        logEvent('all_tasks_deleted', { count: ids.length });
+      });
+    }
+    
+    return ids.length;
+  }, [currentUser, tasks, undoAction, logEvent]);
+
   const handleToggleComplete = useCallback(async (id) => {
     if (!currentUser?.id) return;
     const task = tasks.find((t) => t.id === id);
@@ -1701,8 +1728,14 @@ export function AppProvider({ children }) {
     const next = !task.completed;
     const completedAt = next ? new Date().toISOString() : null;
     
-    setTasks((prev) => prev.map((t) => t.id === id ? { ...t, completed: next, completedAt } : t));
-    
+    setTasks((prev) => {
+      const updated = prev.map((t) => t.id === id ? { ...t, completed: next, completedAt } : t);
+      if (currentUser.isDemo) {
+        localStorage.setItem(`flowday_demo_tasks_${currentUser.id}`, JSON.stringify(updated));
+      }
+      return updated;
+    });
+
     if (next) {
       logEvent('task_completed', { taskId: id });
       const alreadyHadSuccess = tasks.some(t => t.id !== id && t.completed);
@@ -1717,9 +1750,6 @@ export function AppProvider({ children }) {
     }
 
     if (currentUser.isDemo) {
-      const updated = tasks.map((t) => t.id === id ? { ...t, completed: next, completedAt, updatedAt: new Date().toISOString() } : t);
-      setTasks(updated);
-      localStorage.setItem(`flowday_demo_tasks_${currentUser.id}`, JSON.stringify(updated));
       return;
     }
 
@@ -1819,27 +1849,51 @@ export function AppProvider({ children }) {
       status: 'active'
     };
 
+    // Obter tarefas vinculadas originais
+    const linkedTaskIds = goalTasks.filter(gt => gt.goal_id === goalId).map(gt => gt.task_id);
+    const originalTasks = tasks.filter(t => linkedTaskIds.includes(t.id));
+
     if (currentUser.isDemo) {
       const demoGoalId = 'dg_' + Date.now();
       const newGoal = {
         id: demoGoalId,
         user_id: currentUser.id,
-        title: duplicatePayload.title,
-        description: duplicatePayload.description,
-        color: duplicatePayload.color,
-        icon: duplicatePayload.icon,
-        target_date: duplicatePayload.target_date,
-        start_time: duplicatePayload.start_time,
-        end_time: duplicatePayload.end_time,
-        attachments: duplicatePayload.attachments,
-        status: 'active',
+        ...duplicatePayload,
         deletedAt: null,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       };
+      
+      const newTasks = [];
+      const newGoalTasks = [];
+      
+      originalTasks.forEach((ot, idx) => {
+        const newTaskId = `dt_${Date.now()}_${idx}`;
+        newTasks.push({
+          ...ot,
+          id: newTaskId,
+          title: ot.title,
+          completed: false,
+          completedAt: null,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        });
+        newGoalTasks.push({
+          id: `dgt_${Date.now()}_${idx}`,
+          goal_id: demoGoalId,
+          task_id: newTaskId,
+          created_at: new Date().toISOString()
+        });
+      });
+
       const updatedGoals = [newGoal, ...goals];
       setGoals(updatedGoals);
-      localStorage.setItem(`flowday_demo_goals_${currentUser.id}`, JSON.stringify({ goals: updatedGoals, goalTasks }));
+      setTasks(prev => [...newTasks, ...prev]);
+      setGoalTasks(prev => [...newGoalTasks, ...prev]);
+      
+      localStorage.setItem(`flowday_demo_goals_${currentUser.id}`, JSON.stringify({ goals: updatedGoals, goalTasks: [...newGoalTasks, ...goalTasks] }));
+      localStorage.setItem(`flowday_demo_tasks_${currentUser.id}`, JSON.stringify([...newTasks, ...tasks]));
+      
       logEvent('goal_created', { title: duplicatePayload.title, duplicated_from: goalId });
       addNotification('goal', 'Objetivo duplicado', duplicatePayload.title);
       return;
@@ -1849,15 +1903,7 @@ export function AppProvider({ children }) {
     const optimisticGoal = {
       id: tempGoalId,
       user_id: currentUser.id,
-      title: duplicatePayload.title,
-      description: duplicatePayload.description,
-      color: duplicatePayload.color,
-      icon: duplicatePayload.icon,
-      target_date: duplicatePayload.target_date,
-      start_time: duplicatePayload.start_time,
-      end_time: duplicatePayload.end_time,
-      attachments: duplicatePayload.attachments,
-      status: 'active',
+      ...duplicatePayload,
       deletedAt: null,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
@@ -1866,18 +1912,44 @@ export function AppProvider({ children }) {
     setGoals((prev) => [optimisticGoal, ...prev]);
 
     try {
-      const { data } = await goalsService.create(currentUser.id, duplicatePayload);
-      if (data) {
-        setGoals((prev) => prev.map(g => g.id === tempGoalId ? data : g));
+      // 1. Criar o novo objetivo no backend
+      const { data: newGoalData } = await goalsService.create(currentUser.id, duplicatePayload);
+      if (newGoalData) {
+        setGoals((prev) => prev.map(g => g.id === tempGoalId ? newGoalData : g));
+        
+        // 2. Duplicar as tarefas e vincular
+        if (originalTasks.length > 0) {
+          const newTasksData = originalTasks.map(ot => ({
+            title: ot.title,
+            description: ot.description || '',
+            category: ot.category || 'Pessoal',
+            priority: ot.priority || 'Média',
+            dueDate: ot.dueDate || null,
+            completed: false
+          }));
+          
+          for (const taskPayload of newTasksData) {
+            const { data: createdTask } = await tasksService.create(currentUser.id, taskPayload);
+            if (createdTask) {
+              setTasks(prev => [createdTask, ...prev]);
+              const { data: linkData } = await goalsService.linkTask(newGoalData.id, createdTask.id);
+              if (linkData) {
+                setGoalTasks(prev => [...prev, linkData]);
+              }
+            }
+          }
+        }
+        
         logEvent('goal_created', { title: duplicatePayload.title, duplicated_from: goalId });
         addNotification('goal', 'Objetivo duplicado', duplicatePayload.title);
       } else {
         setGoals((prev) => prev.filter(g => g.id !== tempGoalId));
       }
     } catch (err) {
+      console.error(err);
       setGoals((prev) => prev.filter(g => g.id !== tempGoalId));
     }
-  }, [currentUser, goals, goalTasks, logEvent, addNotification]);
+  }, [currentUser, goals, tasks, goalTasks, logEvent, addNotification]);
 
   const handleDuplicateTask = useCallback(async (taskId) => {
     if (!currentUser?.id) return;
@@ -2136,9 +2208,9 @@ export function AppProvider({ children }) {
       setGoals(updatedGoals);
       localStorage.setItem(`flowday_demo_goals_${currentUser.id}`, JSON.stringify({ goals: updatedGoals, goalTasks }));
       logEvent('goal_updated', { goal_id: id });
-      if (updatedData.status === 'completed') {
+      if (updatedData.status === 'completed' && existingGoal?.status !== 'completed') {
         logEvent('goal_completed', { goal_id: id });
-        addNotification('goal', 'Objetivo Concluído! 🏆', existingGoal.title);
+        addNotification('goal', 'Objetivo Concluído!', existingGoal.title);
       }
       return;
     }
@@ -2150,9 +2222,9 @@ export function AppProvider({ children }) {
       if (updatedData.start_time !== undefined && existingGoal.start_time !== updatedData.start_time) {
         logEvent('goal_time_updated', { goal_id: id, start_time: updatedData.start_time, end_time: updatedData.end_time });
       }
-      if (updatedData.status === 'completed') {
+      if (updatedData.status === 'completed' && existingGoal?.status !== 'completed') {
         logEvent('goal_completed', { goal_id: id });
-        addNotification('goal', 'Objetivo Concluído! 🏆', existingGoal.title);
+        addNotification('goal', 'Objetivo Concluído!', existingGoal.title);
         if (existingGoal.start_time) {
           logEvent('goal_completed_with_schedule', { goal_id: id });
         }
@@ -2309,10 +2381,15 @@ export function AppProvider({ children }) {
   }, [currentUser, goals, goalTasks, tasks, undoAction, logEvent, resetAchievementsIfEmpty]);
 
   const handleLinkTask = useCallback(async (goalId, taskId) => {
-    if (goalTasks.some((gt) => gt.goal_id === goalId && gt.task_id === taskId)) return;
+    console.log('[AppContext] handleLinkTask called with:', { goalId, taskId, isDemo: currentUser?.isDemo });
+    if (goalTasks.some((gt) => gt.goal_id === goalId && gt.task_id === taskId)) {
+      console.log('[AppContext] handleLinkTask already linked, ignoring');
+      return;
+    }
     
     if (currentUser?.isDemo) {
       const updatedGT = [...goalTasks, { goal_id: goalId, task_id: taskId }];
+      console.log('[AppContext] handleLinkTask Demo mode, setting goalTasks:', updatedGT);
       setGoalTasks(updatedGT);
       localStorage.setItem(`flowday_demo_goals_${currentUser.id}`, JSON.stringify({ goals, goalTasks: updatedGT }));
       return;
@@ -2320,8 +2397,11 @@ export function AppProvider({ children }) {
 
     const { error } = await goalsService.linkTask(goalId, taskId);
     if (!error) {
+      console.log('[AppContext] handleLinkTask success, setting goalTasks');
       setGoalTasks((prev) => [...prev, { goal_id: goalId, task_id: taskId }]);
       logEvent('task_linked_to_goal', { goal_id: goalId, task_id: taskId });
+    } else {
+      console.error('[AppContext] handleLinkTask service error:', error);
     }
   }, [goalTasks, currentUser, goals, logEvent]);
 
@@ -2896,6 +2976,7 @@ export function AppProvider({ children }) {
     handleUpdateTask,
     handleDeleteTask,
     handleBulkDeleteCompleted,
+    handleDeleteAllTasks,
     handleToggleComplete,
     handleRestoreTask,
     handleDeleteTaskPermanent,

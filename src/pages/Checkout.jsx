@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { Zap, CreditCard, Copy, Hourglass, AlertCircle, Check, Sparkles } from 'lucide-react';
 import { useAppContext } from '../contexts/AppContext';
 import { profilesService } from '../services/profilesService';
 import { PLAN_PREMIUM_MONTHLY_PRICE } from '../../lib/billing/config';
@@ -305,28 +306,31 @@ export default function Checkout() {
           referenceId: data.paymentId || data.subscriptionId || data.id,
           payload: { asaasResponse: data }
         });
+
+        // Cartão de crédito pode ser aprovado imediatamente ou ficar pendente
+        if (data.status === 'CONFIRMED' || data.status === 'RECEIVED') {
+          setStatus('success');
+        } else {
+          setStatus('card_pending');
+          startPaymentMonitor(data.invoiceId || data.id);
+        }
       }
     } catch (err) {
-      console.error('[Checkout Error]', err);
-      setError(err.message);
-      setStatus('error');
-
-      // Log: Erro no checkout (não-bloqueante)
-      logCheckoutEvent('checkout_error', 'error', {
-        errorMessage: err.message
-      });
+      console.error('[Checkout] Erro na requisição de checkout:', err);
+      setError(err.message || 'Erro de rede ao processar o pagamento.');
+      setStatus('idle');
     }
   };
 
   return (
-    <div style={{ maxWidth: '460px', margin: '40px auto', padding: '28px', backgroundColor: 'rgba(24, 24, 32, 0.95)', borderRadius: '20px', border: '1px solid rgba(255, 255, 255, 0.08)', boxShadow: '0 12px 40px rgba(0, 0, 0, 0.6)', color: '#ffffff', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
-
-      {/* Voltar */}
-      <div style={{ marginBottom: '16px' }}>
-        <button
+    <div style={{ maxWidth: '440px', width: '90%', margin: '40px auto', backgroundColor: 'rgba(30, 30, 38, 0.95)', border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: '16px', padding: '32px', boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.37)', color: '#ffffff' }}>
+      
+      {/* Botão voltar */}
+      <div style={{ marginBottom: '24px' }}>
+        <button 
           onClick={() => {
-            window.history.pushState(null, '', '/?app=1');
-            window.dispatchEvent(new Event('popstate'));
+            clearPaymentMonitors();
+            window.location.href = '/?app=1';
           }}
           style={{ background: 'none', border: 'none', color: 'rgba(255, 255, 255, 0.6)', fontSize: '13px', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
         >
@@ -334,7 +338,9 @@ export default function Checkout() {
         </button>
       </div>
 
-      <h2 style={{ fontSize: '24px', fontWeight: '800', marginBottom: '6px', textAlign: 'center' }}>MyFlowDay Premium ⚡</h2>
+      <h2 style={{ fontSize: '24px', fontWeight: '800', marginBottom: '6px', textAlign: 'center', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+        MyFlowDay Premium <Zap size={22} style={{ color: '#10b981' }} />
+      </h2>
       <p style={{ fontSize: '13px', color: 'rgba(255, 255, 255, 0.5)', textAlign: 'center', marginBottom: '20px' }}>Libere todas as ferramentas de foco, gestão e áudio sem limites.</p>
 
       {/* Resumo do plano */}
@@ -347,38 +353,44 @@ export default function Checkout() {
       </div>
 
       {/* ESTADO: Já é Pro */}
-      {(isPro || userProfile?.plano === 'premium') ? (
+      {(isPro) ? (
         <div style={{ textAlign: 'center', padding: '24px 0' }}>
-          <span style={{ fontSize: '48px' }}>⚡</span>
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px', color: '#10b981' }}>
+            <Zap size={48} />
+          </div>
           <h3 style={{ color: '#10b981', margin: '16px 0 8px' }}>Sua Assinatura está Ativa!</h3>
           <p style={{ fontSize: '14px', color: 'rgba(255, 255, 255, 0.7)', lineHeight: '1.5', marginBottom: '20px' }}>Você já é um membro Premium. Todos os recursos Pro estão liberados na sua conta.</p>
-          <button onClick={() => window.location.href = '/?app=1'} style={{ width: '100%', backgroundColor: '#10b981', color: '#ffffff', border: 'none', borderRadius: '10px', padding: '14px', fontWeight: '700', cursor: 'pointer' }}>Acessar MyFlowDay ⚡</button>
+          <button onClick={() => window.location.href = '/?app=1'} style={{ width: '100%', backgroundColor: '#10b981', color: '#ffffff', border: 'none', borderRadius: '10px', padding: '14px', fontWeight: '700', cursor: 'pointer' }}>Acessar MyFlowDay</button>
         </div>
       ) : status === 'success' ? (
         /* ESTADO: Sucesso */
         <div style={{ textAlign: 'center', padding: '24px 0' }}>
-          <span style={{ fontSize: '48px' }}>🎉</span>
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px', color: '#10b981' }}>
+            <Sparkles size={48} />
+          </div>
           <h3 style={{ color: '#10b981', margin: '16px 0 8px' }}>Assinatura Ativada com Sucesso!</h3>
           <p style={{ fontSize: '14px', color: 'rgba(255, 255, 255, 0.7)', lineHeight: '1.5', marginBottom: '20px' }}>Seu pagamento foi confirmado pelo Asaas e o plano Premium já está pronto para uso.</p>
-          <button onClick={() => window.location.href = '/?app=1'} style={{ width: '100%', backgroundColor: '#10b981', color: '#ffffff', border: 'none', borderRadius: '10px', padding: '14px', fontWeight: '700', cursor: 'pointer' }}>Entrar no App Pro ⚡</button>
+          <button onClick={() => window.location.href = '/?app=1'} style={{ width: '100%', backgroundColor: '#10b981', color: '#ffffff', border: 'none', borderRadius: '10px', padding: '14px', fontWeight: '700', cursor: 'pointer' }}>Entrar no App Pro</button>
         </div>
       ) : status === 'card_pending' ? (
         /* ESTADO: Cartão Enviado / Pendente webhook */
         <div style={{ textAlign: 'center', padding: '24px 0' }}>
-          <span style={{ fontSize: '48px', display: 'inline-block', animation: 'pulse 1.5s infinite' }}>💳</span>
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px', color: '#f59e0b' }}>
+            <CreditCard size={48} />
+          </div>
           <h3 style={{ color: '#f59e0b', margin: '16px 0 8px' }}>Processando seu Pagamento...</h3>
           <p style={{ fontSize: '14px', color: 'rgba(255, 255, 255, 0.7)', lineHeight: '1.5', marginBottom: '20px' }}>
             Seus dados foram enviados de forma segura para o Asaas. Aguardando a liberação da operadora do cartão...
           </p>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontSize: '13px', color: '#f59e0b', backgroundColor: 'rgba(245, 158, 11, 0.1)', padding: '10px', borderRadius: '8px' }}>
-            <span className="spinner" style={{ display: 'inline-block', animation: 'spin 1s linear infinite' }}>⏳</span>
+            <Hourglass size={14} className="animate-spin" />
             <span>Aguardando liberação em tempo real...</span>
           </div>
         </div>
       ) : status === 'pix_generated' ? (
         /* ESTADO: Pix Gerado */
         <div style={{ textAlign: 'center' }}>
-          <h3 style={{ color: '#10b981', fontSize: '18px', marginBottom: '12px' }}>Pague com Pix para Ativar ⚡</h3>
+          <h3 style={{ color: '#10b981', fontSize: '18px', marginBottom: '12px' }}>Pague com Pix para Ativar</h3>
           <p style={{ fontSize: '13px', color: 'rgba(255, 255, 255, 0.7)', marginBottom: '16px' }}>Abra o app do seu banco e escaneie o código abaixo ou use o Pix Copia e Cola.</p>
 
           {(checkoutData?.qrCodeBase64 || checkoutData?.qr_code_base64) && (
@@ -397,15 +409,16 @@ export default function Checkout() {
               />
               <button
                 onClick={handleCopyPix}
-                style={{ width: '100%', backgroundColor: copied ? '#059669' : '#10b981', color: '#ffffff', border: 'none', borderRadius: '10px', padding: '12px', fontWeight: '700', cursor: 'pointer', transition: 'background 0.2s' }}
+                style={{ width: '100%', backgroundColor: copied ? '#059669' : '#10b981', color: '#ffffff', border: 'none', borderRadius: '10px', padding: '12px', fontWeight: '700', cursor: 'pointer', transition: 'background 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
               >
-                {copied ? '✓ Código Copiado!' : '📋 Copiar Código Pix (Copia e Cola)'}
+                {copied ? <Check size={16} /> : <Copy size={16} />}
+                <span>{copied ? 'Código Copiado!' : 'Copiar Código Pix (Copia e Cola)'}</span>
               </button>
             </div>
           )}
 
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontSize: '13px', color: '#f59e0b', backgroundColor: 'rgba(245, 158, 11, 0.1)', padding: '10px', borderRadius: '8px' }}>
-            <span className="spinner" style={{ display: 'inline-block', animation: 'spin 1s linear infinite' }}>⏳</span>
+            <Hourglass size={14} className="animate-spin" />
             <span>Aguardando confirmação do pagamento em tempo real...</span>
           </div>
         </div>
@@ -419,20 +432,22 @@ export default function Checkout() {
               onClick={() => setPaymentMethod('pix')}
               style={{ flex: 1, padding: '12px', borderRadius: '10px', border: '1px solid', borderColor: paymentMethod === 'pix' ? '#10b981' : 'rgba(255, 255, 255, 0.1)', backgroundColor: paymentMethod === 'pix' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(255, 255, 255, 0.03)', color: '#ffffff', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
             >
-              <span>❖</span> Pix (Instantâneo)
+              <span>❖</span> Pix
             </button>
             <button
               type="button"
               onClick={() => setPaymentMethod('card')}
               style={{ flex: 1, padding: '12px', borderRadius: '10px', border: '1px solid', borderColor: paymentMethod === 'card' ? '#10b981' : 'rgba(255, 255, 255, 0.1)', backgroundColor: paymentMethod === 'card' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(255, 255, 255, 0.03)', color: '#ffffff', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
             >
-              <span>💳</span> Cartão de Crédito
+              <CreditCard size={16} />
+              <span>Cartão de Crédito</span>
             </button>
           </div>
 
           {error && (
-            <div style={{ backgroundColor: 'rgba(239, 68, 68, 0.15)', border: '1px solid rgba(239, 68, 68, 0.3)', color: '#fca5a5', padding: '12px', borderRadius: '8px', fontSize: '13px', marginBottom: '16px' }}>
-              ⚠️ {error}
+            <div style={{ backgroundColor: 'rgba(239, 68, 68, 0.15)', border: '1px solid rgba(239, 68, 68, 0.3)', color: '#fca5a5', padding: '12px', borderRadius: '8px', fontSize: '13px', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <AlertCircle size={16} />
+              <span>{error}</span>
             </div>
           )}
 
@@ -484,7 +499,7 @@ export default function Checkout() {
             disabled={status === 'processando'}
             style={{ width: '100%', backgroundColor: '#10b981', color: '#ffffff', border: 'none', borderRadius: '12px', padding: '14px', fontSize: '15px', fontWeight: '700', cursor: 'pointer', opacity: status === 'processando' ? 0.7 : 1 }}
           >
-            {status === 'processando' ? 'Processando no Asaas...' : paymentMethod === 'pix' ? 'Gerar QR Code Pix ⚡' : 'Assinar com Cartão ⚡'}
+            {status === 'processando' ? 'Processando no Asaas...' : paymentMethod === 'pix' ? 'Gerar QR Code Pix' : 'Assinar com Cartão'}
           </button>
         </form>
       )}

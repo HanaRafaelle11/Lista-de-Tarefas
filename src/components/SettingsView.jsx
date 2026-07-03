@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Settings, User, Moon, Sun, Bell, Shield, Heart, BellOff, BellRing, CheckCircle, Award, MessageSquare, Calendar, X, Download, AlertTriangle } from 'lucide-react';
+import { Settings, User, LogOut, Sun, Moon, Check, Database, RefreshCw, X, FileText, ChevronRight, Download, Award, Target, LayoutGrid, Calendar, Inbox, Trash2, Bell, Smartphone, Palette, Globe, Book, Monitor, Shield, MessageSquare, AlertTriangle, AlertCircle, Paperclip } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import { useNotifications } from '../hooks/useNotifications';
 import { useAppContext } from '../contexts/AppContext';
 import { exportAllTasksToCalendar } from '../services/googleCalendarService';
+import { calcStreak } from '../hooks/useAchievements';
 import { Card } from '../design-system/ui/Card';
 import { Input } from '../design-system/ui/Input';
 import { Button } from '../design-system/ui/Button';
@@ -76,14 +77,17 @@ export default function SettingsView() {
     openCustomAlert,
     openCustomConfirm,
     handleUpdateProfileFields,
-    logAuthEvent
+    logAuthEvent,
+    handleDeleteAllTasks
   } = useAppContext();
   const effectiveTheme = useEffectiveTheme(theme);
   const [loading, setLoading] = useState(false);
   const [feedbackText, setFeedbackText] = useState('');
   const [feedbackStatus, setFeedbackStatus] = useState('idle'); // idle, sending, sent, error
+  const [feedbackAttachment, setFeedbackAttachment] = useState(null);
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
   const [isSyncModalOpen, setIsSyncModalOpen] = useState(false);
+  const [isDeleteAllTasksModalOpen, setIsDeleteAllTasksModalOpen] = useState(false);
   const notifications = useNotifications();
 
   // Password States
@@ -320,28 +324,6 @@ export default function SettingsView() {
     setIsSyncModalOpen(false);
   };
 
-  const calcStreakLocal = (tasksList) => {
-    const completed = tasksList.filter(t => t.completed && (t.dueDate || t.completedAt));
-    if (completed.length === 0) return 0;
-    const dates = [...new Set(completed.map(t => t.completedAt?.split('T')[0] || t.dueDate))].sort().reverse();
-    if (dates.length === 0) return 0;
-    const todayStr = new Date().toISOString().split('T')[0];
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-    const yesterdayStr = yesterday.toISOString().split('T')[0];
-    
-    if (dates[0] !== todayStr && dates[0] !== yesterdayStr) return 0;
-    let streakCount = 1;
-    for (let i = 1; i < dates.length; i++) {
-      const prev = new Date(dates[i-1]);
-      const curr = new Date(dates[i]);
-      const diff = (prev - curr) / (1000 * 60 * 60 * 24);
-      if (diff === 1) streakCount++;
-      else if (diff > 1) break;
-    }
-    return streakCount;
-  };
-
   const handleExportCSVData = () => {
     if (!isPro) {
       openPaywall('export_csv');
@@ -553,7 +535,7 @@ export default function SettingsView() {
     const activeTasks = (allTasks || []).filter(t => !t.deletedAt);
     const completedTasksCount = activeTasks.filter(t => t.completed).length;
     const activeGoalsCount = (allGoals || []).filter(g => !g.deletedAt && g.status === 'active').length;
-    const streak = calcStreakLocal(allTasks || []);
+    const streak = calcStreak(allTasks || []);
 
     const drawStat = (label, value, y) => {
       ctx.fillStyle = '#94a3b8';
@@ -602,6 +584,16 @@ export default function SettingsView() {
     setFeedbackStatus('sending');
     let dbPersisted = false;
     let emailSent = false;
+    
+    let base64Attachment = null;
+    if (feedbackAttachment) {
+      base64Attachment = await new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (e) => resolve(e.target.result);
+        reader.onerror = () => resolve(null);
+        reader.readAsDataURL(feedbackAttachment);
+      });
+    }
 
     // 1. Tenta inserir na tabela 'feedback' do Supabase
     try {
@@ -677,6 +669,7 @@ export default function SettingsView() {
             email: userEmail || 'no-reply@myflowday.com.br',
             message: trimmed,
             _subject: `Novo Feedback do Flowday - ${userEmail || 'Anônimo'}`,
+            attachment: base64Attachment || undefined,
           })
         });
 
@@ -699,6 +692,7 @@ export default function SettingsView() {
     // 4. Conclusão do envio
     if (dbPersisted || emailSent) {
       setFeedbackText('');
+      setFeedbackAttachment(null);
       setFeedbackStatus('sent');
       setTimeout(() => setFeedbackStatus('idle'), 4000);
     } else {
@@ -717,6 +711,7 @@ export default function SettingsView() {
         localStorage.setItem(localFeedbackKey, JSON.stringify(existing));
         
         setFeedbackText('');
+        setFeedbackAttachment(null);
         setFeedbackStatus('sent');
         setTimeout(() => setFeedbackStatus('idle'), 4000);
       } catch (localErr) {
@@ -1071,8 +1066,8 @@ export default function SettingsView() {
                 <Award size={24} />
               </div>
               <div>
-                <p style={{ fontSize: '15px', fontWeight: '600', color: 'var(--text-main)' }}>
-                  Plano Atual: {isPro ? 'Flowday Pro ⚡' : 'Flowday Grátis'}
+                <p style={{ fontSize: '15px', fontWeight: '600', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  Plano Atual: {isPro ? 'Flowday Pro' : 'Flowday Grátis'}
                 </p>
                 <p style={{ fontSize: '12px', color: 'var(--text-light)' }}>
                   {isPro 
@@ -1104,7 +1099,7 @@ export default function SettingsView() {
                 border: isPro ? '1px solid var(--prio-alta-border)' : 'none'
               }}
             >
-              {isPro ? 'Cancelar Assinatura Pro' : 'Assinar Flowday Pro ⚡'}
+              {isPro ? 'Cancelar Assinatura Pro' : 'Assinar Flowday Pro'}
             </button>
           </div>
         </div>
@@ -1211,7 +1206,7 @@ export default function SettingsView() {
                 <AlertTriangle size={32} />
               </div>
               <h3 style={{ fontSize: '18px', fontWeight: '850', color: 'var(--text-main)', margin: '0 0 12px' }}>
-                Sentiremos sua falta no Pro! 🥺
+                Sentiremos sua falta no Pro!
               </h3>
               <p style={{ fontSize: '13px', color: 'var(--text-muted)', lineHeight: '1.6', margin: '0 0 20px' }}>
                 Ao cancelar sua assinatura, seu histórico continuará salvo de forma segura, mas você voltará a ver <strong>apenas os últimos 30 dias</strong> na sua linha de tempo e perderá o acesso ao Coach MyFlowDay, análises avançadas e sincronização de calendários.
@@ -1221,7 +1216,7 @@ export default function SettingsView() {
                   onClick={() => setIsCancelModalOpen(false)}
                   style={{ width: '100%', padding: '12px', borderRadius: '6px', border: 'none', backgroundColor: 'var(--primary)', color: 'white', fontWeight: '700', fontSize: '13px', cursor: 'pointer' }}
                 >
-                  Manter Assinatura Pro ⚡
+                  Manter Assinatura Pro
                 </button>
                 <button
                   onClick={async () => {
@@ -1462,6 +1457,44 @@ export default function SettingsView() {
             rows="5"
             style={{ width: '100%', padding: '12px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-medium)', backgroundColor: 'var(--bg-app)', color: 'var(--text-main)', resize: 'vertical', fontSize: '14px' }}
           />
+
+          <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <input
+              type="file"
+              id="feedback-attachment"
+              accept="image/*,application/pdf"
+              style={{ display: 'none' }}
+              onChange={(e) => {
+                if (e.target.files && e.target.files.length > 0) {
+                  setFeedbackAttachment(e.target.files[0]);
+                }
+              }}
+            />
+            
+            {feedbackAttachment ? (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', backgroundColor: 'var(--bg-app)', border: '1px solid var(--border-medium)', borderRadius: '6px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden' }}>
+                  <Paperclip size={16} color="var(--text-muted)" />
+                  <span style={{ fontSize: '13px', color: 'var(--text-main)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {feedbackAttachment.name} ({(feedbackAttachment.size / 1024 / 1024).toFixed(2)} MB)
+                  </span>
+                </div>
+                <button 
+                  onClick={() => setFeedbackAttachment(null)}
+                  style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '4px' }}
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            ) : (
+              <button 
+                onClick={() => document.getElementById('feedback-attachment').click()}
+                style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'transparent', border: '1px dashed var(--border-medium)', borderRadius: '6px', padding: '8px 12px', color: 'var(--text-muted)', fontSize: '13px', cursor: 'pointer', alignSelf: 'flex-start' }}
+              >
+                <Paperclip size={16} /> Anexar imagem ou PDF
+              </button>
+            )}
+          </div>
           <button
             onClick={handleSendFeedback}
             disabled={feedbackStatus === 'sending'}
@@ -1489,6 +1522,23 @@ export default function SettingsView() {
           </button>
           {feedbackStatus === 'sent' && <p style={{ fontSize: '12px', color: '#22c55e', marginTop: '8px' }}>Obrigado pelo seu feedback!</p>}
           {feedbackStatus === 'error' && <p style={{ fontSize: '12px', color: '#ef4444', marginTop: '8px' }}>Não foi possível enviar o feedback. Tente novamente.</p>}
+        </div>
+
+        {/* Zona de Perigo */}
+        <div style={{ backgroundColor: 'var(--bg-card)', padding: '24px', borderRadius: 'var(--radius-lg)', border: '1px solid #ef4444', marginTop: '32px' }}>
+          <h2 style={{ fontSize: '16px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px', color: '#ef4444' }}>
+            <AlertTriangle size={18} /> Zona de Perigo
+          </h2>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '13px', color: 'var(--text-light)', marginBottom: '24px' }}>
+            <p>Ações destrutivas. Tenha certeza absoluta antes de prosseguir.</p>
+          </div>
+          <button
+            className="danger-btn"
+            onClick={() => setIsDeleteAllTasksModalOpen(true)}
+            style={{ padding: '12px 24px', backgroundColor: '#FAF0F0', color: '#C06C6C', borderRadius: '8px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '8px' }}
+          >
+            <Trash2 size={16} /> Excluir todas as tarefas
+          </button>
         </div>
 
         {/* PWA & Sistema */}
@@ -1567,7 +1617,7 @@ export default function SettingsView() {
                   width: '100%',
                 }}
               >
-                <span style={{ fontSize: '24px' }}>📅</span>
+                <Calendar size={20} style={{ color: 'var(--primary)', flexShrink: 0 }} />
                 <div>
                   <strong style={{ display: 'block', fontSize: '13px', color: 'var(--text-main)' }}>Google Calendar (Recomendado)</strong>
                   <span style={{ fontSize: '11px', color: 'var(--text-light)' }}>Exporta o arquivo .ics e abre a página de importação do Google.</span>
@@ -1595,6 +1645,33 @@ export default function SettingsView() {
                   <strong style={{ display: 'block', fontSize: '13px', color: 'var(--text-main)' }}>Baixar arquivo .ics</strong>
                   <span style={{ fontSize: '11px', color: 'var(--text-light)' }}>Apenas exporta e baixa o arquivo de calendário para programas locais.</span>
                 </div>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de confirmação para excluir todas as tarefas */}
+      {isDeleteAllTasksModalOpen && (
+        <div className="modal-overlay" onClick={() => setIsDeleteAllTasksModalOpen(false)} style={{ zIndex: 12000 }}>
+          <div 
+            className="modal-content" 
+            onClick={e => e.stopPropagation()}
+            style={{ maxWidth: '400px', width: '90%', padding: '24px', backgroundColor: 'var(--bg-card)', borderRadius: 'var(--radius-lg)' }}
+          >
+            <h3 style={{ fontSize: '18px', marginBottom: '12px', color: '#ef4444' }}>Excluir todas as tarefas?</h3>
+            <p style={{ fontSize: '14px', color: 'var(--text-light)', marginBottom: '24px' }}>Esta ação é permanente e não pode ser desfeita.</p>
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+              <button onClick={() => setIsDeleteAllTasksModalOpen(false)} style={{ padding: '8px 16px', borderRadius: '6px', border: '1px solid var(--border-medium)', background: 'transparent', cursor: 'pointer', color: 'var(--text-main)' }}>Cancelar</button>
+              <button 
+                onClick={async () => {
+                  setIsDeleteAllTasksModalOpen(false);
+                  await handleDeleteAllTasks();
+                  alert('Todas as tarefas foram excluídas com sucesso.');
+                }} 
+                style={{ padding: '8px 16px', borderRadius: '6px', background: '#ef4444', color: 'white', border: 'none', cursor: 'pointer' }}
+              >
+                Sim, excluir tudo
               </button>
             </div>
           </div>

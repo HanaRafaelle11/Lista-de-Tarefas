@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import * as LucideIcons from 'lucide-react';
-import { X, Search, Check, Link2, Unlink, Tag, AlertCircle, Calendar, Inbox, Trash2 } from 'lucide-react';
+import { X, Search, Check, Link2, Unlink, Tag, AlertCircle, Calendar, Inbox, Trash2, Plus } from 'lucide-react';
+import { useAppContext } from '../contexts/AppContext';
 
 function GoalIcon({ name, size = 18, className = '' }) {
   if (!name) return null;
@@ -42,7 +43,35 @@ function formatDate(dateStr) {
 const priorityColors = { Alta: '#ef4444', Média: '#f59e0b', Baixa: '#10b981' };
 
 export default function GoalTasksModal({ isOpen, onClose, goal, tasks, linkedTaskIds, onLink, onUnlink, onDeleteTask }) {
+  console.log('[GoalTasksModal] isOpen:', isOpen, 'goal:', goal?.title, 'tasksCount:', tasks?.length, 'linkedTaskIds:', linkedTaskIds);
+  const { handleAddTask } = useAppContext();
   const [search, setSearch] = useState('');
+  const [quickTaskTitle, setQuickTaskTitle] = useState('');
+  const [isCreatingQuickTask, setIsCreatingQuickTask] = useState(false);
+
+  const handleQuickCreate = async (e) => {
+    e.preventDefault();
+    if (!quickTaskTitle.trim()) return;
+    
+    setIsCreatingQuickTask(true);
+    try {
+      const newTask = await handleAddTask({
+        title: quickTaskTitle.trim(),
+        category: 'Geral',
+        priority: 'Média',
+        dueDate: '',
+        description: '',
+      });
+      if (newTask && newTask.id) {
+        await onLink(newTask.id);
+      }
+      setQuickTaskTitle('');
+    } catch (err) {
+      console.error('[GoalTasksModal] Error creating quick task:', err);
+    } finally {
+      setIsCreatingQuickTask(false);
+    }
+  };
 
   const pendingTasks = useMemo(
     () => tasks.filter(t => !t.completed),
@@ -106,9 +135,29 @@ export default function GoalTasksModal({ isOpen, onClose, goal, tasks, linkedTas
           {/* Lista de tarefas */}
           <div className="goal-tasks-list">
             {filteredTasks.length === 0 ? (
-              <div className="goal-tasks-empty">
+              <div className="goal-tasks-empty" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '32px 16px' }}>
                 <Inbox size={28} style={{ color: 'var(--text-muted)', marginBottom: '8px' }} />
-                <p>{search ? 'Nenhuma tarefa encontrada para essa busca.' : 'Nenhuma tarefa pendente disponível.'}</p>
+                <p style={{ marginBottom: '16px' }}>{search ? 'Nenhuma tarefa encontrada para essa busca.' : 'Nenhuma tarefa pendente disponível.'}</p>
+                
+                <form onSubmit={handleQuickCreate} style={{ display: 'flex', gap: '8px', width: '100%', maxWidth: '320px' }}>
+                  <input
+                    type="text"
+                    placeholder="Criar nova tarefa..."
+                    value={quickTaskTitle}
+                    onChange={(e) => setQuickTaskTitle(e.target.value)}
+                    disabled={isCreatingQuickTask}
+                    className="tasks-search-input"
+                    style={{ flex: 1 }}
+                  />
+                  <button
+                    type="submit"
+                    disabled={!quickTaskTitle.trim() || isCreatingQuickTask}
+                    className="btn-primary"
+                    style={{ padding: '8px 16px', borderRadius: '8px' }}
+                  >
+                    {isCreatingQuickTask ? '...' : 'Criar e Vincular'}
+                  </button>
+                </form>
               </div>
             ) : (
               filteredTasks.map(task => {
@@ -118,7 +167,10 @@ export default function GoalTasksModal({ isOpen, onClose, goal, tasks, linkedTas
                   <div
                     key={task.id}
                     className={`goal-task-row ${isLinked ? 'goal-task-row--linked' : ''}`}
-                    onClick={() => isLinked ? onUnlink(task.id) : onLink(task.id)}
+                    onClick={() => {
+                      console.log('[GoalTasksModal] Row clicked, isLinked:', isLinked, 'task.id:', task.id);
+                      isLinked ? onUnlink(task.id) : onLink(task.id);
+                    }}
                   >
                     {/* Checkbox visual */}
                     <div className={`goal-task-check ${isLinked ? 'checked' : ''}`}>
@@ -149,6 +201,7 @@ export default function GoalTasksModal({ isOpen, onClose, goal, tasks, linkedTas
                         className={`goal-task-action-btn ${isLinked ? 'unlink' : 'link'}`}
                         onClick={e => {
                           e.stopPropagation();
+                          console.log('[GoalTasksModal] Button clicked, isLinked:', isLinked, 'task.id:', task.id);
                           isLinked ? onUnlink(task.id) : onLink(task.id);
                         }}
                         title={isLinked ? 'Desvincular' : 'Vincular'}

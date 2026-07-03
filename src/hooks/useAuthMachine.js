@@ -62,6 +62,7 @@ function buildUser(rawUser) {
     email: rawUser.email,
     name: rawUser.user_metadata?.name || rawUser.email?.split('@')[0] || 'User',
     user_metadata: rawUser.user_metadata || {},
+    isDemo: rawUser.isDemo || false,
   };
 }
 

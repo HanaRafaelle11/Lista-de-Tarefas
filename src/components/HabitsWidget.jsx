@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Plus, Check, MoreVertical, Trash2 } from 'lucide-react';
+import { Plus, Check, MoreVertical, Trash2, Sprout } from 'lucide-react';
 
 // Formatar datas recentes (Últimos 7 dias)
 const getLast7Days = () => {
@@ -61,8 +61,8 @@ export default function HabitsWidget({ habitsManager, goals }) {
   return (
     <div className="habits-widget-container animate-fade-in">
       <div className="goals-section-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-        <h3 className="goals-section-eyebrow" style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-light)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-          🌱 Seus Hábitos Diários
+        <h3 className="goals-section-eyebrow" style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-light)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <Sprout size={14} style={{ color: 'var(--success)' }} /> Seus Hábitos Diários
         </h3>
         {!isAdding && (
           <button 

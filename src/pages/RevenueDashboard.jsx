@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Lock, TrendingUp, AlertOctagon, Award, AlertTriangle } from 'lucide-react';
 import { useAppContext } from '../contexts/AppContext';
 import RevenueKPI from '../components/metrics/RevenueKPI';
 import RevenueChart from '../components/metrics/RevenueChart';
@@ -121,7 +122,9 @@ export default function RevenueDashboard() {
   if (isUnauthorized) {
     return (
       <div style={{ padding: '40px 24px', textAlign: 'center', maxWidth: '520px', margin: '40px auto', backgroundColor: 'rgba(239, 68, 68, 0.08)', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: '16px', color: '#ffffff' }}>
-        <div style={{ fontSize: '48px', marginBottom: '16px' }}>🔒</div>
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px', color: 'var(--danger)' }}>
+          <Lock size={48} />
+        </div>
         <h3 style={{ fontSize: '20px', fontWeight: '700', color: '#ef4444', marginBottom: '8px' }}>Acesso Restrito ao Administrador</h3>
         <p style={{ fontSize: '14px', color: 'rgba(255, 255, 255, 0.7)', lineHeight: 1.6, margin: 0 }}>
           Você não possui permissão para acessar o painel financeiro. Se acredita que isto é um erro, verifique se está logado com a conta master autorizada.
@@ -152,8 +155,8 @@ export default function RevenueDashboard() {
     <div style={{ color: '#ffffff', minHeight: '100vh', padding: '20px 0' }}>
       {/* Cabeçalho */}
       <div style={{ marginBottom: '32px' }}>
-        <h2 style={{ fontSize: '28px', fontWeight: '800', margin: '0 0 6px', fontFamily: 'var(--font-display, sans-serif)', letterSpacing: '-0.5px' }}>
-          Painel Financeiro & Retenção 📈
+        <h2 style={{ fontSize: '28px', fontWeight: '800', margin: '0 0 6px', fontFamily: 'var(--font-display, sans-serif)', letterSpacing: '-0.5px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+          Painel Financeiro & Retenção <TrendingUp size={24} style={{ color: 'var(--primary)' }} />
         </h2>
         <p style={{ fontSize: '14px', color: 'rgba(255, 255, 255, 0.4)', margin: 0 }}>
           Métricas de MRR, Churn Rate e saúde dos usuários do MyFlowDay em tempo real.
@@ -177,8 +180,8 @@ export default function RevenueDashboard() {
                 fontSize: '14px'
               }}
             >
-              <span style={{ fontSize: '18px' }}>
-                {alert.type === 'danger' ? '🚨' : alert.type === 'success' ? '🏆' : '⚠️'}
+              <span style={{ display: 'inline-flex', alignSelf: 'center' }}>
+                {alert.type === 'danger' ? <AlertOctagon size={18} style={{ color: '#ef4444' }} /> : alert.type === 'success' ? <Award size={18} style={{ color: '#10b981' }} /> : <AlertTriangle size={18} style={{ color: '#f59e0b' }} />}
               </span>
               <div>
                 <strong style={{ display: 'block', marginBottom: '4px', color: alert.type === 'danger' ? '#ef4444' : alert.type === 'success' ? '#10b981' : '#f59e0b' }}>
@@ -196,18 +199,18 @@ export default function RevenueDashboard() {
 
       {/* Gráficos e Tabelas Responsivos */}
       <div style={{ width: '100%', overflowX: 'auto', WebkitOverflowScrolling: 'touch', paddingBottom: '12px' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '20px', minWidth: '360px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '20px', width: '100%' }}>
           {/* Gráfico Principal de MRR */}
           <div id="mrr-chart-section">
             <RevenueChart timeline={timelineList} />
           </div>
 
           {/* Churn e Breakdowns em duas colunas com scroll responsivo em mobile */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '20px', width: '100%' }}>
-            <div id="churn-chart-section" style={{ width: '100%', minWidth: '340px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(340px, 100%), 1fr))', gap: '20px', width: '100%' }}>
+            <div id="churn-chart-section" style={{ width: '100%', minWidth: 'min(340px, 100%)' }}>
               <ChurnChart churn={churnData} />
             </div>
-            <div id="breakdown-chart-section" style={{ width: '100%', minWidth: '340px' }}>
+            <div id="breakdown-chart-section" style={{ width: '100%', minWidth: 'min(340px, 100%)' }}>
               <SubscriptionBreakdown breakdown={breakdownData} />
             </div>
           </div>

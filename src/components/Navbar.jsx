@@ -42,7 +42,17 @@ export default function Navbar() {
         <div className="app-top-header-container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', maxWidth: '1200px', margin: '0 auto', padding: '0 16px', height: '64px' }}>
           
           {/* Logo — símbolo SVG oficial com marca integrada */}
-          <div className="navbar-brand" style={{ display: 'flex', alignItems: 'center', flex: 1, justifyContent: 'flex-start', cursor: 'pointer' }} onClick={() => setActiveTab('home')}>
+          <div 
+            className="navbar-brand" 
+            style={{ display: 'flex', alignItems: 'center', flex: 1, justifyContent: 'flex-start', cursor: 'pointer' }} 
+            onClick={() => {
+              if (currentUser?.isDemo) {
+                handleLogout();
+              } else {
+                setActiveTab('home');
+              }
+            }}
+          >
             <img 
               src={logo.src}
               alt={logo.alt} 
@@ -94,6 +104,7 @@ export default function Navbar() {
                 : <Moon size={20} aria-hidden="true" />}
             </button>
             <button
+              id="tour-nav-settings"
               onClick={() => setActiveTab('settings')}
               className="header-btn"
               title="Configurações"

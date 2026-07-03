@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { 
   ChevronDown, ChevronUp, HelpCircle, ArrowLeft, Search, 
   Rocket, CheckSquare, Target, Flame, Clock, Sparkles, 
-  Award, CreditCard, User, Wifi, BookOpen, AlertCircle, CheckCircle2, XCircle
+  Award, CreditCard, User, Wifi, BookOpen, AlertCircle, CheckCircle2, XCircle, Lightbulb, Compass
 } from 'lucide-react';
 import { HELP_CATEGORIES, HELP_ARTICLES } from '../data/helpCenterData';
 
@@ -48,52 +48,52 @@ function ArticleCard({ article }) {
         }}
         aria-expanded={open}
       >
-        <span style={{ fontSize: '16px', fontWeight: '700', fontFamily: 'var(--font-display, sans-serif)', lineHeight: '1.4' }}>
+        <span style={{ fontSize: '17px', fontWeight: '800', fontFamily: 'var(--font-display, sans-serif)', lineHeight: '1.5', color: '#f8fafc' }}>
           {article.title}
         </span>
-        <span style={{ color: 'var(--primary, #10b981)', flexShrink: 0 }}>
+        <span style={{ color: 'var(--primary, #34d399)', flexShrink: 0 }}>
           {open ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
         </span>
       </button>
 
       {open && (
-        <div style={{ padding: '0 20px 24px', fontSize: '14px', color: 'rgba(255,255,255,0.8)', lineHeight: '1.7', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+        <div style={{ padding: '0 20px 24px', fontSize: '15px', color: '#e2e8f0', lineHeight: '1.75', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
           
           {/* O que é */}
-          <div style={{ marginTop: '16px', marginBottom: '16px' }}>
-            <h4 style={{ fontSize: '13px', textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--primary, #10b981)', marginBottom: '4px', fontWeight: '700' }}>
-              💡 O que é
+          <div style={{ marginTop: '20px', marginBottom: '20px' }}>
+            <h4 style={{ fontSize: '14px', textTransform: 'uppercase', letterSpacing: '0.5px', color: '#34d399', marginBottom: '6px', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Lightbulb size={14} /> O que é
             </h4>
-            <p style={{ margin: 0, opacity: 0.9 }}>{article.whatIs}</p>
+            <p style={{ margin: 0, color: '#f8fafc' }}>{article.whatIs}</p>
           </div>
 
           {/* Para que serve */}
-          <div style={{ marginBottom: '16px' }}>
-            <h4 style={{ fontSize: '13px', textTransform: 'uppercase', letterSpacing: '0.5px', color: '#3b82f6', marginBottom: '4px', fontWeight: '700' }}>
-              🎯 Para que serve
+          <div style={{ marginBottom: '20px' }}>
+            <h4 style={{ fontSize: '14px', textTransform: 'uppercase', letterSpacing: '0.5px', color: '#60a5fa', marginBottom: '6px', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Target size={14} /> Para que serve
             </h4>
-            <p style={{ margin: 0, opacity: 0.9 }}>{article.purpose}</p>
+            <p style={{ margin: 0, color: '#f8fafc' }}>{article.purpose}</p>
           </div>
 
           {/* Como acessar & usar */}
-          <div style={{ marginBottom: '16px', backgroundColor: 'rgba(255,255,255,0.03)', padding: '14px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)' }}>
-            <h4 style={{ fontSize: '13px', textTransform: 'uppercase', letterSpacing: '0.5px', color: '#f59e0b', marginBottom: '6px', fontWeight: '700' }}>
-              📍 Como Acessar e Utilizar
+          <div style={{ marginBottom: '20px', backgroundColor: 'rgba(255,255,255,0.05)', padding: '16px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)' }}>
+            <h4 style={{ fontSize: '14px', textTransform: 'uppercase', letterSpacing: '0.5px', color: '#fbbf24', marginBottom: '8px', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Compass size={14} /> Como Acessar e Utilizar
             </h4>
-            <p style={{ margin: '0 0 6px 0', fontSize: '13px' }}><strong>Acesso:</strong> {article.howToAccess}</p>
-            <p style={{ margin: 0, fontSize: '13px' }}><strong>Como usar:</strong> {article.howToUse}</p>
+            <p style={{ margin: '0 0 8px 0', fontSize: '14px', color: '#f8fafc' }}><strong>Acesso:</strong> {article.howToAccess}</p>
+            <p style={{ margin: 0, fontSize: '14px', color: '#f8fafc' }}><strong>Como usar:</strong> {article.howToUse}</p>
           </div>
 
           {/* Guia de Campos */}
           {article.fieldGuide && article.fieldGuide.length > 0 && (
-            <div style={{ marginBottom: '16px' }}>
-              <h4 style={{ fontSize: '13px', textTransform: 'uppercase', letterSpacing: '0.5px', color: '#a855f7', marginBottom: '8px', fontWeight: '700' }}>
-                📝 Guia de Preenchimento Correto
+            <div style={{ marginBottom: '20px' }}>
+              <h4 style={{ fontSize: '14px', textTransform: 'uppercase', letterSpacing: '0.5px', color: '#c084fc', marginBottom: '10px', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <BookOpen size={14} /> Guia de Preenchimento Correto
               </h4>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 {article.fieldGuide.map((f, idx) => (
-                  <div key={idx} style={{ fontSize: '13px', padding: '8px 12px', backgroundColor: 'rgba(168, 85, 247, 0.08)', borderRadius: '6px', borderLeft: '3px solid #a855f7' }}>
-                    <strong style={{ color: '#ffffff' }}>Campo {f.field}:</strong> {f.tip}
+                  <div key={idx} style={{ fontSize: '14px', padding: '10px 14px', backgroundColor: 'rgba(168, 85, 247, 0.1)', borderRadius: '6px', borderLeft: '4px solid #c084fc' }}>
+                    <strong style={{ color: '#ffffff' }}>Campo {f.field}:</strong> <span style={{ color: '#f8fafc' }}>{f.tip}</span>
                   </div>
                 ))}
               </div>
@@ -102,40 +102,40 @@ function ArticleCard({ article }) {
 
           {/* Exemplos Práticos */}
           {article.examples && (
-            <div style={{ marginBottom: '16px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '10px' }}>
-              <div style={{ padding: '10px 14px', backgroundColor: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: '8px', fontSize: '13px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#ef4444', fontWeight: '700', marginBottom: '4px' }}>
-                  <XCircle size={16} /> Exemplo Inadequado
+            <div style={{ marginBottom: '20px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '12px' }}>
+              <div style={{ padding: '12px 16px', backgroundColor: 'rgba(239, 68, 68, 0.15)', border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: '8px', fontSize: '14px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#f87171', fontWeight: '800', marginBottom: '6px' }}>
+                  <XCircle size={18} /> Exemplo Inadequado
                 </div>
-                <span style={{ opacity: 0.9 }}>{article.examples.bad}</span>
+                <span style={{ color: '#f8fafc' }}>{article.examples.bad}</span>
               </div>
-              <div style={{ padding: '10px 14px', backgroundColor: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.2)', borderRadius: '8px', fontSize: '13px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#10b981', fontWeight: '700', marginBottom: '4px' }}>
-                  <CheckCircle2 size={16} /> Exemplo Recomendado
+              <div style={{ padding: '12px 16px', backgroundColor: 'rgba(16, 185, 129, 0.15)', border: '1px solid rgba(16, 185, 129, 0.3)', borderRadius: '8px', fontSize: '14px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#34d399', fontWeight: '800', marginBottom: '6px' }}>
+                  <CheckCircle2 size={18} /> Exemplo Recomendado
                 </div>
-                <span style={{ opacity: 0.9 }}>{article.examples.good}</span>
+                <span style={{ color: '#f8fafc' }}>{article.examples.good}</span>
               </div>
             </div>
           )}
 
           {/* Dicas e Erros Comuns */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '10px', marginTop: '12px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '12px', marginTop: '16px' }}>
             {article.bestPractices && (
-              <div style={{ fontSize: '12px', opacity: 0.8, fontStyle: 'italic' }}>
-                💡 <strong>Boa Prática:</strong> {article.bestPractices}
+              <div style={{ fontSize: '14px', color: '#e2e8f0', fontStyle: 'italic', padding: '8px 12px', backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: '6px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <Lightbulb size={14} style={{ color: '#fbbf24' }} /> <span><strong>Boa Prática:</strong> {article.bestPractices}</span>
               </div>
             )}
             {article.commonErrors && (
-              <div style={{ fontSize: '12px', opacity: 0.8, fontStyle: 'italic' }}>
-                ⚠️ <strong>Erro Comum:</strong> {article.commonErrors}
+              <div style={{ fontSize: '14px', color: '#e2e8f0', fontStyle: 'italic', padding: '8px 12px', backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: '6px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <AlertCircle size={14} style={{ color: '#ef4444' }} /> <span><strong>Erro Comum:</strong> {article.commonErrors}</span>
               </div>
             )}
           </div>
 
           {/* FAQ Específica */}
           {article.faq && (
-            <div style={{ marginTop: '14px', paddingTop: '10px', borderTop: '1px stroke rgba(255,255,255,0.05)', fontSize: '13px', color: 'var(--primary, #10b981)' }}>
-              ❓ <strong>Dúvida Frequente:</strong> {article.faq}
+            <div style={{ marginTop: '16px', paddingTop: '12px', borderTop: '1px solid rgba(255,255,255,0.1)', fontSize: '14px', color: '#34d399' }}>
+              ❓ <strong>Dúvida Frequente:</strong> <span style={{ color: '#f8fafc' }}>{article.faq}</span>
             </div>
           )}
 

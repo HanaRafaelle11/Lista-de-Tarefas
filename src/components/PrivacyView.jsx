@@ -93,7 +93,7 @@ export default function PrivacyView({ onGoBack, onNavigateToTerms }) {
             </div>
           </div>
           <p style={{ color: '#94A3B8', fontSize: '15px', lineHeight: '1.6', marginBottom: '12px' }}>
-            O <strong>MyFlowDay</strong> é um aplicativo web de produtividade pessoal que oferece gerenciamento de tarefas, acompanhamento de metas, calendário integrado e modo foco. Ele é projetado para ajudar você a gerenciar sua rotina diária de forma limpa e intuitiva. A controladora dos dados e encarregada pelo tratamento é <strong>Hana Oliveira Rafaelle</strong>.
+            O <strong>MyFlowDay</strong> é um aplicativo web de produtividade pessoal que oferece gerenciamento de tarefas, acompanhamento de metas, calendário integrado e modo foco. Ele é projetado para ajudar você a gerenciar sua rotina diária de forma limpa e intuitiva. A controladora dos dados e encarregada pelo tratamento é a <strong>equipe de Privacidade do MyFlowDay</strong>.
           </p>
           <p style={{ color: '#94A3B8', fontSize: '15px', lineHeight: '1.6', marginBottom: '16px' }}>
             Este documento rege o tratamento de dados pessoais da nossa plataforma, em conformidade com a <strong>Lei Geral de Proteção de Dados (LGPD — Lei nº 13.709/2018)</strong> e as diretrizes e políticas de conformidade do Google Cloud OAuth 2.0.
@@ -257,10 +257,12 @@ export default function PrivacyView({ onGoBack, onNavigateToTerms }) {
             Para exercer seus direitos de privacidade ou esclarecer dúvidas sobre seus dados, entre em contato direto pelo canal do encarregado:
           </p>
           <div style={{ display: 'flex', alignItems: 'center', gap: '16px', backgroundColor: '#0F172A', border: '1px solid #334155', borderRadius: '10px', padding: '18px 20px' }}>
-            <div style={{ width: '44px', height: '44px', borderRadius: '50%', backgroundColor: '#22D3EE', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0F172A', fontWeight: 'bold', fontSize: '18px' }}>HR</div>
+            <div style={{ width: '44px', height: '44px', borderRadius: '50%', backgroundColor: '#22D3EE', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0F172A', fontWeight: 'bold' }}>
+              <Lock size={18} />
+            </div>
             <div>
-              <div style={{ fontWeight: 600, fontSize: '15px', color: '#F8FAFC' }}>Hana Oliveira Rafaelle &mdash; Encarregada LGPD</div>
-              <div style={{ fontSize: '13px', color: '#22D3EE' }}><a href="mailto:rafaelle@flowday.app" style={{ color: '#22D3EE', textDecoration: 'none' }}>rafaelle@flowday.app</a></div>
+              <div style={{ fontWeight: 600, fontSize: '15px', color: '#F8FAFC' }}>Equipe de Privacidade</div>
+              <div style={{ fontSize: '13px', color: '#22D3EE' }}><a href="mailto:privacidade@myflowday.com" style={{ color: '#22D3EE', textDecoration: 'none' }}>privacidade@myflowday.com</a></div>
             </div>
           </div>
         </section>
@@ -268,7 +270,9 @@ export default function PrivacyView({ onGoBack, onNavigateToTerms }) {
         {/* ── Document Switcher ─────────────────────────────────────────── */}
         <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
           <div style={{ flex: 1, minWidth: '220px', display: 'flex', alignItems: 'center', gap: '14px', backgroundColor: '#1E293B', border: '1px solid #22D3EE', borderRadius: '12px', padding: '20px 22px' }}>
-            <div style={{ fontSize: '20px' }}>🔒</div>
+            <div style={{ color: '#22D3EE', display: 'flex', alignItems: 'center' }}>
+              <Lock size={20} />
+            </div>
             <div>
               <div style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', color: '#22D3EE', marginBottom: '2px' }}>Você está aqui</div>
               <div style={{ fontSize: '15px', fontWeight: 600, color: '#22D3EE' }}>Política de Privacidade</div>
@@ -282,7 +286,9 @@ export default function PrivacyView({ onGoBack, onNavigateToTerms }) {
             onMouseEnter={e => e.currentTarget.style.borderColor = '#22D3EE'}
             onMouseLeave={e => e.currentTarget.style.borderColor = '#334155'}
           >
-            <div style={{ fontSize: '20px' }}>📋</div>
+            <div style={{ color: '#64748B', display: 'flex', alignItems: 'center' }}>
+              <FileText size={20} />
+            </div>
             <div>
               <div style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', color: '#64748B', marginBottom: '2px' }}>Leia também</div>
               <div style={{ fontSize: '15px', fontWeight: 600, color: '#F8FAFC' }}>Termos de Serviço</div>

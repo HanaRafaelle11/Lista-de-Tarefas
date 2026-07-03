@@ -192,9 +192,15 @@ export default function GoalsView() {
   // Obter IDs das tarefas vinculadas ao objetivo em gestão
   const managingGoalLinkedTaskIds = useMemo(() => {
     if (!managingGoal) return [];
-    return goalTasks
-      .filter(gt => gt.goal_id === managingGoal.id)
-      .map(gt => gt.task_id);
+    const filtered = goalTasks.filter(gt => gt.goal_id === managingGoal.id);
+    const ids = filtered.map(gt => gt.task_id);
+    console.log('[GoalsView] managingGoalLinkedTaskIds computed:', {
+      goalId: managingGoal.id,
+      goalTasks,
+      filtered,
+      ids
+    });
+    return ids;
   }, [managingGoal, goalTasks]);
 
   // Obter tarefas vinculadas a um objetivo específico
@@ -588,37 +594,32 @@ export default function GoalsView() {
           >
             <div
               className="modal-content animate-scale-up"
-              style={{ maxWidth: '420px', padding: '28px', textAlign: 'center' }}
+              style={{ maxWidth: '420px', padding: '28px' }}
               onClick={e => e.stopPropagation()}
             >
-              <div style={{ fontSize: '36px', marginBottom: '12px' }}>🏆</div>
-              <h3 style={{ fontSize: '17px', fontWeight: '700', color: 'var(--text-main)', marginBottom: '8px' }}>
+              <div style={{ fontSize: '32px', marginBottom: '16px' }}>🏆</div>
+              <h3 style={{ fontSize: '17px', fontWeight: '700', color: 'var(--text-main)', marginBottom: '12px' }}>
                 Concluir objetivo
               </h3>
-              <p style={{ fontSize: '13.5px', color: 'var(--text-muted)', marginBottom: '20px', lineHeight: '1.6' }}>
-                Você tem <strong>{incompleteLinked.length} {incompleteLinked.length === 1 ? 'tarefa vinculada ainda aberta' : 'tarefas vinculadas ainda abertas'}</strong>.
-                Deseja marcá-{incompleteLinked.length === 1 ? 'la' : 'las'} como concluída{incompleteLinked.length === 1 ? '' : 's'} também?
+              <p style={{ margin: 0, fontSize: '13.5px', color: 'var(--text-main)', lineHeight: '1.5' }}>
+                Este objetivo possui <strong>{incompleteLinked.length} {incompleteLinked.length === 1 ? 'tarefa vinculada ainda pendente' : 'tarefas vinculadas ainda pendentes'}</strong>.<br/>
+                O que você deseja fazer com {incompleteLinked.length === 1 ? 'essa tarefa' : 'essas tarefas'}?
               </p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <div style={{ display: 'flex', gap: '8px', marginTop: '16px', flexWrap: 'wrap' }}>
                 <button
                   onClick={confirmCompleteGoalWithTasks}
                   className="btn-primary-glow"
-                  style={{ padding: '12px 24px', width: '100%', fontSize: '14px', fontWeight: '700' }}
+                  style={{
+                    flex: '1 1 auto',
+                    padding: '9px 16px', borderRadius: 'var(--radius-sm)',
+                    fontSize: '13px', fontWeight: '600', cursor: 'pointer'
+                  }}
                 >
-                  ✅ Concluir objetivo e tarefas
+                  Concluir objetivo E {incompleteLinked.length === 1 ? 'a tarefa' : 'as tarefas'}
                 </button>
                 <button
                   onClick={confirmCompleteGoalWithoutTasks}
                   style={{
-                    padding: '11px 24px',
-                    width: '100%',
-                    fontSize: '13px',
-                    fontWeight: '600',
-                    border: '1px solid var(--border-medium)',
-                    borderRadius: 'var(--radius-sm)',
-                    backgroundColor: 'var(--bg-card)',
-                    color: 'var(--text-main)',
-                    cursor: 'pointer'
                   }}
                 >
                   Apenas concluir o objetivo

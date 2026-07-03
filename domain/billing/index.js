@@ -6,17 +6,26 @@ export async function createSubscription({ userId, planId, customerData }) {
   if (!userId) throw new Error('userId is required');
 
   if (!supabaseAdmin) {
-    return { id: `sub_mock_${Date.now()}`, status: 'active', planId, userId };
+    return { id: `sub_mock_${Date.now()}`, status: 'pending', planId, userId };
   }
 
+  // SECURITY FIX: Never create a subscription with status 'active' directly.
+  // Active status must only be set by BillingEngine.processPaymentSuccess()
+  // after a confirmed payment from the gateway webhook.
   const { data, error } = await supabaseAdmin
     .from('subscriptions')
-    .insert({ user_id: userId, plan: planId || 'pro', status: 'active' })
+    .upsert({
+      user_id: userId,
+      plan: planId || 'premium',
+      status: 'pending',
+      provider: 'asaas',
+      updated_at: new Date().toISOString()
+    }, { onConflict: 'user_id' })
     .select('*')
     .single();
 
   if (error && error.code !== '23505') throw error;
-  return data || { status: 'active', user_id: userId };
+  return data || { status: 'pending', user_id: userId };
 }
 
 export async function verifySubscriptionStatus(userId) {

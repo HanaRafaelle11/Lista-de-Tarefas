@@ -37,16 +37,21 @@ export default async function handler(req, res) {
     const webhookToken = process.env.ASAAS_WEBHOOK_TOKEN;
     const receivedToken = req.headers['asaas-access-token'] || req.headers['access_token'];
 
-    if (webhookToken) {
-      if (!receivedToken || receivedToken !== webhookToken) {
-        console.warn('[ASAAS WEBHOOK AUTH FAIL] Tentativa de acesso não autorizada.', {
-          ip: req.headers['x-forwarded-for'] || req.socket?.remoteAddress,
-          userAgent: req.headers['user-agent'],
-          receivedTokenPartial: receivedToken ? `${receivedToken.substring(0, 4)}***` : 'null',
-          timestamp: new Date().toISOString()
-        });
-        return res.status(401).json({ error: true, message: 'Não autorizado. Token de webhook inválido.' });
-      }
+    // SECURITY FIX: Fail-fast if ASAAS_WEBHOOK_TOKEN is not configured.
+    // Without a token, ANY request could inject fake webhooks and grant Pro access.
+    if (!webhookToken) {
+      console.error('[ASAAS WEBHOOK CRITICAL] ASAAS_WEBHOOK_TOKEN not configured! Rejecting all webhooks for safety.');
+      return res.status(500).json({ error: true, message: 'Webhook token not configured on server.' });
+    }
+
+    if (!receivedToken || receivedToken !== webhookToken) {
+      console.warn('[ASAAS WEBHOOK AUTH FAIL] Tentativa de acesso não autorizada.', {
+        ip: req.headers['x-forwarded-for'] || req.socket?.remoteAddress,
+        userAgent: req.headers['user-agent'],
+        receivedTokenPartial: receivedToken ? `${receivedToken.substring(0, 4)}***` : 'null',
+        timestamp: new Date().toISOString()
+      });
+      return res.status(401).json({ error: true, message: 'Não autorizado. Token de webhook inválido.' });
     }
 
     const body = req.body || {};
@@ -335,6 +340,9 @@ export default async function handler(req, res) {
       source: 'webhook'
     }).catch(() => {});
 
-    return res.status(200).json({ error: true, message: error.message || 'Erro interno no processamento do webhook.' });
+    // RELIABILITY FIX: Return 500 so Asaas retries the webhook delivery.
+    // Returning 200 on errors would tell Asaas the event was processed successfully,
+    // preventing automatic retries and potentially losing payment confirmations.
+    return res.status(500).json({ error: true, message: error.message || 'Erro interno no processamento do webhook.' });
   }
 }

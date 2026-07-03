@@ -145,7 +145,7 @@ export default function LandingPage({ onEnterApp }) {
             justifyContent: 'space-between' 
           }}
         >
-          <div className="landing-logo-container" style={{ display: 'flex', alignItems: 'center', height: '40px' }}>
+          <div className="landing-logo-container" style={{ display: 'flex', alignItems: 'center', height: '40px', cursor: 'pointer' }} onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
             <img
               src={logo.src}
               alt={logo.alt}

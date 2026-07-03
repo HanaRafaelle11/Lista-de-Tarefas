@@ -341,7 +341,7 @@ export default function GoalModal({ isOpen, onClose, onSave, onDelete, editingGo
           {/* Seleção de Ícone — Lucide Grid + Emoji Picker Fallback */}
           <div className="todo-form-group">
             <label className="todo-form-label">Ícone do Objetivo</label>
-            <div className="goal-icon-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(8, 1fr)', gap: '8px', marginBottom: '8px' }}>
+            <div className="goal-icon-grid" style={{ marginBottom: '8px' }}>
               {ICONS.map(i => {
                 const isSelected = icon === i.value;
                 return (
@@ -393,7 +393,7 @@ export default function GoalModal({ isOpen, onClose, onSave, onDelete, editingGo
                   <span>Outro emoji...</span>
                 </button>
                 {showEmojiPicker && (
-                  <div style={{ position: 'absolute', top: '100%', left: 0, zIndex: 9999, marginTop: '4px' }}>
+                  <div style={{ position: 'absolute', top: '100%', left: 0, zIndex: 9999, marginTop: '4px', width: 'min(320px, 80vw)' }}>
                     <EmojiPicker
                       onEmojiClick={(emojiData) => {
                         setIcon(emojiData.emoji);
@@ -402,7 +402,7 @@ export default function GoalModal({ isOpen, onClose, onSave, onDelete, editingGo
                       autoFocusSearch={false}
                       lazyLoadEmojis={true}
                       height={380}
-                      width={320}
+                      width="100%"
                       searchPlaceholder="Buscar emoji..."
                       previewConfig={{ showPreview: false }}
                     />

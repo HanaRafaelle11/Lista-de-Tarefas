@@ -288,7 +288,7 @@ export function useNotifications() {
         if (reg && reg.showNotification) {
           reg.showNotification(title, {
             icon: '/icon.svg',
-            badge: '/favicon.svg',
+            badge: '/notification-badge.png',
             ...options,
           });
           return;
@@ -296,7 +296,7 @@ export function useNotifications() {
       }
       new Notification(title, {
         icon: '/icon.svg',
-        badge: '/favicon.svg',
+        badge: '/notification-badge.png',
         ...options,
       });
     } catch (e) {

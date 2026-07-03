@@ -25,14 +25,8 @@ export default function GuidedTour() {
     {
       target: `${targetPrefix}home`,
       title: 'Tudo começa aqui',
-      content: 'Seu painel principal. Tarefas, hábitos e objetivos em um só lugar, organizados pelo que mais importa agora.',
+      content: 'Seu painel principal (Dashboard). Tarefas e objetivos em um só lugar, organizados pelo que mais importa agora.',
       disableBeacon: true,
-      placement: isMobile ? 'top' : 'bottom',
-    },
-    {
-      target: `${targetPrefix}home`,
-      title: 'Seu ritmo da semana',
-      content: 'Veja como foi sua semana: onde você foi bem e onde vale prestar atenção. Tudo calculado automaticamente.',
       placement: isMobile ? 'top' : 'bottom',
     },
     {
@@ -42,22 +36,22 @@ export default function GuidedTour() {
       placement: isMobile ? 'top' : 'bottom',
     },
     {
-      target: `${targetPrefix}goals`,
-      title: 'Construa constância',
-      content: 'Registre hábitos diários e veja suas sequências crescerem. Pequenos passos, todo dia.',
-      placement: isMobile ? 'top' : 'bottom',
-    },
-    {
       target: `${targetPrefix}tasks`,
       title: 'Organize do seu jeito',
-      content: 'Liste, mova e priorize suas tarefas. Você decide o formato que funciona melhor pra você: lista, kanban ou matriz.',
+      content: 'Liste, mova e priorize suas tarefas. Você decide o formato que funciona melhor: lista ou kanban.',
       placement: isMobile ? 'top' : 'bottom',
     },
     {
-      target: `${targetPrefix}analytics`,
-      title: 'Conheça seu padrão',
-      content: 'Métricas do seu comportamento real. Descubra quando você rende mais e o que ainda pode melhorar.',
+      target: `${targetPrefix}performance`,
+      title: 'Desempenho e Histórico',
+      content: 'Veja métricas do seu comportamento real e acesse o histórico completo das suas tarefas concluídas.',
       placement: isMobile ? 'top' : 'bottom',
+    },
+    {
+      target: '#tour-nav-settings',
+      title: 'Ajuste fino e Configurações',
+      content: 'Personalize o tema, gerencie seus dados, envie feedbacks e acesse o FAQ ou Suporte.',
+      placement: isMobile ? 'bottom' : 'left',
     }
   ];
 

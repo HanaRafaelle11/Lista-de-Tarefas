@@ -27,7 +27,6 @@ async function runDeduplicationAndCleanup() {
   console.log('=============== INICIANDO LIMPEZA CONTROLADA DE DEDUPLICIDADE & ARCHIVED MP ===============\n');
 
   let totalDeduplicated = 0;
-  let totalArchivedMP = 0;
   let totalPriceNormalized = 0;
   const userAuditReport = {};
 
@@ -45,21 +44,7 @@ async function runDeduplicationAndCleanup() {
 
     console.log(`[Audit] Total de assinaturas carregadas do banco: ${allSubs.length}`);
 
-    // 2. Arquivar provedores Mercado Pago (Hard Cleanup)
-    for (const sub of allSubs) {
-      if (sub.provider === 'mercado_pago' || sub.gateway === 'mercadopago' || sub.mp_subscription_id) {
-        await supabaseAdmin
-          .from('subscriptions')
-          .update({
-            status: 'archived',
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', sub.id);
-        
-        totalArchivedMP++;
-        console.log(`[MP Cleanup] Assinatura ${sub.id} (user: ${sub.user_id}) arquivada com sucesso.`);
-      }
-    }
+
 
     // 3. Agrupar por user_id e desativar duplicatas ativas
     const subsByUser = {};
@@ -113,7 +98,7 @@ async function runDeduplicationAndCleanup() {
     }
 
     console.log('\n=============== RELATÓRIO DE AUDITORIA E LIMPEZA ===============');
-    console.log(`Total de Assinaturas MP Arquivadas: ${totalArchivedMP}`);
+
     console.log(`Total de Duplicatas Desativadas (superseded): ${totalDeduplicated}`);
     console.log(`Total de Preços Normalizados: ${totalPriceNormalized}`);
     console.log('Detalhamento de Usuários Ajustados:', JSON.stringify(userAuditReport, null, 2));

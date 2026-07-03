@@ -22,7 +22,7 @@ Auditar a segurança de dados sensíveis, a integridade das políticas de segura
 
 ### B. Dependência Insegura de Metadados de Autenticação (`is_pro`)
 *   **Vulnerabilidade Anterior (Crítica):** O status Pro do usuário dependia do campo editável pelo cliente `raw_user_meta_data->>'is_pro'`. Isso permitia que um usuário Pro falsificasse o metadado no cliente e acessasse recursos pagos sem faturamento correspondente.
-*   **Correção Aplicada:** O status Pro é extraído diretamente da tabela protegida `public.subscriptions`, vinculada com as transações confirmadas dos webhooks do Asaas/Mercado Pago.
+*   **Correção Aplicada:** O status Pro é extraído diretamente da tabela protegida `public.subscriptions`, vinculada com as transações confirmadas dos webhooks do Asaas.
 
 ---
 

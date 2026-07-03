@@ -38,13 +38,17 @@ export async function checkAccess(userId, feature = 'default') {
     const subStatus = sub?.status || 'free';
     const subExpires = sub?.current_period_end;
 
+    // SECURITY FIX: Require a valid, future expiration date to grant Pro.
+    // null expiration = NOT Pro (prevents eternal free Pro from missing dates).
+    const now = new Date();
+
     const profActive = (profPlano === 'premium' || profPlano === 'pro') &&
                        (profStatus === 'active' || profStatus === 'ACTIVE') &&
-                       (!profExpires || new Date(profExpires) > new Date());
+                       (profExpires && new Date(profExpires) > now);
 
     const subActive = (subPlano === 'premium' || subPlano === 'pro') &&
                       (subStatus === 'active' || subStatus === 'ACTIVE') &&
-                      (!subExpires || new Date(subExpires) > new Date());
+                      (subExpires && new Date(subExpires) > now);
 
     const isPro = profActive || subActive;
     const finalPlano = isPro ? (subPlano !== 'free' ? subPlano : profPlano) : 'free';

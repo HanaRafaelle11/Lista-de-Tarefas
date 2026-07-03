@@ -63,7 +63,6 @@ function validateCpf(cpf) {
     return true;
 }
 
-// [LEGACY MERCADO PAGO REMOVED]
 
 // =========================================================
 // HANDLER: handleSubscriptionSync
@@ -511,6 +510,83 @@ const handleAdminBillingTimeline = withAdminAuth((req, res) => billingController
 const handleAdminBillingHealth = withAdminAuth((req, res) => billingController.getHealth(req, res));
 
 // =========================================================
+// MÉTODOS DE CONTROLE E AUDITORIA DE LEDGER (STRIPE-LIKE)
+// =========================================================
+async function handleLedgerHealth(req, res) {
+    try {
+        if (!supabaseAdmin) {
+            return res.status(500).json({ error: 'SupabaseAdmin não configurado.' });
+        }
+
+        // 1. Total de eventos no ledger
+        const { count: eventsCount } = await supabaseAdmin
+            .from('billing_events')
+            .select('*', { count: 'exact', head: true });
+
+        // 2. Último evento processado
+        const { data: lastEvent } = await supabaseAdmin
+            .from('billing_events')
+            .select('created_at, event_type, user_id')
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+        // 3. Auditoria de drift/desalinhamento entre subscriptions e user_entitlements
+        const nowIso = new Date().toISOString();
+        const { data: activeSubs } = await supabaseAdmin
+            .from('subscriptions')
+            .select('user_id, current_period_end')
+            .eq('status', 'active')
+            .gt('current_period_end', nowIso);
+
+        const { data: activeEnts } = await supabaseAdmin
+            .from('user_entitlements')
+            .select('user_id, valid_until')
+            .eq('feature', 'pro_features')
+            .eq('status', 'active')
+            .gt('valid_until', nowIso);
+
+        const subUsers = new Set((activeSubs || []).map(s => s.user_id));
+        const entUsers = new Set((activeEnts || []).map(e => e.user_id));
+
+        const subWithoutEnt = (activeSubs || []).filter(s => !entUsers.has(s.user_id));
+        const entWithoutSub = (activeEnts || []).filter(e => !subUsers.has(e.user_id));
+
+        const hasDrift = subWithoutEnt.length > 0 || entWithoutSub.length > 0;
+
+        return res.status(200).json({
+            status: hasDrift ? 'warning' : 'healthy',
+            totalEvents: eventsCount || 0,
+            lastEvent: lastEvent || null,
+            drift: {
+                activeSubscriptionsCount: subUsers.size,
+                activeEntitlementsCount: entUsers.size,
+                mismatches: {
+                    subscriptionsWithoutEntitlements: subWithoutEnt.map(s => ({ userId: s.user_id, expires: s.current_period_end })),
+                    entitlementsWithoutSubscriptions: entWithoutSub.map(e => ({ userId: e.user_id, expires: e.valid_until }))
+                }
+            }
+        });
+    } catch (error) {
+        return res.status(500).json({ error: 'Falha ao auditar saúde do ledger.', message: error.message });
+    }
+}
+
+const handleLedgerRebuild = withAdminAuth(async (req, res) => {
+    try {
+        const { BillingEventProjector } = await import('../workers/billing-event-projector.js');
+        const success = await BillingEventProjector.replayAllEvents();
+        if (success) {
+            return res.status(200).json({ success: true, message: 'Reconstrução de projeções do ledger concluída.' });
+        } else {
+            return res.status(500).json({ success: false, message: 'Falha ao reprocessar eventos do ledger.' });
+        }
+    } catch (error) {
+        return res.status(500).json({ error: 'Erro no rebuild do ledger.', message: error.message });
+    }
+});
+
+// =========================================================
 // ROUTER PRINCIPAL
 // =========================================================
 
@@ -597,6 +673,10 @@ export default async function handler(req, res) {
             await handleTestPush(req, res);
         } else if (route === 'admin/payment-events' || route === 'admin/billing/timeline' || route.startsWith('admin/billing/user')) {
             await handleAdminBillingTimeline(req, res);
+        } else if (route === 'system/ledger-health') {
+            await handleLedgerHealth(req, res);
+        } else if (route === 'system/ledger-rebuild') {
+            await handleLedgerRebuild(req, res);
         } else if (route === '' || route === 'health') {
             res.status(200).json({ 
                 status: 'online', 
