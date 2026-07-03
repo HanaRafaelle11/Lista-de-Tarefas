@@ -9,6 +9,7 @@ export const EVOLUTION_CATEGORIES = {
   plant: {
     id: 'plant',
     name: 'Plantinha',
+    emoji: '🌱',
     iconName: 'seedling',
     stages: [
       {
@@ -52,6 +53,7 @@ export const EVOLUTION_CATEGORIES = {
   baby: {
     id: 'baby',
     name: 'Bebê',
+    emoji: '👶',
     iconName: 'profile',
     stages: [
       {
@@ -95,6 +97,7 @@ export const EVOLUTION_CATEGORIES = {
   dog: {
     id: 'dog',
     name: 'Cachorrinho',
+    emoji: '🐶',
     iconName: 'paw',
     stages: [
       {
@@ -138,6 +141,7 @@ export const EVOLUTION_CATEGORIES = {
   cat: {
     id: 'cat',
     name: 'Gatinho',
+    emoji: '🐱',
     iconName: 'paw',
     stages: [
       {

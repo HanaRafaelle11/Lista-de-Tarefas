@@ -674,22 +674,49 @@ export default function HomeView() {
                             }}
                             title={`Escolher ${pet.name}`}
                           >
-                            <MFIcon name={pet.iconName} size={14} />
+                            <span style={{ fontSize: '13px', marginRight: '2px', lineHeight: '1' }}>{pet.emoji}</span>
                             <span>{pet.name}</span>
                           </button>
                         ))}
                       </div>
                     </div>
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                      <span style={{ fontSize: '11px', fontWeight: '700', padding: '3px 10px', borderRadius: '20px', backgroundColor: `${currentStage.color}15`, color: currentStage.color, border: `1px solid ${currentStage.color}30` }}>
-                        {currentStage.badge}
-                      </span>
-                    </div>
+                    <div 
+                      className="home-ritmo-desc-card animate-fade-in"
+                      style={{
+                        background: 'linear-gradient(135deg, rgba(255,255,255,0.02) 0%, rgba(255,255,255,0.01) 100%)',
+                        border: '1px solid var(--border-light)',
+                        borderRadius: '16px',
+                        padding: '16px',
+                        marginBottom: '16px',
+                        boxShadow: 'var(--shadow-sm)',
+                        position: 'relative',
+                        overflow: 'hidden'
+                      }}
+                    >
+                      <div style={{
+                        position: 'absolute',
+                        top: '-20px',
+                        right: '-20px',
+                        width: '60px',
+                        height: '60px',
+                        borderRadius: '50%',
+                        background: currentStage.color,
+                        filter: 'blur(30px)',
+                        opacity: 0.15,
+                        pointerEvents: 'none'
+                      }} />
+                      
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                        <span style={{ fontSize: '11px', fontWeight: '700', padding: '3px 10px', borderRadius: '20px', backgroundColor: `${currentStage.color}15`, color: currentStage.color, border: `1px solid ${currentStage.color}30` }}>
+                          {currentStage.badge}
+                        </span>
+                      </div>
 
-                    <p className="home-ritmo-desc">
-                      {currentStage.desc}
-                    </p>
+                      <p className="home-ritmo-desc" style={{ margin: 0, fontSize: '13px', lineHeight: '1.6', color: 'var(--text-muted)' }}>
+                        {currentStage.desc}
+                      </p>
+                    </div>
 
                     <div className="home-ritmo-map-container">
                       <span className="ritmo-map-label">Últimos 7 dias:</span>
@@ -702,25 +729,60 @@ export default function HomeView() {
                             alignItems: 'center', 
                             justifyContent: 'center',
                             gap: '12px', 
-                            padding: '32px 20px', 
-                            background: 'linear-gradient(135deg, rgba(74,101,78,0.05) 0%, rgba(255,255,255,0.02) 100%)',
-                            borderRadius: 'var(--radius-lg)', 
-                            border: '1px dashed var(--border-medium)', 
+                            padding: '36px 24px', 
+                            background: 'linear-gradient(135deg, rgba(255,255,255,0.02) 0%, rgba(255,255,255,0.01) 100%)',
+                            borderRadius: '24px', 
+                            border: '1px solid var(--border-light)', 
                             marginTop: '12px',
                             textAlign: 'center',
                             width: '100%',
                             position: 'relative',
-                            overflow: 'hidden'
+                            overflow: 'hidden',
+                            boxShadow: 'var(--shadow-sm)'
                           }}
                         >
-                          <div className="home-ritmo-empty-illustration" style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '56px', height: '56px', borderRadius: '50%', background: 'rgba(74, 101, 78, 0.1)', color: 'var(--primary)', marginBottom: '4px' }}>
-                            <MFIcon name={currentStage.iconName} size={28} style={{ zIndex: 2 }} color={currentStage.color} />
-                            <div style={{ position: 'absolute', width: '100%', height: '100%', borderRadius: '50%', border: '1px solid rgba(74, 101, 78, 0.2)', animation: 'ping-animation 2s cubic-bezier(0, 0, 0.2, 1) infinite' }} />
+                          <div style={{
+                            position: 'absolute',
+                            top: '-50%',
+                            left: '-50%',
+                            width: '200%',
+                            height: '200%',
+                            background: `radial-gradient(circle, ${currentStage.color}05 0%, transparent 70%)`,
+                            pointerEvents: 'none',
+                            zIndex: 0
+                          }} />
+                          <div 
+                            className="home-ritmo-empty-illustration" 
+                            style={{ 
+                              position: 'relative', 
+                              display: 'flex', 
+                              alignItems: 'center', 
+                              justifyContent: 'center', 
+                              width: '64px', 
+                              height: '64px', 
+                              borderRadius: '50%', 
+                              background: `${currentStage.color}15`, 
+                              color: currentStage.color, 
+                              marginBottom: '8px',
+                              boxShadow: `0 0 20px ${currentStage.color}20`,
+                              border: `1px solid ${currentStage.color}30`,
+                              zIndex: 2
+                            }}
+                          >
+                            <span style={{ fontSize: '28px', zIndex: 2 }}>{currentPetData.emoji}</span>
+                            <div style={{ 
+                              position: 'absolute', 
+                              width: '100%', 
+                              height: '100%', 
+                              borderRadius: '50%', 
+                              border: `1px solid ${currentStage.color}40`, 
+                              animation: 'ping-animation 2s cubic-bezier(0, 0, 0.2, 1) infinite' 
+                            }} />
                           </div>
-                          <h4 style={{ fontSize: '15px', color: 'var(--text-main)', margin: 0, fontWeight: '700', fontFamily: 'var(--font-display)' }}>
+                          <h4 style={{ fontSize: '15px', color: 'var(--text-main)', margin: 0, fontWeight: '700', fontFamily: 'var(--font-display)', zIndex: 2 }}>
                             Comece hoje sua sequência
                           </h4>
-                          <p style={{ fontSize: '12px', color: 'var(--text-light)', margin: '0 0 8px 0', maxWidth: '280px', lineHeight: '1.4' }}>
+                          <p style={{ fontSize: '12px', color: 'var(--text-light)', margin: '0 0 8px 0', maxWidth: '280px', lineHeight: '1.4', zIndex: 2 }}>
                             De acordo com a sua constância na conclusão de tarefas e objetivos, seu {currentPetData.name.toLowerCase()} vai evoluindo!
                           </p>
                           <button 
@@ -729,27 +791,29 @@ export default function HomeView() {
                               background: 'var(--primary)',
                               color: '#ffffff',
                               border: 'none',
-                              padding: '8px 16px',
-                              borderRadius: '20px',
-                              fontSize: '12px',
+                              padding: '10px 20px',
+                              borderRadius: '99px',
+                              fontSize: '12.5px',
                               fontWeight: '600',
                               cursor: 'pointer',
                               display: 'flex',
                               alignItems: 'center',
                               gap: '6px',
-                              transition: 'transform 0.2s, filter 0.2s',
-                              boxShadow: '0 4px 12px rgba(74, 101, 78, 0.2)'
+                              transition: 'all 0.2s ease',
+                              boxShadow: '0 4px 14px rgba(99, 102, 241, 0.3)',
+                              zIndex: 2
                             }}
                             onMouseEnter={(e) => {
                               e.currentTarget.style.transform = 'translateY(-1px)';
-                              e.currentTarget.style.filter = 'brightness(1.1)';
+                              e.currentTarget.style.boxShadow = '0 6px 20px rgba(99, 102, 241, 0.4)';
                             }}
                             onMouseLeave={(e) => {
                               e.currentTarget.style.transform = 'none';
-                              e.currentTarget.style.filter = 'none';
+                              e.currentTarget.style.boxShadow = '0 4px 14px rgba(99, 102, 241, 0.3)';
                             }}
                           >
-                            Ver Minhas Tarefas
+                            <span>Ver Minhas Tarefas</span>
+                            <ChevronRight size={14} />
                           </button>
                         </div>
                       ) : (
