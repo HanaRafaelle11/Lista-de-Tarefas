@@ -14,7 +14,7 @@ export const EVOLUTION_CATEGORIES = {
     stages: [
       {
         level: 1,
-        title: 'Broto Inicial',
+        title: 'Broto',
         badge: 'Nível 1 • Início',
         color: '#3b82f6',
         asset: '/assets/evolution/plant/stage1.png',
@@ -23,7 +23,7 @@ export const EVOLUTION_CATEGORIES = {
       },
       {
         level: 2,
-        title: 'Planta em Crescimento',
+        title: 'Planta Pequena',
         badge: 'Nível 2 • Em Evolução',
         color: 'var(--primary)',
         asset: '/assets/evolution/plant/stage2.png',
@@ -32,7 +32,7 @@ export const EVOLUTION_CATEGORIES = {
       },
       {
         level: 3,
-        title: 'Árvore Frondosa',
+        title: 'Muda',
         badge: 'Nível 3 • Alta Performance',
         color: '#10b981',
         asset: '/assets/evolution/plant/stage3.png',
@@ -41,7 +41,7 @@ export const EVOLUTION_CATEGORIES = {
       },
       {
         level: 4,
-        title: 'Árvore Florida Master',
+        title: 'Planta Digital',
         badge: 'Nível 4 • Consistência Lendária',
         color: '#ec4899',
         asset: '/assets/evolution/plant/stage4.png',
