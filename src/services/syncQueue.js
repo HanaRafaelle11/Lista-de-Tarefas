@@ -34,6 +34,7 @@ let status = {
 let listeners  = new Set();
 let pollTimer  = null;
 const failureTracker = {};
+let isFlushing = false;
 
 export function getConflictLogs() {
   try {
@@ -424,6 +425,8 @@ export function dequeue(idempotencyKey) {
  * Respeita prioridades e exponential backoff.
  */
 export async function flush() {
+  if (isFlushing) return;
+
   const queue = readQueue();
   if (queue.length === 0) {
     if (status.supabase !== 'offline') {
@@ -432,83 +435,88 @@ export async function flush() {
     return;
   }
 
-  const now = Date.now();
-  const ready     = queue.filter(item => (item.nextRetryAt || 0) <= now);
-  const notReady  = queue.filter(item => (item.nextRetryAt || 0) > now);
+  isFlushing = true;
+  try {
+    const now = Date.now();
+    const ready     = queue.filter(item => (item.nextRetryAt || 0) <= now);
+    const notReady  = queue.filter(item => (item.nextRetryAt || 0) > now);
 
-  // Ordena por prioridade de entidade, e depois por data (FIFO)
-  ready.sort((a, b) => {
-    const prioA = getPriority(a);
-    const prioB = getPriority(b);
-    if (prioA !== prioB) return prioA - prioB;
-    return new Date(a.enqueuedAt) - new Date(b.enqueuedAt);
-  });
+    // Ordena por prioridade de entidade, e depois por data (FIFO)
+    ready.sort((a, b) => {
+      const prioA = getPriority(a);
+      const prioB = getPriority(b);
+      if (prioA !== prioB) return prioA - prioB;
+      return new Date(a.enqueuedAt) - new Date(b.enqueuedAt);
+    });
 
-  const remaining = [...notReady];
-  let consecutiveNetworkErrors = 0;
+    const remaining = [...notReady];
+    let consecutiveNetworkErrors = 0;
 
-  for (const item of ready) {
-    // Se tivemos muitos erros de conexão em lote, suspendemos temporariamente os próximos da fila
-    if (consecutiveNetworkErrors >= 3) {
-      remaining.push({
-        ...item,
-        nextRetryAt: Date.now() + 60_000 // joga 1 minuto no futuro
-      });
-      continue;
-    }
-
-    const ok = await trySend(item);
-    if (ok) {
-      consecutiveNetworkErrors = 0;
-      delete failureTracker[item.idempotency_key];
-
-      // Métrica de sync lag
-      const lag = Date.now() - new Date(item.enqueuedAt).getTime();
-      const total = status.totalSyncs || 0;
-      const newAvg = total > 0 ? Math.round(((status.avgSyncLagMs * total) + lag) / (total + 1)) : lag;
-      updateStatus({
-        avgSyncLagMs: newAvg,
-        totalSyncs: total + 1
-      });
-    } else {
-      consecutiveNetworkErrors++;
-      failureTracker[item.idempotency_key] = (failureTracker[item.idempotency_key] || 0) + 1;
-
-      const attempts = (item.attempts || 0) + 1;
-      const maxAttempts = window.BETA_SAFE_MODE ? 5 : MAX_ATTEMPTS; // Beta Safe Mode reduz a agressividade do retry
-      
-      // Backoff adaptativo: penaliza mais se a rede estiver visivelmente instável
-      const isNetworkIssue = !navigator.onLine;
-      const penaltyAttempts = isNetworkIssue ? attempts + 1 : attempts;
-
-      if (attempts < maxAttempts) {
+    for (const item of ready) {
+      // Se tivemos muitos erros de conexão em lote, suspendemos temporariamente os próximos da fila
+      if (consecutiveNetworkErrors >= 3) {
         remaining.push({
           ...item,
-          attempts,
-          nextRetryAt: calcNextRetry(penaltyAttempts),
+          nextRetryAt: Date.now() + 60_000 // joga 1 minuto no futuro
+        });
+        continue;
+      }
+
+      const ok = await trySend(item);
+      if (ok) {
+        consecutiveNetworkErrors = 0;
+        delete failureTracker[item.idempotency_key];
+
+        // Métrica de sync lag
+        const lag = Date.now() - new Date(item.enqueuedAt).getTime();
+        const total = status.totalSyncs || 0;
+        const newAvg = total > 0 ? Math.round(((status.avgSyncLagMs * total) + lag) / (total + 1)) : lag;
+        updateStatus({
+          avgSyncLagMs: newAvg,
+          totalSyncs: total + 1
         });
       } else {
-        console.warn(`[syncQueue] Item descartado após ${maxAttempts} tentativas:`, item.type);
-        logConflict(item.type, item.idempotency_key, item.payload, null, 'Descartado após exceder max retries');
-        addWarning(`Operação "${item.type}" descartada após muitas tentativas`);
+        consecutiveNetworkErrors++;
+        failureTracker[item.idempotency_key] = (failureTracker[item.idempotency_key] || 0) + 1;
+
+        const attempts = (item.attempts || 0) + 1;
+        const maxAttempts = window.BETA_SAFE_MODE ? 5 : MAX_ATTEMPTS; // Beta Safe Mode reduz a agressividade do retry
+        
+        // Backoff adaptativo: penaliza mais se a rede estiver visivelmente instável
+        const isNetworkIssue = !navigator.onLine;
+        const penaltyAttempts = isNetworkIssue ? attempts + 1 : attempts;
+
+        if (attempts < maxAttempts) {
+          remaining.push({
+            ...item,
+            attempts,
+            nextRetryAt: calcNextRetry(penaltyAttempts),
+          });
+        } else {
+          console.warn(`[syncQueue] Item descartado após ${maxAttempts} tentativas:`, item.type);
+          logConflict(item.type, item.idempotency_key, item.payload, null, 'Descartado após exceder max retries');
+          addWarning(`Operação "${item.type}" descartada após muitas tentativas`);
+        }
       }
     }
-  }
 
-  writeQueue(remaining);
+    writeQueue(remaining);
 
-  if (remaining.length === 0) {
-    updateStatus({
-      supabase:   'healthy',
-      pendingOps: 0,
-      lastSync:   new Date().toISOString(),
-      warnings:   [],
-    });
-  } else {
-    updateStatus({
-      supabase:   'degraded',
-      pendingOps: remaining.length,
-    });
+    if (remaining.length === 0) {
+      updateStatus({
+        supabase:   'healthy',
+        pendingOps: 0,
+        lastSync:   new Date().toISOString(),
+        warnings:   [],
+      });
+    } else {
+      updateStatus({
+        supabase:   'degraded',
+        pendingOps: remaining.length,
+      });
+    }
+  } finally {
+    isFlushing = false;
   }
 }
 

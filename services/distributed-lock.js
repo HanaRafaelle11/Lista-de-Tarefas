@@ -41,26 +41,32 @@ export const DistributedLock = {
   async acquire(key, options = {}) {
     const lockTimeoutMs = options.lockTimeoutMs ?? 5000;
     const acquireTimeoutMs = options.acquireTimeoutMs ?? 5000;
-    const initialDelayMs = options.initialDelayMs ?? 50;
+    const initialDelayMs = options.initialDelayMs ?? 200;
 
     const owner = crypto.randomUUID();
     const startTime = Date.now();
     let attempt = 0;
+    let isFirstAttempt = true;
 
     BillingLogger.info('lock_acquire_attempt', null, null, { key, owner });
+
+    // Clean up expired locks exactly once before entering the polling loop
+    try {
+      const now = new Date();
+      await supabaseAdmin
+        .from('billing_locks')
+        .delete()
+        .eq('key', key)
+        .lt('expires_at', now.toISOString());
+    } catch (err) {
+      BillingLogger.error('lock_cleanup_error', null, null, err, { key, owner });
+    }
 
     while (true) {
       const now = new Date();
       const expiresAt = new Date(now.getTime() + lockTimeoutMs);
 
       try {
-        // Delete expired locks
-        await supabaseAdmin
-          .from('billing_locks')
-          .delete()
-          .eq('key', key)
-          .lt('expires_at', now.toISOString());
-
         // Then insert the lock
         const { error: insertErr } = await supabaseAdmin
           .from('billing_locks')

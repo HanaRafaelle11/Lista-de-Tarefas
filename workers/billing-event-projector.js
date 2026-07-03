@@ -258,22 +258,8 @@ export const BillingEventProjector = {
         return false;
       }
 
-      // 1. Limpar e resetar as projeções derivadas para o estado Free
-      logger.info('billing.event.projector.replayAllEvents.clearing_projections');
-      
-      // Apaga todos os entitlements
-      await supabaseAdmin.from('user_entitlements').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-      
-      // Apaga todas as assinaturas operacionais
-      await supabaseAdmin.from('subscriptions').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-      
-      // Reseta todos os perfis para Free
-      await supabaseAdmin.from('profiles').update({
-        plano: PLAN_FREE_NAME,
-        assinatura_status: 'free',
-        assinatura_inicio: null,
-        assinatura_expira_em: null
-      }).neq('id', '00000000-0000-0000-0000-000000000000');
+      // 1. O rebuild reconstrói as projeções em formato de Upsert/Update de estado em tempo real
+      logger.info('billing.event.projector.replayAllEvents.preparing_in_place_projection');
 
       // 2. Recuperar todos os eventos do Ledger ordenados por data
       const { data: events, error } = await supabaseAdmin

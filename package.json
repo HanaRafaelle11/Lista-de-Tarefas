@@ -12,6 +12,7 @@
     "check:infra": "node scripts/preDeployValidation.js",
     "check:sanity": "node scripts/runSanityTest.js",
     "test:billing": "node scripts/runBillingTests.js",
+    "test": "node scripts/runUnitTests.js",
     "subscription:test": "node scripts/subscription-test.mjs"
   },
   "dependencies": {
