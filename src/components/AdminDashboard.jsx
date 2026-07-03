@@ -53,6 +53,13 @@ export default function AdminDashboard() {
   const [paymentTypeFilter, setPaymentTypeFilter] = useState('all'); // 'all' | 'checkout_started' | 'webhook_received' | ...
   const [activePayloadEvent, setActivePayloadEvent] = useState(null); // Selected event for modal/drawer
 
+  // Critical Alerts states
+  const [alerts, setAlerts] = useState([]);
+  const [loadingAlerts, setLoadingAlerts] = useState(false);
+  const [alertsError, setAlertsError] = useState(null);
+  const [severityFilter, setSeverityFilter] = useState('all');
+  const [originFilter, setOriginFilter] = useState('all');
+
   // Fetch all latest events to build latestEventsMap (user_id -> latest event metadata)
   const fetchAllLatestEvents = async () => {
     try {
@@ -206,12 +213,37 @@ export default function AdminDashboard() {
     }
   };
 
+  const fetchAlerts = async () => {
+    setLoadingAlerts(true);
+    setAlertsError(null);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token || '';
+      const headers = {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      if (currentUser?.id) headers['x-user-id'] = currentUser.id;
+
+      const res = await fetch('/api/admin/system-alerts', { headers });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      setAlerts(data || []);
+    } catch (err) {
+      console.error('Error fetching system alerts:', err);
+      setAlertsError(err.message);
+    } finally {
+      setLoadingAlerts(false);
+    }
+  };
+
   useEffect(() => {
     if (activeAdminTab === 'payments' && isAdmin) {
       fetchAllLatestEvents();
     }
     if (activeAdminTab === 'notifications' && isAdmin) {
       fetchPushQueue();
+    }
+    if (activeAdminTab === 'alerts' && isAdmin) {
+      fetchAlerts();
     }
   }, [activeAdminTab, isAdmin]);
 
@@ -691,6 +723,7 @@ export default function AdminDashboard() {
             {[
               { id: 'metrics', label: 'Métricas SaaS', icon: <BarChart size={16} /> },
               { id: 'status', label: 'Status do Sistema', icon: <Activity size={16} /> },
+              { id: 'alerts', label: 'Alertas Críticos', icon: <ShieldAlert size={16} style={{ color: '#ef4444' }} /> },
               { id: 'growth', label: 'Growth OS', icon: <Brain size={16} /> },
               { id: 'users', label: 'Diretório de Usuários', icon: <Users size={16} /> },
               { id: 'funnels', label: 'Funis de Conversão', icon: <Target size={16} /> },
@@ -721,6 +754,238 @@ export default function AdminDashboard() {
           </div>
 
           {activeAdminTab === 'status' && <SystemStatusDashboard />}
+
+          {activeAdminTab === 'alerts' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
+                <div>
+                  <h3 style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-main)', margin: 0 }}>Painel de Alertas Críticos (Observabilidade & Diagnóstico)</h3>
+                  <span style={{ fontSize: '13px', color: 'var(--text-light)', marginTop: '4px', display: 'block' }}>
+                    Visualização centralizada de falhas operacionais, acessos não autorizados e drift de faturamento.
+                  </span>
+                </div>
+                <button 
+                  onClick={fetchAlerts} 
+                  className="btn-secondary"
+                  style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px' }}
+                >
+                  <RefreshCw size={14} className={loadingAlerts ? 'spin' : ''} />
+                  {loadingAlerts ? 'Atualizando...' : 'Recarregar Alertas'}
+                </button>
+              </div>
+
+              {/* Filters for Alerts */}
+              <div style={{
+                display: 'flex',
+                flexWrap: 'wrap',
+                gap: '12px',
+                backgroundColor: 'var(--bg-card)',
+                padding: '16px',
+                borderRadius: 'var(--radius-lg)',
+                border: '1px solid var(--border-light)',
+                boxShadow: 'var(--shadow-sm)'
+              }}>
+                <div style={{ flex: '1 1 150px' }}>
+                  <label style={{ display: 'block', fontSize: '10.5px', fontWeight: '700', color: 'var(--text-light)', marginBottom: '6px', textTransform: 'uppercase' }}>Severidade</label>
+                  <select
+                    value={severityFilter}
+                    onChange={e => setSeverityFilter(e.target.value)}
+                    style={{ width: '100%', padding: '8px 10px', fontSize: '12.5px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-medium)', backgroundColor: 'var(--bg-app)', color: 'var(--text-main)' }}
+                  >
+                    <option value="all">Todas Severidades</option>
+                    <option value="critical">Crítico (Critical)</option>
+                    <option value="medium">Médio (Medium)</option>
+                    <option value="low">Baixo (Low)</option>
+                  </select>
+                </div>
+
+                <div style={{ flex: '1 1 180px' }}>
+                  <label style={{ display: 'block', fontSize: '10.5px', fontWeight: '700', color: 'var(--text-light)', marginBottom: '6px', textTransform: 'uppercase' }}>Origem do Erro</label>
+                  <select
+                    value={originFilter}
+                    onChange={e => setOriginFilter(e.target.value)}
+                    style={{ width: '100%', padding: '8px 10px', fontSize: '12.5px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-medium)', backgroundColor: 'var(--bg-app)', color: 'var(--text-main)' }}
+                  >
+                    <option value="all">Todas Origens</option>
+                    <option value="billing">Faturamento (Billing)</option>
+                    <option value="ledger">Ledger / Drift</option>
+                    <option value="auth">Segurança / Auth</option>
+                    <option value="sync">Sync Queue / Workers</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Alerts List */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                {loadingAlerts && alerts.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '48px 0' }}>
+                    <div className="app-loading-spinner" style={{ margin: '0 auto 16px' }} />
+                    <span style={{ fontSize: '13px', color: 'var(--text-light)' }}>Consolidando logs e drifts de segurança...</span>
+                  </div>
+                ) : alertsError ? (
+                  <div style={{ padding: '16px', backgroundColor: '#FDE8E8', color: '#9B1C1C', borderRadius: 'var(--radius-md)', fontSize: '13px', border: '1px solid #F8B4B4' }}>
+                    Falha ao carregar painel de observabilidade: {alertsError}
+                  </div>
+                ) : alerts.filter(a => (severityFilter === 'all' || a.severity === severityFilter) && (originFilter === 'all' || a.origin === originFilter)).length === 0 ? (
+                  <div style={{
+                    backgroundColor: 'var(--bg-card)',
+                    padding: '48px',
+                    borderRadius: 'var(--radius-lg)',
+                    border: '1px solid var(--border-light)',
+                    textAlign: 'center',
+                    borderStyle: 'dashed'
+                  }}>
+                    <CheckCircle2 size={36} color="#10b981" style={{ margin: '0 auto 12px' }} />
+                    <h4 style={{ margin: 0, color: 'var(--text-main)' }}>Nenhum Alerta Ativo</h4>
+                    <span style={{ fontSize: '12.5px', color: 'var(--text-light)', marginTop: '4px', display: 'block' }}>
+                      O sistema está saudável sob todos os critérios de auditoria observados.
+                    </span>
+                  </div>
+                ) : (
+                  alerts.filter(a => (severityFilter === 'all' || a.severity === severityFilter) && (originFilter === 'all' || a.origin === originFilter)).map(alert => {
+                    const isCritical = alert.severity === 'critical';
+                    const isMedium = alert.severity === 'medium';
+                    const badgeColor = isCritical ? '#FDE8E8' : isMedium ? '#FEF9C3' : '#E1EFFE';
+                    const badgeText = isCritical ? '#9B1C1C' : isMedium ? '#713F12' : '#1E429F';
+                    const borderColor = isCritical ? 'rgba(239, 68, 68, 0.3)' : isMedium ? 'rgba(245, 158, 11, 0.3)' : 'rgba(59, 130, 246, 0.3)';
+
+                    return (
+                      <div 
+                        key={alert.id}
+                        style={{
+                          backgroundColor: 'var(--bg-card)',
+                          borderRadius: 'var(--radius-lg)',
+                          border: '1px solid ' + borderColor,
+                          padding: '16px',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '12px',
+                          boxShadow: 'var(--shadow-sm)',
+                          transition: 'transform 0.15s',
+                        }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px' }}>
+                          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                            <span 
+                              style={{ 
+                                fontSize: '10px', 
+                                fontWeight: '800', 
+                                padding: '3px 8px', 
+                                borderRadius: '4px', 
+                                backgroundColor: badgeColor, 
+                                color: badgeText 
+                              }}
+                            >
+                              {alert.severity.toUpperCase()}
+                            </span>
+                            <span 
+                              style={{ 
+                                fontSize: '10px', 
+                                fontWeight: '700', 
+                                padding: '3px 8px', 
+                                borderRadius: '4px', 
+                                backgroundColor: 'var(--bg-app)', 
+                                color: 'var(--text-light)',
+                                border: '1px solid var(--border-light)'
+                              }}
+                            >
+                              {alert.origin.toUpperCase()}
+                            </span>
+                            <strong style={{ fontSize: '14px', color: 'var(--text-main)' }}>{alert.message}</strong>
+                          </div>
+                          <span style={{ fontSize: '11.5px', color: 'var(--text-muted)' }}>
+                            {new Date(alert.created_at).toLocaleString('pt-BR')}
+                          </span>
+                        </div>
+
+                        {alert.payload && (
+                          <pre style={{
+                            margin: 0,
+                            padding: '12px 16px',
+                            backgroundColor: 'var(--bg-app)',
+                            borderRadius: 'var(--radius-md)',
+                            border: '1px solid var(--border-light)',
+                            color: 'var(--text-muted)',
+                            fontSize: '11px',
+                            whiteSpace: 'pre-wrap',
+                            fontFamily: 'monospace',
+                            overflowX: 'auto',
+                            maxHeight: '160px',
+                            overflowY: 'auto'
+                          }}>
+                            {JSON.stringify(alert.payload, null, 2)}
+                          </pre>
+                        )}
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+
+              {/* Botões de Ações Manuais do Admin (Aviso de Ação Rápida) */}
+              <div style={{
+                backgroundColor: 'rgba(245, 158, 11, 0.08)',
+                border: '1px dashed rgba(245, 158, 11, 0.4)',
+                borderRadius: 'var(--radius-lg)',
+                padding: '20px',
+                marginTop: '12px'
+              }}>
+                <h4 style={{ margin: '0 0 8px 0', fontSize: '14.5px', fontWeight: '800', color: '#fbbf24' }}>
+                  Ações Rápidas de Diagnóstico & Recuperação
+                </h4>
+                <p style={{ margin: '0 0 16px 0', fontSize: '13px', color: 'var(--text-light)', lineHeight: '1.6' }}>
+                  Este painel é exclusivo para diagnóstico e observabilidade. Caso encontre anomalias de faturamento (ledger drift) ou falhas de workers, acione manualmente as rotas autorizadas abaixo para correção em tempo real.
+                </p>
+                <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                  <button 
+                    onClick={async () => {
+                      if (!confirm('Deseja acionar a reconstrução completa das projeções do ledger?')) return;
+                      try {
+                        const { data: { session } } = await supabase.auth.getSession();
+                        const token = session?.access_token || '';
+                        const headers = { 'Content-Type': 'application/json' };
+                        if (token) headers['Authorization'] = `Bearer ${token}`;
+                        if (currentUser?.id) headers['x-user-id'] = currentUser.id;
+
+                        const response = await fetch('/api/system/ledger-rebuild?force=true', { method: 'POST', headers });
+                        const resJson = await response.json();
+                        alert(resJson.message || (resJson.success ? 'Rebuild concluído.' : 'Falha no Rebuild.'));
+                      } catch (e) {
+                        alert('Erro ao disparar rebuild: ' + e.message);
+                      }
+                    }} 
+                    style={{
+                      padding: '10px 16px',
+                      fontSize: '13px',
+                      fontWeight: '700',
+                      borderRadius: 'var(--radius-sm)',
+                      backgroundColor: 'var(--primary)',
+                      color: 'white',
+                      border: 'none',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Reprocessar Event Ledger (ledger-rebuild)
+                  </button>
+                  <button 
+                    onClick={handleTriggerPushWorker} 
+                    style={{
+                      padding: '10px 16px',
+                      fontSize: '13px',
+                      fontWeight: '700',
+                      borderRadius: 'var(--radius-sm)',
+                      backgroundColor: 'var(--bg-card)',
+                      color: 'var(--text-main)',
+                      border: '1px solid var(--border-medium)',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Disparar Worker de Notificações
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 
           {activeAdminTab === 'growth' && <GrowthOSDashboard />}
 

@@ -642,6 +642,218 @@ await runTest('Lock Contention Metrics — Registro correto de tentativas e temp
 
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// TESTE 15: Critical Alerts & Security Logging
+// ═══════════════════════════════════════════════════════════════════════════════
+await runTest('Critical Alerts — Log de acesso não autorizado e consolidação de alertas', async () => {
+  const { withAdminAuth } = await import('../lib/auth/withAdminAuth.js');
+  const { supabaseAdmin } = await import('../lib/supabase.js');
+
+  const originalFrom = supabaseAdmin.from.bind(supabaseAdmin);
+  const eventsInserted = [];
+
+  supabaseAdmin.from = function(table) {
+    if (table === 'events') {
+      return {
+        insert(payload) {
+          eventsInserted.push(...payload);
+          return Promise.resolve({ error: null });
+        }
+      };
+    }
+    return originalFrom(table);
+  };
+
+  try {
+    // 1. Simular uma requisição não autorizada ao middleware withAdminAuth
+    const dummyHandler = async (req, res) => res.status(200).json({ ok: true });
+    const protectedHandler = withAdminAuth(dummyHandler);
+
+    let resCode = null;
+    let resJson = null;
+
+    const mockReq = {
+      headers: {},
+      url: '/api/admin/some-secret-route',
+      method: 'GET'
+    };
+    const mockRes = {
+      status(code) {
+        resCode = code;
+        return {
+          json(data) {
+            resJson = data;
+          }
+        };
+      }
+    };
+
+    await protectedHandler(mockReq, mockRes);
+
+    assert.strictEqual(resCode, 403, 'Requisição sem JWT para rota protegida deve retornar 403');
+    assert.strictEqual(eventsInserted.length, 1, 'Deve registrar um evento de acesso não autorizado');
+    assert.strictEqual(eventsInserted[0].event_type, 'unauthorized_admin_access', 'Tipo de evento deve ser unauthorized_admin_access');
+    assert.strictEqual(eventsInserted[0].metadata.path, '/api/admin/some-secret-route');
+
+    // 2. Testar consolidação de alertas na API
+    const mockAlertsReq = {
+      headers: {
+        authorization: 'Bearer valid_jwt_mock'
+      }
+    };
+    
+    // Stub supabaseAdmin.auth.getUser para aceitar o mock token como admin
+    const originalGetUser = supabaseAdmin.auth.getUser.bind(supabaseAdmin.auth);
+    supabaseAdmin.auth.getUser = () => {
+      return Promise.resolve({
+        data: {
+          user: {
+            id: 'admin-uuid',
+            email: 'admin@flowday.app',
+            app_metadata: { role: 'admin' },
+            user_metadata: { is_admin: true }
+          }
+        },
+        error: null
+      });
+    };
+
+    // Mock das tabelas para o endpoint de alertas
+    supabaseAdmin.from = function(table) {
+      if (table === 'events') {
+        return {
+          select() {
+            return {
+              eq(col, val) {
+                if (val === 'unauthorized_admin_access') {
+                  return {
+                    gte() {
+                      return {
+                        order() {
+                          return Promise.resolve({
+                            data: [{
+                              id: 'auth_alert_1',
+                              event_type: 'unauthorized_admin_access',
+                              metadata: { email: 'malicious@hacker.com' },
+                              created_at: new Date().toISOString()
+                            }],
+                            error: null
+                          });
+                        }
+                      };
+                    }
+                  };
+                }
+                return { gte() { return { order() { return Promise.resolve({ data: [], error: null }); } }; } };
+              },
+              ilike() {
+                return { gte() { return { order() { return Promise.resolve({ data: [], error: null }); } }; } };
+              }
+            };
+          }
+        };
+      }
+      if (table === 'webhook_events') {
+        return {
+          select() {
+            return {
+              eq() {
+                return {
+                  gte() {
+                    return {
+                      order() {
+                        return Promise.resolve({
+                          data: [{
+                            id: 'webhook_alert_1',
+                            event_id: 'err_webhook_1',
+                            status: 'error',
+                            payload: { message: 'Failed' },
+                            created_at: new Date().toISOString()
+                          }],
+                          error: null
+                        });
+                      }
+                    };
+                  }
+                };
+              }
+            };
+          }
+        };
+      }
+      if (table === 'billing_events' || table === 'subscriptions' || table === 'user_entitlements') {
+        const chainable = {
+          select() { return chainable; },
+          eq() { return chainable; },
+          gte() { return chainable; },
+          gt() { return chainable; },
+          order() { return chainable; },
+          then(resolve) {
+            resolve({ data: [], error: null });
+          }
+        };
+        return chainable;
+      }
+      return originalFrom(table);
+    };
+
+    // Importar dinamicamente a rota para testar o handler handleSystemAlerts
+    const routesModule = await import('../api/[...routes].js');
+    
+    // Obter a função handleSystemAlerts do modulo
+    let handleSystemAlertsFn = null;
+    const routesFileContent = await import('fs');
+    const path = await import('path');
+    
+    // Para chamar o handler de rotas principal, simulamos a rota 'admin/system-alerts'
+    const routerHandler = routesModule.default;
+    
+    let alertsResCode = null;
+    let alertsResData = null;
+    const mockAlertsRes = {
+      status(code) {
+        alertsResCode = code;
+        return {
+          json(data) {
+            alertsResData = data;
+          }
+        };
+      },
+      setHeader() {},
+      headers: {}
+    };
+
+    const mockRouterReq = {
+      headers: {
+        authorization: 'Bearer valid_jwt_mock'
+      },
+      query: {
+        routes: ['admin', 'system-alerts']
+      },
+      method: 'GET'
+    };
+
+    await routerHandler(mockRouterReq, mockAlertsRes);
+
+    assert.strictEqual(alertsResCode, 200, 'Endpoint system-alerts deve retornar status 200');
+    assert.ok(Array.isArray(alertsResData), 'Alertas consolidados devem vir em formato de array');
+    
+    // Deve conter o alerta de auth e o de webhook
+    const authAlert = alertsResData.find(a => a.origin === 'auth');
+    const webhookAlert = alertsResData.find(a => a.origin === 'billing');
+    
+    assert.ok(authAlert, 'Deve conter o alerta de segurança (auth)');
+    assert.ok(webhookAlert, 'Deve conter o alerta de webhook (billing)');
+    assert.strictEqual(authAlert.severity, 'critical', 'Severidade do alerta de auth deve ser critical');
+    assert.strictEqual(webhookAlert.severity, 'critical', 'Severidade do alerta de webhook deve ser critical');
+
+    // Restaurar getUser
+    supabaseAdmin.auth.getUser = originalGetUser;
+  } finally {
+    supabaseAdmin.from = originalFrom;
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // RESULTADO FINAL
 // ═══════════════════════════════════════════════════════════════════════════════
 console.log(`\n${'═'.repeat(60)}`);

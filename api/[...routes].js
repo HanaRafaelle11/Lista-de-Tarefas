@@ -696,6 +696,176 @@ const handleLedgerRebuild = withAdminAuth(async (req, res) => {
     }
 });
 
+const handleSystemAlerts = withAdminAuth(async (req, res) => {
+    try {
+        if (!supabaseAdmin) {
+            return res.status(500).json({ error: 'SupabaseAdmin não configurado.' });
+        }
+
+        const alerts = [];
+
+        // 1. Query Security Access Attempts (unauthorized_admin_access) in last 7 days
+        try {
+            const yesterday = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+            const { data: securityEvents } = await supabaseAdmin
+                .from('events')
+                .select('*')
+                .eq('event_type', 'unauthorized_admin_access')
+                .gte('created_at', yesterday)
+                .order('created_at', { ascending: false });
+
+            if (securityEvents && securityEvents.length > 0) {
+                securityEvents.forEach(evt => {
+                    alerts.push({
+                        id: evt.id || `auth_${evt.created_at}`,
+                        severity: 'critical',
+                        origin: 'auth',
+                        message: `Tentativa de acesso bloqueada em rota de administrador (${evt.metadata?.email}).`,
+                        payload: evt.metadata,
+                        created_at: evt.created_at
+                    });
+                });
+            }
+        } catch (e) {
+            console.error('Alerts - Auth check failed:', e);
+        }
+
+        // 2. Query Webhook / Billing Failures in last 7 days
+        try {
+            const yesterday = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+            const { data: webhookErrors } = await supabaseAdmin
+                .from('webhook_events')
+                .select('*')
+                .eq('status', 'error')
+                .gte('created_at', yesterday)
+                .order('created_at', { ascending: false });
+
+            if (webhookErrors && webhookErrors.length > 0) {
+                webhookErrors.forEach(err => {
+                    alerts.push({
+                        id: err.id || `webhook_${err.created_at}`,
+                        severity: 'critical',
+                        origin: 'billing',
+                        message: `Falha no processamento de webhook da Asaas (ID: ${err.event_id}).`,
+                        payload: { event_type: err.event_type, resource_id: err.resource_id, user_id: err.user_id, payload: err.payload },
+                        created_at: err.created_at
+                    });
+                });
+            }
+        } catch (e) {
+            console.error('Alerts - Webhook check failed:', e);
+        }
+
+        // 3. Query Billing Events Failures in last 7 days
+        try {
+            const yesterday = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+            const { data: billingErrors } = await supabaseAdmin
+                .from('billing_events')
+                .select('*')
+                .eq('status', 'error')
+                .gte('created_at', yesterday)
+                .order('created_at', { ascending: false });
+
+            if (billingErrors && billingErrors.length > 0) {
+                billingErrors.forEach(err => {
+                    alerts.push({
+                        id: err.id || `billing_${err.created_at}`,
+                        severity: 'medium',
+                        origin: 'billing',
+                        message: `Falha em transação de faturamento (${err.event_type}).`,
+                        payload: { user_id: err.user_id, payment_id: err.payment_id, metadata: err.metadata },
+                        created_at: err.created_at
+                    });
+                });
+            }
+        } catch (e) {
+            console.error('Alerts - Billing check failed:', e);
+        }
+
+        // 4. Query Sync Queue / Worker Errors in last 7 days
+        try {
+            const yesterday = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+            const { data: workerErrors } = await supabaseAdmin
+                .from('events')
+                .select('*')
+                .ilike('event_type', '%error%')
+                .gte('created_at', yesterday)
+                .order('created_at', { ascending: false });
+
+            if (workerErrors && workerErrors.length > 0) {
+                workerErrors.forEach(err => {
+                    if (err.event_type !== 'unauthorized_admin_access') {
+                        alerts.push({
+                            id: err.id || `worker_${err.created_at}`,
+                            severity: 'medium',
+                            origin: 'sync',
+                            message: `Erro registrado no worker ou processador (${err.event_type}).`,
+                            payload: err.metadata,
+                            created_at: err.created_at
+                        });
+                    }
+                });
+            }
+        } catch (e) {
+            console.error('Alerts - Worker check failed:', e);
+        }
+
+        // 5. Query Ledger Drift in Real Time
+        try {
+            const nowIso = new Date().toISOString();
+            const { data: activeSubs } = await supabaseAdmin
+                .from('subscriptions')
+                .select('user_id, current_period_end')
+                .eq('status', 'active')
+                .gt('current_period_end', nowIso);
+
+            const { data: activeEnts } = await supabaseAdmin
+                .from('user_entitlements')
+                .select('user_id, valid_until')
+                .eq('feature', 'pro_features')
+                .eq('status', 'active')
+                .gt('valid_until', nowIso);
+
+            const subUsers = new Set((activeSubs || []).map(s => s.user_id));
+            const entUsers = new Set((activeEnts || []).map(e => e.user_id));
+
+            const subWithoutEnt = (activeSubs || []).filter(s => !entUsers.has(s.user_id));
+            const entWithoutSub = (activeEnts || []).filter(e => !subUsers.has(e.user_id));
+
+            if (subWithoutEnt.length > 0) {
+                alerts.push({
+                    id: `drift_sub_without_ent_${nowIso}`,
+                    severity: 'critical',
+                    origin: 'ledger',
+                    message: `${subWithoutEnt.length} usuários possuem assinatura ativa no gateway mas sem entitlements Pro.`,
+                    payload: { users: subWithoutEnt.map(s => ({ userId: s.user_id, expires: s.current_period_end })) },
+                    created_at: nowIso
+                });
+            }
+
+            if (entWithoutSub.length > 0) {
+                alerts.push({
+                    id: `drift_ent_without_sub_${nowIso}`,
+                    severity: 'medium',
+                    origin: 'ledger',
+                    message: `${entWithoutSub.length} usuários com acesso Pro ativo no Supabase, mas sem assinatura ativa no gateway.`,
+                    payload: { users: entWithoutSub.map(e => ({ userId: e.user_id, expires: e.valid_until })) },
+                    created_at: nowIso
+                });
+            }
+        } catch (e) {
+            console.error('Alerts - Drift check failed:', e);
+        }
+
+        // Ordenar cronologicamente decrescente
+        alerts.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+        return res.status(200).json(alerts);
+    } catch (error) {
+        return res.status(500).json({ error: 'Erro ao consolidar alertas.', message: error.message });
+    }
+});
+
 // =========================================================
 // ROUTER PRINCIPAL
 // =========================================================
@@ -783,6 +953,8 @@ export default async function handler(req, res) {
             await handleTestPush(req, res);
         } else if (route === 'admin/payment-events' || route === 'admin/billing/timeline' || route.startsWith('admin/billing/user')) {
             await handleAdminBillingTimeline(req, res);
+        } else if (route === 'admin/system-alerts') {
+            await handleSystemAlerts(req, res);
         } else if (route === 'system/ledger-health') {
             await handleLedgerHealth(req, res);
         } else if (route === 'system/idempotency-metrics') {
