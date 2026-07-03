@@ -494,9 +494,16 @@ export function AppProvider({ children }) {
                        (plan === 'pro' || plan === 'premium') &&
                        (!expiresAt || new Date(expiresAt) > new Date());
 
-        setIsPro(active);
-        setSubscriptionStatus(active ? 'active' : status);
-        setSubscriptionPlan(plan);
+        // Previne sobrescrever para falso se o checkServerAccess (SSOT) determinou true
+        setIsPro(prev => prev === true ? true : active);
+        setSubscriptionStatus(prev => {
+          if (prev === 'ACTIVE') return 'ACTIVE';
+          return (active ? 'active' : status).toUpperCase();
+        });
+        setSubscriptionPlan(prev => {
+          if (prev === 'premium' || prev === 'pro') return prev;
+          return plan;
+        });
       }
     } catch (e) {
       console.warn('[AppContext] Erro ao carregar subscriptions:', e.message);

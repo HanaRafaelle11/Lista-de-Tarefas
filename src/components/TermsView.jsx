@@ -15,7 +15,7 @@ export default function TermsView({ onGoBack, onNavigateToPrivacy }) {
             <img 
               src={logo.src} 
               alt={logo.alt} 
-              style={{ height: '42px', width: 'auto', objectFit: 'contain' }} 
+              style={{ height: '52px', width: 'auto', objectFit: 'contain' }} 
             />
           </div>
           

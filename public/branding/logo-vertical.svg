@@ -12,5 +12,5 @@
     <circle cx="950" cy="200" r="70" fill="#00E5C3" />
   </g>
   <text x="50%" y="740" text-anchor="middle" font-family="'Plus Jakarta Sans', sans-serif" font-size="120px" font-weight="800" fill="#FBFAFC" letter-spacing="-3px">MyFlowDay</text>
-  <text x="50%" y="840" text-anchor="middle" font-family="'Plus Jakarta Sans', sans-serif" font-size="30px" font-weight="700" fill="#A1A7B3" letter-spacing="6px">FOCO • CONSISTÊNCIA • EVOLUÇÃO</text>
+  <text x="50%" y="855" text-anchor="middle" font-family="'Plus Jakarta Sans', sans-serif" font-size="42px" font-weight="700" fill="#A1A7B3" letter-spacing="6px">FOCO • CONSISTÊNCIA • EVOLUÇÃO</text>
 </svg>

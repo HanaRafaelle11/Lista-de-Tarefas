@@ -255,13 +255,13 @@ export default function FocusView() {
   const activeTask = pendingTasks.find(t => t.id === selectedTaskId);
 
   const ambientSounds = [
-    { value: 'none',            label: 'Nenhum' },
-    { value: 'rain.wav',        label: 'Chuva' },
-    { value: 'forest.wav',      label: 'Floresta' },
-    { value: 'cafe.wav',        label: 'Cafeteria' },
-    { value: 'ocean.wav',       label: 'Ondas do Mar' },
-    { value: 'fireplace.wav',   label: 'Lareira' },
-    { value: 'white-noise.wav', label: 'Ruído Branco' },
+    { value: 'none',            label: 'Nenhum', emoji: '🔇' },
+    { value: 'rain.wav',        label: 'Chuva', emoji: '🌧️' },
+    { value: 'forest.wav',      label: 'Floresta', emoji: '🌲' },
+    { value: 'cafe.wav',        label: 'Cafeteria', emoji: '☕' },
+    { value: 'ocean.wav',       label: 'Ondas do Mar', emoji: '🌊' },
+    { value: 'fireplace.wav',   label: 'Lareira', emoji: '🔥' },
+    { value: 'white-noise.wav', label: 'Ruído Branco', emoji: '💤' },
   ];
 
 
@@ -420,7 +420,7 @@ export default function FocusView() {
                   style={{ width: '100%', padding: '8px', border: '1px solid var(--border-medium)', borderRadius: '6px', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)', fontSize: '13px' }}
                 >
                   {ambientSounds.map(sound => (
-                    <option key={sound.value} value={sound.value}>{sound.label}</option>
+                    <option key={sound.value} value={sound.value}>{sound.emoji} {sound.label}</option>
                   ))}
                 </select>
               </div>

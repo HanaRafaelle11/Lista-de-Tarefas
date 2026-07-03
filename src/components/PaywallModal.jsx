@@ -40,7 +40,7 @@ export default function PaywallModal() {
   if (!isPaywallOpen) return null;
 
   const handleStartCheckout = async () => {
-    if (isPro || userProfile?.plano === 'premium') {
+    if (isPro) {
       setCheckoutStatus('success');
       return;
     }
@@ -135,32 +135,32 @@ export default function PaywallModal() {
           <button
             type="button"
             onClick={handleStartCheckout}
-            disabled={isPro || userProfile?.plano === 'premium'}
+            disabled={isPro}
             style={{ 
               width: '100%', 
               padding: '16px', 
               borderRadius: '8px', 
               border: 'none', 
-              backgroundColor: (isPro || userProfile?.plano === 'premium')
+              backgroundColor: isPro
                 ? 'var(--border-medium)'
                 : (isReactivation ? '#10b981' : '#3b82f6'), 
-              color: (isPro || userProfile?.plano === 'premium') ? 'var(--text-light)' : 'white', 
+              color: isPro ? 'var(--text-light)' : 'white', 
               fontWeight: '700', 
               fontSize: '15px', 
-              cursor: (isPro || userProfile?.plano === 'premium') ? 'not-allowed' : 'pointer', 
+              cursor: isPro ? 'not-allowed' : 'pointer', 
               display: 'flex', 
               alignItems: 'center', 
               justifyContent: 'center', 
               gap: '10px', 
               transition: 'all 0.2s', 
-              boxShadow: (isPro || userProfile?.plano === 'premium')
+              boxShadow: isPro
                 ? 'none'
                 : (isReactivation 
                   ? '0 4px 20px rgba(16, 185, 129, 0.25)' 
                   : '0 4px 20px rgba(0, 115, 230, 0.25)')
             }}
           >
-            {(isPro || userProfile?.plano === 'premium') 
+            {isPro 
               ? 'Você já possui uma assinatura Premium ativa' 
               : (isReactivation ? 'Retomar MyFlowDay Pro com Desconto' : 'Assinar MyFlowDay Pro')}
             <ExternalLink size={16} />

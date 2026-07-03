@@ -694,7 +694,7 @@ export default function Auth({ onLoginSuccess, initialMode = 'login', onBackToLa
               src={logo.src} 
               alt={logo.alt} 
               onClick={onBackToLanding}
-              style={{ height: '60px', width: 'auto', objectFit: 'contain', marginBottom: '8px', background: 'transparent', border: 'none', boxShadow: 'none', padding: 0, cursor: 'pointer' }} 
+              style={{ height: '80px', width: 'auto', objectFit: 'contain', marginBottom: '8px', background: 'transparent', border: 'none', boxShadow: 'none', padding: 0, cursor: 'pointer' }} 
             />
             <p style={{ fontSize: '15px', color: 'var(--text-muted)', margin: '0 0 24px 0', letterSpacing: '0.5px', fontWeight: '500', textAlign: 'center' }}>
               {mode === 'updatePassword' ? 'Crie sua nova senha de acesso.' :

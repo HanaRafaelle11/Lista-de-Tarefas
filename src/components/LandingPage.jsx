@@ -149,7 +149,7 @@ export default function LandingPage({ onEnterApp }) {
             <img
               src={logo.src}
               alt={logo.alt}
-              style={{ height: '44px', width: 'auto', objectFit: 'contain' }}
+              style={{ height: '56px', width: 'auto', objectFit: 'contain' }}
               onError={(e) => { e.target.style.display = 'none'; }}
             />
           </div>
@@ -1181,7 +1181,7 @@ export default function LandingPage({ onEnterApp }) {
       >
         <Container>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '24px' }}>
-            <img src={logo.src} alt={logo.alt} style={{ height: '44px', width: 'auto', objectFit: 'contain' }} onError={e => e.target.style.display = 'none'} />
+            <img src={logo.src} alt={logo.alt} style={{ height: '56px', width: 'auto', objectFit: 'contain' }} onError={e => e.target.style.display = 'none'} />
           </div>
           
           <p style={{ fontSize: '13.5px', color: '#64748B', marginBottom: '32px', maxWidth: '500px', margin: '0 auto 32px', lineHeight: '1.6' }}>
