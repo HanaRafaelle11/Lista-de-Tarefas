@@ -59,6 +59,7 @@ export default function AdminDashboard() {
   const [alertsError, setAlertsError] = useState(null);
   const [severityFilter, setSeverityFilter] = useState('all');
   const [originFilter, setOriginFilter] = useState('all');
+  const [alertStatusFilter, setAlertStatusFilter] = useState('all'); // 'all' | 'open' | 'stale' | 'resolved'
 
   // Fetch all latest events to build latestEventsMap (user_id -> latest event metadata)
   const fetchAllLatestEvents = async () => {
@@ -799,7 +800,7 @@ export default function AdminDashboard() {
                   </select>
                 </div>
 
-                <div style={{ flex: '1 1 180px' }}>
+                <div style={{ flex: '1 1 150px' }}>
                   <label style={{ display: 'block', fontSize: '10.5px', fontWeight: '700', color: 'var(--text-light)', marginBottom: '6px', textTransform: 'uppercase' }}>Origem do Erro</label>
                   <select
                     value={originFilter}
@@ -811,6 +812,20 @@ export default function AdminDashboard() {
                     <option value="ledger">Ledger / Drift</option>
                     <option value="auth">Segurança / Auth</option>
                     <option value="sync">Sync Queue / Workers</option>
+                  </select>
+                </div>
+
+                <div style={{ flex: '1 1 150px' }}>
+                  <label style={{ display: 'block', fontSize: '10.5px', fontWeight: '700', color: 'var(--text-light)', marginBottom: '6px', textTransform: 'uppercase' }}>Status do Incidente</label>
+                  <select
+                    value={alertStatusFilter}
+                    onChange={e => setAlertStatusFilter(e.target.value)}
+                    style={{ width: '100%', padding: '8px 10px', fontSize: '12.5px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-medium)', backgroundColor: 'var(--bg-app)', color: 'var(--text-main)' }}
+                  >
+                    <option value="all">Todos Status</option>
+                    <option value="open">Abertos (Open)</option>
+                    <option value="stale">Inativos (Stale)</option>
+                    <option value="resolved">Resolvidos (Resolved)</option>
                   </select>
                 </div>
               </div>
@@ -826,7 +841,7 @@ export default function AdminDashboard() {
                   <div style={{ padding: '16px', backgroundColor: '#FDE8E8', color: '#9B1C1C', borderRadius: 'var(--radius-md)', fontSize: '13px', border: '1px solid #F8B4B4' }}>
                     Falha ao carregar painel de observabilidade: {alertsError}
                   </div>
-                ) : alerts.filter(a => (severityFilter === 'all' || a.severity === severityFilter) && (originFilter === 'all' || a.origin === originFilter)).length === 0 ? (
+                ) : alerts.filter(a => (severityFilter === 'all' || a.severity === severityFilter) && (originFilter === 'all' || a.origin === originFilter) && (alertStatusFilter === 'all' || a.status === alertStatusFilter)).length === 0 ? (
                   <div style={{
                     backgroundColor: 'var(--bg-card)',
                     padding: '48px',
@@ -842,12 +857,17 @@ export default function AdminDashboard() {
                     </span>
                   </div>
                 ) : (
-                  alerts.filter(a => (severityFilter === 'all' || a.severity === severityFilter) && (originFilter === 'all' || a.origin === originFilter)).map(alert => {
+                  alerts.filter(a => (severityFilter === 'all' || a.severity === severityFilter) && (originFilter === 'all' || a.origin === originFilter) && (alertStatusFilter === 'all' || a.status === alertStatusFilter)).map(alert => {
                     const isCritical = alert.severity === 'critical';
                     const isMedium = alert.severity === 'medium';
                     const badgeColor = isCritical ? '#FDE8E8' : isMedium ? '#FEF9C3' : '#E1EFFE';
                     const badgeText = isCritical ? '#9B1C1C' : isMedium ? '#713F12' : '#1E429F';
                     const borderColor = isCritical ? 'rgba(239, 68, 68, 0.3)' : isMedium ? 'rgba(245, 158, 11, 0.3)' : 'rgba(59, 130, 246, 0.3)';
+
+                    const isStale = alert.status === 'stale';
+                    const isResolved = alert.status === 'resolved';
+                    const statusColor = isResolved ? '#DEF7EC' : isStale ? '#FEF9C3' : '#FDE8E8';
+                    const statusText = isResolved ? '#03543F' : isStale ? '#713F12' : '#9B1C1C';
 
                     return (
                       <div 
@@ -877,6 +897,19 @@ export default function AdminDashboard() {
                               }}
                             >
                               {alert.severity.toUpperCase()}
+                            </span>
+                            <span 
+                              style={{ 
+                                fontSize: '10px', 
+                                fontWeight: '800', 
+                                padding: '3px 8px', 
+                                borderRadius: '4px', 
+                                backgroundColor: statusColor, 
+                                color: statusText,
+                                border: '1px solid ' + statusText + '1A'
+                              }}
+                            >
+                              {alert.status?.toUpperCase() || 'OPEN'}
                             </span>
                             <span 
                               style={{ 

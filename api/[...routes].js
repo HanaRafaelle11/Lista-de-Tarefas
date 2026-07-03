@@ -804,7 +804,7 @@ const handleSystemAlerts = withAdminAuth(async (req, res) => {
                             severity: 'medium',
                             origin: 'sync',
                             message: `Erro registrado no worker ou processador (${err.event_type}).`,
-                            payload: err.metadata,
+                            payload: { ...err.metadata, event_type: err.event_type },
                             created_at: err.created_at
                         });
                     }
@@ -814,7 +814,7 @@ const handleSystemAlerts = withAdminAuth(async (req, res) => {
             console.error('Alerts - Worker check failed:', e);
         }
 
-        // 5. Query/Check Ledger Drift in Real Time (with in-memory cache)
+        // 5. Query/Check Ledger Drift in Real Time (with 60s cache limit)
         const nowMs = Date.now();
         let driftAlerts = [];
 
@@ -825,13 +825,13 @@ const handleSystemAlerts = withAdminAuth(async (req, res) => {
                 const nowIso = new Date().toISOString();
                 const { data: activeSubs } = await supabaseAdmin
                     .from('subscriptions')
-                    .select('user_id, current_period_end')
+                    .select('user_id, current_period_end, created_at')
                     .eq('status', 'active')
                     .gt('current_period_end', nowIso);
 
                 const { data: activeEnts } = await supabaseAdmin
                     .from('user_entitlements')
-                    .select('user_id, valid_until')
+                    .select('user_id, valid_until, created_at')
                     .eq('feature', 'pro_features')
                     .eq('status', 'active')
                     .gt('valid_until', nowIso);
@@ -842,25 +842,30 @@ const handleSystemAlerts = withAdminAuth(async (req, res) => {
                 const subWithoutEnt = (activeSubs || []).filter(s => !entUsers.has(s.user_id));
                 const entWithoutSub = (activeEnts || []).filter(e => !subUsers.has(e.user_id));
 
+                // Generating User-Level Ledger drift incidents (Deduplication based on drift type + user_id)
                 if (subWithoutEnt.length > 0) {
-                    driftAlerts.push({
-                        id: `drift_sub_without_ent_${nowIso}`,
-                        severity: 'critical',
-                        origin: 'ledger',
-                        message: `${subWithoutEnt.length} usuários possuem assinatura ativa no gateway mas sem entitlements Pro.`,
-                        payload: { users: subWithoutEnt.map(s => ({ userId: s.user_id, expires: s.current_period_end })) },
-                        created_at: nowIso
+                    subWithoutEnt.forEach(s => {
+                        driftAlerts.push({
+                            id: `drift_sub_without_ent_${s.user_id}`,
+                            severity: 'critical',
+                            origin: 'ledger',
+                            message: `Drift de Faturamento: Usuário com assinatura ativa no gateway mas sem entitlement Pro (ID: ${s.user_id}).`,
+                            payload: { userId: s.user_id, expires: s.current_period_end },
+                            created_at: s.created_at || nowIso
+                        });
                     });
                 }
 
                 if (entWithoutSub.length > 0) {
-                    driftAlerts.push({
-                        id: `drift_ent_without_sub_${nowIso}`,
-                        severity: 'medium',
-                        origin: 'ledger',
-                        message: `${entWithoutSub.length} usuários com acesso Pro ativo no Supabase, mas sem assinatura ativa no gateway.`,
-                        payload: { users: entWithoutSub.map(e => ({ userId: e.user_id, expires: e.valid_until })) },
-                        created_at: nowIso
+                    entWithoutSub.forEach(e => {
+                        driftAlerts.push({
+                            id: `drift_ent_without_sub_${e.user_id}`,
+                            severity: 'medium',
+                            origin: 'ledger',
+                            message: `Drift de Faturamento: Usuário com acesso Pro ativo no Supabase, mas sem assinatura ativa no gateway (ID: ${e.user_id}).`,
+                            payload: { userId: e.user_id, expires: e.valid_until },
+                            created_at: e.created_at || nowIso
+                        });
                     });
                 }
 
@@ -889,15 +894,17 @@ const handleSystemAlerts = withAdminAuth(async (req, res) => {
             if (aggregated.has(key)) {
                 const existing = aggregated.get(key);
                 existing.count = (existing.count || 1) + 1;
-                // Get earliest/oldest first_seen
+                
+                // Get earliest first_seen
                 if (new Date(alert.created_at) < new Date(existing.first_seen)) {
                     existing.first_seen = alert.created_at;
                 }
                 // Get newest last_seen
-                if (new Date(alert.created_at) > new Date(existing.created_at)) {
-                    existing.created_at = alert.created_at;
+                if (new Date(alert.created_at) > new Date(existing.last_seen)) {
                     existing.last_seen = alert.created_at;
+                    existing.created_at = alert.created_at;
                 }
+                
                 if (Array.isArray(existing.payloads)) {
                     existing.payloads.push(alert.payload);
                 } else {
@@ -908,22 +915,54 @@ const handleSystemAlerts = withAdminAuth(async (req, res) => {
                     ...alert,
                     count: 1,
                     first_seen: alert.created_at,
-                    last_seen: alert.created_at,
-                    status: 'open'
+                    last_seen: alert.created_at
                 });
             }
         }
 
-        // Combine logs with runtime computed drift alerts (drift alerts are not aggregated)
-        const finalAlerts = [
+        // Merge aggregated logs with computed drift alerts
+        const allIncidents = [
             ...Array.from(aggregated.values()),
-            ...driftAlerts.map(d => ({ ...d, count: 1, first_seen: d.created_at, last_seen: d.created_at, status: 'open' }))
+            ...driftAlerts.map(d => ({
+                ...d,
+                count: 1,
+                first_seen: d.created_at,
+                last_seen: d.created_at
+            }))
         ];
 
-        // Ordenar cronologicamente decrescente
-        finalAlerts.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+        // Apply Dynamic Severity Escalation & Dynamic Decay (Status) Rules
+        allIncidents.forEach(incident => {
+            // 1. Dynamic Escalation Engine
+            if (incident.severity === 'medium' && incident.count >= 5) {
+                incident.severity = 'critical';
+                incident.message = `[ESCALADO] ${incident.message}`;
+            } else if (incident.count >= 15 && incident.severity !== 'critical') {
+                incident.severity = 'critical';
+                incident.message = `[ESCALADO ALTA FREQUÊNCIA] ${incident.message}`;
+            }
 
-        return res.status(200).json(finalAlerts);
+            // 2. Alert Decay System (Status: open | stale | resolved)
+            const lastSeenMs = new Date(incident.last_seen).getTime();
+            const ageMs = nowMs - lastSeenMs;
+
+            if (ageMs <= 4 * 60 * 60 * 1000) {
+                incident.status = 'open'; // Less than 4 hours
+            } else if (ageMs <= 24 * 60 * 60 * 1000) {
+                incident.status = 'stale'; // Between 4 and 24 hours
+            } else {
+                incident.status = 'resolved'; // Over 24 hours
+            }
+        });
+
+        // Ordenar: 1. Severity (critical primeiro), 2. last_seen desc
+        allIncidents.sort((a, b) => {
+            if (a.severity === 'critical' && b.severity !== 'critical') return -1;
+            if (a.severity !== 'critical' && b.severity === 'critical') return 1;
+            return new Date(b.last_seen) - new Date(a.last_seen);
+        });
+
+        return res.status(200).json(allIncidents);
     } catch (error) {
         return res.status(500).json({ error: 'Erro ao consolidar alertas.', message: error.message });
     }

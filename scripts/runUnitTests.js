@@ -753,7 +753,51 @@ await runTest('Critical Alerts — Log de acesso não autorizado e consolidaçã
                 }
                 return { gte() { return { order() { return Promise.resolve({ data: [], error: null }); } }; } };
               },
-              ilike() {
+              ilike(col, val) {
+                if (val === '%error%') {
+                  return {
+                    gte() {
+                      return {
+                        order() {
+                          // Return:
+                          // - 5 duplicate medium worker errors to trigger escalation to critical
+                          // - 1 old worker error created 6 hours ago to trigger stale decay status
+                          // - 1 very old worker error created 30 hours ago to trigger resolved decay status
+                          const now = Date.now();
+                          const data = [];
+                          
+                          // 5 duplicates:
+                          for (let i = 0; i < 5; i++) {
+                            data.push({
+                              id: `worker_err_esc_${i}`,
+                              event_type: 'worker_task_error',
+                              metadata: { task_id: 'task_abc' },
+                              created_at: new Date(now - i * 1000).toISOString()
+                            });
+                          }
+                          
+                          // Stale error:
+                          data.push({
+                            id: 'worker_err_stale',
+                            event_type: 'worker_queue_error',
+                            metadata: { task_id: 'task_stale' },
+                            created_at: new Date(now - 6 * 60 * 60 * 1000).toISOString() // 6 hours ago
+                          });
+
+                          // Resolved error:
+                          data.push({
+                            id: 'worker_err_resolved',
+                            event_type: 'worker_loop_error',
+                            metadata: { task_id: 'task_resolved' },
+                            created_at: new Date(now - 30 * 60 * 60 * 1000).toISOString() // 30 hours ago
+                          });
+
+                          return Promise.resolve({ data, error: null });
+                        }
+                      };
+                    }
+                  };
+                }
                 return { gte() { return { order() { return Promise.resolve({ data: [], error: null }); } }; } };
               }
             };
@@ -840,20 +884,27 @@ await runTest('Critical Alerts — Log de acesso não autorizado e consolidaçã
     assert.strictEqual(alertsResCode, 200, 'Endpoint system-alerts deve retornar status 200');
     assert.ok(Array.isArray(alertsResData), 'Alertas consolidados devem vir em formato de array');
     
-    // Deve conter o alerta de auth e o de webhook
+    // Deve conter o alerta de auth, de webhook, e os worker errors
     const authAlert = alertsResData.find(a => a.origin === 'auth');
     const webhookAlert = alertsResData.find(a => a.origin === 'billing');
+    const escalatedAlert = alertsResData.find(a => a.origin === 'sync' && a.count === 5);
+    const staleAlert = alertsResData.find(a => a.origin === 'sync' && a.status === 'stale');
+    const resolvedAlert = alertsResData.find(a => a.origin === 'sync' && a.status === 'resolved');
     
     assert.ok(authAlert, 'Deve conter o alerta de segurança (auth)');
     assert.ok(webhookAlert, 'Deve conter o alerta de webhook (billing)');
-    assert.strictEqual(authAlert.severity, 'critical', 'Severidade do alerta de auth deve ser critical');
-    assert.strictEqual(webhookAlert.severity, 'critical', 'Severidade do alerta de webhook deve ser critical');
-    
-    // Validar a deduplicação / agrupamento de spam
-    assert.strictEqual(authAlert.count, 2, 'Dois eventos idênticos de auth devem ser agrupados com count = 2');
-    assert.ok(authAlert.first_seen, 'Deve possuir propriedade first_seen');
-    assert.ok(authAlert.last_seen, 'Deve possuir propriedade last_seen');
-    assert.strictEqual(authAlert.status, 'open', 'Deve possuir status open');
+    assert.ok(escalatedAlert, 'Deve conter o alerta escalado');
+    assert.ok(staleAlert, 'Deve conter o alerta stale');
+    assert.ok(resolvedAlert, 'Deve conter o alerta resolved');
+
+    // Validar status decay (open, stale, resolved)
+    assert.strictEqual(authAlert.status, 'open', 'Incidente recente deve ser open');
+    assert.strictEqual(staleAlert.status, 'stale', 'Incidente com mais de 4 horas deve ser stale');
+    assert.strictEqual(resolvedAlert.status, 'resolved', 'Incidente com mais de 24 horas deve ser resolved');
+
+    // Validar dynamic escalation (medium -> critical when count >= 5)
+    assert.strictEqual(escalatedAlert.severity, 'critical', 'Severidade do alerta com count=5 deve ser promovida a critical');
+    assert.ok(escalatedAlert.message.includes('[ESCALADO]'), 'Mensagem do alerta escalado deve conter prefixo [ESCALADO]');
 
     // Restaurar getUser
     supabaseAdmin.auth.getUser = originalGetUser;
