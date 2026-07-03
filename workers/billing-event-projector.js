@@ -9,6 +9,7 @@ import {
   PROVIDER_ASAAS
 } from '../lib/billing/config.js';
 import { AccessDecisionEngine } from '../services/access-decision-engine.js';
+import { OpsMetrics } from '../services/ops-metrics.js';
 
 /**
  * Billing Event Projector (Ouvinte/Projetor Reativo de Estado)
@@ -30,6 +31,11 @@ export const BillingEventProjector = {
     const { event_type: type, user_id: userId, payment_id: paymentId, subscription_id: subscriptionId, value, metadata } = event;
     const nowIso = new Date().toISOString();
     const meta = metadata || {};
+
+    if (event.created_at) {
+      const delayMs = Date.now() - new Date(event.created_at).getTime();
+      OpsMetrics.recordProjectionDelay(delayMs);
+    }
 
     logger.info('billing.event.projector.projecting', { type, userId, eventId: event.id });
 
@@ -249,8 +255,11 @@ export const BillingEventProjector = {
   /**
    * Executa a reconstrução total determinística do estado lendo e reprocessando
    * cronologicamente todo o ledger de eventos billing_events.
+   * 
+   * @param {Object} [options={}] - Opções de execução
+   * @param {boolean} [options.force=false] - Forçar a execução se passar do limite seguro
    */
-  async replayAllEvents() {
+  async replayAllEvents(options = {}) {
     logger.info('billing.event.projector.replayAllEvents.start');
     try {
       if (!supabaseAdmin) {
@@ -261,6 +270,25 @@ export const BillingEventProjector = {
       // 1. O rebuild reconstrói as projeções em formato de Upsert/Update de estado em tempo real
       logger.info('billing.event.projector.replayAllEvents.preparing_in_place_projection');
 
+      // 1.5 Safety Guard: Verificar volume de eventos
+      const { count: eventsCount, error: countErr } = await supabaseAdmin
+        .from('billing_events')
+        .select('*', { count: 'exact', head: true });
+
+      const threshold = 100000;
+      if (!countErr && eventsCount > threshold && !options.force) {
+        logger.warn('billing.event.projector.replayAllEvents.safety_guard_triggered', { count: eventsCount });
+        return {
+          warning: true,
+          count: eventsCount,
+          message: `Volume de eventos (${eventsCount}) excede o limite seguro de ${threshold}. Defina force=true para prosseguir.`
+        };
+      }
+
+      const startTime = Date.now();
+      logger.info('replay started', { timestamp: new Date().toISOString() });
+      OpsMetrics.replayStarted();
+
       // 2. Recuperar todos os eventos do Ledger ordenados por data
       const { data: events, error } = await supabaseAdmin
         .from('billing_events')
@@ -269,6 +297,7 @@ export const BillingEventProjector = {
 
       if (error) {
         logger.error('billing.event.projector.replayAllEvents.fetch_failed', { error: error.message });
+        OpsMetrics.replayCompleted(0, false);
         return false;
       }
 
@@ -279,11 +308,22 @@ export const BillingEventProjector = {
         await this.project(event);
       }
 
+      const duration = Date.now() - startTime;
+      logger.info('replay completed', {
+        durationMs: duration,
+        projectionsCount: events.length,
+        timestamp: new Date().toISOString()
+      });
+      OpsMetrics.replayCompleted(events.length, true);
+
       logger.info('billing.event.projector.replayAllEvents.success');
       return true;
     } catch (err) {
       logger.error('billing.event.projector.replayAllEvents.exception', { error: err.message });
+      OpsMetrics.replayCompleted(0, false);
       return false;
     }
   }
 };
+
+

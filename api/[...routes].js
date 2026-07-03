@@ -14,6 +14,7 @@ import { runBillingSanityCheck } from '../jobs/billing-sanity-check.js';
 import { withAdminAuth } from '../lib/auth/withAdminAuth.js';
 import { logPaymentEvent } from '../lib/payment-logger.js';
 import { billingController } from '../server/modules/billing/billing.controller.js';
+import { OpsMetrics } from '../services/ops-metrics.js';
 
 
 // =========================================================
@@ -518,65 +519,174 @@ async function handleLedgerHealth(req, res) {
             return res.status(500).json({ error: 'SupabaseAdmin não configurado.' });
         }
 
-        // 1. Total de eventos no ledger
-        const { count: eventsCount } = await supabaseAdmin
-            .from('billing_events')
-            .select('*', { count: 'exact', head: true });
+        let totalEvents = 0;
+        let eventsLast24h = 0;
+        let driftData = null;
+        let dbStatus = 'OK';
 
-        // 2. Último evento processado
-        const { data: lastEvent } = await supabaseAdmin
-            .from('billing_events')
-            .select('created_at, event_type, user_id')
-            .order('created_at', { ascending: false })
-            .limit(1)
-            .maybeSingle();
+        // 1. Total de eventos no ledger (tolerante a falha)
+        try {
+            const { count, error } = await supabaseAdmin
+                .from('billing_events')
+                .select('*', { count: 'exact', head: true });
+            if (!error) totalEvents = count || 0;
+        } catch (e) {
+            dbStatus = 'DEGRADED';
+        }
 
-        // 3. Auditoria de drift/desalinhamento entre subscriptions e user_entitlements
-        const nowIso = new Date().toISOString();
-        const { data: activeSubs } = await supabaseAdmin
-            .from('subscriptions')
-            .select('user_id, current_period_end')
-            .eq('status', 'active')
-            .gt('current_period_end', nowIso);
+        // 2. Eventos nas últimas 24h (tolerante a falha)
+        try {
+            const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+            const { count, error } = await supabaseAdmin
+                .from('billing_events')
+                .select('*', { count: 'exact', head: true })
+                .gte('created_at', yesterday);
+            if (!error) eventsLast24h = count || 0;
+        } catch (e) {
+            dbStatus = 'DEGRADED';
+        }
 
-        const { data: activeEnts } = await supabaseAdmin
-            .from('user_entitlements')
-            .select('user_id, valid_until')
-            .eq('feature', 'pro_features')
-            .eq('status', 'active')
-            .gt('valid_until', nowIso);
+        // 3. Auditoria de drift/desalinhamento entre subscriptions e user_entitlements (tolerante a falha)
+        try {
+            const nowIso = new Date().toISOString();
+            const { data: activeSubs } = await supabaseAdmin
+                .from('subscriptions')
+                .select('user_id, current_period_end')
+                .eq('status', 'active')
+                .gt('current_period_end', nowIso);
 
-        const subUsers = new Set((activeSubs || []).map(s => s.user_id));
-        const entUsers = new Set((activeEnts || []).map(e => e.user_id));
+            const { data: activeEnts } = await supabaseAdmin
+                .from('user_entitlements')
+                .select('user_id, valid_until')
+                .eq('feature', 'pro_features')
+                .eq('status', 'active')
+                .gt('valid_until', nowIso);
 
-        const subWithoutEnt = (activeSubs || []).filter(s => !entUsers.has(s.user_id));
-        const entWithoutSub = (activeEnts || []).filter(e => !subUsers.has(e.user_id));
+            const subUsers = new Set((activeSubs || []).map(s => s.user_id));
+            const entUsers = new Set((activeEnts || []).map(e => e.user_id));
 
-        const hasDrift = subWithoutEnt.length > 0 || entWithoutSub.length > 0;
+            const subWithoutEnt = (activeSubs || []).filter(s => !entUsers.has(s.user_id));
+            const entWithoutSub = (activeEnts || []).filter(e => !subUsers.has(e.user_id));
 
-        return res.status(200).json({
-            status: hasDrift ? 'warning' : 'healthy',
-            totalEvents: eventsCount || 0,
-            lastEvent: lastEvent || null,
-            drift: {
+            const hasDrift = subWithoutEnt.length > 0 || entWithoutSub.length > 0;
+            if (hasDrift && dbStatus === 'OK') {
+                dbStatus = 'DEGRADED';
+            }
+
+            driftData = {
                 activeSubscriptionsCount: subUsers.size,
                 activeEntitlementsCount: entUsers.size,
                 mismatches: {
                     subscriptionsWithoutEntitlements: subWithoutEnt.map(s => ({ userId: s.user_id, expires: s.current_period_end })),
                     entitlementsWithoutSubscriptions: entWithoutSub.map(e => ({ userId: e.user_id, expires: e.valid_until }))
                 }
-            }
+            };
+        } catch (e) {
+            dbStatus = 'DEGRADED';
+        }
+
+        // 4. Métricas do OpsMetrics
+        const duplicateEvents = OpsMetrics.getWebhookMetrics().duplicates_detected;
+        const avgDelayMs = OpsMetrics.getAvgProjectionDelay();
+        const lastReplay = OpsMetrics.getReplayMetrics();
+
+        return res.status(200).json({
+            status: dbStatus,
+            total_events: totalEvents,
+            events_last_24h: eventsLast24h,
+            duplicate_provider_events: duplicateEvents,
+            avg_projection_delay_ms: avgDelayMs,
+            last_replay: lastReplay,
+            drift: driftData
         });
     } catch (error) {
-        return res.status(500).json({ error: 'Falha ao auditar saúde do ledger.', message: error.message });
+        return res.status(500).json({ status: 'CRITICAL', error: 'Falha crítica ao auditar saúde do ledger.', message: error.message });
+    }
+}
+
+async function handleIdempotencyMetrics(req, res) {
+    try {
+        const metrics = OpsMetrics.getIdempotencyMetrics();
+        return res.status(200).json(metrics);
+    } catch (error) {
+        return res.status(500).json({ error: error.message });
+    }
+}
+
+async function handleLockMetrics(req, res) {
+    try {
+        const metrics = OpsMetrics.getLockMetrics();
+        return res.status(200).json(metrics);
+    } catch (error) {
+        return res.status(500).json({ error: error.message });
+    }
+}
+
+async function handleReadiness(req, res) {
+    const status = {
+        billing: 'ok',
+        ledger: 'ok',
+        auth: 'ok',
+        webhooks: 'ok',
+        queues: 'ok',
+        overall: 'ready'
+    };
+
+    try {
+        if (!supabaseAdmin) {
+            status.overall = 'not_ready';
+            return res.status(200).json({ ...status, billing: 'error', ledger: 'error', auth: 'error', webhooks: 'error' });
+        }
+
+        // Parallel checks to ensure endpoints perform well
+        const checks = await Promise.allSettled([
+            supabaseAdmin.from('subscriptions').select('id').limit(1),
+            supabaseAdmin.from('billing_events').select('id').limit(1),
+            supabaseAdmin.from('webhook_events').select('id').limit(1)
+        ]);
+
+        if (checks[0].status === 'rejected' || checks[0].value.error) {
+            status.billing = 'error';
+        }
+        if (checks[1].status === 'rejected' || checks[1].value.error) {
+            status.ledger = 'error';
+        }
+        if (checks[2].status === 'rejected' || checks[2].value.error) {
+            status.webhooks = 'error';
+        }
+        if (!supabaseAdmin.auth) {
+            status.auth = 'error';
+        }
+
+        if (status.billing === 'error' || status.ledger === 'error' || status.webhooks === 'error' || status.auth === 'error') {
+            status.overall = 'not_ready';
+        }
+
+        return res.status(200).json(status);
+    } catch (err) {
+        return res.status(500).json({
+            billing: 'error',
+            ledger: 'error',
+            auth: 'error',
+            webhooks: 'error',
+            queues: 'error',
+            overall: 'not_ready',
+            error: err.message
+        });
     }
 }
 
 const handleLedgerRebuild = withAdminAuth(async (req, res) => {
     try {
         const { BillingEventProjector } = await import('../workers/billing-event-projector.js');
-        const success = await BillingEventProjector.replayAllEvents();
-        if (success) {
+        const force = req.query?.force === 'true' || req.body?.force === true;
+        const result = await BillingEventProjector.replayAllEvents({ force });
+
+        if (result && result.warning) {
+            return res.status(400).json(result);
+        }
+
+        if (result === true) {
             return res.status(200).json({ success: true, message: 'Reconstrução de projeções do ledger concluída.' });
         } else {
             return res.status(500).json({ success: false, message: 'Falha ao reprocessar eventos do ledger.' });
@@ -675,6 +785,12 @@ export default async function handler(req, res) {
             await handleAdminBillingTimeline(req, res);
         } else if (route === 'system/ledger-health') {
             await handleLedgerHealth(req, res);
+        } else if (route === 'system/idempotency-metrics') {
+            await handleIdempotencyMetrics(req, res);
+        } else if (route === 'system/lock-metrics') {
+            await handleLockMetrics(req, res);
+        } else if (route === 'system/readiness') {
+            await handleReadiness(req, res);
         } else if (route === 'system/ledger-rebuild') {
             await handleLedgerRebuild(req, res);
         } else if (route === '' || route === 'health') {

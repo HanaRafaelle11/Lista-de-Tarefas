@@ -2,6 +2,7 @@ import crypto from 'crypto';
 import { AsyncLocalStorage } from 'async_hooks';
 import { supabaseAdmin } from '../lib/supabase.js';
 import { BillingLogger } from './billing-tracer.js';
+import { OpsMetrics } from './ops-metrics.js';
 
 const lockStorage = new AsyncLocalStorage();
 
@@ -49,6 +50,7 @@ export const DistributedLock = {
     let isFirstAttempt = true;
 
     BillingLogger.info('lock_acquire_attempt', null, null, { key, owner });
+    OpsMetrics.increment('lock.attempts');
 
     // Clean up expired locks exactly once before entering the polling loop
     try {
@@ -78,12 +80,17 @@ export const DistributedLock = {
           }]);
 
         if (!insertErr) {
+          const waitTime = Date.now() - startTime;
+          OpsMetrics.increment('lock.acquired');
+          OpsMetrics.increment('lock.total_wait_ms', waitTime);
+          OpsMetrics.max('lock.max_wait_ms', waitTime);
           BillingLogger.info('lock_acquired', null, null, { key, owner, expires_at: expiresAt.toISOString() });
           return owner;
         }
 
         // If unique constraint violation, the lock is already held
         if (insertErr.code !== '23505') {
+          OpsMetrics.increment('lock.failed');
           throw insertErr;
         }
       } catch (err) {
@@ -92,6 +99,8 @@ export const DistributedLock = {
 
       const elapsed = Date.now() - startTime;
       if (elapsed >= acquireTimeoutMs) {
+        OpsMetrics.increment('lock.failed');
+        OpsMetrics.increment('lock.timeouts');
         BillingLogger.warn('lock_acquire_timeout', null, null, { key, owner, elapsedMs: elapsed });
         throw new Error(`[DistributedLock] Timeout ao adquirir lock para chave '${key}' após ${elapsed}ms`);
       }

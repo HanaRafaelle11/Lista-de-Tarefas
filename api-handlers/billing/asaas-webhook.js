@@ -2,6 +2,7 @@ import { supabaseAdmin } from '../../lib/supabase.js';
 import { BillingEngine } from '../../lib/billing/engine.js';
 import { logPaymentEvent } from '../../lib/payment-logger.js';
 import { PLAN_PREMIUM_MONTHLY_PRICE } from '../../lib/billing/config.js';
+import { OpsMetrics } from '../../services/ops-metrics.js';
 import { RateLimiter } from '../../server/modules/rpl/rate-limiter.js';
 import { CircuitBreakerFactory } from '../../server/modules/rpl/circuit-breaker.js';
 import { WebhookQueue } from '../../server/modules/rpl/webhook-queue.js';
@@ -92,6 +93,8 @@ export default async function handler(req, res) {
       return res.status(200).json({ message: 'Evento ignorado por falta de tipo de evento.' });
     }
 
+    OpsMetrics.increment('webhook.received');
+
     // 2. CORRIGIR WEBHOOK IDEMPOTÊNCIA (event_id DETERMINÍSTICO E IMUTÁVEL)
     const eventId = body.id 
       ? String(body.id) 
@@ -109,6 +112,17 @@ export default async function handler(req, res) {
       }
 
       if (alreadyProcessed) {
+        OpsMetrics.increment('webhook.idempotent_hits');
+        OpsMetrics.increment('webhook.duplicates_detected');
+        console.log(JSON.stringify({
+          level: 'INFO',
+          event: 'webhook.processed',
+          event_id: eventId,
+          event_type: event,
+          idempotent_hit: true,
+          processing_time_ms: Date.now() - startTime,
+          failure_reason: null
+        }));
         console.log(`[ASAAS WEBHOOK IDEMPOTENT] Evento ${eventId} já processado anteriormente.`);
         return res.status(200).json({ message: 'Evento já processado.', idempotent: true });
       }
@@ -218,6 +232,17 @@ export default async function handler(req, res) {
           if (recCheckErr) console.error('[ASAAS WEBHOOK DB ERROR Check PAYMENT_RECEIVED Dedup]', recCheckErr);
 
           if (existingReceived) {
+            OpsMetrics.increment('webhook.idempotent_hits');
+            OpsMetrics.increment('webhook.duplicates_detected');
+            console.log(JSON.stringify({
+              level: 'INFO',
+              event: 'webhook.processed',
+              event_id: eventId,
+              event_type: event,
+              idempotent_hit: true,
+              processing_time_ms: Date.now() - startTime,
+              failure_reason: null
+            }));
             console.log(`[ASAAS WEBHOOK DEDUPLICATION] PAYMENT_CONFIRMED ignorado pois PAYMENT_RECEIVED já processou paymentId=${paymentId}`);
             try {
               await supabaseAdmin.from('webhook_events').insert([{
@@ -324,9 +349,31 @@ export default async function handler(req, res) {
       console.error('[ASAAS WEBHOOK EXCEPTION Insert Processed Event]', dbErr);
     }
 
+    OpsMetrics.increment('webhook.processed');
+    console.log(JSON.stringify({
+      level: 'INFO',
+      event: 'webhook.processed',
+      event_id: eventId,
+      event_type: event,
+      idempotent_hit: false,
+      processing_time_ms: Date.now() - startTime,
+      failure_reason: null
+    }));
+
     return res.status(200).json({ success: true, event, paymentId, processed: true });
   } catch (error) {
     console.error('[ERROR] [ASAAS WEBHOOK UNHANDLED EXCEPTION]', error);
+
+    OpsMetrics.increment('webhook.errors');
+    console.log(JSON.stringify({
+      level: 'ERROR',
+      event: 'webhook.processed',
+      event_id: typeof eventId !== 'undefined' ? eventId : 'unknown',
+      event_type: typeof event !== 'undefined' ? event : 'unknown',
+      idempotent_hit: false,
+      processing_time_ms: Date.now() - startTime,
+      failure_reason: error.message || String(error)
+    }));
 
     // Observability: log de exceção não tratada
     logPaymentEvent({

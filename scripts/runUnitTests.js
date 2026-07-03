@@ -541,6 +541,107 @@ await runTest('Webhook Asaas — Deduplicação de eventos idênticos', async ()
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// TESTE 12: OpsMetrics — Incremento e snapshots de métricas operacionais
+// ═══════════════════════════════════════════════════════════════════════════════
+await runTest('OpsMetrics — Incremento e snapshots corretos', async () => {
+  const { OpsMetrics } = await import('../services/ops-metrics.js');
+
+  const before = OpsMetrics.getCounters();
+  OpsMetrics.increment('webhook.received');
+  OpsMetrics.increment('webhook.idempotent_hits', 2);
+  const after = OpsMetrics.getCounters();
+
+  assert.strictEqual(after['webhook.received'], before['webhook.received'] + 1, 'webhook.received deve incrementar 1');
+  assert.strictEqual(after['webhook.idempotent_hits'], before['webhook.idempotent_hits'] + 2, 'webhook.idempotent_hits deve incrementar 2');
+
+  OpsMetrics.recordProjectionDelay(100);
+  OpsMetrics.recordProjectionDelay(300);
+  assert.strictEqual(OpsMetrics.getAvgProjectionDelay(), 200, 'Atraso médio deve ser (100+300)/2 = 200ms');
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// TESTE 13: Replay Safety Guard — Evitar replays volumosos acidentalmente
+// ═══════════════════════════════════════════════════════════════════════════════
+await runTest('Replay Safety Guard — Threshold bloqueia sem force=true', async () => {
+  const { BillingEventProjector } = await import('../workers/billing-event-projector.js');
+
+  const { supabaseAdmin } = await import('../lib/supabase.js');
+  const originalFrom = supabaseAdmin.from.bind(supabaseAdmin);
+
+  // Simular 150.000 eventos no banco de dados
+  supabaseAdmin.from = function(table) {
+    if (table === 'billing_events') {
+      return {
+        select(cols, opts) {
+          if (opts && opts.count === 'exact') {
+            return Promise.resolve({ count: 150000, error: null });
+          }
+          // Para a query real de busca do replay, retornar array vazio
+          return {
+            order() { return Promise.resolve({ data: [], error: null }); }
+          };
+        }
+      };
+    }
+    return originalFrom(table);
+  };
+
+  try {
+    // Caso 1: Sem force=true -> Deve retornar o warning object
+    const result1 = await BillingEventProjector.replayAllEvents();
+    assert.ok(result1 && result1.warning === true, 'Deve retornar aviso de threshold de segurança');
+    assert.strictEqual(result1.count, 150000, 'Aviso deve indicar contagem correta');
+
+    // Caso 2: Com force=true -> Deve prosseguir e retornar true (sucesso)
+    const result2 = await BillingEventProjector.replayAllEvents({ force: true });
+    assert.strictEqual(result2, true, 'Com force: true deve completar com sucesso');
+  } finally {
+    supabaseAdmin.from = originalFrom;
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// TESTE 14: Lock Contention Metrics — Registro correto de estatísticas do lock
+// ═══════════════════════════════════════════════════════════════════════════════
+await runTest('Lock Contention Metrics — Registro correto de tentativas e tempos', async () => {
+  const { DistributedLock } = await import('../services/distributed-lock.js');
+  const { OpsMetrics } = await import('../services/ops-metrics.js');
+
+  const { supabaseAdmin } = await import('../lib/supabase.js');
+  const originalFrom = supabaseAdmin.from.bind(supabaseAdmin);
+
+  supabaseAdmin.from = function(table) {
+    if (table === 'billing_locks') {
+      return {
+        delete() { return { eq() { return { lt() { return Promise.resolve({ error: null }); } }; } }; },
+        insert() { return Promise.resolve({ error: null }); } // Adquire imediatamente
+      };
+    }
+    return originalFrom(table);
+  };
+
+  const beforeAttempts = OpsMetrics.getLockMetrics().total_attempts;
+  const beforeAcquired = OpsMetrics.getLockMetrics().total_acquired;
+
+  try {
+    const owner = await DistributedLock.acquire('metrics-lock-test', {
+      lockTimeoutMs: 50,
+      acquireTimeoutMs: 100,
+      initialDelayMs: 10
+    });
+    assert.ok(owner, 'Lock deve ser adquirido');
+    
+    const metrics = OpsMetrics.getLockMetrics();
+    assert.strictEqual(metrics.total_attempts, beforeAttempts + 1, 'Deve incrementar tentativas de lock');
+    assert.strictEqual(metrics.total_acquired, beforeAcquired + 1, 'Deve incrementar locks adquiridos');
+  } finally {
+    supabaseAdmin.from = originalFrom;
+  }
+});
+
+
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // RESULTADO FINAL
 // ═══════════════════════════════════════════════════════════════════════════════
 console.log(`\n${'═'.repeat(60)}`);
