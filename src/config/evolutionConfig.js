@@ -58,12 +58,12 @@ export const EVOLUTION_CATEGORIES = {
     stages: [
       {
         level: 1,
-        title: 'Recém-nascido',
+        title: 'Bebê Futurista',
         badge: 'Nível 1 • Primeiros Passos',
         color: '#3b82f6',
         asset: '/assets/evolution/baby/stage1.png',
-        desc: 'Sua jornada de foco começou! Conclua tarefas para ajudar seu bebê a crescer forte e saudável.',
-        alt: 'Bebê recém-nascido deitado em um berço futurista brilhante'
+        desc: 'Sua jornada começou! O bebê futurista dorme protegido em sua cápsula de berço de alta tecnologia. Conclua tarefas para ajudá-lo a crescer!',
+        alt: 'Bebê futurista neon dormindo dentro de uma cápsula de berço de alta tecnologia'
       },
       {
         level: 2,
@@ -71,26 +71,26 @@ export const EVOLUTION_CATEGORIES = {
         badge: 'Nível 2 • Aprendendo',
         color: 'var(--primary)',
         asset: '/assets/evolution/baby/stage2.png',
-        desc: 'Ganhando mobilidade e foco! Continue a sequência diária para comemorar cada nova conquista.',
-        alt: 'Bebê engatinhando e explorando'
+        desc: 'Ganhando foco! Seu bebê engatinha em um caminho digital brilhante. Continue avançando para guiá-lo no progresso.',
+        alt: 'Bebê neon fofo engatinhando por um caminho digital brilhante'
       },
       {
         level: 3,
-        title: 'Criança Ativa',
+        title: 'Criança Curiosa',
         badge: 'Nível 3 • Curiosa & Forte',
         color: '#10b981',
         asset: '/assets/evolution/baby/stage3.png',
-        desc: 'Seus objetivos concluídos deram muita energia para aprender e explorar novos hábitos!',
-        alt: 'Criança jovem dando os primeiros passos ativa e forte'
+        desc: 'Fantástico! O bebê cresceu e agora é uma criança curiosa brincando com blocos holográficos gerados pela sua constância.',
+        alt: 'Criança jovem neon de pé brincando com blocos holográficos'
       },
       {
         level: 4,
-        title: 'Jovem Campeão',
+        title: 'Jovem Cibernético',
         badge: 'Nível 4 • Brilhante Master',
         color: '#f59e0b',
         asset: '/assets/evolution/baby/stage4.png',
-        desc: 'Consistência incrível! Seu jovem campeão está no topo do desenvolvimento e autoconhecimento!',
-        alt: 'Jovem campeão de pé com uma pequena mochila'
+        desc: 'Consistência lendária! Seu companheiro se tornou um jovem cibernético super estiloso com mochila neon, de pé e confiante na sua rotina.',
+        alt: 'Jovem cibernético futurista com mochila neon de pé confiante'
       }
     ]
   },
@@ -106,8 +106,8 @@ export const EVOLUTION_CATEGORIES = {
         badge: 'Nível 1 • Novo Amigo',
         color: '#3b82f6',
         asset: '/assets/evolution/dog/stage1.png',
-        desc: 'Seu filhotinho chegou! Complete tarefas e objetivos diários para dar energia e carinho a ele.',
-        alt: 'Cachorrinho filhote dormindo deitado em uma almofada'
+        desc: 'Seu filhotinho neon chegou e está descansando em um travesseiro brilhante. Complete tarefas diárias para dar energia a ele!',
+        alt: 'Cachorrinho filhote neon deitado dormindo em um travesseiro brilhante'
       },
       {
         level: 2,
@@ -115,26 +115,26 @@ export const EVOLUTION_CATEGORIES = {
         badge: 'Nível 2 • Ativo & Feliz',
         color: 'var(--primary)',
         asset: '/assets/evolution/dog/stage2.png',
-        desc: 'Sua constância deixa seu pet cheio de saúde! Continue realizando seus compromissos.',
-        alt: 'Cachorrinho brincalhão sentado olhando para frente'
+        desc: 'Seu cãozinho está muito feliz, sentado e olhando para cima com detalhes de neon brilhantes. Continue realizando compromissos!',
+        alt: 'Cachorrinho feliz neon sentado olhando para cima'
       },
       {
         level: 3,
-        title: 'Cão Leal & Forte',
+        title: 'Cão Dinâmico',
         badge: 'Nível 3 • Companheiro',
         color: '#10b981',
         asset: '/assets/evolution/dog/stage3.png',
-        desc: 'Foco impecável! Seu cão se tornou um verdadeiro protetor e parceiro da sua rotina produtiva.',
-        alt: 'Cão jovem correndo alegremente atrás de uma bola'
+        desc: 'Ritmo acelerado! Seu pet corre cheio de energia com belos rastros de dados neon na cauda, acompanhando sua velocidade.',
+        alt: 'Cachorro neon dinâmico correndo com rastros de dados na cauda'
       },
       {
         level: 4,
-        title: 'Cão Campeão',
+        title: 'Alfa Cibernético',
         badge: 'Nível 4 • Nobreza & Foco',
         color: '#8b5cf6',
         asset: '/assets/evolution/dog/stage4.png',
-        desc: 'Desempenho espetacular! Seu pet alcançou o nível máximo de lealdade e vitórias diárias!',
-        alt: 'Cão adulto imponente e campeão com uma capa'
+        desc: 'Desempenho lendário! Seu companheiro se tornou um cão alfa cibernético heroico, equipado com armadura holográfica e capa neon.',
+        alt: 'Cão alfa cibernético heroico com capa neon e armadura holográfica'
       }
     ]
   },
@@ -150,35 +150,35 @@ export const EVOLUTION_CATEGORIES = {
         badge: 'Nível 1 • Despertando',
         color: '#3b82f6',
         asset: '/assets/evolution/cat/stage1.png',
-        desc: 'Seu gatinho está curioso! Crie e cumpra metas para desenvolver a agilidade e sabedoria dele.',
-        alt: 'Gatinho filhote encolhido dormindo em uma plataforma'
+        desc: 'Seu filhote de gatinho neon está dormindo e encolhido na plataforma cibernética. Crie e cumpra metas para dar energia e fazê-lo explorar!',
+        alt: 'Filhote de gato neon dormindo encolhido em uma plataforma cibernética brilhante'
       },
       {
         level: 2,
-        title: 'Gato Ágil',
+        title: 'Gato Explorador',
         badge: 'Nível 2 • Em Movimento',
         color: 'var(--primary)',
         asset: '/assets/evolution/cat/stage2.png',
-        desc: 'Movimentos precisos e rotina em dia! Mantenha seus hábitos para preservar o equilíbrio.',
-        alt: 'Gatinho jovem explorador com lupa nas mãos'
+        desc: 'Seu gatinho cresceu e agora está ativamente brincando e explorando a plataforma com energia! Mantenha seus hábitos para preservar o equilíbrio.',
+        alt: 'Gato jovem neon brincando e explorando de forma ativa'
       },
       {
         level: 3,
-        title: 'Gato Majestoso',
+        title: 'Gato Elegante',
         badge: 'Nível 3 • Presença Forte',
         color: '#10b981',
         asset: '/assets/evolution/cat/stage3.png',
-        desc: 'Sua constância deu um porte majestoso ao seu pet. Foco e elegância total no seu dia a dia!',
-        alt: 'Gato majestoso de pé com pose ágil'
+        desc: 'Foco impecável! Seu gato se tornou um elegante felino neon adulto que observa graciosamente sua rotina produtiva.',
+        alt: 'Gato adulto neon elegante em pé de forma graciosa'
       },
       {
         level: 4,
-        title: 'Gato Rei Master',
+        title: 'Guardião Cibernético',
         badge: 'Nível 4 • Soberano Master',
         color: '#ec4899',
         asset: '/assets/evolution/cat/stage4.png',
-        desc: 'Foco supremo! Seu gatinho reina sobre a sua produtividade e paz de espírito.',
-        alt: 'Gato adulto com uma coroa brilhando em uma plataforma'
+        desc: 'Incrível! Seu pet se transformou em um poderoso gato guardião cibernético soberano, com uma coroa de neon e aura brilhante.',
+        alt: 'Gato guardião cibernético poderoso com coroa de neon e efeitos de aura'
       }
     ]
   }
