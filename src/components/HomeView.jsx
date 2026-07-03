@@ -637,6 +637,8 @@ export default function HomeView() {
                 plant: {
                   name: 'Plantinha',
                   iconName: 'seedling',
+                  spritesheet: '/assets/evolution/plant-stages.png',
+                  gridLayout: '2x2', // Stage 1=TL, 2=TR, 3=BL, 4=BR
                   stages: [
                     { level: 1, title: 'Broto Inicial', iconName: 'seedling', badge: 'Nível 1 • Início', color: '#3b82f6', desc: 'De acordo com a sua constância e conclusão de tarefas e objetivos, sua plantinha vai evoluindo!' },
                     { level: 2, title: 'Planta em Crescimento', iconName: 'seedling', badge: 'Nível 2 • Em Evolução', color: 'var(--primary)', desc: 'Sua constância está dando frutos! Mantenha a sequência de tarefas para fazer sua árvore crescer.' },
@@ -647,6 +649,8 @@ export default function HomeView() {
                 baby: {
                   name: 'Bebê',
                   iconName: 'profile',
+                  spritesheet: '/assets/evolution/baby-stages.png',
+                  gridLayout: '2x2',
                   stages: [
                     { level: 1, title: 'Recém-nascido', iconName: 'profile', badge: 'Nível 1 • Primeiros Passos', color: '#3b82f6', desc: 'Sua jornada de foco começou! Conclua tarefas para ajudar seu bebê a crescer forte e saudável.' },
                     { level: 2, title: 'Bebê Engatinhando', iconName: 'profile', badge: 'Nível 2 • Aprendendo', color: 'var(--primary)', desc: 'Ganhando mobilidade e foco! Continue a sequência diária para comemorar cada nova conquista.' },
@@ -657,6 +661,8 @@ export default function HomeView() {
                 dog: {
                   name: 'Cachorrinho',
                   iconName: 'paw',
+                  spritesheet: '/assets/evolution/dog-stages.png',
+                  gridLayout: '1x4', // Stage 1→2→3→4 horizontal
                   stages: [
                     { level: 1, title: 'Filhotinho', iconName: 'paw', badge: 'Nível 1 • Novo Amigo', color: '#3b82f6', desc: 'Seu filhotinho chegou! Complete tarefas e objetivos diários para dar energia e carinho a ele.' },
                     { level: 2, title: 'Cão Brincalhão', iconName: 'paw', badge: 'Nível 2 • Ativo & Feliz', color: 'var(--primary)', desc: 'Sua constância deixa seu pet cheio de saúde! Continue realizando seus compromissos.' },
@@ -667,6 +673,8 @@ export default function HomeView() {
                 cat: {
                   name: 'Gatinho',
                   iconName: 'paw',
+                  spritesheet: '/assets/evolution/cat-stages.png',
+                  gridLayout: '2x2',
                   stages: [
                     { level: 1, title: 'Filhote Curioso', iconName: 'paw', badge: 'Nível 1 • Despertando', color: '#3b82f6', desc: 'Seu gatinho está curioso! Crie e cumpra metas para desenvolver a agilidade e sabedoria dele.' },
                     { level: 2, title: 'Gato Ágil', iconName: 'paw', badge: 'Nível 2 • Em Movimento', color: 'var(--primary)', desc: 'Movimentos precisos e rotina em dia! Mantenha seus hábitos para preservar o equilíbrio.' },
@@ -824,10 +832,43 @@ export default function HomeView() {
                       <div className="wave wave-1" />
                       <div className="wave wave-2" />
                       <div className="wave wave-3" />
-                      <div style={{ fontSize: '40px', zIndex: 2, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
-                        <MFIcon name={currentStage.iconName} size={40} color={currentStage.color} />
-                        <span style={{ fontSize: '10px', fontWeight: '800', color: 'var(--text-main)', backgroundColor: 'var(--bg-card)', padding: '2px 8px', borderRadius: '10px', boxShadow: 'var(--shadow-sm)', border: '1px solid var(--border-light)' }}>{currentStage.title}</span>
-                      </div>
+                      {(() => {
+                        // Calcula background-position para recortar o estágio correto do spritesheet
+                        const layout = currentPetData.gridLayout;
+                        let bgSize, bgPosition;
+                        if (layout === '1x4') {
+                          // Dog: 4 colunas horizontais (cada estágio = 25% da largura)
+                          bgSize = '400% 100%';
+                          bgPosition = `${stageIndex * (100 / 3)}% 50%`;
+                        } else {
+                          // 2x2 grid: TL(0), TR(1), BL(2), BR(3)
+                          const col = stageIndex % 2;
+                          const row = Math.floor(stageIndex / 2);
+                          bgSize = '200% 200%';
+                          bgPosition = `${col * 100}% ${row * 100}%`;
+                        }
+                        return (
+                          <div
+                            key={`${growthPet}-${stageIndex}`}
+                            className="evolution-stage-image animate-fade-in"
+                            style={{
+                              width: '100%',
+                              maxWidth: '180px',
+                              aspectRatio: '1 / 1',
+                              backgroundImage: `url(${currentPetData.spritesheet})`,
+                              backgroundSize: bgSize,
+                              backgroundPosition: bgPosition,
+                              backgroundRepeat: 'no-repeat',
+                              borderRadius: '16px',
+                              zIndex: 2,
+                              filter: `drop-shadow(0 4px 20px ${currentStage.color}40)`,
+                              transition: 'background-position 0.4s ease, filter 0.4s ease',
+                            }}
+                            title={`${currentPetData.name} — ${currentStage.title}`}
+                          />
+                        );
+                      })()}
+                      <span style={{ fontSize: '10px', fontWeight: '800', color: 'var(--text-main)', backgroundColor: 'var(--bg-card)', padding: '2px 8px', borderRadius: '10px', boxShadow: 'var(--shadow-sm)', border: '1px solid var(--border-light)', zIndex: 2, marginTop: '4px' }}>{currentStage.title}</span>
                     </div>
                   </div>
                 </section>
