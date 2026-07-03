@@ -15,6 +15,7 @@ import { withAdminAuth } from '../lib/auth/withAdminAuth.js';
 import { logPaymentEvent } from '../lib/payment-logger.js';
 import { billingController } from '../server/modules/billing/billing.controller.js';
 import { OpsMetrics } from '../services/ops-metrics.js';
+import { AIOpsCore } from '../services/aiops-core.js';
 
 
 // =========================================================
@@ -931,6 +932,48 @@ const handleSystemAlerts = withAdminAuth(async (req, res) => {
             }))
         ];
 
+        // Chaos Simulation Alert Injection
+        const chaos = AIOpsCore.getChaosFlags();
+        if (chaos.simulatedWebhookFaultActive) {
+            allIncidents.push({
+                id: 'chaos_webhook_fault',
+                severity: 'medium',
+                origin: 'billing',
+                message: 'Simulated Chaos Fault: Asaas Webhook API Timed Out (504 Gateway Timeout)',
+                payload: { event_id: 'chaos_web_evt_1', service: 'asaas-webhook-receiver' },
+                created_at: new Date().toISOString(),
+                count: 3,
+                first_seen: new Date(Date.now() - 10000).toISOString(),
+                last_seen: new Date().toISOString()
+            });
+        }
+        if (chaos.simulatedWorkerCrashActive) {
+            allIncidents.push({
+                id: 'chaos_worker_crash',
+                severity: 'medium',
+                origin: 'sync',
+                message: 'Simulated Chaos Fault: Queue loop worker notifications crash (ReferenceError: connection is not defined)',
+                payload: { event_type: 'worker_task_error', worker_id: 'sync_worker_notif_1' },
+                created_at: new Date().toISOString(),
+                count: 5,
+                first_seen: new Date(Date.now() - 30000).toISOString(),
+                last_seen: new Date().toISOString()
+            });
+        }
+        if (chaos.simulatedLatencyActive) {
+            allIncidents.push({
+                id: 'chaos_latency_contention',
+                severity: 'low',
+                origin: 'sync',
+                message: 'Simulated Chaos Fault: Distributed lock acquisition contention (>850ms) on key: test-delete-once',
+                payload: { event_type: 'lock_acquire_timeout', elapsedMs: 852 },
+                created_at: new Date().toISOString(),
+                count: 2,
+                first_seen: new Date(Date.now() - 50000).toISOString(),
+                last_seen: new Date().toISOString()
+            });
+        }
+
         // Apply Dynamic Severity Escalation & Dynamic Decay (Status) & AIOps Prediction Engine Rules
         allIncidents.forEach(incident => {
             // 1. Calculate base impact_score
@@ -1017,18 +1060,38 @@ const handleSystemAlerts = withAdminAuth(async (req, res) => {
             };
         });
 
+        // Correlate, run RCA, and adjust ML sensitivities
+        const processedIncidents = AIOpsCore.processAndCorrelate(allIncidents);
+
         // Ordenar: 1. Severity (critical primeiro), 2. last_seen desc
-        allIncidents.sort((a, b) => {
+        processedIncidents.sort((a, b) => {
             if (a.severity === 'critical' && b.severity !== 'critical') return -1;
             if (a.severity !== 'critical' && b.severity === 'critical') return 1;
             return new Date(b.last_seen) - new Date(a.last_seen);
         });
 
-        return res.status(200).json(allIncidents);
+        return res.status(200).json(processedIncidents);
     } catch (error) {
         return res.status(500).json({ error: 'Erro ao consolidar alertas.', message: error.message });
     }
 });
+
+// Handler para Simulação de Caos (Chaos Simulator Control Panel)
+const handleChaosSimulation = async (req, res) => {
+    return withAdminAuth(req, res, async () => {
+        if (req.method === 'POST') {
+            const { flag, value } = req.body || {};
+            const success = AIOpsCore.setChaosFlag(flag, value);
+            if (success) {
+                return res.status(200).json({ success: true, message: `Chaos flag '${flag}' set to ${value}.`, flags: AIOpsCore.getChaosFlags() });
+            } else {
+                return res.status(400).json({ error: `Flag de caos inválida: ${flag}.` });
+            }
+        } else {
+            return res.status(200).json(AIOpsCore.getChaosFlags());
+        }
+    });
+};
 
 // =========================================================
 // ROUTER PRINCIPAL
@@ -1119,6 +1182,8 @@ export default async function handler(req, res) {
             await handleAdminBillingTimeline(req, res);
         } else if (route === 'admin/system-alerts') {
             await handleSystemAlerts(req, res);
+        } else if (route === 'admin/chaos-simulation') {
+            await handleChaosSimulation(req, res);
         } else if (route === 'system/ledger-health') {
             await handleLedgerHealth(req, res);
         } else if (route === 'system/idempotency-metrics') {

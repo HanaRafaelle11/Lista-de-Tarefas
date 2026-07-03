@@ -60,6 +60,7 @@ export default function AdminDashboard() {
   const [severityFilter, setSeverityFilter] = useState('all');
   const [originFilter, setOriginFilter] = useState('all');
   const [alertStatusFilter, setAlertStatusFilter] = useState('all'); // 'all' | 'open' | 'stale' | 'resolved'
+  const [chaosFlags, setChaosFlags] = useState({ simulatedLatencyActive: false, simulatedWebhookFaultActive: false, simulatedWorkerCrashActive: false });
 
   // Fetch all latest events to build latestEventsMap (user_id -> latest event metadata)
   const fetchAllLatestEvents = async () => {
@@ -228,11 +229,61 @@ export default function AdminDashboard() {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       setAlerts(data || []);
+      
+      // Load chaos flags in parallel
+      fetchChaosFlags();
     } catch (err) {
       console.error('Error fetching system alerts:', err);
       setAlertsError(err.message);
     } finally {
       setLoadingAlerts(false);
+    }
+  };
+
+  const fetchChaosFlags = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token || '';
+      const headers = {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      if (currentUser?.id) headers['x-user-id'] = currentUser.id;
+
+      const res = await fetch('/api/admin/chaos-simulation', { headers });
+      if (res.ok) {
+        const data = await res.json();
+        setChaosFlags(data || {});
+      }
+    } catch (err) {
+      console.error('Error fetching chaos flags:', err);
+    }
+  };
+
+  const handleToggleChaosFlag = async (flag, value) => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token || '';
+      const headers = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      if (currentUser?.id) headers['x-user-id'] = currentUser.id;
+
+      const res = await fetch('/api/admin/chaos-simulation', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ flag, value })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setChaosFlags(data.flags || {});
+        openCustomAlert(`Caos '${flag}': ${value ? 'ATIVADO' : 'DESATIVADO'}`);
+        // Reload alerts immediately to see injected simulated chaos events
+        const alertsRes = await fetch('/api/admin/system-alerts', { headers });
+        if (alertsRes.ok) {
+          const alertsData = await alertsRes.json();
+          setAlerts(alertsData || []);
+        }
+      }
+    } catch (err) {
+      openCustomAlert('Erro ao alterar flag de caos: ' + err.message);
     }
   };
 
@@ -990,6 +1041,45 @@ export default function AdminDashboard() {
                             )}
                           </div>
 
+                          {/* 2.5. RCA (Root Cause Analysis) Pipeline */}
+                          {alert.rca && (
+                            <div style={{
+                              padding: '10px 12px',
+                              backgroundColor: alert.rca.is_root_cause ? 'rgba(16, 185, 129, 0.08)' : 'rgba(59, 130, 246, 0.08)',
+                              border: alert.rca.is_root_cause ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid rgba(59, 130, 246, 0.3)',
+                              borderRadius: 'var(--radius-sm)',
+                              fontSize: '11.5px'
+                            }}>
+                              <div style={{ fontWeight: '800', display: 'flex', alignItems: 'center', gap: '6px', color: alert.rca.is_root_cause ? '#10b981' : '#3b82f6', marginBottom: '4px' }}>
+                                <Activity size={14} /> {alert.rca.is_root_cause ? '⚡ CAUSA RAIZ SISTÊMICA DETECTADA' : '🔗 SINTOMA SECUNDÁRIO EM CASCATA'}
+                              </div>
+                              <span style={{ color: 'var(--text-muted)', lineHeight: '1.4', display: 'block' }}>
+                                {alert.rca.explanation}
+                              </span>
+                              {alert.rca.is_root_cause && alert.rca.symptoms && alert.rca.symptoms.length > 0 && (
+                                <div style={{ marginTop: '6px', fontSize: '10.5px', color: 'var(--text-light)', display: 'flex', gap: '6px', alignItems: 'center' }}>
+                                  <strong style={{ color: 'var(--text-main)' }}>Sintomas secundários suprimidos:</strong>
+                                  {alert.rca.symptoms.map((symId, idx) => (
+                                    <span key={idx} style={{ padding: '2px 6px', backgroundColor: 'var(--border-light)', borderRadius: '3px', fontFamily: 'monospace' }}>
+                                      {symId.slice(0, 8)}...
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {/* 2.6. ML Continuous Learning & alert fatigue tuning */}
+                          {alert.ml_insights && (
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11px', borderTop: '1px dashed var(--border-light)', paddingTop: '10px', marginTop: '2px', color: 'var(--text-muted)' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                <Brain size={12} color="#10b981" />
+                                <span>{alert.ml_insights.alert_sensitivity_offset}</span>
+                              </div>
+                              <span>Probabilidade Falso Positivo: <strong>{Math.round(alert.ml_insights.false_positive_probability * 100)}%</strong></span>
+                            </div>
+                          )}
+
                           {/* 3. Prediction Engine Warnings */}
                           {alert.prediction?.predicted_incident && (
                             <div style={{
@@ -1096,6 +1186,104 @@ export default function AdminDashboard() {
                     );
                   })
                 )}
+              </div>
+
+              {/* Chaos Testing Control Panel */}
+              <div style={{
+                backgroundColor: 'var(--bg-card)',
+                border: '1px solid var(--border-light)',
+                borderRadius: 'var(--radius-lg)',
+                padding: '20px',
+                marginTop: '16px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '12px'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Flame size={18} color="#ef4444" />
+                  <h4 style={{ margin: 0, fontSize: '14.5px', fontWeight: '800', color: 'var(--text-main)' }}>
+                    Painel de Simulação de Caos (Chaos Testing Simulator)
+                  </h4>
+                </div>
+                <p style={{ margin: 0, fontSize: '12.5px', color: 'var(--text-light)', lineHeight: '1.5' }}>
+                  Injete falhas artificiais e latências simuladas para testar a resiliência do sistema, as previsões preditivas da AIOps e os mecanismos de auto-retentativa em tempo real.
+                </p>
+
+                <div style={{
+                  display: 'flex',
+                  gap: '16px',
+                  flexWrap: 'wrap',
+                  marginTop: '6px'
+                }}>
+                  {/* Webhook fault switch */}
+                  <label style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    fontSize: '12.5px',
+                    fontWeight: '700',
+                    color: 'var(--text-main)',
+                    padding: '10px 14px',
+                    backgroundColor: 'var(--bg-app)',
+                    borderRadius: 'var(--radius-md)',
+                    border: '1px solid var(--border-light)',
+                    cursor: 'pointer'
+                  }}>
+                    <input
+                      type="checkbox"
+                      checked={!!chaosFlags.simulatedWebhookFaultActive}
+                      onChange={e => handleToggleChaosFlag('simulatedWebhookFaultActive', e.target.checked)}
+                      style={{ cursor: 'pointer' }}
+                    />
+                    Injetar Falha Webhook (Asaas Timeout)
+                  </label>
+
+                  {/* Worker fault switch */}
+                  <label style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    fontSize: '12.5px',
+                    fontWeight: '700',
+                    color: 'var(--text-main)',
+                    padding: '10px 14px',
+                    backgroundColor: 'var(--bg-app)',
+                    borderRadius: 'var(--radius-md)',
+                    border: '1px solid var(--border-light)',
+                    cursor: 'pointer'
+                  }}>
+                    <input
+                      type="checkbox"
+                      checked={!!chaosFlags.simulatedWorkerCrashActive}
+                      onChange={e => handleToggleChaosFlag('simulatedWorkerCrashActive', e.target.checked)}
+                      style={{ cursor: 'pointer' }}
+                    />
+                    Simular Crash de Worker (Sync Loop)
+                  </label>
+
+                  {/* Latency switch */}
+                  <label style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    fontSize: '12.5px',
+                    fontWeight: '700',
+                    color: 'var(--text-main)',
+                    padding: '10px 14px',
+                    backgroundColor: 'var(--bg-app)',
+                    borderRadius: 'var(--radius-md)',
+                    border: '1px solid var(--border-light)',
+                    cursor: 'pointer'
+                  }}>
+                    <input
+                      type="checkbox"
+                      checked={!!chaosFlags.simulatedLatencyActive}
+                      onChange={e => handleToggleChaosFlag('simulatedLatencyActive', e.target.checked)}
+                      style={{ cursor: 'pointer' }}
+                    />
+                    Injetar Latência de Contenção (&gt;800ms)
+                  </label>
+                </div>
               </div>
 
               {/* Botões de Ações Manuais do Admin (Aviso de Ação Rápida) */}

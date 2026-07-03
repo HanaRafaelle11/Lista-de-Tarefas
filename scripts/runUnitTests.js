@@ -767,12 +767,13 @@ await runTest('Critical Alerts — Log de acesso não autorizado e consolidaçã
                           const data = [];
                           
                           // 5 duplicates:
+                          const tenMinutesAgo = Date.now() - 10 * 60 * 1000;
                           for (let i = 0; i < 5; i++) {
                             data.push({
                               id: `worker_err_esc_${i}`,
                               event_type: 'worker_task_error',
                               metadata: { task_id: 'task_abc' },
-                              created_at: new Date(now - i * 1000).toISOString()
+                              created_at: new Date(tenMinutesAgo - i * 1000).toISOString()
                             });
                           }
                           
@@ -920,6 +921,80 @@ await runTest('Critical Alerts — Log de acesso não autorizado e consolidaçã
   } finally {
     supabaseAdmin.from = originalFrom;
   }
+});
+
+await runTest('AIOps Advanced Engine — RCA, Correlação Temporal e Caos', async () => {
+  // Importar AIOpsCore
+  const { AIOpsCore } = await import('../services/aiops-core.js');
+
+  // 1. Validar que as flags de caos são inicialmente falsas
+  const initialFlags = AIOpsCore.getChaosFlags();
+  assert.strictEqual(initialFlags.simulatedLatencyActive, false);
+  
+  // 2. Definir flag de caos e ler novamente
+  AIOpsCore.setChaosFlag('simulatedLatencyActive', true);
+  const updatedFlags = AIOpsCore.getChaosFlags();
+  assert.strictEqual(updatedFlags.simulatedLatencyActive, true);
+  
+  // Resetar flag
+  AIOpsCore.setChaosFlag('simulatedLatencyActive', false);
+
+  // 3. Testar correlação e RCA temporal
+  const mockIncidents = [
+    {
+      id: 'incident_root',
+      origin: 'billing',
+      message: 'Payment gateway timeout error',
+      payload: { userId: 'user_123', payment_id: 'pay_xyz' },
+      first_seen: new Date(Date.now() - 5000).toISOString(),
+      last_seen: new Date(Date.now() - 5000).toISOString(),
+      severity: 'medium',
+      count: 1
+    },
+    {
+      id: 'incident_symptom',
+      origin: 'ledger',
+      message: 'Ledger entitlement mismatch drift',
+      payload: { userId: 'user_123' },
+      first_seen: new Date().toISOString(),
+      last_seen: new Date().toISOString(),
+      severity: 'critical',
+      count: 1
+    }
+  ];
+
+  const processed = AIOpsCore.processAndCorrelate(mockIncidents);
+  
+  const root = processed.find(p => p.id === 'incident_root');
+  const symptom = processed.find(p => p.id === 'incident_symptom');
+
+  assert.ok(root, 'Deve retornar o incidente raiz');
+  assert.ok(symptom, 'Deve retornar o incidente sintoma');
+  
+  assert.strictEqual(root.rca.is_root_cause, true, 'Primeiro incidente temporalmente deve ser a causa raiz');
+  assert.strictEqual(symptom.rca.is_root_cause, false, 'Segundo incidente temporalmente deve ser o sintoma secundário');
+  assert.strictEqual(symptom.rca.root_cause_id, 'incident_root', 'Sintoma deve apontar para o root_cause_id correto');
+  
+  // O sintoma secundário crítico deve ter sido atenuado para medium para reduzir alert fatigue
+  assert.strictEqual(symptom.severity, 'medium', 'Sintoma secundário de severidade alta deve ser atenuado para reduzir alert fatigue');
+
+  // 4. Validar aprendizado contínuo (feedback)
+  AIOpsCore.recordFeedback('billing_Payment gateway timeout error', 'retry_job', true);
+  AIOpsCore.recordFeedback('billing_Payment gateway timeout error', 'retry_job', true);
+  const reprocessed = AIOpsCore.processAndCorrelate([
+    {
+      id: 'incident_root_new',
+      origin: 'billing',
+      message: 'Payment gateway timeout error',
+      payload: { userId: 'user_123' },
+      first_seen: new Date().toISOString(),
+      last_seen: new Date().toISOString(),
+      severity: 'medium',
+      count: 2
+    }
+  ]);
+  const newRoot = reprocessed[0];
+  assert.ok(newRoot.ml_insights.learned_pattern_detected, 'Deve acusar detecção de padrão conhecido após feedback');
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
