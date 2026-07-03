@@ -21,8 +21,8 @@ export default function EvolutionStageImage({ asset, alt, color, animationKey })
       draggable={false}
       className="evolution-stage-img animate-fade-in"
       style={{
-        width: '160px',
-        height: '160px',
+        width: '85%',
+        height: '85%',
         objectFit: 'contain',
         objectPosition: 'center',
         borderRadius: '16px',
