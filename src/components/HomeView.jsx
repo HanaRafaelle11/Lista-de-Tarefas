@@ -846,7 +846,6 @@ export default function HomeView() {
                         color={currentStage.color}
                         animationKey={`${growthPet}-${stageIndex}`}
                       />
-                      <span style={{ fontSize: '10px', fontWeight: '800', color: 'var(--text-main)', backgroundColor: 'var(--bg-card)', padding: '2px 8px', borderRadius: '10px', boxShadow: 'var(--shadow-sm)', border: '1px solid var(--border-light)', zIndex: 2, marginTop: '4px' }}>{currentStage.title}</span>
                     </div>
                   </div>
                 </section>
