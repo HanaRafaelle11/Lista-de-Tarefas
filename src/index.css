@@ -6920,3 +6920,17 @@ body,
   transform-origin: bottom center;
   will-change: transform;
 }
+
+/* Checkout name inputs grid */
+.checkout-name-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+@media (max-width: 480px) {
+  .checkout-name-row {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+}

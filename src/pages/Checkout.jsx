@@ -463,9 +463,9 @@ export default function Checkout() {
           {/* Dados do Titular */}
           <div style={{ marginBottom: '16px' }}>
             <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: 'rgba(255, 255, 255, 0.7)', marginBottom: '6px' }}>Seu Nome Completo</label>
-            <div style={{ display: 'flex', gap: '10px' }}>
-              <input type="text" placeholder="Nome" value={firstName} onChange={e => setFirstName(e.target.value)} required style={{ flex: 1, padding: '10px 12px', backgroundColor: 'rgba(255, 255, 255, 0.05)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '8px', color: '#ffffff', fontSize: '14px' }} />
-              <input type="text" placeholder="Sobrenome" value={lastName} onChange={e => setLastName(e.target.value)} required style={{ flex: 1, padding: '10px 12px', backgroundColor: 'rgba(255, 255, 255, 0.05)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '8px', color: '#ffffff', fontSize: '14px' }} />
+            <div className="checkout-name-row">
+              <input type="text" placeholder="Nome" value={firstName} onChange={e => setFirstName(e.target.value)} required style={{ width: '100%', boxSizing: 'border-box', padding: '10px 12px', backgroundColor: 'rgba(255, 255, 255, 0.05)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '8px', color: '#ffffff', fontSize: '14px' }} />
+              <input type="text" placeholder="Sobrenome" value={lastName} onChange={e => setLastName(e.target.value)} required style={{ width: '100%', boxSizing: 'border-box', padding: '10px 12px', backgroundColor: 'rgba(255, 255, 255, 0.05)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '8px', color: '#ffffff', fontSize: '14px' }} />
             </div>
           </div>
 

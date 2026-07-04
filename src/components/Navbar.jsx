@@ -116,13 +116,13 @@ export default function Navbar() {
             <div 
               className={`app-top-profile ${activeTab === 'profile' ? 'active' : ''}`}
               onClick={() => setActiveTab('profile')}
-              style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '38px', height: '38px', margin: 0, flexShrink: 0 }}
+              style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '42px', height: '42px', margin: 0, flexShrink: 0 }}
             >
-              <div className="app-top-avatar" title={userProfile?.name || currentUser?.name} style={{ width: '38px', height: '38px', borderRadius: '50%', overflow: 'hidden', border: '1px solid var(--border-medium)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <div className="app-top-avatar" title={userProfile?.name || currentUser?.name} style={{ width: '42px', height: '42px', borderRadius: '50%', overflow: 'hidden', border: '1px solid var(--border-medium)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                 {userProfile?.avatar_url ? (
-                  <img src={userProfile.avatar_url} alt="Avatar" style={{ width: '38px', height: '38px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+                  <img src={userProfile.avatar_url} alt="Avatar" style={{ width: '42px', height: '42px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
                 ) : (
-                  <DefaultAvatar size={38} />
+                  <DefaultAvatar size={42} />
                 )}
               </div>
             </div>
