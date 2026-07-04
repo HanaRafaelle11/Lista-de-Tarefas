@@ -47,6 +47,11 @@ export const AccessDecisionEngine = {
 
     const nowIso = new Date().toISOString();
     try {
+      let canAccessPro = false;
+      let plan = 'free';
+      let status = 'free';
+      let reason = 'no_active_subscription';
+
       // 1. Consulta estrita de direitos ativos em user_entitlements
       const { data: entitlement, error } = await supabaseAdmin
         .from('user_entitlements')
@@ -57,28 +62,43 @@ export const AccessDecisionEngine = {
         .gt('valid_until', nowIso)
         .maybeSingle();
 
-      if (error) {
-        console.error(`[AccessDecisionEngine DB Error] Falha ao consultar entitlements para ${userId}:`, error.message);
-        return {
-          plan: 'free',
-          status: 'free',
-          canAccessPro: false,
-          limits: { ai_requests: 0, tasks: 'limited' },
-          reason: 'database_error'
-        };
+      if (!error && entitlement) {
+        canAccessPro = true;
+        plan = 'premium';
+        status = 'active';
+        reason = 'subscription_active';
+      } else {
+        // Fallback resiliente: se a tabela user_entitlements não existir ou a consulta falhar,
+        // verifica diretamente na tabela subscriptions.
+        console.warn(`[AccessDecisionEngine] Entitlements não disponível. Usando fallback na tabela subscriptions para o usuário ${userId}`);
+        const { data: activeSub, error: subErr } = await supabaseAdmin
+          .from('subscriptions')
+          .select('plan, status, current_period_end')
+          .eq('user_id', userId)
+          .eq('status', 'active')
+          .eq('provider', 'asaas')
+          .gt('current_period_end', nowIso)
+          .order('updated_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (!subErr && activeSub) {
+          canAccessPro = true;
+          plan = activeSub.plan || 'premium';
+          status = 'active';
+          reason = 'subscription_active_fallback';
+        }
       }
 
-      const canAccessPro = !!entitlement;
-      
       return {
-        plan: canAccessPro ? 'premium' : 'free',
-        status: canAccessPro ? entitlement.status : 'free',
+        plan,
+        status,
         canAccessPro,
         limits: {
           ai_requests: canAccessPro ? 100 : 0,
           tasks: canAccessPro ? 'unlimited' : '30_days_limit'
         },
-        reason: canAccessPro ? 'subscription_active' : 'no_active_subscription'
+        reason
       };
     } catch (err) {
       console.error(`[AccessDecisionEngine Exception] Erro ao obter access resolution para ${userId}:`, err.message);
