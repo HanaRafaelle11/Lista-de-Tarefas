@@ -25,9 +25,8 @@ export default function EvolutionStageImage({ asset, alt, color, animationKey })
         height: '85%',
         objectFit: 'contain',
         objectPosition: 'center',
-        borderRadius: '16px',
         zIndex: 2,
-        filter: `drop-shadow(0 4px 20px ${color}40)`,
+        mixBlendMode: 'screen',
         display: 'block',
         flexShrink: 0,
       }}
