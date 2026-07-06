@@ -712,9 +712,8 @@ export default function SettingsView() {
         formData.append('message', messageWithAttachments);
         formData.append('_subject', `Novo Feedback do Flowday - ${userEmail || 'Anônimo'}`);
         
-        feedbackAttachments.forEach((file, index) => {
-          const key = index === 0 ? 'attachment' : `attachment${index + 1}`;
-          formData.append(key, file);
+        feedbackAttachments.forEach((file) => {
+          formData.append('attachment', file);
         });
 
         const response = await fetch(`https://formsubmit.co/ajax/${recipientEmail}`, {
@@ -1605,6 +1604,12 @@ export default function SettingsView() {
                   const selected = Array.from(e.target.files);
                   if (feedbackAttachments.length + selected.length > 4) {
                     openCustomAlert('Você pode anexar no máximo 4 arquivos.');
+                    return;
+                  }
+                  const currentSize = feedbackAttachments.reduce((acc, f) => acc + f.size, 0);
+                  const selectedSize = selected.reduce((acc, f) => acc + f.size, 0);
+                  if (currentSize + selectedSize > 10 * 1024 * 1024) {
+                    openCustomAlert('O tamanho total dos anexos não pode exceder 10 MB.');
                     return;
                   }
                   setFeedbackAttachments(prev => [...prev, ...selected]);
