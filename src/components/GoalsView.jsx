@@ -102,10 +102,21 @@ export default function GoalsView() {
     return (goals || []).filter(g => !g.deletedAt);
   }, [goals]);
 
-  // Filtrar objetivos por status
+  // Filtrar e ordenar objetivos por status e data limite
   const filteredGoals = useMemo(() => {
-    if (filter === 'all') return activeGoals;
-    return activeGoals.filter(g => g.status === filter);
+    const list = filter === 'all' ? activeGoals : activeGoals.filter(g => g.status === filter);
+    return [...list].sort((a, b) => {
+      const dateA = a.target_date || '';
+      const dateB = b.target_date || '';
+
+      if (dateA && dateB) {
+        return dateA.localeCompare(dateB);
+      }
+      if (dateA && !dateB) return -1;
+      if (!dateA && dateB) return 1;
+
+      return new Date(a.created_at || a.createdAt || 0) - new Date(b.created_at || b.createdAt || 0);
+    });
   }, [activeGoals, filter]);
 
   // Contagens por status

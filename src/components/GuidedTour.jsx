@@ -88,44 +88,80 @@ export default function GuidedTour() {
   };
 
   return (
-    <Joyride
-      key={tourKey}
-      callback={handleJoyrideCallback}
-      continuous
-      hideCloseButton
-      run={run}
-      scrollToFirstStep
-      showProgress
-      showSkipButton
-      steps={steps}
-      styles={{
-        options: {
-          zIndex: 10000,
-          primaryColor: '#4CAF50', // var(--primary) equivalent
-          backgroundColor: '#ffffff',
-          textColor: '#333333',
-        },
-        buttonClose: {
-          display: 'none',
-        },
-        buttonSkip: {
-          color: '#888',
-        },
-        buttonNext: {
-          backgroundColor: '#4CAF50',
-          borderRadius: '4px',
-        },
-        buttonBack: {
-          color: '#4CAF50',
-        }
-      }}
-      locale={{
-        back: 'Voltar',
-        close: 'Fechar',
-        last: 'Concluir',
-        next: 'Avançar',
-        skip: 'Pular'
-      }}
-    />
+    <>
+      <Joyride
+        key={tourKey}
+        callback={handleJoyrideCallback}
+        continuous
+        hideCloseButton
+        run={run}
+        scrollToFirstStep
+        showProgress
+        showSkipButton
+        steps={steps}
+        styles={{
+          options: {
+            zIndex: 99999,
+            primaryColor: '#6366F1',
+            backgroundColor: 'var(--bg-card, #ffffff)',
+            textColor: 'var(--text-main, #333333)',
+          },
+          buttonClose: {
+            display: 'none',
+          },
+          buttonSkip: {
+            color: '#888',
+          },
+          buttonNext: {
+            backgroundColor: '#6366F1',
+            borderRadius: '4px',
+          },
+          buttonBack: {
+            color: '#6366F1',
+          }
+        }}
+        locale={{
+          back: 'Voltar',
+          close: 'Fechar',
+          last: 'Concluir',
+          next: 'Avançar',
+          skip: 'Pular'
+        }}
+      />
+
+      {!run && (
+        <button
+          onClick={() => {
+            setTourKey(prev => prev + 1);
+            setRun(true);
+          }}
+          style={{
+            position: 'fixed',
+            bottom: isMobile ? '84px' : '24px',
+            right: '24px',
+            width: '42px',
+            height: '42px',
+            borderRadius: '50%',
+            backgroundColor: 'var(--primary)',
+            color: '#FFFFFF',
+            border: 'none',
+            boxShadow: 'var(--shadow-lg)',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9998,
+            fontSize: '18px',
+            fontWeight: 'bold',
+            transition: 'transform 0.2s',
+          }}
+          title="Iniciar Tour de Ajuda"
+          onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.1)'}
+          onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
+        >
+          ?
+        </button>
+      )}
+    </>
   );
 }

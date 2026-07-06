@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Play, Pause, RotateCcw, CheckCircle2, Moon, Sun, Volume2, Settings, VolumeX, Music, Clock, Target, Coffee } from 'lucide-react';
 import { useAppContext, parseTaskMetadata } from '../contexts/AppContext';
+import { MFIcon } from './MFIcon';
 
 export default function FocusView() {
   const {
@@ -524,22 +525,45 @@ export default function FocusView() {
               <span>Sons Ambientes</span>
             </summary>
             
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '12px' }}>
+             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '12px' }}>
               <div>
-                <label htmlFor="ambient-sound-selector" style={{ display: 'block', color: 'var(--text-light)', fontSize: '11px', marginBottom: '4px' }}>Escolha o som:</label>
-                <select 
-                  id="ambient-sound-selector"
-                  value={ambientSoundFile} 
-                  onChange={(e) => {
-                    setAmbientSoundFile(e.target.value);
-                    setIsAmbientPlaying(false);
-                  }}
-                  style={{ width: '100%', padding: '6px', border: '1px solid var(--border-medium)', borderRadius: '6px', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)', fontSize: '12.5px' }}
-                >
-                  {ambientSounds.map(sound => (
-                    <option key={sound.value} value={sound.value}>{sound.emoji} {sound.label}</option>
-                  ))}
-                </select>
+                <label style={{ display: 'block', color: 'var(--text-light)', fontSize: '11px', marginBottom: '8px' }}>Escolha o som:</label>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(90px, 1fr))', gap: '8px' }}>
+                  {ambientSounds.map(sound => {
+                    const isSelected = ambientSoundFile === sound.value;
+                    return (
+                      <button
+                        key={sound.value}
+                        type="button"
+                        onClick={() => {
+                          setAmbientSoundFile(sound.value);
+                          setIsAmbientPlaying(false);
+                        }}
+                        style={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '6px',
+                          padding: '10px 8px',
+                          borderRadius: '8px',
+                          border: isSelected ? '1.5px solid var(--primary)' : '1px solid var(--border-medium)',
+                          backgroundColor: isSelected ? 'var(--primary-light)' : 'var(--bg-card)',
+                          color: isSelected ? 'var(--primary)' : 'var(--text-main)',
+                          cursor: 'pointer',
+                          transition: 'all 0.15s',
+                          fontSize: '11px',
+                          fontWeight: '600'
+                        }}
+                      >
+                        <MFIcon name={sound.emoji} size={18} color={isSelected ? 'var(--primary)' : 'var(--text-light)'} />
+                        <span style={{ textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', width: '100%', textAlign: 'center' }}>
+                          {sound.label}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>

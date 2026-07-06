@@ -30,14 +30,15 @@ import CustomDialogModal from '../components/CustomDialogModal.jsx';
 
 // ─── Helpers para Metadados de Tarefas (Horário e Recorrência) ───────────────
 export function parseTaskMetadata(description = '') {
-  if (!description) return { due_time: '', recurrence: 'nenhuma' };
+  if (!description) return { due_time: '', recurrence: 'nenhuma', archived: false };
   const marker = '--flowday-meta--';
   const parts = description.split(marker);
-  if (parts.length < 2) return { due_time: '', recurrence: 'nenhuma' };
+  if (parts.length < 2) return { due_time: '', recurrence: 'nenhuma', archived: false };
   try {
-    return JSON.parse(parts[1].trim());
+    const parsed = JSON.parse(parts[1].trim());
+    return { due_time: '', recurrence: 'nenhuma', archived: false, ...parsed };
   } catch (e) {
-    return { due_time: '', recurrence: 'nenhuma' };
+    return { due_time: '', recurrence: 'nenhuma', archived: false };
   }
 }
 
@@ -47,11 +48,11 @@ export function formatDescriptionWithoutMetadata(description = '') {
   return description.split(marker)[0].trim();
 }
 
-export function buildDescriptionWithMetadata(userDesc = '', due_time = '', recurrence = 'nenhuma') {
+export function buildDescriptionWithMetadata(userDesc = '', due_time = '', recurrence = 'nenhuma', archived = false) {
   const cleanDesc = formatDescriptionWithoutMetadata(userDesc);
   const existingMeta = parseTaskMetadata(userDesc);
   const marker = '--flowday-meta--';
-  const meta = { ...existingMeta, due_time, recurrence };
+  const meta = { ...existingMeta, due_time, recurrence, archived };
   return `${cleanDesc}\n\n${marker}\n${JSON.stringify(meta)}`;
 }
 
@@ -945,7 +946,14 @@ export function AppProvider({ children }) {
 
   const loadProfile = useCallback(async (userId) => {
     const { data } = await profilesService.getProfile(userId);
-    if (data) setUserProfile(data);
+    let profileData = data || { id: userId, avatar_url: '' };
+    
+    const localAvatar = localStorage.getItem(`flowday_user_avatar_${userId}`);
+    if (localAvatar && (!profileData.avatar_url || profileData.avatar_url === '')) {
+      profileData.avatar_url = localAvatar;
+    }
+    
+    setUserProfile(profileData);
   }, []);
 
   // ── Health Check SILENCIOSO (não-bloqueante) ──────────────────────────────────
@@ -1799,19 +1807,44 @@ export function AppProvider({ children }) {
 
   const handleUploadAvatar = useCallback(async (file) => {
     if (!currentUser?.id) return;
-    const { publicUrl } = await profilesService.uploadAvatar(currentUser.id, file);
-    if (publicUrl) {
-      setUserProfile(prev => ({ ...prev, avatar_url: publicUrl }));
+    
+    // Instant base64 local preview
+    const reader = new FileReader();
+    reader.onloadend = async () => {
+      const base64Url = reader.result;
+      setUserProfile(prev => ({ ...prev, avatar_url: base64Url }));
+      localStorage.setItem(`flowday_user_avatar_${currentUser.id}`, base64Url);
       logEvent('profile_updated', { avatar: true });
-    }
+
+      // Background upload if not a demo user
+      if (!currentUser.isDemo) {
+        try {
+          const { publicUrl } = await profilesService.uploadAvatar(currentUser.id, file);
+          if (publicUrl) {
+            setUserProfile(prev => ({ ...prev, avatar_url: publicUrl }));
+            localStorage.setItem(`flowday_user_avatar_${currentUser.id}`, publicUrl);
+          }
+        } catch (err) {
+          console.warn('[AppContext] Supabase avatar upload failed, using local fallback:', err);
+        }
+      }
+    };
+    reader.readAsDataURL(file);
   }, [currentUser?.id, logEvent]);
 
   const handleDeleteAvatar = useCallback(async () => {
     if (!currentUser?.id) return;
-    const { error } = await profilesService.deleteAvatar(currentUser.id);
-    if (!error) {
-      setUserProfile(prev => ({ ...prev, avatar_url: '' }));
-      logEvent('profile_updated', { avatar: false });
+    
+    setUserProfile(prev => ({ ...prev, avatar_url: '' }));
+    localStorage.removeItem(`flowday_user_avatar_${currentUser.id}`);
+    logEvent('profile_updated', { avatar: false });
+
+    if (!currentUser.isDemo) {
+      try {
+        await profilesService.deleteAvatar(currentUser.id);
+      } catch (err) {
+        console.warn('[AppContext] Supabase avatar delete failed:', err);
+      }
     }
   }, [currentUser?.id, logEvent]);
 

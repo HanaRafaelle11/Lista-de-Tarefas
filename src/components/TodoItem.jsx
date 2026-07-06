@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Calendar, Trash2, Edit2, AlertCircle, CalendarPlus, Check, Repeat, Unlink, Copy, Clock, Play, MoreVertical, Sparkles, Flame } from 'lucide-react';
-import { parseTaskMetadata, formatDescriptionWithoutMetadata, useAppContext } from '../contexts/AppContext';
+import { Calendar, Trash2, Edit2, AlertCircle, CalendarPlus, Check, Repeat, Unlink, Copy, Clock, Play, MoreVertical, Sparkles, Flame, Archive } from 'lucide-react';
+import { parseTaskMetadata, formatDescriptionWithoutMetadata, buildDescriptionWithMetadata, useAppContext } from '../contexts/AppContext';
 import { formatTaskDateDisplay, formatTaskTimeDisplay } from '../utils/dateUtils';
 import CategoryIcon from './CategoryIcon';
 
@@ -20,7 +20,7 @@ function exportTaskToCalendar(task) {
 export default function TodoItem({ item, onToggleComplete, onDelete, onEdit, goalId, onUnlinkGoal, onDuplicate, isRecommended, isCritical, isStreak }) {
   const [calExported, setCalExported] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
-  const { isPro, openPaywall, openCustomConfirm, setActiveTab } = useAppContext();
+  const { isPro, openPaywall, openCustomConfirm, setActiveTab, handleUpdateTask } = useAppContext();
 
   const handleExportCalendar = () => {
     if (!isPro) {
@@ -258,6 +258,26 @@ export default function TodoItem({ item, onToggleComplete, onDelete, onEdit, goa
                   <span>Editar</span>
                 </button>
               )}
+              
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowMenu(false);
+                  openCustomConfirm(
+                    "Deseja realmente arquivar esta tarefa?",
+                    "Arquivar Tarefa",
+                    () => {
+                      const meta = parseTaskMetadata(item.description);
+                      const updatedDesc = buildDescriptionWithMetadata(item.description, meta.due_time, meta.recurrence, true);
+                      handleUpdateTask(item.id, { description: updatedDesc });
+                    }
+                  );
+                }}
+                style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', fontSize: '12.5px', border: 'none', background: 'none', color: 'var(--text-muted)', width: '100%', textAlign: 'left', cursor: 'pointer' }}
+              >
+                <Archive size={14} />
+                <span>Arquivar</span>
+              </button>
 
               <button 
                 onClick={(e) => { e.stopPropagation(); if (onDelete) onDelete(item); setShowMenu(false); }}

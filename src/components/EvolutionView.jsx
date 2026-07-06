@@ -1063,7 +1063,7 @@ export default function EvolutionView() {
                   <Target size={16} style={{ color: 'var(--primary)' }} />
                   Saúde dos Objetivos Ativos
                 </h4>
-                {goals.length === 0 ? (
+                {activeGoals.length === 0 ? (
                   <div style={{ padding: '16px', textAlign: 'center', color: 'var(--text-light)', backgroundColor: 'var(--bg-app)', borderRadius: 'var(--radius-sm)', border: '1px dashed var(--border-medium)' }}>
                     Nenhum objetivo registrado.
                   </div>

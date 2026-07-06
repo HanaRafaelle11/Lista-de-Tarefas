@@ -3,7 +3,7 @@ import {
   Plus, Search, X, Calendar, ChevronDown, ChevronRight, 
   List, Columns, Grid, Trash2, Edit2, AlertCircle, ArrowLeft, ArrowRight,
   Sparkles, Award, Sprout, Pin, Zap, CheckCircle, Moon, Sun, Tag, AlertTriangle, RotateCcw, Copy, Check, Download,
-  Archive, Target
+  Archive, Target, MoreVertical, Trash
 } from 'lucide-react';
 import EmojiPicker from 'emoji-picker-react';
 import CategoryIcon from './CategoryIcon';
@@ -157,16 +157,30 @@ function categorizeTasks(tasks, goals = [], goalTasks = []) {
 const priorityOrder = { 'Alta': 0, 'Média': 1, 'Baixa': 2 };
 const sortByTime = (tasksList) =>
   [...tasksList].sort((a, b) => {
-    const metaA = parseTaskMetadata(a.description);
-    const metaB = parseTaskMetadata(b.description);
-    const timeA = metaA.due_time || '';
-    const timeB = metaB.due_time || '';
+    const dateA = a.dueDate ? a.dueDate.split('T')[0] : '';
+    const dateB = b.dueDate ? b.dueDate.split('T')[0] : '';
 
-    if (timeA && timeB) {
-      return timeA.localeCompare(timeB);
+    if (dateA && dateB) {
+      if (dateA !== dateB) return dateA.localeCompare(dateB);
+      
+      const metaA = parseTaskMetadata(a.description);
+      const metaB = parseTaskMetadata(b.description);
+      const timeA = metaA.due_time || '';
+      const timeB = metaB.due_time || '';
+
+      if (timeA && timeB) return timeA.localeCompare(timeB);
+      if (timeA && !timeB) return -1;
+      if (!timeA && timeB) return 1;
+
+      const pA = priorityOrder[a.priority] ?? 2;
+      const pB = priorityOrder[b.priority] ?? 2;
+      if (pA !== pB) return pA - pB;
+
+      return new Date(a.created_at || a.createdAt || 0) - new Date(b.created_at || b.createdAt || 0);
     }
-    if (timeA && !timeB) return -1;
-    if (!timeA && timeB) return 1;
+
+    if (dateA && !dateB) return -1;
+    if (!dateA && dateB) return 1;
 
     const pA = priorityOrder[a.priority] ?? 2;
     const pB = priorityOrder[b.priority] ?? 2;
@@ -333,12 +347,16 @@ export default function MyDayView() {
     setShouldOpenGoalModal,
     openCustomConfirm,
     selectedGoalIdFilter,
-    setSelectedGoalIdFilter
+    setSelectedGoalIdFilter,
+    handleDuplicateGoal
   } = useAppContext();
 
   // Estados locais
   const [filter, setFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [isArchivedModalOpen, setIsArchivedModalOpen] = useState(false);
+  const [archivedTab, setArchivedTab] = useState('goals');
+  const [activeGoalKebabId, setActiveGoalKebabId] = useState(null);
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState(null);
@@ -784,6 +802,9 @@ export default function MyDayView() {
   // Filtragem de tarefas
   const baseFiltered = useMemo(() => {
     return tasks.filter(task => {
+      const meta = parseTaskMetadata(task.description);
+      if (meta.archived) return false;
+
       const q = searchQuery.toLowerCase();
       const matchesSearch = task.title.toLowerCase().includes(q) ||
         (task.description && task.description.toLowerCase().includes(q));
@@ -807,6 +828,9 @@ export default function MyDayView() {
   // Filtragem exclusiva para o Kanban que ignora o filtro de status superior (all/active/completed)
   const kanbanFiltered = useMemo(() => {
     return tasks.filter(task => {
+      const meta = parseTaskMetadata(task.description);
+      if (meta.archived) return false;
+
       const q = searchQuery.toLowerCase();
       const matchesSearch = task.title.toLowerCase().includes(q) ||
         (task.description && task.description.toLowerCase().includes(q));
@@ -836,25 +860,21 @@ export default function MyDayView() {
     if (selectedGoalIdFilter !== 'all') {
       baseGoals = baseGoals.filter(g => g.id === selectedGoalIdFilter);
     }
-    if (categoryFilter === 'all') return baseGoals;
-
+    
+    // Sort goals chronologically by target_date
     return [...baseGoals].sort((a, b) => {
-      const aTasks = tasks.filter(t => {
-        const link = goalTasks.find(gt => gt.goal_id === a.id && gt.task_id === t.id);
-        return link && !t.deletedAt;
-      });
-      const bTasks = tasks.filter(t => {
-        const link = goalTasks.find(gt => gt.goal_id === b.id && gt.task_id === t.id);
-        return link && !t.deletedAt;
-      });
-      const aMatches = aTasks.some(t => t.category === categoryFilter);
-      const bMatches = bTasks.some(t => t.category === categoryFilter);
+      const dateA = a.target_date || '';
+      const dateB = b.target_date || '';
 
-      if (aMatches && !bMatches) return -1;
-      if (!aMatches && bMatches) return 1;
-      return 0;
+      if (dateA && dateB) {
+        return dateA.localeCompare(dateB);
+      }
+      if (dateA && !dateB) return -1;
+      if (!dateA && dateB) return 1;
+
+      return new Date(a.created_at || a.createdAt || 0) - new Date(b.created_at || b.createdAt || 0);
     });
-  }, [goals, categoryFilter, tasks, goalTasks, selectedGoalIdFilter]);
+  }, [goals, selectedGoalIdFilter]);
 
   const sections = useMemo(() => categorizeTasks(looseTasksFiltered, goals, goalTasks), [looseTasksFiltered, goals, goalTasks]);
 
@@ -1139,6 +1159,14 @@ export default function MyDayView() {
           >
             <Tag size={14} />
             <span>Categorias</span>
+          </button>
+          <button 
+            onClick={() => setIsArchivedModalOpen(true)} 
+            className="tasks-add-btn" 
+            style={{ backgroundColor: 'var(--bg-card)', color: 'var(--text-main)', border: '1px solid var(--border-medium)', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+          >
+            <Archive size={14} style={{ color: 'var(--text-muted)' }} />
+            <span>Arquivados</span>
           </button>
           <button 
             onClick={() => setIsTemplatesOpen(true)} 
@@ -1474,37 +1502,177 @@ export default function MyDayView() {
                           </div>
                         </div>
 
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }} onClick={e => e.stopPropagation()}>
-                          <button 
-                            onClick={() => openEditGoalModal(goal)}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0, position: 'relative' }} onClick={e => e.stopPropagation()}>
+                          
+                          {/* Goal Kebab Menu Trigger */}
+                          <button
+                            onClick={() => setActiveGoalKebabId(activeGoalKebabId === goal.id ? null : goal.id)}
                             className="todo-item-action-btn edit-btn"
                             style={{ padding: '6px' }}
-                            title="Editar Objetivo"
+                            title="Opções do Objetivo"
                           >
-                            <Edit2 size={13} />
+                            <MoreVertical size={16} />
                           </button>
-                          <button 
-                            onClick={() => handleCompleteGoal(goal.id)}
-                            className="todo-item-action-btn edit-btn"
-                            style={{ color: '#22c55e', padding: '6px' }}
-                            title="Concluir Objetivo"
-                          >
-                            <Check size={13} />
-                          </button>
-                          <button 
-                            onClick={() => {
-                              openCustomConfirm(
-                                "Deseja realmente arquivar este objetivo?",
-                                "Arquivar Objetivo",
-                                () => onUpdateGoal(goal.id, { status: 'archived' })
-                              );
-                            }}
-                            className="todo-item-action-btn edit-btn"
-                            style={{ color: 'var(--text-muted)', padding: '6px' }}
-                            title="Arquivar Objetivo"
-                          >
-                            <Archive size={13} />
-                          </button>
+
+                          {/* Kebab Dropdown Panel */}
+                          {activeGoalKebabId === goal.id && (
+                            <>
+                              <div 
+                                style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 999 }} 
+                                onClick={() => setActiveGoalKebabId(null)}
+                              />
+                              <div 
+                                style={{
+                                  position: 'absolute',
+                                  top: '32px',
+                                  right: '24px',
+                                  backgroundColor: 'var(--bg-card)',
+                                  border: '1px solid var(--border-medium)',
+                                  borderRadius: '8px',
+                                  padding: '6px 0',
+                                  zIndex: 1000,
+                                  minWidth: '130px',
+                                  boxShadow: 'var(--shadow-md)',
+                                  display: 'flex',
+                                  flexDirection: 'column'
+                                }}
+                              >
+                                <button
+                                  onClick={() => {
+                                    openEditGoalModal(goal);
+                                    setActiveGoalKebabId(null);
+                                  }}
+                                  style={{
+                                    padding: '8px 12px',
+                                    background: 'none',
+                                    border: 'none',
+                                    color: 'var(--text-main)',
+                                    fontSize: '12.5px',
+                                    fontWeight: '600',
+                                    cursor: 'pointer',
+                                    textAlign: 'left',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '8px'
+                                  }}
+                                  onMouseEnter={e => e.currentTarget.style.backgroundColor = 'var(--bg-card-hover)'}
+                                  onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+                                >
+                                  <Edit2 size={13} />
+                                  <span>Editar</span>
+                                </button>
+
+                                <button
+                                  onClick={() => {
+                                    handleDuplicateGoal(goal.id);
+                                    setActiveGoalKebabId(null);
+                                  }}
+                                  style={{
+                                    padding: '8px 12px',
+                                    background: 'none',
+                                    border: 'none',
+                                    color: 'var(--text-main)',
+                                    fontSize: '12.5px',
+                                    fontWeight: '600',
+                                    cursor: 'pointer',
+                                    textAlign: 'left',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '8px'
+                                  }}
+                                  onMouseEnter={e => e.currentTarget.style.backgroundColor = 'var(--bg-card-hover)'}
+                                  onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+                                >
+                                  <Copy size={13} />
+                                  <span>Duplicar</span>
+                                </button>
+
+                                <button
+                                  onClick={() => {
+                                    handleCompleteGoal(goal.id);
+                                    setActiveGoalKebabId(null);
+                                  }}
+                                  style={{
+                                    padding: '8px 12px',
+                                    background: 'none',
+                                    border: 'none',
+                                    color: '#22c55e',
+                                    fontSize: '12.5px',
+                                    fontWeight: '600',
+                                    cursor: 'pointer',
+                                    textAlign: 'left',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '8px'
+                                  }}
+                                  onMouseEnter={e => e.currentTarget.style.backgroundColor = 'var(--bg-card-hover)'}
+                                  onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+                                >
+                                  <Check size={13} />
+                                  <span>Concluir</span>
+                                </button>
+
+                                <button
+                                  onClick={() => {
+                                    openCustomConfirm(
+                                      "Deseja realmente arquivar este objetivo?",
+                                      "Arquivar Objetivo",
+                                      () => onUpdateGoal(goal.id, { status: 'archived' })
+                                    );
+                                    setActiveGoalKebabId(null);
+                                  }}
+                                  style={{
+                                    padding: '8px 12px',
+                                    background: 'none',
+                                    border: 'none',
+                                    color: 'var(--text-muted)',
+                                    fontSize: '12.5px',
+                                    fontWeight: '600',
+                                    cursor: 'pointer',
+                                    textAlign: 'left',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '8px'
+                                  }}
+                                  onMouseEnter={e => e.currentTarget.style.backgroundColor = 'var(--bg-card-hover)'}
+                                  onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+                                >
+                                  <Archive size={13} />
+                                  <span>Arquivar</span>
+                                </button>
+
+                                <button
+                                  onClick={() => {
+                                    openCustomConfirm(
+                                      "Deseja realmente excluir permanentemente este objetivo?",
+                                      "Excluir Objetivo",
+                                      () => onDeleteGoal(goal.id)
+                                    );
+                                    setActiveGoalKebabId(null);
+                                  }}
+                                  style={{
+                                    padding: '8px 12px',
+                                    background: 'none',
+                                    border: 'none',
+                                    color: '#ef4444',
+                                    fontSize: '12.5px',
+                                    fontWeight: '600',
+                                    cursor: 'pointer',
+                                    textAlign: 'left',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '8px'
+                                  }}
+                                  onMouseEnter={e => e.currentTarget.style.backgroundColor = 'var(--bg-card-hover)'}
+                                  onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+                                >
+                                  <Trash size={13} />
+                                  <span>Excluir</span>
+                                </button>
+                              </div>
+                            </>
+                          )}
+
                           <span style={{ color: 'var(--text-muted)', display: 'flex', paddingLeft: '4px' }} onClick={() => toggleGoalExpand(goal.id)}>
                             {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
                           </span>
@@ -1528,6 +1696,27 @@ export default function MyDayView() {
                                   onDuplicate={onDuplicateTask}
                                 />
                               ))}
+                              {/* Link task button always visible at the bottom of the list */}
+                              <div style={{ display: 'flex', justifyContent: 'center', marginTop: '8px' }}>
+                                <button
+                                  onClick={() => {
+                                    setEditingTask(null);
+                                    setTitle('');
+                                    setDescription('');
+                                    setCategory(categories[0]?.id || 'Trabalho');
+                                    setPriority('Média');
+                                    setDueDate('');
+                                    setDueTime('');
+                                    setRecurrence('nenhuma');
+                                    setLinkedGoal(goal.id);
+                                    setIsModalOpen(true);
+                                  }}
+                                  className="tasks-add-btn btn-primary-glow"
+                                  style={{ display: 'inline-flex', padding: '6px 12px', fontSize: '12px' }}
+                                >
+                                  <Plus size={14} /> Nova tarefa
+                                </button>
+                              </div>
                             </div>
                           ) : (
                             <div style={{ textAlign: 'center', padding: '20px', color: 'var(--text-light)', fontSize: '13px' }}>
@@ -2545,6 +2734,244 @@ export default function MyDayView() {
               >
                 Concluir Tudo
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Itens Arquivados */}
+      {isArchivedModalOpen && (
+        <div 
+          className="modal-overlay animate-fade-in" 
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.75)',
+            backdropFilter: 'blur(8px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 15000,
+            padding: '16px'
+          }}
+        >
+          <div 
+            className="modal-content animate-scale-up" 
+            style={{
+              backgroundColor: 'var(--bg-card)',
+              border: '1px solid var(--border-medium)',
+              borderRadius: 'var(--radius-lg)',
+              width: '100%',
+              maxWidth: '550px',
+              maxHeight: '85vh',
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
+              boxShadow: 'var(--shadow-lg)'
+            }}
+          >
+            {/* Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px 24px', borderBottom: '1px solid var(--border-light)' }}>
+              <h3 style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
+                <Archive size={20} style={{ color: 'var(--primary)' }} />
+                <span>Itens Arquivados</span>
+              </h3>
+              <button 
+                onClick={() => setIsArchivedModalOpen(false)}
+                style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Tab Selection */}
+            <div style={{ display: 'flex', borderBottom: '1px solid var(--border-light)', padding: '0 16px' }}>
+              <button
+                onClick={() => setArchivedTab('goals')}
+                style={{
+                  flex: 1,
+                  padding: '14px',
+                  background: 'none',
+                  border: 'none',
+                  color: archivedTab === 'goals' ? 'var(--primary)' : 'var(--text-muted)',
+                  fontWeight: '700',
+                  fontSize: '14px',
+                  borderBottom: archivedTab === 'goals' ? '2.5px solid var(--primary)' : '2.5px solid transparent',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s'
+                }}
+              >
+                Objetivos ({(goals || []).filter(g => g.status === 'archived' && !g.deletedAt).length})
+              </button>
+              <button
+                onClick={() => setArchivedTab('tasks')}
+                style={{
+                  flex: 1,
+                  padding: '14px',
+                  background: 'none',
+                  border: 'none',
+                  color: archivedTab === 'tasks' ? 'var(--primary)' : 'var(--text-muted)',
+                  fontWeight: '700',
+                  fontSize: '14px',
+                  borderBottom: archivedTab === 'tasks' ? '2.5px solid var(--primary)' : '2.5px solid transparent',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s'
+                }}
+              >
+                Tarefas ({(tasks || []).filter(t => parseTaskMetadata(t.description).archived === true && !t.deletedAt).length})
+              </button>
+            </div>
+
+            {/* List Area */}
+            <div style={{ padding: '20px 24px', overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {archivedTab === 'goals' ? (
+                (goals || []).filter(g => g.status === 'archived' && !g.deletedAt).length === 0 ? (
+                  <div style={{ textAlign: 'center', color: 'var(--text-light)', padding: '40px 0', fontSize: '13.5px' }}>
+                    Nenhum objetivo arquivado.
+                  </div>
+                ) : (
+                  (goals || []).filter(g => g.status === 'archived' && !g.deletedAt).map(goal => (
+                    <div 
+                      key={goal.id} 
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '12px 16px',
+                        backgroundColor: 'var(--bg-app)',
+                        border: '1px solid var(--border-light)',
+                        borderRadius: 'var(--radius-md)'
+                      }}
+                    >
+                      <span style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-main)', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', maxWidth: '300px' }}>
+                        {goal.title}
+                      </span>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <button
+                          onClick={() => {
+                            onUpdateGoal(goal.id, { status: 'active' });
+                            openCustomAlert("Objetivo restaurado com sucesso!", "Restaurado");
+                          }}
+                          style={{
+                            padding: '6px 12px',
+                            borderRadius: '6px',
+                            border: 'none',
+                            backgroundColor: 'var(--primary)',
+                            color: '#FFFFFF',
+                            fontSize: '12px',
+                            fontWeight: '700',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          Restaurar
+                        </button>
+                        <button
+                          onClick={() => {
+                            openCustomConfirm(
+                              "Excluir permanentemente este objetivo?",
+                              "Excluir Objetivo",
+                              () => onDeleteGoal(goal.id)
+                            );
+                          }}
+                          style={{
+                            padding: '6px 12px',
+                            borderRadius: '6px',
+                            border: 'none',
+                            backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                            color: '#ef4444',
+                            fontSize: '12px',
+                            fontWeight: '700',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          Excluir
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )
+              ) : (
+                (tasks || []).filter(t => parseTaskMetadata(t.description).archived === true && !t.deletedAt).length === 0 ? (
+                  <div style={{ textAlign: 'center', color: 'var(--text-light)', padding: '40px 0', fontSize: '13.5px' }}>
+                    Nenhuma tarefa arquivada.
+                  </div>
+                ) : (
+                  (tasks || []).filter(t => parseTaskMetadata(t.description).archived === true && !t.deletedAt).map(task => {
+                    const meta = parseTaskMetadata(task.description);
+                    const cleanDesc = formatDescriptionWithoutMetadata(task.description);
+                    return (
+                      <div 
+                        key={task.id} 
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          padding: '12px 16px',
+                          backgroundColor: 'var(--bg-app)',
+                          border: '1px solid var(--border-light)',
+                          borderRadius: 'var(--radius-md)'
+                        }}
+                      >
+                        <div style={{ display: 'flex', flexDirection: 'column', maxWidth: '300px' }}>
+                          <span style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-main)', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                            {task.title}
+                          </span>
+                          {cleanDesc && (
+                            <span style={{ fontSize: '11px', color: 'var(--text-light)', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                              {cleanDesc}
+                            </span>
+                          )}
+                        </div>
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          <button
+                            onClick={() => {
+                              const updatedDesc = buildDescriptionWithMetadata(task.description, meta.due_time, meta.recurrence, false);
+                              onUpdateTask(task.id, { description: updatedDesc });
+                              openCustomAlert("Tarefa restaurada com sucesso!", "Restaurada");
+                            }}
+                            style={{
+                              padding: '6px 12px',
+                              borderRadius: '6px',
+                              border: 'none',
+                              backgroundColor: 'var(--primary)',
+                              color: '#FFFFFF',
+                              fontSize: '12px',
+                              fontWeight: '700',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            Restaurar
+                          </button>
+                          <button
+                            onClick={() => {
+                              openCustomConfirm(
+                                "Excluir permanentemente esta tarefa?",
+                                "Excluir Tarefa",
+                                () => onDeleteTask(task.id)
+                              );
+                            }}
+                            style={{
+                              padding: '6px 12px',
+                              borderRadius: '6px',
+                              border: 'none',
+                              backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                              color: '#ef4444',
+                              fontSize: '12px',
+                              fontWeight: '700',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            Excluir
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })
+                )
+              )}
             </div>
           </div>
         </div>

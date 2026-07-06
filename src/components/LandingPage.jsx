@@ -91,6 +91,7 @@ export default function LandingPage({ onEnterApp }) {
             <a href="#ecossistema" className="nav-link">O Ecossistema</a>
             <a href="#coach" className="nav-link">O Coach</a>
             <a href="#comparativo" className="nav-link">Comparação</a>
+            <a href="#planos" className="nav-link">Planos</a>
           </div>
 
           <div className="landing-nav-buttons" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -431,7 +432,7 @@ export default function LandingPage({ onEnterApp }) {
             </h2>
           </div>
 
-          <div className="steps-flow-container" style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: '40px' }}>
+          <div className="steps-flow-container">
             
             {/* Step 1 */}
             <div className="step-row">
@@ -446,9 +447,6 @@ export default function LandingPage({ onEnterApp }) {
               </div>
             </div>
 
-            {/* Connector Arrow */}
-            <div className="step-connector"><ArrowDown size={20} color="rgba(255, 255, 255, 0.15)" /></div>
-
             {/* Step 2 */}
             <div className="step-row">
               <div className="step-num-col">
@@ -462,9 +460,6 @@ export default function LandingPage({ onEnterApp }) {
               </div>
             </div>
 
-            {/* Connector Arrow */}
-            <div className="step-connector"><ArrowDown size={20} color="rgba(255, 255, 255, 0.15)" /></div>
-
             {/* Step 3 */}
             <div className="step-row">
               <div className="step-num-col">
@@ -477,9 +472,6 @@ export default function LandingPage({ onEnterApp }) {
                 </p>
               </div>
             </div>
-
-            {/* Connector Arrow */}
-            <div className="step-connector"><ArrowDown size={20} color="rgba(255, 255, 255, 0.15)" /></div>
 
             {/* Step 4 */}
             <div className="step-row">
@@ -692,8 +684,7 @@ export default function LandingPage({ onEnterApp }) {
                   </ul>
                 </div>
                 <div style={{ background: 'rgba(255, 255, 255, 0.02)', padding: '20px', borderRadius: '12px', border: '1px solid rgba(255, 255, 255, 0.05)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  <div className="chat-bubble-showcase">🧠 <b>Coach Flow:</b> Você rende muito mais às terças. Aproveite este dia para tarefas de foco profundo.</div>
-                  <div className="chat-bubble-showcase">🧠 <b>Coach Flow:</b> O objetivo "Tutor de Pet Perfeito" está parado há 4 dias. Vamos agir?</div>
+                  <div className="chat-bubble-showcase">🧠 <b>Coach Flow:</b> Olá! Analisando seu ritmo, notei que você rende muito mais às terças-feiras no período da manhã. Para potencializar seus resultados, sugiro agendar as tarefas do objetivo "Estudos de Tecnologia" nessa janela. Além disso, o seu objetivo "Leitura Diária" está parado há 4 dias — que tal fazermos uma sessão curta de 10 minutos hoje para reativar o seu hábito e manter a planta evoluindo?</div>
                 </div>
               </div>
             )}
@@ -929,75 +920,6 @@ export default function LandingPage({ onEnterApp }) {
         </Container>
       </section>
 
-      {/* ── 9. PARA QUEM É ─────────────────────────────────────────────── */}
-      <section
-        style={{
-          padding: '100px 24px',
-          background: '#07090C',
-        }}
-      >
-        <Container>
-          <div style={{ textAlign: 'center', marginBottom: '60px' }}>
-            <span style={{ fontSize: '12px', fontWeight: 700, color: '#C084FC', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Público Alvo</span>
-            <h2 style={{ fontSize: 'clamp(28px, 4vw, 42px)', fontWeight: 800, color: '#FFFFFF', marginTop: '10px', letterSpacing: '-0.02em' }}>
-              Feito para quem busca progresso consistente
-            </h2>
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px' }}>
-            
-            <div className="target-card">
-              <span style={{ fontSize: '32px', marginBottom: '16px', display: 'block' }}>🎯</span>
-              <h4 style={{ fontSize: '18px', fontWeight: 700, color: '#FFFFFF', marginBottom: '8px' }}>Profissionais</h4>
-              <p style={{ fontSize: '14.5px', color: '#94A3B8', margin: 0, lineHeight: 1.5 }}>
-                Mais foco e consistência no trabalho e estudos, organizando entregas e evitando o estresse e burnout.
-              </p>
-            </div>
-
-            <div className="target-card">
-              <span style={{ fontSize: '32px', marginBottom: '16px', display: 'block' }}>📚</span>
-              <h4 style={{ fontSize: '18px', fontWeight: 700, color: '#FFFFFF', marginBottom: '8px' }}>Estudantes</h4>
-              <p style={{ fontSize: '14.5px', color: '#94A3B8', margin: 0, lineHeight: 1.5 }}>
-                Foco profundo nos estudos, controle de revisões, metas de aprovação e gamificação do tempo gasto.
-              </p>
-            </div>
-
-            <div className="target-card">
-              <span style={{ fontSize: '32px', marginBottom: '16px', display: 'block' }}>💼</span>
-              <h4 style={{ fontSize: '18px', fontWeight: 700, color: '#FFFFFF', marginBottom: '8px' }}>Empreendedores</h4>
-              <p style={{ fontSize: '14.5px', color: '#94A3B8', margin: 0, lineHeight: 1.5 }}>
-                Visão macro de objetivos de negócio traduzidos em hábitos e tarefas diárias acionáveis.
-              </p>
-            </div>
-
-            <div className="target-card">
-              <span style={{ fontSize: '32px', marginBottom: '16px', display: 'block' }}>🏃</span>
-              <h4 style={{ fontSize: '18px', fontWeight: 700, color: '#FFFFFF', marginBottom: '8px' }}>Criando Hábitos</h4>
-              <p style={{ fontSize: '14.5px', color: '#94A3B8', margin: 0, lineHeight: 1.5 }}>
-                Suba degrau por degrau na construção de rotinas saudáveis e monitore sua frequência real de hábitos.
-              </p>
-            </div>
-
-            <div className="target-card">
-              <span style={{ fontSize: '32px', marginBottom: '16px', display: 'block' }}>🐶</span>
-              <h4 style={{ fontSize: '18px', fontWeight: 700, color: '#FFFFFF', marginBottom: '8px' }}>Projetos Pessoais</h4>
-              <p style={{ fontSize: '14.5px', color: '#94A3B8', margin: 0, lineHeight: 1.5 }}>
-                Manter objetivos paralelos vivos e divertidos, acompanhado do desenvolvimento do seu companion.
-              </p>
-            </div>
-
-            <div className="target-card">
-              <span style={{ fontSize: '32px', marginBottom: '16px', display: 'block' }}>💰</span>
-              <h4 style={{ fontSize: '18px', fontWeight: 700, color: '#FFFFFF', marginBottom: '8px' }}>Planejamento Financeiro</h4>
-              <p style={{ fontSize: '14.5px', color: '#94A3B8', margin: 0, lineHeight: 1.5 }}>
-                Progresso mensurável e etapas de planejamento ligadas à sua central de conquistas de metas.
-              </p>
-            </div>
-
-          </div>
-        </Container>
-      </section>
-
       {/* ── 10. DEPOIMENTOS ───────────────────────────────────────────── */}
       <section
         style={{
@@ -1059,8 +981,9 @@ export default function LandingPage({ onEnterApp }) {
         </Container>
       </section>
 
-      {/* ── 11. ROADMAP & FAQ REVISADO ────────────────────────────────── */}
+      {/* ── 11. PRICING GRID ──────────────────────────────────────────── */}
       <section
+        id="planos"
         style={{
           padding: '100px 24px',
           background: '#07090C',
@@ -1068,114 +991,187 @@ export default function LandingPage({ onEnterApp }) {
         }}
       >
         <Container>
-          <div style={{ display: 'grid', gridTemplateColumns: '0.9fr 1.1fr', gap: '60px' }} className="roadmap-faq-grid">
-            
-            {/* Roadmap */}
-            <div>
-              <span style={{ fontSize: '12px', fontWeight: 700, color: '#10B981', textTransform: 'uppercase', letterSpacing: '0.05em' }}>O Futuro</span>
-              <h2 style={{ fontSize: '32px', fontWeight: 800, color: '#FFFFFF', marginTop: '10px', marginBottom: '30px', letterSpacing: '-0.02em' }}>
-                Roadmap de Evolução
-              </h2>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                <div className="roadmap-item done">
-                  <span className="status-badge">PRONTO</span>
-                  <div>
-                    <h4 style={{ margin: '0 0 4px', fontSize: '15px', fontWeight: 700, color: '#FFFFFF' }}>Coach IA Inteligente</h4>
-                    <p style={{ margin: 0, fontSize: '13px', color: '#94A3B8' }}>Análises de comportamento e sugestões dinâmicas.</p>
-                  </div>
-                </div>
+          <div style={{ textAlign: 'center', marginBottom: '60px' }}>
+            <span style={{ fontSize: '12px', fontWeight: 700, color: '#10B981', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Planos</span>
+            <h2 style={{ fontSize: 'clamp(28px, 4vw, 42px)', fontWeight: 800, color: '#FFFFFF', marginTop: '10px', letterSpacing: '-0.02em' }}>
+              Comece grátis. Evolua quando quiser.
+            </h2>
+            <p style={{ color: '#94A3B8', fontSize: '16px', maxWidth: '550px', margin: '12px auto 0' }}>
+              Sem truques. O plano gratuito já é completo. O Pro existe para quem quer ir mais fundo.
+            </p>
+          </div>
 
-                <div className="roadmap-item done">
-                  <span className="status-badge">PRONTO</span>
-                  <div>
-                    <h4 style={{ margin: '0 0 4px', fontSize: '15px', fontWeight: 700, color: '#FFFFFF' }}>Companheiro Virtual (Pet)</h4>
-                    <p style={{ margin: 0, fontSize: '13px', color: '#94A3B8' }}>Gamificação e companheiro evolutivo na Home.</p>
-                  </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', maxWidth: '800px', margin: '0 auto' }} className="pricing-grid">
+            {/* Free Plan */}
+            <div className="pricing-card">
+              <div style={{ marginBottom: '24px' }}>
+                <span style={{ fontSize: '13px', fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Gratuito</span>
+                <div style={{ fontSize: '48px', fontWeight: 800, color: '#FFFFFF', marginTop: '8px', lineHeight: 1 }}>
+                  R$0
+                  <span style={{ fontSize: '16px', fontWeight: 500, color: '#64748B' }}>/mês</span>
                 </div>
-
-                <div className="roadmap-item done">
-                  <span className="status-badge">PRONTO</span>
-                  <div>
-                    <h4 style={{ margin: '0 0 4px', fontSize: '15px', fontWeight: 700, color: '#FFFFFF' }}>Planejamento Assistido por IA</h4>
-                    <p style={{ margin: 0, fontSize: '13px', color: '#94A3B8' }}>Geração de planos automáticos de tarefas e hábitos.</p>
-                  </div>
-                </div>
-
-                <div className="roadmap-item future">
-                  <span className="status-badge-future">FUTURO</span>
-                  <div>
-                    <h4 style={{ margin: '0 0 4px', fontSize: '15px', fontWeight: 700, color: '#FFFFFF' }}>Aplicativo Mobile Nativo</h4>
-                    <p style={{ margin: 0, fontSize: '13px', color: '#94A3B8' }}>Templates modernos e notificações push locais.</p>
-                  </div>
-                </div>
-
-                <div className="roadmap-item future">
-                  <span className="status-badge-future">FUTURO</span>
-                  <div>
-                    <h4 style={{ margin: '0 0 4px', fontSize: '15px', fontWeight: 700, color: '#FFFFFF' }}>Integração de Calendário Externa</h4>
-                    <p style={{ margin: 0, fontSize: '13px', color: '#94A3B8' }}>Sincronização com Google Calendar e Outlook.</p>
-                  </div>
-                </div>
-
-                <div className="roadmap-item future">
-                  <span className="status-badge-future">FUTURO</span>
-                  <div>
-                    <h4 style={{ margin: '0 0 4px', fontSize: '15px', fontWeight: 700, color: '#FFFFFF' }}>Widgets do Sistema & Mais Companions</h4>
-                    <p style={{ margin: 0, fontSize: '13px', color: '#94A3B8' }}>Acesso rápido à Home e novas espécies de pets evolutivos.</p>
-                  </div>
-                </div>
+                <p style={{ color: '#94A3B8', fontSize: '14px', marginTop: '12px', lineHeight: 1.5 }}>
+                  Tudo que você precisa para organizar sua evolução pessoal.
+                </p>
               </div>
-            </div>
-
-            {/* FAQ */}
-            <div>
-              <span style={{ fontSize: '12px', fontWeight: 700, color: '#C084FC', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Perguntas Frequentes</span>
-              <h2 style={{ fontSize: '32px', fontWeight: 800, color: '#FFFFFF', marginTop: '10px', marginBottom: '30px', letterSpacing: '-0.02em' }}>
-                Respostas Rápidas
-              </h2>
-              
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '32px' }}>
                 {[
-                  {
-                    q: 'O que é o MyFlowDay?',
-                    a: 'O MyFlowDay é um sistema operacional de evolução pessoal que centraliza seus objetivos, tarefas, hábitos, sessões de foco Pomodoro, conquistas gamificadas e um coach inteligente em um ecossistema integrado para ajudá-lo a evoluir dia após dia.'
-                  },
-                  {
-                    q: 'Como o Coach IA funciona?',
-                    a: 'Ele observa silenciosamente suas horas de maior foco, tarefas concluídas e hábitos cumpridos na semana para fornecer notas reais e relatórios acionáveis de comportamento (como avisar se um objetivo de leitura está parado ou indicar o seu melhor dia de foco).'
-                  },
-                  {
-                    q: 'O que é o companheiro virtual (pet) da Home?',
-                    a: 'É um avatar dinâmico (inicialmente uma planta semente) que cresce de nível e forma física à medida que você conclui tarefas e hábitos no seu dia. Ele funciona como o espelho visual do seu progresso.'
-                  },
-                  {
-                    q: 'O aplicativo funciona offline?',
-                    a: 'Sim. O MyFlowDay possui um banco de dados local IndexedDB completo que salva todas as suas alterações em cache. Assim que o seu dispositivo restabelece a conexão com a internet, os dados são sincronizados com o Supabase automaticamente.'
-                  },
-                  {
-                    q: 'O MyFlowDay é gratuito?',
-                    a: 'Sim, o MyFlowDay oferece um plano gratuito completo com todos os módulos essenciais. Usuários que desejam o desbloqueio completo de tendências profundas e recomendações específicas do Coach IA podem assinar o plano Pro.'
-                  }
-                ].map((item, idx) => (
-                  <div 
-                    key={idx} 
-                    style={{ background: '#0F1318', border: '1px solid rgba(255, 255, 255, 0.05)', borderRadius: '12px', overflow: 'hidden', cursor: 'pointer' }}
-                    onClick={() => toggleFaq(idx)}
-                  >
-                    <div style={{ padding: '18px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontSize: '15px', fontWeight: 700, color: '#FFFFFF' }}>{item.q}</span>
-                      <ChevronDown size={18} style={{ transform: openFaq === idx ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s', color: '#94A3B8' }} />
-                    </div>
-                    {openFaq === idx && (
-                      <div style={{ padding: '0 24px 20px', fontSize: '14px', lineHeight: 1.6, color: '#94A3B8', borderTop: '1px solid rgba(255, 255, 255, 0.02)', paddingTop: '12px' }}>
-                        {item.a}
-                      </div>
-                    )}
+                  'Tarefas, hábitos e objetivos ilimitados',
+                  'Timer Pomodoro com áudio ambiente',
+                  'Companion virtual evolutivo',
+                  'Coach IA — insights semanais básicos',
+                  'Conquistas e gamificação completa',
+                  'Planejamento semanal drag & drop',
+                  'Exportação PDF',
+                  'Sincronização offline'
+                ].map((f, i) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '14px', color: '#E2E8F0' }}>
+                    <span style={{ color: '#10B981', fontSize: '16px', flexShrink: 0 }}>✓</span>
+                    {f}
                   </div>
                 ))}
               </div>
+              <button
+                onClick={onEnterApp}
+                style={{
+                  width: '100%',
+                  padding: '14px',
+                  borderRadius: '12px',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  background: 'transparent',
+                  color: '#FFFFFF',
+                  fontWeight: 700,
+                  fontSize: '15px',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                }}
+                onMouseOver={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; }}
+                onMouseOut={e => { e.currentTarget.style.background = 'transparent'; }}
+              >
+                Começar Gratuitamente
+              </button>
             </div>
 
+            {/* Pro Plan */}
+            <div className="pricing-card pricing-card-pro">
+              <div style={{ position: 'absolute', top: '-1px', left: '50%', transform: 'translateX(-50%)' }}>
+                <span style={{
+                  background: 'linear-gradient(135deg, #6366F1, #8B5CF6)',
+                  color: '#FFFFFF',
+                  fontSize: '11px',
+                  fontWeight: 700,
+                  padding: '4px 16px',
+                  borderRadius: '0 0 8px 8px',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.05em'
+                }}>Recomendado</span>
+              </div>
+              <div style={{ marginBottom: '24px' }}>
+                <span style={{ fontSize: '13px', fontWeight: 700, color: '#8B5CF6', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Pro</span>
+                <div style={{ fontSize: '48px', fontWeight: 800, color: '#FFFFFF', marginTop: '8px', lineHeight: 1 }}>
+                  R$19
+                  <span style={{ fontSize: '16px', fontWeight: 500, color: '#64748B' }}>/mês</span>
+                </div>
+                <p style={{ color: '#94A3B8', fontSize: '14px', marginTop: '12px', lineHeight: 1.5 }}>
+                  Para quem quer o máximo do Coach IA e insights profundos.
+                </p>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '32px' }}>
+                {[
+                  'Tudo do plano Gratuito',
+                  'Coach IA avançado — análises profundas',
+                  'Tendências de produtividade por horário',
+                  'Relatórios detalhados de comportamento',
+                  'Sugestões diárias personalizadas',
+                  'Prioridade em novos recursos',
+                  'Companions exclusivos',
+                  'Suporte prioritário'
+                ].map((f, i) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '14px', color: '#E2E8F0' }}>
+                    <span style={{ color: '#8B5CF6', fontSize: '16px', flexShrink: 0 }}>✓</span>
+                    {f}
+                  </div>
+                ))}
+              </div>
+              <button
+                onClick={onEnterApp}
+                className="btn-purple-glow"
+                style={{
+                  width: '100%',
+                  padding: '14px',
+                  borderRadius: '12px',
+                  border: 'none',
+                  background: 'linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%)',
+                  color: '#FFFFFF',
+                  fontWeight: 700,
+                  fontSize: '15px',
+                  cursor: 'pointer',
+                  transition: 'all 0.3s',
+                  boxShadow: '0 4px 20px rgba(99, 102, 241, 0.3)',
+                }}
+              >
+                Assinar Pro
+              </button>
+            </div>
+          </div>
+        </Container>
+      </section>
+
+      {/* ── 12. FAQ ───────────────────────────────────────────────────── */}
+      <section
+        style={{
+          padding: '100px 24px',
+          background: '#090D12',
+          borderTop: '1px solid rgba(255, 255, 255, 0.03)',
+        }}
+      >
+        <Container>
+          <div style={{ textAlign: 'center', marginBottom: '60px' }}>
+            <span style={{ fontSize: '12px', fontWeight: 700, color: '#C084FC', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Perguntas Frequentes</span>
+            <h2 style={{ fontSize: 'clamp(28px, 4vw, 42px)', fontWeight: 800, color: '#FFFFFF', marginTop: '10px', letterSpacing: '-0.02em' }}>
+              Respostas Rápidas
+            </h2>
+          </div>
+
+          <div style={{ maxWidth: '700px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            {[
+              {
+                q: 'O que é o MyFlowDay?',
+                a: 'O MyFlowDay é um sistema operacional de evolução pessoal que centraliza seus objetivos, tarefas, hábitos, sessões de foco Pomodoro, conquistas gamificadas e um coach inteligente em um ecossistema integrado para ajudá-lo a evoluir dia após dia.'
+              },
+              {
+                q: 'Como o Coach IA funciona?',
+                a: 'Ele observa silenciosamente suas horas de maior foco, tarefas concluídas e hábitos cumpridos na semana para fornecer notas reais e relatórios acionáveis de comportamento (como avisar se um objetivo de leitura está parado ou indicar o seu melhor dia de foco).'
+              },
+              {
+                q: 'O que é o companheiro virtual (pet) da Home?',
+                a: 'É um avatar dinâmico (inicialmente uma planta semente) que cresce de nível e forma física à medida que você conclui tarefas e hábitos no seu dia. Ele funciona como o espelho visual do seu progresso.'
+              },
+              {
+                q: 'O aplicativo funciona offline?',
+                a: 'Sim. O MyFlowDay possui um banco de dados local IndexedDB completo que salva todas as suas alterações em cache. Assim que o seu dispositivo restabelece a conexão com a internet, os dados são sincronizados com o Supabase automaticamente.'
+              },
+              {
+                q: 'Qual a diferença entre o plano Gratuito e o Pro?',
+                a: 'O plano Gratuito já inclui todos os módulos essenciais: tarefas, hábitos, objetivos, timer, companion e gamificação. O plano Pro desbloqueia análises profundas do Coach IA, tendências de produtividade por horário, companions exclusivos e suporte prioritário.'
+              }
+            ].map((item, idx) => (
+              <div 
+                key={idx} 
+                style={{ background: '#0F1318', border: '1px solid rgba(255, 255, 255, 0.05)', borderRadius: '12px', overflow: 'hidden', cursor: 'pointer' }}
+                onClick={() => toggleFaq(idx)}
+              >
+                <div style={{ padding: '18px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: '15px', fontWeight: 700, color: '#FFFFFF' }}>{item.q}</span>
+                  <ChevronDown size={18} style={{ transform: openFaq === idx ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s', color: '#94A3B8', flexShrink: 0 }} />
+                </div>
+                {openFaq === idx && (
+                  <div style={{ padding: '0 24px 20px', fontSize: '14px', lineHeight: 1.6, color: '#94A3B8', borderTop: '1px solid rgba(255, 255, 255, 0.02)', paddingTop: '12px' }}>
+                    {item.a}
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
         </Container>
       </section>
@@ -1401,13 +1397,40 @@ export default function LandingPage({ onEnterApp }) {
         }
 
         /* ── STEPS FLOW ── */
+        .steps-flow-container {
+          position: relative;
+          max-width: 650px;
+          margin: 0 auto;
+          padding: 20px 0;
+          display: flex;
+          flex-direction: column;
+          gap: 40px;
+        }
+        
+        .steps-flow-container::before {
+          content: '';
+          position: absolute;
+          left: 24px;
+          top: 30px;
+          bottom: 30px;
+          width: 2px;
+          background: linear-gradient(180deg, #6366F1 0%, #C084FC 33%, #10B981 66%, #F59E0B 100%);
+          z-index: 1;
+        }
+
         .step-row {
           display: flex;
           align-items: center;
           gap: 24px;
-          max-width: 650px;
-          margin: 0 auto;
-          text-align: left;
+          position: relative;
+          z-index: 2;
+        }
+
+        .step-num-col {
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          z-index: 3;
         }
 
         .step-number {
@@ -1422,6 +1445,7 @@ export default function LandingPage({ onEnterApp }) {
           color: white;
           box-shadow: 0 0 20px rgba(99, 102, 241, 0.2);
           flex-shrink: 0;
+          border: 3px solid #07090C;
         }
 
         .step-content-card {
@@ -1430,13 +1454,6 @@ export default function LandingPage({ onEnterApp }) {
           padding: 20px 24px;
           border-radius: 16px;
           flex: 1;
-        }
-
-        .step-connector {
-          display: flex;
-          justify-content: center;
-          margin: 0 auto;
-          height: 24px;
         }
 
         /* ── ECOSYSTEM CARD ── */
@@ -1561,11 +1578,24 @@ export default function LandingPage({ onEnterApp }) {
 
         /* ── COACH DIALOGUES ── */
         .coach-chat-showcase {
+          position: relative;
           display: flex;
           flex-direction: column;
-          gap: 16px;
+          gap: 20px;
           max-width: 650px;
           margin: 0 auto;
+          padding-left: 24px;
+        }
+
+        .coach-chat-showcase::before {
+          content: '';
+          position: absolute;
+          left: 10px;
+          top: 20px;
+          bottom: 20px;
+          width: 2px;
+          background: linear-gradient(180deg, #10B981 0%, rgba(16, 185, 129, 0.15) 100%);
+          z-index: 1;
         }
 
         .chat-bubble-large {
@@ -1578,22 +1608,30 @@ export default function LandingPage({ onEnterApp }) {
           gap: 16px;
           text-align: left;
           box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+          position: relative;
+          z-index: 2;
         }
 
         .chat-avatar {
-          font-size: 24px;
-          background: rgba(16, 185, 129, 0.1);
-          width: 44px;
-          height: 44px;
-          border-radius: 12px;
+          font-size: 16px;
+          background: #07090C;
+          border: 2px solid #10B981;
+          width: 32px;
+          height: 32px;
+          border-radius: 50%;
           display: flex;
           align-items: center;
           justify-content: center;
           flex-shrink: 0;
+          position: absolute;
+          left: -30px;
+          top: 24px;
+          z-index: 3;
         }
 
         .chat-text-wrapper {
           flex: 1;
+          margin-left: 12px;
         }
 
         /* ── CASCADE ANIMATION ── */
@@ -1681,44 +1719,21 @@ export default function LandingPage({ onEnterApp }) {
           color: white;
         }
 
-        /* ── ROADMAP ── */
-        .roadmap-item {
+        /* ── PRICING CARDS ── */
+        .pricing-card {
+          background: #0F1318;
+          border: 1px solid rgba(255, 255, 255, 0.06);
+          padding: 36px 32px;
+          border-radius: 20px;
+          position: relative;
           display: flex;
-          align-items: flex-start;
-          gap: 16px;
-          background: rgba(255, 255, 255, 0.02);
-          border: 1px solid rgba(255, 255, 255, 0.04);
-          padding: 16px;
-          border-radius: 12px;
+          flex-direction: column;
         }
 
-        .roadmap-item.done {
-          border-left: 3px solid #10B981;
-        }
-
-        .roadmap-item.future {
-          border-left: 3px solid #64748B;
-          opacity: 0.75;
-        }
-
-        .status-badge {
-          background: rgba(16, 185, 129, 0.15);
-          color: #10B981;
-          font-size: 10px;
-          font-weight: 800;
-          padding: 3px 8px;
-          border-radius: 4px;
-          letter-spacing: 0.05em;
-        }
-
-        .status-badge-future {
-          background: rgba(100, 116, 139, 0.15);
-          color: #94A3B8;
-          font-size: 10px;
-          font-weight: 800;
-          padding: 3px 8px;
-          border-radius: 4px;
-          letter-spacing: 0.05em;
+        .pricing-card-pro {
+          border-color: rgba(99, 102, 241, 0.3);
+          background: linear-gradient(170deg, rgba(99, 102, 241, 0.06) 0%, #0F1318 40%);
+          box-shadow: 0 8px 40px rgba(99, 102, 241, 0.1);
         }
 
         /* Responsive */
@@ -1731,9 +1746,9 @@ export default function LandingPage({ onEnterApp }) {
             grid-template-columns: 1fr !important;
             gap: 24px;
           }
-          .roadmap-faq-grid {
+          .pricing-grid {
             grid-template-columns: 1fr !important;
-            gap: 48px;
+            max-width: 420px !important;
           }
         }
 
@@ -1744,9 +1759,20 @@ export default function LandingPage({ onEnterApp }) {
           .landing-nav-links {
             display: none !important;
           }
-          .step-row {
-            flex-direction: column;
-            text-align: center;
+          .problem-comparison-grid {
+            display: flex !important;
+            flex-direction: row !important;
+            overflow-x: auto !important;
+            scroll-snap-type: x mandatory;
+            gap: 16px !important;
+            padding-bottom: 16px;
+            scroll-behavior: smooth;
+            -webkit-overflow-scrolling: touch;
+          }
+          .problem-comparison-grid > div {
+            min-width: 280px !important;
+            flex: 0 0 85% !important;
+            scroll-snap-align: center;
           }
         }
       `}

@@ -171,48 +171,44 @@ export default function WeeklyPlannerModal({ isOpen, onClose, tasks, onUpdateTas
     }
   };
 
-  const [confirmClear, setConfirmClear] = useState(false);
-
   const handleClearWeeklyPlan = async () => {
     if (!currentUser?.id) return;
-    if (!confirmClear) {
-      setConfirmClear(true);
-      return;
-    }
-
-    setSaving(true);
-    try {
-      if (!currentUser.isDemo) {
-        const { error } = await supabase.auth.updateUser({
-          data: { weekly_plan: null }
-        });
-        if (error) throw error;
+    openCustomConfirm(
+      "Deseja realmente limpar todo o seu planejamento semanal atual? Essa ação não pode ser desfeita.",
+      "Limpar Planejamento",
+      async () => {
+        setSaving(true);
+        try {
+          if (!currentUser.isDemo) {
+            const { error } = await supabase.auth.updateUser({
+              data: { weekly_plan: null }
+            });
+            if (error) throw error;
+          }
+          
+          setCurrentUser(prev => ({
+            ...prev,
+            user_metadata: { ...prev.user_metadata, weekly_plan: null }
+          }));
+          setWeeklyFocus('');
+          setCriticalPriorities(['']);
+          setSelectedGoals([]);
+          onClose();
+        } catch (err) {
+          console.error('[WeeklyPlannerModal] Erro ao limpar plano:', err);
+          setCurrentUser(prev => ({
+            ...prev,
+            user_metadata: { ...prev.user_metadata, weekly_plan: null }
+          }));
+          setWeeklyFocus('');
+          setCriticalPriorities(['']);
+          setSelectedGoals([]);
+          onClose();
+        } finally {
+          setSaving(false);
+        }
       }
-      
-      setCurrentUser(prev => ({
-        ...prev,
-        user_metadata: { ...prev.user_metadata, weekly_plan: null }
-      }));
-      setWeeklyFocus('');
-      setCriticalPriorities(['']);
-      setSelectedGoals([]);
-      setConfirmClear(false);
-      onClose();
-    } catch (err) {
-      console.error('[WeeklyPlannerModal] Erro ao limpar plano:', err);
-      // Garantir limpeza local robusta mesmo em caso de erro da chamada remota
-      setCurrentUser(prev => ({
-        ...prev,
-        user_metadata: { ...prev.user_metadata, weekly_plan: null }
-      }));
-      setWeeklyFocus('');
-      setCriticalPriorities(['']);
-      setSelectedGoals([]);
-      setConfirmClear(false);
-      onClose();
-    } finally {
-      setSaving(false);
-    }
+    );
   };
 
   const handleExportGoogleCalendar = () => {
@@ -457,10 +453,10 @@ export default function WeeklyPlannerModal({ isOpen, onClose, tasks, onUpdateTas
                 type="button" 
                 onClick={handleClearWeeklyPlan}
                 className="btn-secondary" 
-                style={{ width: '100%', padding: '12px', fontSize: '15px', color: '#E53E3E', borderColor: '#E53E3E', backgroundColor: confirmClear ? '#FFF5F5' : 'transparent' }}
+                style={{ width: '100%', padding: '12px', fontSize: '15px', color: '#E53E3E', borderColor: '#E53E3E', backgroundColor: 'transparent' }}
                 disabled={saving}
               >
-                {confirmClear ? 'Tem certeza? Clique para confirmar' : 'Limpar Planejamento'}
+                Limpar Planejamento
               </button>
             </div>
           </form>

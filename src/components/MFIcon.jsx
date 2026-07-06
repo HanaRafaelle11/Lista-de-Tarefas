@@ -645,6 +645,39 @@ ICONS.target = ICONS.objectives;
 ICONS.briefcase = ICONS.career;
 ICONS.book = ICONS.reading;
 
+const emojiMap = {
+  // Shortcodes
+  'seedling': 'sprout',
+  'sprout': 'sprout',
+  'briefcase': 'career',
+  'work': 'career',
+  'home': 'home',
+  'book': 'reading',
+  'study': 'reading',
+  'meditation': 'focus',
+  'focus': 'focus',
+  'target': 'objectives',
+  
+  // Browser emojis
+  '🌱': 'sprout',
+  '💼': 'career',
+  '🏠': 'home',
+  '📚': 'reading',
+  '🧘': 'focus',
+  '🧘‍♂️': 'focus',
+  '🧘‍♀️': 'focus',
+  '🎯': 'objectives',
+  '🚀': 'objectives',
+  '🌧️': 'rain-drop',
+  '🌧': 'rain-drop',
+  '🌲': 'forest',
+  '☕': 'coffee-cup',
+  '🌊': 'waves',
+  '🔥': 'campfire',
+  '💤': 'sleep',
+  '🔇': 'volume-x'
+};
+
 /**
  * @param {object} props
  * @param {keyof ICONS} props.name - Icon name
@@ -657,32 +690,22 @@ ICONS.book = ICONS.reading;
 export function MFIcon({ name, size = 24, color, className = '', style = {}, title }) {
   if (!name) return null;
 
-  const isEmoji = /\p{Emoji}/u.test(name) && !/^[a-zA-Z0-9-]+$/.test(name);
-  if (isEmoji) {
-    return (
-      <span 
-        className={className} 
-        style={{ 
-          fontSize: `${size * 0.9}px`, 
-          lineHeight: 1, 
-          display: 'inline-block', 
-          verticalAlign: 'middle',
-          ...style 
-        }} 
-        role="img" 
-        aria-label={title || "ícone"}
-      >
-        {name}
-      </span>
-    );
+  let resolvedName = name;
+  const cleanName = typeof name === 'string' ? name.replace(/:/g, '').trim() : '';
+
+  if (emojiMap[cleanName]) {
+    resolvedName = emojiMap[cleanName];
+  } else if (emojiMap[name]) {
+    resolvedName = emojiMap[name];
   }
 
-  const paths = ICONS[name.toLowerCase() ? name.toLowerCase() : name];
+  const paths = ICONS[resolvedName.toLowerCase() ? resolvedName.toLowerCase() : resolvedName];
 
   if (!paths) {
+    const isEmoji = /\p{Emoji}/u.test(name) && !/^[a-zA-Z0-9-]+$/.test(name);
     return (
       <span 
-        className={`mf-icon-emoji ${className}`} 
+        className={isEmoji ? className : `mf-icon-emoji ${className}`} 
         style={{ 
           fontSize: `${size * 0.9}px`, 
           lineHeight: 1, 
@@ -709,7 +732,7 @@ export function MFIcon({ name, size = 24, color, className = '', style = {}, tit
       strokeWidth="2"
       strokeLinecap="round"
       strokeLinejoin="round"
-      className={`mf-icon mf-icon-${name} ${className}`}
+      className={`mf-icon mf-icon-${resolvedName} ${className}`}
       style={{ flexShrink: 0, display: 'inline-block', verticalAlign: 'middle', ...style }}
       aria-hidden={!title}
       role={title ? 'img' : undefined}

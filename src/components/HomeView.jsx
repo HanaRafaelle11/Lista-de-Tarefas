@@ -436,7 +436,8 @@ export default function HomeView() {
 
   const weeklyTotal = ritmoSemanal.reduce((acc, d) => acc + d.count, 0);
   const currentPetData = EVOLUTION_CATEGORIES[growthPet] || EVOLUTION_CATEGORIES.plant;
-  const stageIndex = getEvolutionStage({
+  const hasNoItems = activeTasksList.length === 0 && activeGoalsList.length === 0;
+  const stageIndex = hasNoItems ? 0 : getEvolutionStage({
     weeklyTotal,
     currentStreak,
     completedGoalsCount,
@@ -541,11 +542,17 @@ export default function HomeView() {
         </div>
 
         <form onSubmit={handleQuickSubmit} style={{ display: 'flex', gap: '12px' }}>
-          <input 
-            type="text" 
+          <textarea 
             value={quickInput}
             onChange={(e) => setQuickInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                handleQuickSubmit(e);
+              }
+            }}
             placeholder="Conte seu objetivo ou descreva um sonho. A IA do MyFlowDay cria seu plano..."
+            rows={2}
             style={{
               flex: 1,
               padding: '12px 16px',
@@ -556,7 +563,10 @@ export default function HomeView() {
               fontSize: '13.5px',
               fontWeight: '550',
               outline: 'none',
-              transition: 'border-color 0.2s'
+              transition: 'border-color 0.2s',
+              resize: 'none',
+              fontFamily: 'inherit',
+              lineHeight: '1.4'
             }}
           />
           <button 
