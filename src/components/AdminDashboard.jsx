@@ -441,30 +441,36 @@ export default function AdminDashboard() {
       const targetUserObj = adminUsers.find(u => u.id === userId);
       setUserDetails(targetUserObj || { id: userId, nickname: 'Usuário' });
 
-      // Fetch user event timeline
-      let query = supabase
-        .from('events')
-        .select('id, event_type, created_at, metadata')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false });
+      // Fetch user event timeline securely from server-side admin endpoint to bypass RLS
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      const headers = {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      if (currentUser?.id) headers['x-user-id'] = currentUser.id;
 
-      if (timeFilter === '7d') {
-        query = query.gt('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString());
-      } else if (timeFilter === '30d') {
-        query = query.gt('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString());
-      }
-
-      const { data: evts, error: evtsErr } = await query;
-      if (!evtsErr && evts) {
+      const res = await fetch(`/api/admin/dashboard?targetUserId=${userId}&userId=${currentUser?.id || ''}`, { headers });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const result = await res.json();
+      
+      if (result && result.events) {
+        let evts = result.events;
+        if (timeFilter === '7d') {
+          const limit = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+          evts = evts.filter(e => e.created_at >= limit);
+        } else if (timeFilter === '30d') {
+          const limit = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+          evts = evts.filter(e => e.created_at >= limit);
+        }
+        console.log('[AdminDashboard] Loaded events count:', evts.length, evts.slice(0, 5));
         setUserEvents(evts);
-      } else if (evtsErr) {
-        console.warn('[AdminDashboard] events query failed:', evtsErr);
+      } else {
+        console.log('[AdminDashboard] result is null or has no events:', result);
         setUserEvents([]);
       }
     } catch (e) {
       console.error('[AdminDashboard] Error loading user details:', e);
       setError('Erro de conexão ao carregar a timeline do usuário.');
-      setUserDetails(null);
+      setUserEvents([]);
     } finally {
       setLoadingUser(false);
     }
@@ -479,10 +485,11 @@ export default function AdminDashboard() {
 
   // Filter user events locally based on eventCategoryFilter
   const filteredUserEvents = useMemo(() => {
+    console.log('[AdminDashboard] Filtering userEvents:', userEvents.length, 'filter:', eventCategoryFilter);
     if (eventCategoryFilter === 'all') return userEvents;
     
     return userEvents.filter(evt => {
-      const type = evt.event_type;
+      const type = evt.event_type || '';
       switch (eventCategoryFilter) {
         case 'onboarding':
           return type.includes('onboarding');
@@ -506,21 +513,23 @@ export default function AdminDashboard() {
   const handleExportCSV = () => {
     if (!selectedUser || !userDetails) return;
     
-    let csvContent = 'data:text/csv;charset=utf-8,';
+    let csvContent = '\uFEFF'; // Add UTF-8 BOM for proper Excel encoding
     csvContent += 'ID,Tipo de Evento,Data,Metadados\n';
     
     userEvents.forEach(evt => {
-      const metaStr = JSON.stringify(evt.metadata).replace(/"/g, '""');
-      csvContent += `${evt.id},${evt.event_type},${evt.created_at},"${metaStr}"\n`;
+      const metaStr = JSON.stringify(evt.metadata || {}).replace(/"/g, '""');
+      csvContent += `${evt.id || ''},${evt.event_type || ''},${evt.created_at || ''},"${metaStr}"\n`;
     });
 
-    const encodedUri = encodeURI(csvContent);
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
+    link.setAttribute('href', url);
     link.setAttribute('download', `user_events_${selectedUser}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   // Helper to color-code user timeline events
@@ -644,7 +653,7 @@ export default function AdminDashboard() {
               </div>
               <div>
                 <span style={{ fontSize: '10.5px', color: 'var(--text-light)', textTransform: 'uppercase', fontWeight: '700' }}>Último Acesso</span>
-                <strong style={{ display: 'block', color: 'var(--text-main)', fontSize: '15px', marginTop: '4px' }}>{userDetails?.last_access ? new Date(userDetails.last_access).toLocaleString('pt-BR') : 'Nunca'}</strong>
+                <strong style={{ display: 'block', color: 'var(--text-main)', fontSize: '15px', marginTop: '4px' }}>{(userDetails?.last_login || userDetails?.last_access) ? new Date(userDetails.last_login || userDetails.last_access).toLocaleString('pt-BR') : 'Nunca'}</strong>
               </div>
               <div>
                 <span style={{ fontSize: '10.5px', color: 'var(--text-light)', textTransform: 'uppercase', fontWeight: '700' }}>Engajamento Geral</span>

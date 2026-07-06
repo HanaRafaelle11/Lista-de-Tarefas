@@ -176,12 +176,22 @@ export async function flushBatch() {
       });
     } catch (logErr) {}
 
-    const { error } = await supabase
-      .from('events')
-      .upsert(payload, { onConflict: 'id' }); // Upsert for idempotency
+    const headers = {
+      'Content-Type': 'application/json'
+    };
+    if (currentSessionToken) {
+      headers['Authorization'] = `Bearer ${currentSessionToken}`;
+    }
 
-    if (error) {
-      console.error(error);
+    const response = await fetch('/api/events/log', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ events: payload })
+    });
+
+    if (!response.ok) {
+      const errText = await response.text();
+      throw new Error(`HTTP ${response.status}: ${errText}`);
     }
     
     // Deleta do IndexedDB apenas após confirmação de sucesso
@@ -199,10 +209,10 @@ export async function flushBatch() {
 }
 
 // Fallback to sendBeacon helper
-const fallbackToBeacon = (supabaseUrl, supabaseAnonKey, payload, batchToSend) => {
+const fallbackToBeacon = (payload, batchToSend) => {
   if (typeof navigator !== 'undefined' && typeof navigator.sendBeacon === 'function') {
-    const beaconUrl = `${supabaseUrl}/rest/v1/events?apikey=${supabaseAnonKey}`;
-    const blob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
+    const beaconUrl = '/api/events/log';
+    const blob = new Blob([JSON.stringify({ events: payload })], { type: 'application/json' });
     const sent = navigator.sendBeacon(beaconUrl, blob);
     if (sent) {
       for (const item of batchToSend) {
@@ -213,16 +223,13 @@ const fallbackToBeacon = (supabaseUrl, supabaseAnonKey, payload, batchToSend) =>
 };
 
 // Escuta eventos de encerramento da página para forçar sincronização final via keepalive fetch
+let handlePageUnload;
 if (typeof window !== 'undefined') {
-  const handlePageUnload = () => {
+  handlePageUnload = () => {
     if (memoryBuffer.length === 0) return;
 
     const batchToSend = [...memoryBuffer];
     memoryBuffer = []; // Limpar buffer
-
-    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-    const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-    if (!supabaseUrl || !supabaseAnonKey) return;
 
     const payload = batchToSend.map(e => ({
       id: e.id,
@@ -237,19 +244,17 @@ if (typeof window !== 'undefined') {
     let fetchSuccess = false;
     try {
       const headers = {
-        'apikey': supabaseAnonKey,
-        'Content-Type': 'application/json',
-        'Prefer': 'return=minimal'
+        'Content-Type': 'application/json'
       };
 
       if (currentSessionToken) {
         headers['Authorization'] = `Bearer ${currentSessionToken}`;
       }
 
-      fetch(`${supabaseUrl}/rest/v1/events`, {
+      fetch('/api/events/log', {
         method: 'POST',
         headers,
-        body: JSON.stringify(payload),
+        body: JSON.stringify({ events: payload }),
         keepalive: true
       }).then(res => {
         if (res.ok) {
@@ -257,10 +262,10 @@ if (typeof window !== 'undefined') {
             localDB.delete('events', item.id).catch(() => {});
           }
         } else {
-          fallbackToBeacon(supabaseUrl, supabaseAnonKey, payload, batchToSend);
+          fallbackToBeacon(payload, batchToSend);
         }
       }).catch(() => {
-        fallbackToBeacon(supabaseUrl, supabaseAnonKey, payload, batchToSend);
+        fallbackToBeacon(payload, batchToSend);
       });
       fetchSuccess = true;
     } catch (e) {
@@ -268,7 +273,7 @@ if (typeof window !== 'undefined') {
     }
 
     if (!fetchSuccess) {
-      fallbackToBeacon(supabaseUrl, supabaseAnonKey, payload, batchToSend);
+      fallbackToBeacon(payload, batchToSend);
     }
   };
 

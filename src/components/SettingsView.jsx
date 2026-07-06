@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Settings, User, LogOut, Sun, Moon, Check, Database, RefreshCw, X, FileText, ChevronRight, Download, Award, Target, LayoutGrid, Calendar, Inbox, Trash2, Bell, Smartphone, Palette, Globe, Book, Monitor, Shield, MessageSquare, AlertTriangle, AlertCircle, Paperclip, BellOff, CheckCircle, BellRing } from 'lucide-react';
+import { Settings, User, LogOut, Sun, Moon, Check, Database, RefreshCw, X, FileText, ChevronRight, Download, Award, Target, LayoutGrid, Calendar, Inbox, Trash2, Bell, Smartphone, Palette, Globe, Book, Monitor, Shield, MessageSquare, AlertTriangle, AlertCircle, Paperclip, BellOff, CheckCircle, BellRing, RotateCcw } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import { useNotifications } from '../hooks/useNotifications';
 import MFIcon from './MFIcon';
@@ -58,14 +58,14 @@ export default function SettingsView() {
     currentUser,
     handleLogout,
     isPro,
-    tasks,
-    allTasks,
-    allGoals,
-    goals,
+    tasks = [],
+    allTasks = [],
+    allGoals = [],
+    goals = [],
     consistencyScore,
     habitsManager,
-    deletedTasks,
-    deletedGoals,
+    deletedTasks = [],
+    deletedGoals = [],
     handleRestoreTask,
     handleDeleteTaskPermanent,
     handleRestoreGoal,
@@ -85,7 +85,7 @@ export default function SettingsView() {
   const [loading, setLoading] = useState(false);
   const [feedbackText, setFeedbackText] = useState('');
   const [feedbackStatus, setFeedbackStatus] = useState('idle'); // idle, sending, sent, error
-  const [feedbackAttachment, setFeedbackAttachment] = useState(null);
+  const [feedbackAttachments, setFeedbackAttachments] = useState([]);
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
   const [isSyncModalOpen, setIsSyncModalOpen] = useState(false);
   const [isDeleteAllTasksModalOpen, setIsDeleteAllTasksModalOpen] = useState(false);
@@ -442,10 +442,10 @@ export default function SettingsView() {
           </table>
 
           <script>
-            window.onload = function() {
+            setTimeout(function() {
               window.print();
               window.close();
-            };
+            }, 500);
           </script>
         </body>
       </html>
@@ -588,13 +588,57 @@ export default function SettingsView() {
     let dbPersisted = false;
     let emailSent = false;
     
-    let base64Attachment = null;
-    if (feedbackAttachment) {
-      base64Attachment = await new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.onload = (e) => resolve(e.target.result);
-        reader.onerror = () => resolve(null);
-        reader.readAsDataURL(feedbackAttachment);
+    // Ler arquivos de forma assíncrona para Base64 (para a Edge Function)
+    const base64Attachments = await Promise.all(
+      feedbackAttachments.map(file => {
+        return new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onload = (e) => resolve({
+            name: file.name,
+            type: file.type,
+            size: file.size,
+            base64: e.target.result
+          });
+          reader.onerror = () => resolve(null);
+          reader.readAsDataURL(file);
+        });
+      })
+    );
+    const validAttachments = base64Attachments.filter(Boolean);
+
+    // Fazer upload dos anexos para o Supabase Storage (bucket avatars) para gerar links públicos
+    const uploadedUrls = [];
+    if (feedbackAttachments.length > 0) {
+      for (const file of feedbackAttachments) {
+        try {
+          const sanitizedName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+          const filePath = `${currentUser?.id || 'anonymous'}/feedback/${Date.now()}_${sanitizedName}`;
+          const { error: uploadError } = await supabase.storage
+            .from('avatars')
+            .upload(filePath, file, {
+              cacheControl: '3600',
+              upsert: true
+            });
+          if (!uploadError) {
+            const { data } = supabase.storage.from('avatars').getPublicUrl(filePath);
+            if (data?.publicUrl) {
+              uploadedUrls.push({ name: file.name, url: data.publicUrl });
+            }
+          } else {
+            console.warn('[Feedback] Falha ao fazer upload do anexo:', uploadError.message);
+          }
+        } catch (err) {
+          console.warn('[Feedback] Erro no upload:', err.message);
+        }
+      }
+    }
+
+    // Incrementar a mensagem com os links públicos dos anexos
+    let messageWithAttachments = trimmed;
+    if (uploadedUrls.length > 0) {
+      messageWithAttachments += '\n\n--- ANEXOS ENVIADOS ---';
+      uploadedUrls.forEach(item => {
+        messageWithAttachments += `\n📎 ${item.name}: ${item.url}`;
       });
     }
 
@@ -603,7 +647,7 @@ export default function SettingsView() {
       const { error: dbError } = await supabase
         .from('feedback')
         .insert({
-          message: trimmed,
+          message: messageWithAttachments,
           user_id: currentUser?.id || null,
           user_email: currentUser?.email || null,
           created_at: new Date().toISOString(),
@@ -613,9 +657,8 @@ export default function SettingsView() {
         console.log('[Feedback] Salvo com sucesso na tabela feedback.');
       } else {
         console.warn('[Feedback] Falha ao salvar na tabela feedback. Usando fallback de logEvent...', dbError.message);
-        // Fallback: Inserir na tabela de eventos via logEvent do batcher offline-resiliente
         await logEvent('feedback_submitted', {
-          message: trimmed,
+          message: messageWithAttachments,
           user_email: currentUser?.email || null
         });
         dbPersisted = true;
@@ -624,7 +667,7 @@ export default function SettingsView() {
       console.warn('[Feedback] Falha ao tentar gravar no banco de dados:', e.message);
       try {
         await logEvent('feedback_submitted', {
-          message: trimmed,
+          message: messageWithAttachments,
           user_email: currentUser?.email || null
         });
         dbPersisted = true;
@@ -638,9 +681,10 @@ export default function SettingsView() {
       try {
         const { error: funcError } = await supabase.functions.invoke('send-feedback-email', {
           body: {
-            message: trimmed,
+            message: messageWithAttachments,
             userId: currentUser?.id || null,
             userEmail: currentUser?.email || null,
+            attachments: validAttachments
           }
         });
         if (!funcError) {
@@ -654,26 +698,28 @@ export default function SettingsView() {
       }
     }
 
-    // 3. Fallback: Se a Edge Function não enviou o e-mail, tenta via FormSubmit.co
+    // 3. Fallback: Se a Edge Function não enviou o e-mail, tenta via FormSubmit.co usando FormData (suporta anexos de verdade no e-mail)
     if (!emailSent) {
       try {
         const userEmail = currentUser?.email || '';
         const recipientEmail = 'suporte@myflowday.com.br';
         
         console.log(`[Feedback] Enviando e-mail de feedback via FormSubmit para: ${recipientEmail}`);
+        
+        const formData = new FormData();
+        formData.append('name', currentUser?.name || 'Usuário Flowday');
+        formData.append('email', userEmail || 'no-reply@myflowday.com.br');
+        formData.append('message', messageWithAttachments);
+        formData.append('_subject', `Novo Feedback do Flowday - ${userEmail || 'Anônimo'}`);
+        
+        feedbackAttachments.forEach((file, index) => {
+          const key = index === 0 ? 'attachment' : `attachment${index + 1}`;
+          formData.append(key, file);
+        });
+
         const response = await fetch(`https://formsubmit.co/ajax/${recipientEmail}`, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-          },
-          body: JSON.stringify({
-            name: currentUser?.name || 'Usuário Flowday',
-            email: userEmail || 'no-reply@myflowday.com.br',
-            message: trimmed,
-            _subject: `Novo Feedback do Flowday - ${userEmail || 'Anônimo'}`,
-            attachment: base64Attachment || undefined,
-          })
+          body: formData
         });
 
         if (response.ok) {
@@ -695,11 +741,10 @@ export default function SettingsView() {
     // 4. Conclusão do envio
     if (dbPersisted || emailSent) {
       setFeedbackText('');
-      setFeedbackAttachment(null);
+      setFeedbackAttachments([]);
       setFeedbackStatus('sent');
       setTimeout(() => setFeedbackStatus('idle'), 4000);
     } else {
-      // Se todos falharam, salva em localStorage como fallback de emergência
       console.warn('[Feedback] Salvando localmente devido a falhas em todos os canais de envio.');
       try {
         const localFeedbackKey = 'flowday_local_feedback';
@@ -714,7 +759,7 @@ export default function SettingsView() {
         localStorage.setItem(localFeedbackKey, JSON.stringify(existing));
         
         setFeedbackText('');
-        setFeedbackAttachment(null);
+        setFeedbackAttachments([]);
         setFeedbackStatus('sent');
         setTimeout(() => setFeedbackStatus('idle'), 4000);
       } catch (localErr) {
@@ -742,15 +787,68 @@ export default function SettingsView() {
         }
       );
     };
+
+    const handleRestoreAll = () => {
+      openCustomConfirm(
+        `Deseja restaurar todos os ${deletedTasks.length + deletedGoals.length} itens da lixeira de volta para sua lista ativa?`,
+        'Restaurar tudo',
+        async () => {
+          for (const task of deletedTasks) {
+            await handleRestoreTask(task.id);
+          }
+          for (const goal of deletedGoals) {
+            await handleRestoreGoal(goal.id);
+          }
+        }
+      );
+    };
     
+    const { habits = [] } = habitsManager || {};
+
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
         <div style={{ padding: '16px', backgroundColor: 'rgba(239, 68, 68, 0.05)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(239, 68, 68, 0.1)', fontSize: '13px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '8px' }}>
           <MFIcon name="warning" size={16} color="var(--prio-alta-text)" /> Os itens excluídos permanecem na lixeira por 30 dias antes de serem eliminados permanentemente de forma automática.
         </div>
 
+        {/* Contadores da Lixeira */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '12px', marginBottom: '8px' }}>
+          <div style={{ backgroundColor: 'var(--bg-card)', padding: '12px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-light)', textAlign: 'center' }}>
+            <span style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-light)', display: 'block', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Tarefas Excluídas</span>
+            <strong style={{ fontSize: '20px', color: 'var(--text-main)', display: 'block', marginTop: '4px' }}>{deletedTasks.length}</strong>
+          </div>
+          <div style={{ backgroundColor: 'var(--bg-card)', padding: '12px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-light)', textAlign: 'center' }}>
+            <span style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-light)', display: 'block', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Objetivos Excluídos</span>
+            <strong style={{ fontSize: '20px', color: 'var(--text-main)', display: 'block', marginTop: '4px' }}>{deletedGoals.length}</strong>
+          </div>
+          <div style={{ backgroundColor: 'var(--bg-card)', padding: '12px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-light)', textAlign: 'center' }}>
+            <span style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-light)', display: 'block', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Hábitos Excluídos</span>
+            <strong style={{ fontSize: '20px', color: 'var(--text-main)', display: 'block', marginTop: '4px' }}>{habits.filter(h => h.deletedAt).length}</strong>
+          </div>
+        </div>
+
         {hasItems && (
-          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+            <button
+              onClick={handleRestoreAll}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '10px 18px',
+                fontSize: '13px',
+                fontWeight: '700',
+                color: '#ffffff',
+                backgroundColor: '#10b981', // Green color
+                border: 'none',
+                borderRadius: 'var(--radius-sm, 8px)',
+                cursor: 'pointer',
+                boxShadow: '0 2px 8px rgba(16, 185, 129, 0.3)',
+                transition: 'all 0.2s'
+              }}
+            >
+              <RotateCcw size={14} /> Restaurar tudo
+            </button>
             <button
               onClick={handleDeleteAll}
               style={{
@@ -1499,36 +1597,50 @@ export default function SettingsView() {
             <input
               type="file"
               id="feedback-attachment"
-              accept="image/*,application/pdf"
+              accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx,.txt"
               style={{ display: 'none' }}
+              multiple
               onChange={(e) => {
                 if (e.target.files && e.target.files.length > 0) {
-                  setFeedbackAttachment(e.target.files[0]);
+                  const selected = Array.from(e.target.files);
+                  if (feedbackAttachments.length + selected.length > 4) {
+                    openCustomAlert('Você pode anexar no máximo 4 arquivos.');
+                    return;
+                  }
+                  setFeedbackAttachments(prev => [...prev, ...selected]);
                 }
               }}
             />
             
-            {feedbackAttachment ? (
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', backgroundColor: 'var(--bg-app)', border: '1px solid var(--border-medium)', borderRadius: '6px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden' }}>
-                  <Paperclip size={16} color="var(--text-muted)" />
-                  <span style={{ fontSize: '13px', color: 'var(--text-main)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {feedbackAttachment.name} ({(feedbackAttachment.size / 1024 / 1024).toFixed(2)} MB)
-                  </span>
-                </div>
-                <button 
-                  onClick={() => setFeedbackAttachment(null)}
-                  style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '4px' }}
-                >
-                  <X size={16} />
-                </button>
+            {feedbackAttachments.length > 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                {feedbackAttachments.map((file, idx) => (
+                  <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', backgroundColor: 'var(--bg-app)', border: '1px solid var(--border-medium)', borderRadius: '6px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden' }}>
+                      <Paperclip size={16} color="var(--text-muted)" />
+                      <span style={{ fontSize: '13px', color: 'var(--text-main)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {file.name} ({(file.size / 1024 / 1024).toFixed(2)} MB)
+                      </span>
+                    </div>
+                    <button 
+                      type="button"
+                      onClick={() => setFeedbackAttachments(prev => prev.filter((_, i) => i !== idx))}
+                      style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '4px' }}
+                    >
+                      <X size={16} />
+                    </button>
+                  </div>
+                ))}
               </div>
-            ) : (
+            )}
+            
+            {feedbackAttachments.length < 4 && (
               <button 
+                type="button"
                 onClick={() => document.getElementById('feedback-attachment').click()}
                 style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'transparent', border: '1px dashed var(--border-medium)', borderRadius: '6px', padding: '8px 12px', color: 'var(--text-muted)', fontSize: '13px', cursor: 'pointer', alignSelf: 'flex-start' }}
               >
-                <Paperclip size={16} /> Anexar imagem ou PDF
+                <Paperclip size={16} /> Anexar arquivo ({feedbackAttachments.length}/4)
               </button>
             )}
           </div>

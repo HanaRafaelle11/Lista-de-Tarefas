@@ -134,6 +134,8 @@ const TYPE_PRIORITIES = {
   goal_create:    2,
   goal_update:    2,
   goal_delete:    2,
+  goal_tasks_link: 3,
+  goal_tasks_unlink: 3,
   event:          3  // Prioridade baixa (analytics/batch)
 };
 
@@ -947,6 +949,26 @@ async function trySend(item) {
           updated_at: data.updated_at || new Date().toISOString()
         })
         .eq('id', userId);
+      if (error) throw error;
+      return true;
+    }
+
+    if (type === 'goal_tasks_link') {
+      const { goalId, taskId } = payload;
+      const { error } = await supabase
+        .from('goal_tasks')
+        .insert([{ goal_id: goalId, task_id: taskId }]);
+      if (error && error.code !== '23505') throw error;
+      return true;
+    }
+
+    if (type === 'goal_tasks_unlink') {
+      const { goalId, taskId } = payload;
+      const { error } = await supabase
+        .from('goal_tasks')
+        .delete()
+        .eq('goal_id', goalId)
+        .eq('task_id', taskId);
       if (error) throw error;
       return true;
     }

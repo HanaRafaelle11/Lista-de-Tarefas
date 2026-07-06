@@ -2,7 +2,8 @@ import React, { useState, useMemo, useEffect, useRef, lazy, Suspense } from 'rea
 import { 
   Plus, Search, X, Calendar, ChevronDown, ChevronRight, 
   List, Columns, Grid, Trash2, Edit2, AlertCircle, ArrowLeft, ArrowRight,
-  Sparkles, Award, Sprout, Pin, Zap, CheckCircle, Moon, Sun, Tag, AlertTriangle, RotateCcw, Copy, Check, Download
+  Sparkles, Award, Sprout, Pin, Zap, CheckCircle, Moon, Sun, Tag, AlertTriangle, RotateCcw, Copy, Check, Download,
+  Archive, Target
 } from 'lucide-react';
 import EmojiPicker from 'emoji-picker-react';
 import CategoryIcon from './CategoryIcon';
@@ -12,6 +13,8 @@ import AchievementModal from './AchievementModal'; // Importar AchievementModal
 import Skeleton from './Skeleton';
 import EisenhowerMatrix from './EisenhowerMatrix';
 import { TASK_TEMPLATES } from '../data/taskTemplates';
+import HabitsWidget from './HabitsWidget';
+import GoalModal from './GoalModal';
 const WeeklyPlannerModal = lazy(() => import('./WeeklyPlannerModal'));
 import { 
   useAppContext, 
@@ -174,9 +177,30 @@ const sortByTime = (tasksList) =>
 
 function TaskSection({ title, tasks, icon, accent, onEdit, onDelete, onToggle, defaultOpen = true, isOverdue = false, goalId, onUnlinkGoal }) {
   const [open, setOpen] = useState(defaultOpen);
-  const { handleDuplicateTask } = useAppContext();
+  const { handleDuplicateTask, goalTasks, tasks: allTasks } = useAppContext();
 
   if (tasks.length === 0) return null;
+
+  const getTaskHighlights = (task) => {
+    if (task.completed) return { isRecommended: false, isCritical: false, isStreak: false };
+
+    const now = new Date();
+    const taskDateStr = task.dueDate ? (task.dueDate.includes('T') ? task.dueDate : `${task.dueDate}T23:59:59`) : null;
+    const taskDateObj = taskDateStr ? new Date(taskDateStr) : null;
+    const overdue = taskDateObj && taskDateObj < now;
+    
+    const todayStr = new Date().toISOString().split('T')[0];
+    const isToday = task.dueDate && task.dueDate.split('T')[0] === todayStr;
+    const isCritical = overdue || (task.priority === 'Alta' && isToday);
+
+    const linkedGoalId = (goalTasks || []).find(gt => gt.task_id === task.id)?.goal_id;
+    const isRecommended = !!linkedGoalId;
+
+    const completedToday = (allTasks || []).filter(t => t.completed && t.completedAt && t.completedAt.split('T')[0] === todayStr).length;
+    const isStreak = isToday && completedToday === 0;
+
+    return { isRecommended, isCritical, isStreak, linkedGoalId };
+  };
 
   return (
     <div className={`task-section ${isOverdue ? 'task-section--overdue' : ''}`}>
@@ -197,18 +221,24 @@ function TaskSection({ title, tasks, icon, accent, onEdit, onDelete, onToggle, d
 
       {open && (
         <div className="task-section-list animate-fade-in">
-          {sortByTime(tasks).map(task => (
-            <TodoItem
-              key={task.id}
-              item={task}
-              onToggleComplete={onToggle}
-              onDelete={onDelete}
-              onEdit={onEdit}
-              goalId={goalId}
-              onUnlinkGoal={onUnlinkGoal}
-              onDuplicate={handleDuplicateTask}
-            />
-          ))}
+          {sortByTime(tasks).map(task => {
+            const highlights = getTaskHighlights(task);
+            return (
+              <TodoItem
+                key={task.id}
+                item={task}
+                onToggleComplete={onToggle}
+                onDelete={onDelete}
+                onEdit={onEdit}
+                goalId={goalId || highlights.linkedGoalId}
+                onUnlinkGoal={onUnlinkGoal}
+                onDuplicate={handleDuplicateTask}
+                isRecommended={highlights.isRecommended}
+                isCritical={highlights.isCritical}
+                isStreak={highlights.isStreak}
+              />
+            );
+          })}
         </div>
       )}
     </div>
@@ -271,7 +301,7 @@ function EmptyState({ filter, searchQuery, onAdd }) {
   );
 }
 
-export default function TodoView() {
+export default function MyDayView() {
   const {
     tasks = [],
     handleAddTask: onAddTask,
@@ -294,7 +324,16 @@ export default function TodoView() {
     setActiveTab,
     setSettingsTab,
     handleDuplicateTask: onDuplicateTask,
-    openCustomAlert
+    openCustomAlert,
+    handleAddGoal: onAddGoal,
+    handleUpdateGoal: onUpdateGoal,
+    handleDeleteGoal: onDeleteGoal,
+    handleLinkTask: onLinkTask,
+    shouldOpenGoalModal,
+    setShouldOpenGoalModal,
+    openCustomConfirm,
+    selectedGoalIdFilter,
+    setSelectedGoalIdFilter
   } = useAppContext();
 
   // Estados locais
@@ -310,6 +349,19 @@ export default function TodoView() {
   const [showCompletedKanban, setShowCompletedKanban] = useState(true);
   const [showBulkConfirm, setShowBulkConfirm] = useState(false);
   const [taskToDelete, setTaskToDelete] = useState(null);
+
+  // Estados locais para Objetivos
+  const [isGoalModalOpen, setIsGoalModalOpen] = useState(false);
+  const [editingGoal, setEditingGoal] = useState(null);
+  const [expandedGoals, setExpandedGoals] = useState(() => {
+    try {
+      const saved = localStorage.getItem('flowday_expanded_goals');
+      return saved ? JSON.parse(saved) : {};
+    } catch (_) {
+      return {};
+    }
+  });
+  const [pendingCompleteGoalId, setPendingCompleteGoalId] = useState(null);
 
   // Estados para AchievementModal
   const [showAchievementModal, setShowAchievementModal] = useState(false);
@@ -381,7 +433,74 @@ export default function TodoView() {
     }
   }, [viewMode, logEvent]);
 
-  // Removido o Abertura automática no primeiro uso para evitar reaberturas após deletar a última tarefa
+  // Efeito e Handlers para Objetivos
+  useEffect(() => {
+    if (shouldOpenGoalModal) {
+      setShouldOpenGoalModal(false);
+      setEditingGoal(null);
+      setIsGoalModalOpen(true);
+    }
+  }, [shouldOpenGoalModal, setShouldOpenGoalModal]);
+
+  const toggleGoalExpand = (goalId) => {
+    setExpandedGoals(prev => {
+      const updated = { ...prev, [goalId]: !prev[goalId] };
+      localStorage.setItem('flowday_expanded_goals', JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  const openNewGoalModal = () => {
+    setEditingGoal(null);
+    setIsGoalModalOpen(true);
+  };
+
+  const openEditGoalModal = (goal) => {
+    setEditingGoal(goal);
+    setIsGoalModalOpen(true);
+  };
+
+  const handleSaveGoal = (data) => {
+    if (editingGoal) {
+      onUpdateGoal(editingGoal.id, data);
+    } else {
+      onAddGoal(data);
+    }
+    setIsGoalModalOpen(false);
+    setEditingGoal(null);
+  };
+
+  const handleDeleteGoal = () => {
+    if (!editingGoal) return;
+    openCustomConfirm(
+      `Deseja realmente excluir o objetivo "${editingGoal.title}"? Isso desvinculará suas tarefas associadas.`,
+      "Excluir Objetivo",
+      async () => {
+        await onDeleteGoal(editingGoal.id);
+        setIsGoalModalOpen(false);
+        setEditingGoal(null);
+      }
+    );
+  };
+
+  const handleCompleteGoal = (id) => {
+    const linkedIds = goalTasks.filter(gt => gt.goal_id === id).map(gt => gt.task_id);
+    const incompleteLinked = tasks.filter(t => linkedIds.includes(t.id) && !t.completed);
+    if (incompleteLinked.length > 0) {
+      setPendingCompleteGoalId(id);
+    } else {
+      onUpdateGoal(id, { status: 'completed' });
+    }
+  };
+
+  const confirmCompleteGoalWithTasks = () => {
+    if (!pendingCompleteGoalId) return;
+    const linkedIds = goalTasks.filter(gt => gt.goal_id === pendingCompleteGoalId).map(gt => gt.task_id);
+    const incompleteLinked = tasks.filter(t => linkedIds.includes(t.id) && !t.completed);
+    incompleteLinked.forEach(t => onUpdateTask(t.id, { completed: true }));
+    onUpdateGoal(pendingCompleteGoalId, { status: 'completed' });
+    setPendingCompleteGoalId(null);
+  };
 
   const openNewTaskModal = () => {
     setEditingTask(null);
@@ -676,9 +795,14 @@ export default function TodoView() {
 
       const matchesCat = categoryFilter === 'all' || task.category === categoryFilter;
 
-      return matchesSearch && matchesStatus && matchesCat;
+      let matchesGoal = true;
+      if (selectedGoalIdFilter !== 'all') {
+        matchesGoal = (goalTasks || []).some(gt => gt.goal_id === selectedGoalIdFilter && gt.task_id === task.id);
+      }
+
+      return matchesSearch && matchesStatus && matchesCat && matchesGoal;
     });
-  }, [tasks, filter, searchQuery, categoryFilter]);
+  }, [tasks, filter, searchQuery, categoryFilter, selectedGoalIdFilter, goalTasks]);
 
   // Filtragem exclusiva para o Kanban que ignora o filtro de status superior (all/active/completed)
   const kanbanFiltered = useMemo(() => {
@@ -689,11 +813,50 @@ export default function TodoView() {
 
       const matchesCat = categoryFilter === 'all' || task.category === categoryFilter;
 
-      return matchesSearch && matchesCat;
-    });
-  }, [tasks, searchQuery, categoryFilter]);
+      let matchesGoal = true;
+      if (selectedGoalIdFilter !== 'all') {
+        matchesGoal = (goalTasks || []).some(gt => gt.goal_id === selectedGoalIdFilter && gt.task_id === task.id);
+      }
 
-  const sections = useMemo(() => categorizeTasks(baseFiltered, goals, goalTasks), [baseFiltered, goals, goalTasks]);
+      return matchesSearch && matchesCat && matchesGoal;
+    });
+  }, [tasks, searchQuery, categoryFilter, selectedGoalIdFilter, goalTasks]);
+
+  const looseTasksFiltered = useMemo(() => {
+    return baseFiltered.filter(task => {
+      const link = goalTasks.find(gt => gt.task_id === task.id);
+      const goal = link ? goals.find(g => g.id === link.goal_id && !g.deletedAt) : null;
+      if (goal && goal.status === 'active') return false;
+      return true;
+    });
+  }, [baseFiltered, goalTasks, goals]);
+
+  const activeGoals = useMemo(() => {
+    let baseGoals = (goals || []).filter(g => g.status === 'active' && !g.deletedAt);
+    if (selectedGoalIdFilter !== 'all') {
+      baseGoals = baseGoals.filter(g => g.id === selectedGoalIdFilter);
+    }
+    if (categoryFilter === 'all') return baseGoals;
+
+    return [...baseGoals].sort((a, b) => {
+      const aTasks = tasks.filter(t => {
+        const link = goalTasks.find(gt => gt.goal_id === a.id && gt.task_id === t.id);
+        return link && !t.deletedAt;
+      });
+      const bTasks = tasks.filter(t => {
+        const link = goalTasks.find(gt => gt.goal_id === b.id && gt.task_id === t.id);
+        return link && !t.deletedAt;
+      });
+      const aMatches = aTasks.some(t => t.category === categoryFilter);
+      const bMatches = bTasks.some(t => t.category === categoryFilter);
+
+      if (aMatches && !bMatches) return -1;
+      if (!aMatches && bMatches) return 1;
+      return 0;
+    });
+  }, [goals, categoryFilter, tasks, goalTasks, selectedGoalIdFilter]);
+
+  const sections = useMemo(() => categorizeTasks(looseTasksFiltered, goals, goalTasks), [looseTasksFiltered, goals, goalTasks]);
 
   // Estatísticas rápidas
   const total = tasks.length;
@@ -809,13 +972,18 @@ export default function TodoView() {
   };
 
   return (
-    <div className="tasks-view animate-fade-in">
+    <div className="tasks-view animate-fade-in" style={{ paddingBottom: '80px' }}>
+
+      {/* ── Hábitos Diários (Fixo no Topo) ── */}
+      <div className="myday-habits-container animate-fade-in" style={{ marginBottom: '24px' }}>
+        <HabitsWidget habitsManager={habitsManager} goals={goals} />
+      </div>
 
       {/* ── Header da página ──────────────────────────────── */}
       <div className="tasks-page-header" style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
         <div className="tasks-page-title-block">
           <h1 className="tasks-page-title" style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-            <span>Tarefas</span>
+            <span>Meu Dia</span>
             <button
               onClick={() => {
                 setSettingsTab('trash');
@@ -861,7 +1029,7 @@ export default function TodoView() {
           ].map(item => (
             <button
               key={item.key}
-              onClick={() => setViewMode(item.key)}
+              onClick={() => { setViewMode(item.key); setShowCategoryManager(false); }}
               className={`nav-tab-button ${viewMode === item.key ? 'active-nav-tab' : ''}`}
               style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px' }}
             >
@@ -983,6 +1151,14 @@ export default function TodoView() {
           <button onClick={() => setIsPlannerOpen(true)} className="tasks-add-btn" style={{ backgroundColor: 'var(--bg-card)', color: 'var(--text-main)', border: '1px solid var(--border-medium)' }}>
             <Calendar size={16} />
             <span className="hide-on-mobile">Planejar Semana</span>
+          </button>
+          <button 
+            onClick={openNewGoalModal} 
+            className="tasks-add-btn" 
+            style={{ backgroundColor: 'var(--bg-card)', color: 'var(--text-main)', border: '1px solid var(--border-medium)', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+          >
+            <Target size={14} style={{ color: 'var(--primary)' }} />
+            <span>Novo Objetivo</span>
           </button>
           <button onClick={openNewTaskModal} className="tasks-add-btn btn-primary-glow" id="btn-nova-tarefa">
             <Plus size={16} />
@@ -1182,7 +1358,210 @@ export default function TodoView() {
       {/* Conteúdos das Abas (Visualizações Bloco 4) */}
       {viewMode === 'list' && (
         <>
-          {baseFiltered.length > 0 ? (
+          {/* Banner de Filtro de Objetivo Ativo */}
+          {selectedGoalIdFilter !== 'all' && (
+            (() => {
+              const activeGoal = goals.find(g => g.id === selectedGoalIdFilter);
+              if (!activeGoal) return null;
+              return (
+                <div style={{
+                  backgroundColor: 'var(--primary-glow)',
+                  border: '1px solid var(--primary-light)',
+                  borderRadius: 'var(--radius-md)',
+                  padding: '12px 18px',
+                  marginBottom: '20px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: '12px'
+                }} className="animate-fade-in">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Target size={16} style={{ color: 'var(--primary)' }} />
+                    <span style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text-main)' }}>
+                      Filtrado por objetivo: <strong style={{ color: activeGoal.color || 'var(--primary)' }}>{activeGoal.title}</strong>
+                    </span>
+                  </div>
+                  <button 
+                    onClick={() => setSelectedGoalIdFilter('all')}
+                    style={{
+                      border: 'none',
+                      background: 'var(--bg-card)',
+                      border: '1px solid var(--border-medium)',
+                      borderRadius: '12px',
+                      padding: '4px 12px',
+                      fontSize: '11px',
+                      fontWeight: '700',
+                      color: 'var(--text-light)',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s'
+                    }}
+                  >
+                    Limpar Filtro
+                  </button>
+                </div>
+              );
+            })()
+          )}
+          {/* 🎯 Objetivos Ativos (Accordions) */}
+          {filter === 'all' && activeGoals.length > 0 && (
+            <div className="myday-goals-section animate-fade-in" style={{ marginBottom: '24px' }}>
+              <h3 style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', paddingLeft: '4px' }}>
+                <Target size={16} style={{ color: 'var(--primary)' }} />
+                <span>Objetivos em Andamento</span>
+                <span style={{ fontSize: '12px', fontWeight: '600', padding: '2px 8px', borderRadius: '12px', backgroundColor: 'var(--bg-card-hover)', color: 'var(--text-light)' }}>
+                  {activeGoals.length}
+                </span>
+              </h3>
+              
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {activeGoals.map(goal => {
+                  const linkedTasks = tasks.filter(t => {
+                    const link = goalTasks.find(gt => gt.goal_id === goal.id && gt.task_id === t.id);
+                    return link && !t.deletedAt;
+                  });
+                  const totalTasks = linkedTasks.length;
+                  const doneTasks = linkedTasks.filter(t => t.completed).length;
+                  const pct = totalTasks > 0 ? Math.round((doneTasks / totalTasks) * 100) : 0;
+                  const isExpanded = selectedGoalIdFilter === goal.id || !!expandedGoals[goal.id];
+                  const isMatchingCategory = categoryFilter === 'all' || linkedTasks.some(t => t.category === categoryFilter);
+
+                  return (
+                    <div 
+                      key={goal.id} 
+                      className="myday-goal-accordion-card"
+                      style={{
+                        backgroundColor: 'var(--bg-card)',
+                        border: isMatchingCategory 
+                          ? `2px solid ${goal.color || 'var(--primary)'}` 
+                          : `1px solid var(--border-light)`,
+                        borderRadius: 'var(--radius-md)',
+                        overflow: 'hidden',
+                        opacity: isMatchingCategory ? 1 : 0.45,
+                        transition: 'all 0.2s ease',
+                        boxShadow: isExpanded ? `0 4px 12px ${goal.color ? `${goal.color}15` : 'rgba(0,0,0,0.1)'}` : 'none'
+                      }}
+                    >
+                      {/* Accordion Header */}
+                      <div 
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          padding: '14px 16px',
+                          cursor: 'pointer',
+                          userSelect: 'none',
+                          gap: '12px',
+                          borderBottom: isExpanded ? '1px solid var(--border-light)' : '1px solid transparent'
+                        }}
+                        onClick={() => toggleGoalExpand(goal.id)}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1, minWidth: 0 }}>
+                          <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '28px', height: '28px', borderRadius: '50%', backgroundColor: `${goal.color || 'var(--primary)'}15`, color: goal.color || 'var(--primary)', flexShrink: 0 }}>
+                            <MFIcon name={goal.icon || 'target'} size={15} />
+                          </span>
+                          <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, flex: 1 }}>
+                            <span style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-main)', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                              {goal.title}
+                            </span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
+                              <div style={{ height: '4px', width: '100px', backgroundColor: 'var(--bg-card-hover)', borderRadius: '2px', overflow: 'hidden', flexShrink: 0 }}>
+                                <div style={{ height: '100%', width: `${pct}%`, backgroundColor: goal.color || 'var(--primary)', transition: 'width 0.3s ease' }} />
+                              </div>
+                              <span style={{ fontSize: '11px', fontWeight: '600', color: goal.color || 'var(--primary)' }}>
+                                {pct}% ({doneTasks}/{totalTasks})
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }} onClick={e => e.stopPropagation()}>
+                          <button 
+                            onClick={() => openEditGoalModal(goal)}
+                            className="todo-item-action-btn edit-btn"
+                            style={{ padding: '6px' }}
+                            title="Editar Objetivo"
+                          >
+                            <Edit2 size={13} />
+                          </button>
+                          <button 
+                            onClick={() => handleCompleteGoal(goal.id)}
+                            className="todo-item-action-btn edit-btn"
+                            style={{ color: '#22c55e', padding: '6px' }}
+                            title="Concluir Objetivo"
+                          >
+                            <Check size={13} />
+                          </button>
+                          <button 
+                            onClick={() => {
+                              openCustomConfirm(
+                                "Deseja realmente arquivar este objetivo?",
+                                "Arquivar Objetivo",
+                                () => onUpdateGoal(goal.id, { status: 'archived' })
+                              );
+                            }}
+                            className="todo-item-action-btn edit-btn"
+                            style={{ color: 'var(--text-muted)', padding: '6px' }}
+                            title="Arquivar Objetivo"
+                          >
+                            <Archive size={13} />
+                          </button>
+                          <span style={{ color: 'var(--text-muted)', display: 'flex', paddingLeft: '4px' }} onClick={() => toggleGoalExpand(goal.id)}>
+                            {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Accordion Body */}
+                      {isExpanded && (
+                        <div style={{ padding: '16px', backgroundColor: 'var(--bg-card-hover)' }}>
+                          {linkedTasks.length > 0 ? (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                              {sortByTime(linkedTasks).map(task => (
+                                <TodoItem
+                                  key={task.id}
+                                  item={task}
+                                  onToggleComplete={handleToggleCompleteWithAchievement}
+                                  onDelete={setTaskToDelete}
+                                  onEdit={openEditTaskModal}
+                                  goalId={goal.id}
+                                  onUnlinkGoal={handleUnlinkTask}
+                                  onDuplicate={onDuplicateTask}
+                                />
+                              ))}
+                            </div>
+                          ) : (
+                            <div style={{ textAlign: 'center', padding: '20px', color: 'var(--text-light)', fontSize: '13px' }}>
+                              <p style={{ margin: '0 0 10px' }}>Nenhuma tarefa vinculada a este objetivo.</p>
+                              <button
+                                onClick={() => {
+                                  setEditingTask(null);
+                                  setTitle('');
+                                  setDescription('');
+                                  setCategory(categories[0]?.id || 'Trabalho');
+                                  setPriority('Média');
+                                  setDueDate('');
+                                  setDueTime('');
+                                  setRecurrence('nenhuma');
+                                  setLinkedGoal(goal.id);
+                                  setIsModalOpen(true);
+                                }}
+                                className="tasks-add-btn btn-primary-glow"
+                                style={{ display: 'inline-flex', padding: '6px 12px', fontSize: '12px' }}
+                              >
+                                <Plus size={14} /> Vincular tarefa
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {looseTasksFiltered.length > 0 ? (
             <div className="tasks-sections-wrapper">
               <TaskSection
                 title="Atrasadas"
@@ -1191,7 +1570,7 @@ export default function TodoView() {
                 tasks={sections.overdue}
                 onEdit={openEditTaskModal}
                 onDelete={setTaskToDelete}
-                onToggle={handleToggleCompleteWithAchievement} // Usar a função com lógica de conquista
+                onToggle={handleToggleCompleteWithAchievement}
                 defaultOpen={true}
                 isOverdue={true}
               />
@@ -1201,7 +1580,7 @@ export default function TodoView() {
                 tasks={sections.today}
                 onEdit={openEditTaskModal}
                 onDelete={setTaskToDelete}
-                onToggle={handleToggleCompleteWithAchievement} // Usar a função com lógica de conquista
+                onToggle={handleToggleCompleteWithAchievement}
                 defaultOpen={true}
               />
               <TaskSection
@@ -1210,7 +1589,7 @@ export default function TodoView() {
                 tasks={sections.tomorrow}
                 onEdit={openEditTaskModal}
                 onDelete={setTaskToDelete}
-                onToggle={handleToggleCompleteWithAchievement} // Usar a função com lógica de conquista
+                onToggle={handleToggleCompleteWithAchievement}
                 defaultOpen={true}
               />
               <TaskSection
@@ -1219,7 +1598,7 @@ export default function TodoView() {
                 tasks={sections.thisWeek}
                 onEdit={openEditTaskModal}
                 onDelete={setTaskToDelete}
-                onToggle={handleToggleCompleteWithAchievement} // Usar a função com lógica de conquista
+                onToggle={handleToggleCompleteWithAchievement}
                 defaultOpen={true}
               />
               <TaskSection
@@ -1228,7 +1607,7 @@ export default function TodoView() {
                 tasks={sections.future}
                 onEdit={openEditTaskModal}
                 onDelete={setTaskToDelete}
-                onToggle={handleToggleCompleteWithAchievement} // Usar a função com lógica de conquista
+                onToggle={handleToggleCompleteWithAchievement}
                 defaultOpen={false}
               />
               <TaskSection
@@ -1237,7 +1616,7 @@ export default function TodoView() {
                 tasks={sections.noDueDate}
                 onEdit={openEditTaskModal}
                 onDelete={setTaskToDelete}
-                onToggle={handleToggleCompleteWithAchievement} // Usar a função com lógica de conquista
+                onToggle={handleToggleCompleteWithAchievement}
                 defaultOpen={false}
               />
               {Object.entries(sections.templateGroups || {}).map(([templateName, templateTasks]) => {
@@ -1263,12 +1642,14 @@ export default function TodoView() {
                 tasks={sections.completed}
                 onEdit={openEditTaskModal}
                 onDelete={setTaskToDelete}
-                onToggle={handleToggleCompleteWithAchievement} // Usar a função com lógica de conquista
+                onToggle={handleToggleCompleteWithAchievement}
                 defaultOpen={false}
               />
             </div>
           ) : (
-            <EmptyState filter={filter} searchQuery={searchQuery} onAdd={openNewTaskModal} />
+            activeGoals.length === 0 && (
+              <EmptyState filter={filter} searchQuery={searchQuery} onAdd={openNewTaskModal} />
+            )
           )}
         </>
       )}
@@ -2101,6 +2482,68 @@ export default function TodoView() {
                 style={{ backgroundColor: 'var(--danger)', color: 'white', padding: '8px 16px', borderRadius: '6px', cursor: 'pointer', border: 'none', fontWeight: '600' }}
               >
                 Mover para Lixeira
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Criação / Edição de Objetivos */}
+      {isGoalModalOpen && (
+        <GoalModal
+          isOpen={isGoalModalOpen}
+          editingGoal={editingGoal}
+          onClose={() => {
+            setIsGoalModalOpen(false);
+            setEditingGoal(null);
+          }}
+          onSave={handleSaveGoal}
+          onDelete={handleDeleteGoal}
+        />
+      )}
+
+      {/* Alerta de confirmação para conclusão de objetivo com tarefas pendentes */}
+      {pendingCompleteGoalId && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', justifyContent: 'center', alignItems: 'center',
+          zIndex: 999999, padding: '16px'
+        }}>
+          <div style={{
+            backgroundColor: 'var(--bg-card)', padding: '24px', borderRadius: 'var(--radius-lg)',
+            maxWidth: '400px', width: '100%', border: '1px solid var(--border-light)', boxShadow: 'var(--shadow-lg)'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--primary)', marginBottom: '12px' }}>
+              <AlertCircle size={24} />
+              <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '700', color: 'var(--text-main)' }}>Concluir Objetivo?</h3>
+            </div>
+            <p style={{ fontSize: '13.5px', color: 'var(--text-muted)', lineHeight: '1.5', marginBottom: '20px' }}>
+              Este objetivo possui tarefas pendentes. Deseja marcar todas as tarefas vinculadas a ele como concluídas também?
+            </p>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', flexWrap: 'wrap' }}>
+              <button 
+                onClick={() => setPendingCompleteGoalId(null)}
+                className="btn-secondary"
+                style={{ padding: '8px 16px', borderRadius: '6px', cursor: 'pointer', border: '1px solid var(--border-medium)', background: 'transparent', color: 'var(--text-main)' }}
+              >
+                Cancelar
+              </button>
+              <button 
+                onClick={() => {
+                  onUpdateGoal(pendingCompleteGoalId, { status: 'completed' });
+                  setPendingCompleteGoalId(null);
+                }}
+                className="btn-secondary"
+                style={{ padding: '8px 16px', borderRadius: '6px', cursor: 'pointer', border: '1px solid var(--border-medium)', background: 'var(--bg-card-hover)', color: 'var(--text-main)' }}
+              >
+                Apenas Objetivo
+              </button>
+              <button 
+                onClick={confirmCompleteGoalWithTasks}
+                className="btn-primary"
+                style={{ backgroundColor: 'var(--primary)', color: 'white', padding: '8px 16px', borderRadius: '6px', cursor: 'pointer', border: 'none', fontWeight: '600' }}
+              >
+                Concluir Tudo
               </button>
             </div>
           </div>

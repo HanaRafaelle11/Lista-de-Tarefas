@@ -139,6 +139,8 @@ export default function RevenueChart({ timeline }) {
           {/* Eixo X - Rótulos */}
           {xTicks.map((tick, i) => {
             const [year, month, day] = tick.date.split('-');
+            const monthsShort = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+            const monthName = monthsShort[parseInt(month, 10) - 1] || '';
             return (
               <text
                 key={i}
@@ -149,7 +151,7 @@ export default function RevenueChart({ timeline }) {
                 fontSize="11"
                 fontFamily="sans-serif"
               >
-                {`${day}/${month}`}
+                {`${day} ${monthName}`}
               </text>
             );
           })}

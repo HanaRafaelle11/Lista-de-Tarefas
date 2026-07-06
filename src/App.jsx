@@ -1,10 +1,11 @@
 import React, { useEffect, lazy, Suspense } from 'react';
+import { createPortal } from 'react-dom';
 import { AppProvider, useAppContext } from './contexts/AppContext';
 import { useNotifications } from './hooks/useNotifications';
 import { supabase } from './supabaseClient';
 import Auth from './components/Auth';
 import CreatePasswordModal from './components/CreatePasswordModal';
-import Navbar from './components/Navbar';
+import Sidebar from './components/Sidebar';
 import LandingPage from './components/LandingPage';
 import PrivacyView from './components/PrivacyView';
 import TermsView from './components/TermsView';
@@ -15,15 +16,12 @@ import SyncStatusBanner from './components/SyncStatusBanner';
 import PaywallModal from './components/PaywallModal';
 
 import HomeView from './components/HomeView';
-import GoalsView from './components/GoalsView';
-import TodoView from './components/TodoView';
+import MyDayView from './components/MyDayView';
 import FocusView from './components/FocusView';
 import EvolutionView from './components/EvolutionView';
-import PerformanceView from './components/PerformanceView';
 import ProfileView from './components/ProfileView';
 import AdminDashboard from './components/AdminDashboard';
 import SettingsView from './components/SettingsView';
-import CoachView from './components/CoachView';
 import MFIcon from './components/MFIcon';
 
 const RevenueDashboard = lazy(() => import('./pages/RevenueDashboard'));
@@ -259,6 +257,11 @@ function AppLayout() {
     }
   }, [activeTab, currentUser?.id, logEvent, isPro]);
 
+  // Scroll to top on routing or tab change
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  }, [currentPath, activeTab]);
+
   // Interceptar rotas de Termos e Privacidade públicas
   const legalRoute = getLegalRoute(currentPath, currentHash);
 
@@ -364,14 +367,17 @@ function AppLayout() {
         <div className="pro-upgrade-banner" style={{
           backgroundColor: 'rgba(16, 185, 129, 0.15)',
           borderBottom: '1px solid rgba(16, 185, 129, 0.25)',
-          padding: '10px',
+          padding: '10px 16px',
           textAlign: 'center',
           fontSize: '13px',
           color: '#10b981',
           display: 'flex',
           justifyContent: 'center',
           alignItems: 'center',
-          gap: '10px'
+          gap: '10px',
+          flexWrap: 'wrap',
+          boxSizing: 'border-box',
+          width: '100%'
         }}>
           <span>Desbloqueie o MyFlowDay Pro para ter acesso a relatórios e análises completas!</span>
           <button 
@@ -386,7 +392,8 @@ function AppLayout() {
               borderRadius: '4px',
               padding: '4px 12px',
               fontWeight: '600',
-              cursor: 'pointer'
+              cursor: 'pointer',
+              whiteSpace: 'nowrap'
             }}
           >
             Quero ser Pro
@@ -394,35 +401,35 @@ function AppLayout() {
         </div>
       )}
       <SyncStatusBanner />
-      <Navbar />
+      
+      <div className="app-body-container">
+        <Sidebar />
 
-      <main className="app-main-content">
-        <div className="container">
-          <GlobalErrorBoundary>
-            <Suspense fallback={
-              <div className="app-loading-container">
-                <div className="app-loading-spinner" />
-                <span className="app-loading-text">Carregando...</span>
-              </div>
-            }>
-              {activeTab === 'home' && <HomeView />}
-              {activeTab === 'goals' && <GoalsView />}
-              {activeTab === 'tasks' && <TodoView />}
-              {activeTab === 'focus' && <FocusView />}
-              {activeTab === 'coach' && <CoachView />}
-              {activeTab === 'analytics' && <EvolutionView />}
-              {activeTab === 'performance' && <PerformanceView />}
-              {activeTab === 'profile' && <ProfileView />}
-              {activeTab === 'admin' && <AdminDashboard />}
-              {activeTab === 'revenue' && <RevenueDashboard />}
-              {activeTab === 'settings' && <SettingsView />}
-            </Suspense>
-          </GlobalErrorBoundary>
-        </div>
-      </main>
+        <main className="app-main-content">
+          <div className="container">
+            <GlobalErrorBoundary>
+              <Suspense fallback={
+                <div className="app-loading-container">
+                  <div className="app-loading-spinner" />
+                  <span className="app-loading-text">Carregando...</span>
+                </div>
+              }>
+                {activeTab === 'home' && <HomeView />}
+                {activeTab === 'myday' && <MyDayView />}
+                {activeTab === 'focus' && <FocusView />}
+                {activeTab === 'evolution' && <EvolutionView />}
+                {activeTab === 'profile' && <ProfileView />}
+                {activeTab === 'admin' && <AdminDashboard />}
+                {activeTab === 'revenue' && <RevenueDashboard />}
+                {activeTab === 'settings' && <SettingsView />}
+              </Suspense>
+            </GlobalErrorBoundary>
+          </div>
+        </main>
+      </div>
 
-      {undoAction && (
-        <div className="undo-toast animate-scale-up">
+      {undoAction && createPortal(
+        <div className="undo-toast animate-scale-up" style={{ zIndex: 12000 }}>
           <span className="undo-toast-text">
             {undoAction.type === 'task'
               ? 'Tarefa removida'
@@ -435,7 +442,8 @@ function AppLayout() {
           <button className="undo-toast-btn" onClick={triggerUndo}>
             DESFAZER
           </button>
-        </div>
+        </div>,
+        document.body
       )}
 
 

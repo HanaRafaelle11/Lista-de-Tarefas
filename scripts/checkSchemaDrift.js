@@ -12,16 +12,17 @@ if (!fs.existsSync(envPath)) {
 const envFile = fs.readFileSync(envPath, 'utf8');
 const urlMatch = envFile.match(/VITE_SUPABASE_URL=(.+)/);
 const keyMatch = envFile.match(/VITE_SUPABASE_ANON_KEY=(.+)/);
+const serviceKeyMatch = envFile.match(/SUPABASE_SERVICE_ROLE_KEY=(.+)/);
 
-if (!urlMatch || !keyMatch) {
+if (!urlMatch || (!keyMatch && !serviceKeyMatch)) {
   console.error('❌ Erro: Não foi possível obter as credenciais do Supabase no .env.local.');
   process.exit(1);
 }
 
 const supabaseUrl = urlMatch[1].trim();
-const supabaseAnonKey = keyMatch[1].trim();
+const supabaseKey = (serviceKeyMatch ? serviceKeyMatch[1] : keyMatch[1]).trim();
 
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 // 2. Carregar Schema Esperado
 const schemaExpectedPath = path.resolve('supabase.schema.expected.json');

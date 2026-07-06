@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Lock, TrendingUp, AlertOctagon, Award, AlertTriangle, X } from 'lucide-react';
 import { useAppContext } from '../contexts/AppContext';
+import { supabase } from '../supabaseClient';
 import RevenueKPI from '../components/metrics/RevenueKPI';
 import RevenueChart from '../components/metrics/RevenueChart';
 import ChurnChart from '../components/metrics/ChurnChart';
@@ -38,7 +39,15 @@ export default function RevenueDashboard() {
         const protocol = window.location.protocol;
         const apiPrefix = host.includes('localhost') ? `${protocol}//${host}` : '';
         
-        const res = await fetch(`${apiPrefix}/api/analytics/revenue?userId=${currentUser.id}`);
+        const { data: { session } } = await supabase.auth.getSession();
+        const headers = {
+          'Content-Type': 'application/json',
+        };
+        if (session?.access_token) {
+          headers['Authorization'] = `Bearer ${session.access_token}`;
+        }
+        
+        const res = await fetch(`${apiPrefix}/api/analytics/revenue?userId=${currentUser.id}`, { headers });
         if (res.status === 403) {
           setIsUnauthorized(true);
           return;
@@ -72,7 +81,13 @@ export default function RevenueDashboard() {
       const protocol = window.location.protocol;
       const apiPrefix = host.includes('localhost') ? `${protocol}//${host}` : '';
       
-      const res = await fetch(`${apiPrefix}/api/analytics/user-timeline?userId=${currentUser.id}&targetUserId=${targetUserId}`);
+      const { data: { session } } = await supabase.auth.getSession();
+      const headers = {};
+      if (session?.access_token) {
+        headers['Authorization'] = `Bearer ${session.access_token}`;
+      }
+      
+      const res = await fetch(`${apiPrefix}/api/analytics/user-timeline?userId=${currentUser.id}&targetUserId=${targetUserId}`, { headers });
       if (res.status === 403) {
         setTimelineError('Você não tem permissão para acessar a timeline deste usuário.');
         return;
@@ -147,7 +162,7 @@ export default function RevenueDashboard() {
   const kpisData = data?.kpis ?? { mrr: 0, arr: 0, churnRate: 0, nrr: 100, activeSubscribers: 0, reactivatedCount: 0, arpu: 0 };
   const timelineList = Array.isArray(data?.timeline) ? data.timeline : [];
   const churnData = data?.churn ?? { overallRate: 0, cohorts: [], riskCounts: { low: 0, medium: 0, high: 0 } };
-  const breakdownData = Array.isArray(data?.subscriptionBreakdown) ? data.subscriptionBreakdown : [];
+  const breakdownData = data?.subscriptionBreakdown ?? { free: 0, active: 0, canceled: 0, pastDue: 0 };
   const cohortsHeatmapData = Array.isArray(data?.cohortsHeatmap) ? data.cohortsHeatmap : [];
   const customerHealthData = Array.isArray(data?.customerHealth) ? data.customerHealth : [];
 

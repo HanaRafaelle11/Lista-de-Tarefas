@@ -65,7 +65,7 @@ export const AdminDashboardService = {
     // 4. Execução Segura e Isolada de Events
     let events = [];
     try {
-      const eventsRes = await supabaseAdmin.from('events').select('user_id, event_type, created_at').order('created_at', { ascending: false }).limit(5000);
+      const eventsRes = await supabaseAdmin.from('events').select('user_id, event_type, created_at, metadata').order('created_at', { ascending: false }).limit(5000);
       if (!eventsRes.error && eventsRes.data) events = eventsRes.data;
     } catch (e) {
       console.warn('[ADMIN DASHBOARD WARN events]', e.message);
@@ -74,7 +74,7 @@ export const AdminDashboardService = {
     // 5. Execução Segura e Isolada de Tasks
     let tasks = [];
     try {
-      const tasksRes = await supabaseAdmin.from('tasks').select('id, completed');
+      const tasksRes = await supabaseAdmin.from('tasks').select('id, completed, user_id');
       if (!tasksRes.error && tasksRes.data) tasks = tasksRes.data;
     } catch (e) {
       console.warn('[ADMIN DASHBOARD WARN tasks]', e.message);
@@ -83,7 +83,7 @@ export const AdminDashboardService = {
     // 6. Execução Segura e Isolada de Goals
     let goals = [];
     try {
-      const goalsRes = await supabaseAdmin.from('goals').select('id, status');
+      const goalsRes = await supabaseAdmin.from('goals').select('id, status, user_id');
       if (!goalsRes.error && goalsRes.data) goals = goalsRes.data;
     } catch (e) {
       console.warn('[ADMIN DASHBOARD WARN goals]', e.message);
@@ -175,6 +175,84 @@ export const AdminDashboardService = {
       }
     });
 
+    // Inicializar contadores por usuário para evitar undefined na tela
+    userMasterMap.forEach((u) => {
+      u.goals_created = 0;
+      u.goals_completed = 0;
+      u.tasks_created = 0;
+      u.tasks_completed = 0;
+      u.completion_rate = 0;
+      u.pomodoros = 0;
+      u.weekly_plans = 0;
+      u.active_days = 0;
+      u.sessions = 0;
+    });
+
+    // Contabilizar objetivos (goals) por usuário
+    goals.forEach(g => {
+      const u = userMasterMap.get(g.user_id);
+      if (u) {
+        u.goals_created++;
+        if (g.status === 'completed') u.goals_completed++;
+      }
+    });
+
+    // Contabilizar tarefas (tasks) por usuário
+    tasks.forEach(t => {
+      const u = userMasterMap.get(t.user_id);
+      if (u) {
+        u.tasks_created++;
+        if (t.completed) u.tasks_completed++;
+      }
+    });
+
+    // Calcular taxa de conclusão de tarefas individual
+    userMasterMap.forEach((u) => {
+      u.completion_rate = u.tasks_created > 0 ? Math.round((u.tasks_completed / u.tasks_created) * 100) : 0;
+    });
+
+    // Agrupar eventos de foco (pomodoros), planos semanais, sessões e dias ativos por usuário
+    const userActiveDaysMap = new Map();
+
+    events.forEach(e => {
+      if (!e.user_id) return;
+      const u = userMasterMap.get(e.user_id);
+      if (u) {
+        u.total_events = (u.total_events || 0) + 1;
+        // Pomodoros
+        if (e.event_type === 'focus_session_completed' || e.event_type === 'pomodoro_completed') {
+          u.pomodoros++;
+        }
+        
+        // Planos semanais
+        if (e.event_type === 'weekly_plan_created') {
+          u.weekly_plans++;
+        }
+
+        // Sessões
+        if (e.event_type === 'session_started' || e.event_type === 'app_opened') {
+          u.sessions++;
+        }
+
+        // Dias ativos
+        if (e.created_at) {
+          const dateStr = e.created_at.slice(0, 10);
+          if (!userActiveDaysMap.has(e.user_id)) {
+            userActiveDaysMap.set(e.user_id, new Set());
+          }
+          userActiveDaysMap.get(e.user_id).add(dateStr);
+        }
+      }
+    });
+
+    // Registrar quantidade de dias ativos a partir dos Sets
+    userActiveDaysMap.forEach((daySet, uid) => {
+      const u = userMasterMap.get(uid);
+      if (u) {
+        u.active_days = daySet.size;
+      }
+    });
+
     const usersList = Array.from(userMasterMap.values());
     const totalUsers = usersList.length || profiles.length || 1;
     const premiumCount = activeSubs.length;
@@ -222,13 +300,35 @@ export const AdminDashboardService = {
     const weeklyPlanEvents = events.filter(e => e.event_type === 'weekly_plan_created').length;
     const calendarEvents = events.filter(e => e.event_type === 'calendar_task_created').length;
 
-    // Onboarding Funnel Counts
+    // Calcular tempo médio de foco global real a partir dos eventos
+    const focusCompletedEvents = events.filter(e => e.event_type === 'focus_session_completed');
+    const totalFocusMinutes = focusCompletedEvents.reduce((acc, e) => acc + Number(e.metadata?.duration_minutes || e.metadata?.durationMinutes || 0), 0);
+    const avgFocusTime = focusCompletedEvents.length > 0 ? Math.round((totalFocusMinutes / focusCompletedEvents.length) * 10) / 10 : 0;
+
+    // Onboarding Funnel Counts (Mapeando o formato real do evento do banco com metadata.step)
     const onboardingStarted = events.filter(e => e.event_type === 'onboarding_started').length;
-    const onboardingStep1 = events.filter(e => e.event_type === 'onboarding_step1').length;
-    const onboardingStep2 = events.filter(e => e.event_type === 'onboarding_step2').length;
-    const onboardingStep3 = events.filter(e => e.event_type === 'onboarding_step3').length;
-    const onboardingStep4 = events.filter(e => e.event_type === 'onboarding_step4').length;
+    const onboardingStep1 = events.filter(e => 
+      e.event_type === 'onboarding_step1' || 
+      (e.event_type === 'onboarding_step_completed' && (e.metadata?.step === '1' || e.metadata?.step === 1 || e.metadata?.step === '0' || e.metadata?.step === 0))
+    ).length;
+    const onboardingStep2 = events.filter(e => 
+      e.event_type === 'onboarding_step2' || 
+      (e.event_type === 'onboarding_step_completed' && (e.metadata?.step === '2' || e.metadata?.step === 2))
+    ).length;
+    const onboardingStep3 = events.filter(e => 
+      e.event_type === 'onboarding_step3' || 
+      (e.event_type === 'onboarding_step_completed' && (e.metadata?.step === '3' || e.metadata?.step === 3))
+    ).length;
+    const onboardingStep4 = events.filter(e => 
+      e.event_type === 'onboarding_step4' || 
+      (e.event_type === 'onboarding_step_completed' && (e.metadata?.step === '4' || e.metadata?.step === 4))
+    ).length;
     const onboardingCompleted = events.filter(e => e.event_type === 'onboarding_completed').length;
+    
+    // Paywall and Conversion Funnel metrics
+    const paywallViews = events.filter(e => e.event_type === 'paywall_viewed').length;
+    const upgradeClicks = events.filter(e => e.event_type === 'upgrade_clicked').length;
+    const monetizationConversion = paywallViews > 0 ? Math.round((upgradeClicks / paywallViews) * 100) : 0;
 
     const churnCalculated = subscriptions.length > 0 ? Math.round((canceledSubs.length / subscriptions.length) * 100) : 0;
     const arpuCalculated = totalUsers > 0 ? Math.round((mrr / totalUsers) * 100) / 100 : 0;
@@ -248,7 +348,7 @@ export const AdminDashboardService = {
       retention_d7: 60,
       retention_d30: 45,
       sessions_per_user: totalUsers > 0 ? Math.round(events.length / totalUsers) : 0,
-      avg_focus_time: 25,
+      avg_focus_time: avgFocusTime || 25,
       total_users: totalUsers,
       active_today: dau,
       active_7d: wau,
@@ -267,6 +367,9 @@ export const AdminDashboardService = {
       onboarding_step3: onboardingStep3,
       onboarding_step4: onboardingStep4,
       onboarding_completed: onboardingCompleted,
+      paywall_views: paywallViews,
+      upgrade_clicks: upgradeClicks,
+      monetization_conversion: monetizationConversion,
 
       metrics: {
         revenue: {
@@ -298,7 +401,7 @@ export const AdminDashboardService = {
           mau,
           stickinessPercentage: stickinessDauMau,
           sessions: events.length,
-          avgTimeMinutes: 25
+          avgTimeMinutes: avgFocusTime || 25
         },
         product: {
           tasks: taskCreatedCount,

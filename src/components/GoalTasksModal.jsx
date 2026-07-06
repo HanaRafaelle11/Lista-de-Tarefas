@@ -49,6 +49,17 @@ export default function GoalTasksModal({ isOpen, onClose, goal, tasks, linkedTas
   const [quickTaskTitle, setQuickTaskTitle] = useState('');
   const [isCreatingQuickTask, setIsCreatingQuickTask] = useState(false);
 
+  // ESC key listener
+  React.useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && isOpen) {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
   const handleQuickCreate = async (e) => {
     e.preventDefault();
     if (!quickTaskTitle.trim()) return;
@@ -132,32 +143,34 @@ export default function GoalTasksModal({ isOpen, onClose, goal, tasks, linkedTas
             />
           </div>
 
+          {/* Criar nova tarefa rápido */}
+          <form onSubmit={handleQuickCreate} style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+            <input
+              type="text"
+              placeholder="Criar nova tarefa e vincular..."
+              value={quickTaskTitle}
+              onChange={(e) => setQuickTaskTitle(e.target.value)}
+              disabled={isCreatingQuickTask}
+              className="tasks-search-input"
+              style={{ flex: 1 }}
+            />
+            <button
+              type="submit"
+              disabled={!quickTaskTitle.trim() || isCreatingQuickTask}
+              className="btn-primary-glow"
+              style={{ padding: '8px 16px', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '4px', whiteSpace: 'nowrap', fontSize: '13px' }}
+            >
+              <Plus size={14} />
+              <span>{isCreatingQuickTask ? '...' : 'Adicionar'}</span>
+            </button>
+          </form>
+
           {/* Lista de tarefas */}
           <div className="goal-tasks-list">
             {filteredTasks.length === 0 ? (
               <div className="goal-tasks-empty" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '32px 16px' }}>
                 <Inbox size={28} style={{ color: 'var(--text-muted)', marginBottom: '8px' }} />
-                <p style={{ marginBottom: '16px' }}>{search ? 'Nenhuma tarefa encontrada para essa busca.' : 'Nenhuma tarefa pendente disponível.'}</p>
-                
-                <form onSubmit={handleQuickCreate} style={{ display: 'flex', gap: '8px', width: '100%', maxWidth: '320px' }}>
-                  <input
-                    type="text"
-                    placeholder="Criar nova tarefa..."
-                    value={quickTaskTitle}
-                    onChange={(e) => setQuickTaskTitle(e.target.value)}
-                    disabled={isCreatingQuickTask}
-                    className="tasks-search-input"
-                    style={{ flex: 1 }}
-                  />
-                  <button
-                    type="submit"
-                    disabled={!quickTaskTitle.trim() || isCreatingQuickTask}
-                    className="btn-primary"
-                    style={{ padding: '8px 16px', borderRadius: '8px' }}
-                  >
-                    {isCreatingQuickTask ? '...' : 'Criar e Vincular'}
-                  </button>
-                </form>
+                <p style={{ margin: 0, textAlign: 'center' }}>{search ? 'Nenhuma tarefa encontrada para essa busca.' : 'Nenhuma tarefa pendente disponível.'}</p>
               </div>
             ) : (
               filteredTasks.map(task => {

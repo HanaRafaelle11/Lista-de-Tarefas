@@ -11,7 +11,7 @@
  */
 
 const DB_NAME = 'flowday_local_db';
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 
 function openDB() {
   return new Promise((resolve, reject) => {
@@ -41,6 +41,9 @@ function openDB() {
       }
       if (!db.objectStoreNames.contains('notifications')) {
         db.createObjectStore('notifications', { keyPath: 'id' });
+      }
+      if (!db.objectStoreNames.contains('goal_tasks')) {
+        db.createObjectStore('goal_tasks', { keyPath: 'id' });
       }
     };
 

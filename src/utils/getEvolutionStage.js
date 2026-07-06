@@ -14,15 +14,15 @@
 export function getEvolutionStage(progress, totalStages = 4) {
   if (!progress) return 0;
   
-  const { weeklyTotal = 0, currentStreak = 0, completedGoalsCount = 0 } = progress;
+  const { weeklyTotal = 0, currentStreak = 0, completedGoalsCount = 0, consistencyScore = 0 } = progress;
 
-  if (weeklyTotal >= 15 || currentStreak >= 7 || completedGoalsCount >= 2) {
+  if (weeklyTotal >= 15 || currentStreak >= 7 || completedGoalsCount >= 2 || consistencyScore >= 85) {
     return Math.min(3, totalStages - 1);
   }
-  if (weeklyTotal >= 7 || currentStreak >= 4 || completedGoalsCount >= 1) {
+  if (weeklyTotal >= 7 || currentStreak >= 4 || completedGoalsCount >= 1 || consistencyScore >= 50) {
     return Math.min(2, totalStages - 1);
   }
-  if (weeklyTotal >= 2 || currentStreak >= 2) {
+  if (weeklyTotal >= 2 || currentStreak >= 2 || consistencyScore >= 20) {
     return Math.min(1, totalStages - 1);
   }
   

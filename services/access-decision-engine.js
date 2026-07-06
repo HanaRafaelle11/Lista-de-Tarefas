@@ -8,7 +8,7 @@
  * O cache local serve unicamente como telemetria secundária e nunca dita autorizações.
  */
 import { supabaseAdmin } from '../lib/supabase.js';
-import { EntitlementsService } from './entitlements.service.js';
+import { isAdmin } from '../lib/auth/adminAuth.js';
 
 const isProCache = new Map();
 
@@ -47,6 +47,25 @@ export const AccessDecisionEngine = {
 
     const nowIso = new Date().toISOString();
     try {
+      // 0. Auto-grant PRO access to Admin Master users
+      try {
+        const { data: { user: authUser } } = await supabaseAdmin.auth.admin.getUserById(userId);
+        if (authUser && isAdmin(authUser)) {
+          return {
+            plan: 'pro',
+            status: 'active',
+            canAccessPro: true,
+            limits: {
+              ai_requests: 100,
+              tasks: 'unlimited'
+            },
+            reason: 'admin_automatic_access'
+          };
+        }
+      } catch (e) {
+        console.warn('[AccessDecisionEngine] Could not fetch user or check admin status:', e.message);
+      }
+
       let canAccessPro = false;
       let plan = 'free';
       let status = 'free';

@@ -503,6 +503,48 @@ async function handlePaymentEventsLog(req, res) {
     }
 }
 
+// ANALYTICS EVENTS OBSERVABILITY — LOG (frontend → backend)
+// POST /api/events/log
+// Recebe lote de eventos analíticos e insere usando supabaseAdmin (service_role)
+// =========================================================
+async function handleEventsLogBatch(req, res) {
+    if (req.method !== 'POST') {
+        return res.status(405).json({ error: 'Método não permitido. Utilize POST.' });
+    }
+
+    try {
+        const { events } = req.body || {};
+        if (!Array.isArray(events) || events.length === 0) {
+            return res.status(400).json({ error: 'Fila de eventos vazia ou formato inválido.' });
+        }
+
+        // Mapear e higienizar
+        const payload = events.map(e => ({
+            id: e.id,
+            user_id: e.user_id,
+            event_type: e.event_type,
+            metadata: e.metadata,
+            created_at: e.created_at
+        })).filter(e => !!e.user_id);
+
+        if (payload.length > 0) {
+            const { error } = await supabaseAdmin
+                .from('events')
+                .insert(payload);
+
+            if (error && error.code !== '23505') { // Ignorar chaves duplicadas
+                console.error('[Events Batch API Error]', error.message);
+                throw error;
+            }
+        }
+
+        return res.status(200).json({ success: true, processed: payload.length });
+    } catch (err) {
+        console.error('[Events Batch API Critical Error]', err.message);
+        return res.status(500).json({ error: 'Erro interno ao salvar eventos.', message: err.message });
+    }
+}
+
 // =========================================================
 // PAYMENT OBSERVABILITY — QUERY (admin)
 // GET /api/admin/payment-events?userId=xxx
@@ -1158,6 +1200,8 @@ export default async function handler(req, res) {
         } else if (route === 'payment-events/log') {
             const handlePayLog = (await import('../api-handlers/payments/events-log.js')).default;
             await handlePayLog(req, res);
+        } else if (route === 'events/log' || route === 'events/batch') {
+            await handleEventsLogBatch(req, res);
         } else if (route === 'admin/dashboard') {
             const handleDash = (await import('../api-handlers/admin/dashboard.js')).default;
             await handleDash(req, res);

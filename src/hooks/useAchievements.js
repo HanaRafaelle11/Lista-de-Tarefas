@@ -9,6 +9,7 @@ export const ACHIEVEMENTS = [
     title: 'Primeira conquista',
     desc: 'Você concluiu sua primeira tarefa.',
     check: (s) => s.completedTasks >= 1,
+    rarity: 'Comum'
   },
   {
     key: 'tasks_10',
@@ -16,6 +17,7 @@ export const ACHIEVEMENTS = [
     title: 'Em ritmo',
     desc: '10 tarefas concluídas. O hábito está se formando.',
     check: (s) => s.completedTasks >= 10,
+    rarity: 'Comum'
   },
   {
     key: 'tasks_50',
@@ -23,6 +25,7 @@ export const ACHIEVEMENTS = [
     title: 'Meio centenário',
     desc: '50 tarefas concluídas. Consistência de nível avançado.',
     check: (s) => s.completedTasks >= 50,
+    rarity: 'Rara'
   },
   {
     key: 'tasks_100',
@@ -30,6 +33,7 @@ export const ACHIEVEMENTS = [
     title: 'Centenário',
     desc: '100 tarefas. Uma prova de comprometimento raro.',
     check: (s) => s.completedTasks >= 100,
+    rarity: 'Épica'
   },
   {
     key: 'streak_3',
@@ -37,6 +41,7 @@ export const ACHIEVEMENTS = [
     title: '3 dias seguidos',
     desc: 'Três dias consecutivos de progresso.',
     check: (s) => s.currentStreak >= 3,
+    rarity: 'Comum'
   },
   {
     key: 'streak_7',
@@ -44,6 +49,7 @@ export const ACHIEVEMENTS = [
     title: 'Semana perfeita',
     desc: '7 dias consecutivos. Isso é um hábito real.',
     check: (s) => s.currentStreak >= 7,
+    rarity: 'Rara'
   },
   {
     key: 'streak_30',
@@ -51,6 +57,7 @@ export const ACHIEVEMENTS = [
     title: '30 dias de consistência',
     desc: 'Um mês inteiro de progresso diário.',
     check: (s) => s.currentStreak >= 30,
+    rarity: 'Épica'
   },
   {
     key: 'first_goal',
@@ -58,6 +65,7 @@ export const ACHIEVEMENTS = [
     title: 'Primeiro objetivo',
     desc: 'Você criou seu primeiro objetivo. O caminho começa aqui.',
     check: (s) => s.totalGoals >= 1,
+    rarity: 'Comum'
   },
   {
     key: 'first_goal_completed',
@@ -65,6 +73,7 @@ export const ACHIEVEMENTS = [
     title: 'Objetivo alcançado',
     desc: 'Você alcançou um objetivo. Isso é raro e valioso.',
     check: (s) => s.completedGoals >= 1,
+    rarity: 'Rara'
   },
   {
     key: 'goals_10',
@@ -72,6 +81,7 @@ export const ACHIEVEMENTS = [
     title: 'Visionário',
     desc: '10 objetivos concluídos. Você constrói grandes coisas.',
     check: (s) => s.completedGoals >= 10,
+    rarity: 'Épica'
   },
   {
     key: 'pet_lover',
@@ -79,6 +89,7 @@ export const ACHIEVEMENTS = [
     title: 'Amigo dos Animais',
     desc: 'Você concluiu 3 ou mais tarefas de cuidados com pets.',
     check: (s) => s.petTasksCompleted >= 3,
+    rarity: 'Rara'
   },
   {
     key: 'financista',
@@ -86,6 +97,7 @@ export const ACHIEVEMENTS = [
     title: 'Mestre Financeiro',
     desc: 'Você concluiu 3 ou mais tarefas de finanças pessoais.',
     check: (s) => s.financeTasksCompleted >= 3,
+    rarity: 'Rara'
   },
   {
     key: 'carreira',
@@ -93,6 +105,7 @@ export const ACHIEVEMENTS = [
     title: 'Foco Profissional',
     desc: 'Você concluiu 3 ou mais tarefas de transição de carreira.',
     check: (s) => s.careerTasksCompleted >= 3,
+    rarity: 'Rara'
   },
   {
     key: 'perfect_habits',
@@ -100,6 +113,7 @@ export const ACHIEVEMENTS = [
     title: 'Foco Total',
     desc: 'Você concluiu 100% dos seus hábitos de hoje.',
     check: (s) => s.habits100PercentToday === true,
+    rarity: 'Lendária'
   },
 ];
 

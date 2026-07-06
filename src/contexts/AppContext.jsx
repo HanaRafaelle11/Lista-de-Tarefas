@@ -135,27 +135,39 @@ export function AppProvider({ children }) {
   const [userProfile, setUserProfile]       = useState(null);
 
   // ── Navegação ────────────────────────────────────────────────────────────────
-  const VALID_TABS = new Set(['home', 'goals', 'tasks', 'focus', 'coach', 'analytics', 'performance', 'profile', 'admin', 'revenue', 'settings']);
+  const VALID_TABS = new Set(['home', 'myday', 'focus', 'evolution', 'profile', 'admin', 'revenue', 'settings', 'goals', 'tasks', 'coach', 'analytics', 'performance']);
   const [activeTab, setActiveTab] = useState(() => {
     try {
       if (typeof window !== 'undefined') {
         const pathname = window.location.pathname.toLowerCase().replace(/\/$/, '');
         if (pathname.includes('/admin')) return 'admin';
-        if (pathname.includes('/tasks') || pathname.includes('/tarefas')) return 'tasks';
-        if (pathname.includes('/goals') || pathname.includes('/objetivos')) return 'goals';
+        if (pathname.includes('/tasks') || pathname.includes('/tarefas')) return 'myday';
+        if (pathname.includes('/goals') || pathname.includes('/objetivos')) return 'myday';
+        if (pathname.includes('/myday') || pathname.includes('/meudia')) return 'myday';
         if (pathname.includes('/focus') || pathname.includes('/foco')) return 'focus';
-        if (pathname.includes('/coach')) return 'coach';
-        if (pathname.includes('/analytics') || pathname.includes('/evolucao')) return 'analytics';
-        if (pathname.includes('/performance') || pathname.includes('/desempenho')) return 'performance';
+        if (pathname.includes('/coach')) return 'home';
+        if (pathname.includes('/analytics') || pathname.includes('/evolucao')) return 'evolution';
+        if (pathname.includes('/performance') || pathname.includes('/desempenho')) return 'evolution';
+        if (pathname.includes('/evolution')) return 'evolution';
         if (pathname.includes('/profile') || pathname.includes('/perfil')) return 'profile';
         if (pathname.includes('/revenue') || pathname.includes('/financas')) return 'revenue';
         if (pathname.includes('/settings') || pathname.includes('/configuracoes')) return 'settings';
 
         const params = new URLSearchParams(window.location.search);
         const tabParam = params.get('tab');
-        if (tabParam && VALID_TABS.has(tabParam)) return tabParam;
+        if (tabParam && VALID_TABS.has(tabParam)) {
+          if (tabParam === 'tasks' || tabParam === 'goals') return 'myday';
+          if (tabParam === 'analytics' || tabParam === 'performance') return 'evolution';
+          if (tabParam === 'coach') return 'home';
+          return tabParam;
+        }
         const rawHash = window.location.hash.replace(/^#\/?/, '');
-        if (rawHash && VALID_TABS.has(rawHash)) return rawHash;
+        if (rawHash && VALID_TABS.has(rawHash)) {
+          if (rawHash === 'tasks' || rawHash === 'goals') return 'myday';
+          if (rawHash === 'analytics' || rawHash === 'performance') return 'evolution';
+          if (rawHash === 'coach') return 'home';
+          return rawHash;
+        }
       }
     } catch (_) {}
     return 'home';
@@ -194,10 +206,15 @@ export function AppProvider({ children }) {
     };
   }, []);
 
-  // Controla reprodução do som ambiente com fades suaves
+  // Controla reprodução do som ambiente
   useEffect(() => {
     const audio = ambientAudioRef.current;
     if (!audio) return;
+
+    if (fadeIntervalRef.current) {
+      clearInterval(fadeIntervalRef.current);
+      fadeIntervalRef.current = null;
+    }
 
     if (ambientSoundFile === 'none') {
       audio.pause();
@@ -211,37 +228,20 @@ export function AppProvider({ children }) {
 
     const targetSrc = `${window.location.origin}/assets/audio/${ambientSoundFile}`;
     if (audio.src !== targetSrc) {
+      audio.pause();
       audio.src = targetSrc;
       audio.load();
     }
 
+    audio.volume = ambientSoundVolume;
     localStorage.setItem('flowday_ambient_sound_file', ambientSoundFile);
     localStorage.setItem('flowday_ambient_sound_volume', String(ambientSoundVolume));
     localStorage.setItem('flowday_ambient_is_playing', String(isAmbientPlaying));
 
-    if (fadeIntervalRef.current) {
-      clearInterval(fadeIntervalRef.current);
-      fadeIntervalRef.current = null;
-    }
-
     if (isAmbientPlaying) {
-      audio.volume = 0;
       audio.play()
         .then(() => {
           setAudioBlocked(false);
-          const step = 0.05;
-          const intervalMs = 50;
-          fadeIntervalRef.current = setInterval(() => {
-            if (!ambientAudioRef.current) return;
-            const nextVol = audio.volume + step;
-            if (nextVol >= ambientSoundVolume) {
-              audio.volume = ambientSoundVolume;
-              clearInterval(fadeIntervalRef.current);
-              fadeIntervalRef.current = null;
-            } else {
-              audio.volume = nextVol;
-            }
-          }, intervalMs);
         })
         .catch(e => {
           if (e.name === 'NotAllowedError') {
@@ -253,26 +253,7 @@ export function AppProvider({ children }) {
           }
         });
     } else {
-      const step = 0.05;
-      const intervalMs = 50;
-      const startVol = audio.volume;
-      if (startVol > 0 && !audio.paused) {
-        fadeIntervalRef.current = setInterval(() => {
-          if (!ambientAudioRef.current) return;
-          const nextVol = audio.volume - step;
-          if (nextVol <= 0) {
-            audio.volume = 0;
-            audio.pause();
-            clearInterval(fadeIntervalRef.current);
-            fadeIntervalRef.current = null;
-          } else {
-            audio.volume = nextVol;
-          }
-        }, intervalMs);
-      } else {
-        audio.pause();
-        audio.volume = 0;
-      }
+      audio.pause();
     }
   }, [ambientSoundFile, isAmbientPlaying]);
 
@@ -295,6 +276,7 @@ export function AppProvider({ children }) {
   const [tasks, setTasks]           = useState([]);
   const [goals, setGoals]           = useState([]);
   const [goalTasks, setGoalTasks]   = useState([]);
+  const [selectedGoalIdFilter, setSelectedGoalIdFilter] = useState('all');
 
   // ── Conquistas ───────────────────────────────────────────────────────────────
   const [unlockedAchievements, setUnlockedAchievements] = useState(null);
@@ -431,37 +413,19 @@ export function AppProvider({ children }) {
     try {
       if (currentUser?.id) {
         if (!currentUser.isDemo) {
-          await eventsService.logEvent(currentUser.id, 'logout');
+          await eventsService.logEvent(currentUser.id, 'logout').catch(() => {});
         }
       }
       if (!currentUser?.isDemo) {
-        await supabase.auth.signOut();
+        await supabase.auth.signOut().catch(() => {});
       }
       
-      // Limpa dados demo se for o caso
       if (currentUser?.isDemo) {
         localStorage.removeItem(`flowday_demo_tasks_${currentUser.id}`);
         localStorage.removeItem(`flowday_demo_goals_${currentUser.id}`);
         localStorage.removeItem(`flowday_demo_habits_${currentUser.id}`);
         localStorage.removeItem(`flowday_demo_achievements_${currentUser.id}`);
       }
-      if (currentUser?.isDemo) {
-        window.location.href = window.location.origin + '/';
-      } else {
-        window.location.href = window.location.origin + '/login';
-      }
-      // Reset do guard de conquistas para o próximo login
-      dataLoadedOnce.current = false;
-      initialGoalsCount.current = -1;
-      initialCompletedTasksCount.current = -1;
-      firstSuccessLogged.current = false;
-      setCurrentUser(null);
-      setUserProfile(null);
-      setTasks([]); setGoals([]); setGoalTasks([]);
-      setUnlockedAchievements(null); setUnlockedKeys(null);
-      setToastQueue([]); // Limpa a fila de exibição no logout
-      setHabits([]); setHabitLogs([]);
-      setNotifications([]);
 
       // Limpa caches locais no IndexedDB para isolamento multiusuário
       await localDB.clear('tasks').catch(() => {});
@@ -470,7 +434,13 @@ export function AppProvider({ children }) {
       await localDB.clear('profile').catch(() => {});
       await localDB.clear('events').catch(() => {});
       await localDB.clear('notifications').catch(() => {});
-    } catch (e) { console.error(e); }
+
+      // Redireciona imediatamente, limpando toda a memória da aba do navegador de forma limpa
+      window.location.href = '/';
+    } catch (e) {
+      console.error(e);
+      window.location.href = '/';
+    }
   }, [currentUser]);
 
   // Determina se usuário logado é administrador
@@ -711,11 +681,11 @@ export function AppProvider({ children }) {
       setTasks(JSON.parse(localTasks));
     } else {
       const mockTasks = [
-        { id: 'dt1', user_id: currentUser.id, title: 'Revisar hooks avançados do React', description: 'Focar em useMemo e useCallback', category: 'Estudos', priority: 'Alta', dueDate: now.toISOString().split('T')[0], completed: true, createdAt: now.toISOString(), completedAt: now.toISOString(), deletedAt: null },
+        { id: 'dt1', user_id: currentUser.id, title: 'Revisar hooks avançados do React', description: 'Focar em useMemo e useCallback', category: 'Estudos', priority: 'Alta', dueDate: now.toISOString().split('T')[0], completed: false, createdAt: now.toISOString(), completedAt: null, deletedAt: null },
         { id: 'dt2', user_id: currentUser.id, title: 'Correr 5km no parque', description: 'Treinar endurance e ritmo constante', category: 'Lazer', priority: 'Alta', dueDate: now.toISOString().split('T')[0], completed: false, createdAt: now.toISOString(), deletedAt: null },
         { id: 'dt3', user_id: currentUser.id, title: 'Refatorar design system do Flowday', description: 'Ajustar variáveis de cores e glassmorphism', category: 'Trabalho', priority: 'Alta', dueDate: now.toISOString().split('T')[0], completed: false, createdAt: now.toISOString(), deletedAt: null },
-        { id: 'dt4', user_id: currentUser.id, title: 'Comprar tênis de corrida com amortecimento', description: 'Focar em proteção de articulações', category: 'Pessoal', priority: 'Média', dueDate: '', completed: true, createdAt: now.toISOString(), completedAt: now.toISOString(), deletedAt: null },
-        { id: 'dt5', user_id: currentUser.id, title: 'Ler 20 páginas do livro atual', description: 'Hábito de leitura offline diária', category: 'Pessoal', priority: 'Baixa', dueDate: now.toISOString().split('T')[0], completed: true, createdAt: now.toISOString(), completedAt: now.toISOString(), deletedAt: null },
+        { id: 'dt4', user_id: currentUser.id, title: 'Comprar tênis de corrida com amortecimento', description: 'Focar em proteção de articulações', category: 'Pessoal', priority: 'Média', dueDate: '', completed: false, createdAt: now.toISOString(), completedAt: null, deletedAt: null },
+        { id: 'dt5', user_id: currentUser.id, title: 'Ler 20 páginas do livro atual', description: 'Hábito de leitura offline diária', category: 'Pessoal', priority: 'Baixa', dueDate: now.toISOString().split('T')[0], completed: false, createdAt: now.toISOString(), completedAt: null, deletedAt: null },
         { id: 'dt6', user_id: currentUser.id, title: 'Aprender sobre App Router do Next.js', description: 'Estudar layouts e subrotas dinâmicas', category: 'Estudos', priority: 'Média', dueDate: '', completed: false, createdAt: now.toISOString(), deletedAt: null },
         { id: 'dt7', user_id: currentUser.id, title: 'Preparar marmitas saudáveis', description: 'Alimentação equilibrada para a semana', category: 'Pessoal', priority: 'Média', dueDate: '', completed: false, createdAt: now.toISOString(), deletedAt: null }
       ];
@@ -725,8 +695,8 @@ export function AppProvider({ children }) {
 
     if (localGoals) {
       const parsed = JSON.parse(localGoals);
-      setGoals(parsed.goals);
-      setGoalTasks(parsed.goalTasks);
+      setGoals(parsed.goals || []);
+      setGoalTasks(parsed.goalTasks || []);
     } else {
       const mockGoals = [
         { id: 'dg1', user_id: currentUser.id, title: 'Dominar o React', description: 'Ficar proficiente em React, hooks e Next.js', color: '#6366f1', icon: 'target', target_date: '', status: 'active', deletedAt: null },
@@ -747,8 +717,8 @@ export function AppProvider({ children }) {
 
     if (localHabits) {
       const parsed = JSON.parse(localHabits);
-      setHabits(parsed.habits);
-      setHabitLogs(parsed.habitLogs);
+      setHabits(parsed.habits || []);
+      setHabitLogs(parsed.habitLogs || []);
     } else {
       const mockHabits = [
         { id: 'dh1', user_id: currentUser.id, title: 'Meditar 10 min', description: 'Foco na respiração mindfulness', frequency: 'diaria', created_at: new Date().toISOString() },
@@ -912,7 +882,8 @@ export function AppProvider({ children }) {
     const taskRate = taskCount > 0 ? (completedTaskCount / taskCount) : 0;
 
     // 2. Taxa de conclusão de hábitos nos últimos 7 dias (40% de peso)
-    const recentLogs = habitLogs.filter(l => new Date(l.completed_date) >= sevenDaysAgo);
+    const activeHabitIds = habits.map(h => h.id);
+    const recentLogs = habitLogs.filter(l => activeHabitIds.includes(l.habit_id) && new Date(l.completed_date) >= sevenDaysAgo);
     const totalPossibleLogs = habits.length * 7;
     const habitRate = totalPossibleLogs > 0 ? (recentLogs.length / totalPossibleLogs) : 0;
 
@@ -1618,12 +1589,9 @@ export function AppProvider({ children }) {
 
     // 2. Executa a deleção lógica imediatamente no banco/cache
     if (currentUser.isDemo) {
-      const updatedList = tasks.filter(t => t.id !== id);
-      setTasks(updatedList);
-      const updatedGT = goalTasks.filter(gt => gt.task_id !== id);
-      setGoalTasks(updatedGT);
-      localStorage.setItem(`flowday_demo_tasks_${currentUser.id}`, JSON.stringify(updatedList));
-      localStorage.setItem(`flowday_demo_goals_${currentUser.id}`, JSON.stringify({ goals, goalTasks: updatedGT }));
+      const updatedTasks = tasks.map(t => t.id === id ? { ...t, deletedAt: nowIso } : t);
+      setTasks(updatedTasks);
+      localStorage.setItem(`flowday_demo_tasks_${currentUser.id}`, JSON.stringify(updatedTasks));
       logEvent('task_deleted', { task_id: id });
     } else {
       tasksService.delete(currentUser.id, id).then(({ error, degraded }) => {
@@ -1636,12 +1604,14 @@ export function AppProvider({ children }) {
     // 3. Agenda a expiração do undo
     const timerId = setTimeout(() => {
       setUndoAction(null);
-      const finalTasks = tasks.filter(t => t.id !== id);
-      if (!currentUser.isDemo) {
-        setTasks(finalTasks);
-      }
-      resetAchievementsIfEmpty(currentUser.id, finalTasks, goals);
-    }, 5000);
+      setTasks(currentTasks => {
+        setGoals(currentGoals => {
+          resetAchievementsIfEmpty(currentUser.id, currentTasks, currentGoals);
+          return currentGoals;
+        });
+        return currentTasks;
+      });
+    }, 3000);
 
     // 4. Ativa o Undo Action
     setUndoAction({
@@ -1682,7 +1652,7 @@ export function AppProvider({ children }) {
       });
     }
 
-    // 4. Agenda a expiração do undo (10 segundos)
+    // 4. Agenda a expiração do undo (3 segundos)
     const timerId = setTimeout(() => {
       setUndoAction(null);
       const finalTasks = tasks.filter(t => !ids.includes(t.id));
@@ -1690,7 +1660,7 @@ export function AppProvider({ children }) {
         setTasks(finalTasks);
       }
       resetAchievementsIfEmpty(currentUser.id, finalTasks, goals);
-    }, 10000);
+    }, 3000);
 
     // 5. Undo action para lote (restaura todos)
     setUndoAction({
@@ -2216,39 +2186,118 @@ export function AppProvider({ children }) {
   const handleUpdateGoal = useCallback(async (id, updatedData) => {
     if (!currentUser?.id) return;
     const existingGoal = goals.find(g => g.id === id);
+    const { actions, ...payloadData } = updatedData;
     
     if (currentUser.isDemo) {
-      const updatedGoals = goals.map((g) => g.id === id ? { ...g, ...updatedData } : g);
+      const updatedGoals = goals.map((g) => g.id === id ? { ...g, ...payloadData } : g);
       setGoals(updatedGoals);
-      localStorage.setItem(`flowday_demo_goals_${currentUser.id}`, JSON.stringify({ goals: updatedGoals, goalTasks }));
+      
+      let currentDemoTasks = [...tasks];
+      let currentDemoGT = [...goalTasks];
+
+      if (actions && actions.length > 0) {
+        for (const actionTitle of actions) {
+          const actionId = 'dt_' + Math.random().toString(36).substr(2, 9);
+          const taskData = {
+            id: actionId,
+            user_id: currentUser.id,
+            title: actionTitle,
+            description: '',
+            category: 'Trabalho',
+            priority: 'Média',
+            dueDate: null,
+            completed: false,
+            createdAt: new Date().toISOString(),
+            completedAt: null,
+            deletedAt: null
+          };
+          currentDemoTasks.push(taskData);
+          currentDemoGT.push({ goal_id: id, task_id: actionId });
+        }
+        setTasks(currentDemoTasks);
+        setGoalTasks(currentDemoGT);
+      }
+
+      localStorage.setItem(`flowday_demo_goals_${currentUser.id}`, JSON.stringify({ goals: updatedGoals, goalTasks: currentDemoGT }));
+      localStorage.setItem(`flowday_demo_tasks_${currentUser.id}`, JSON.stringify(currentDemoTasks));
       logEvent('goal_updated', { goal_id: id });
-      if (updatedData.status === 'completed' && existingGoal?.status !== 'completed') {
+      if (payloadData.status === 'completed' && existingGoal?.status !== 'completed') {
         logEvent('goal_completed', { goal_id: id });
         addNotification('goal', 'Objetivo Concluído!', existingGoal.title);
       }
       return;
     }
 
-    const { data: payload } = await goalsService.update(currentUser.id, id, updatedData);
+    const { data: payload } = await goalsService.update(currentUser.id, id, payloadData);
     if (payload) {
       setGoals((prev) => prev.map((g) => g.id === id ? { ...g, ...payload } : g));
       logEvent('goal_updated', { goal_id: id });
-      if (updatedData.start_time !== undefined && existingGoal.start_time !== updatedData.start_time) {
-        logEvent('goal_time_updated', { goal_id: id, start_time: updatedData.start_time, end_time: updatedData.end_time });
+
+      if (actions && actions.length > 0) {
+        const newTasks = [];
+        for (const actionTitle of actions) {
+          const tempActionId = `temp_action_${Math.random()}_${Date.now()}`;
+          const tempTask = {
+            id: tempActionId,
+            user_id: currentUser.id,
+            title: actionTitle,
+            description: '',
+            category: 'Trabalho',
+            priority: 'Média',
+            dueDate: null,
+            completed: false,
+            createdAt: new Date().toISOString(),
+            completedAt: null,
+            deletedAt: null
+          };
+          newTasks.push({ tempId: tempActionId, task: tempTask });
+        }
+
+        // Atualização otimista
+        setTasks((prev) => [...newTasks.map(nt => nt.task), ...prev]);
+        setGoalTasks((prev) => [...prev, ...newTasks.map(nt => ({ goal_id: id, task_id: nt.tempId }))]);
+
+        // Gravação assíncrona no banco
+        for (const nt of newTasks) {
+          const taskData = {
+            title: nt.task.title,
+            description: '',
+            category: 'Trabalho',
+            priority: 'Média',
+            dueDate: null,
+          };
+          const { data: taskResponse } = await tasksService.create(currentUser.id, taskData);
+          if (taskResponse) {
+            setTasks((prev) => prev.map(t => t.id === nt.tempId ? taskResponse : t));
+            await goalsService.linkTask(id, taskResponse.id);
+            setGoalTasks((prev) => prev.map(gt => 
+              (gt.goal_id === id && gt.task_id === nt.tempId) 
+                ? { goal_id: id, task_id: taskResponse.id } 
+                : gt
+            ));
+          } else {
+            setTasks((prev) => prev.filter(t => t.id !== nt.tempId));
+            setGoalTasks((prev) => prev.filter(gt => gt.task_id !== nt.tempId));
+          }
+        }
       }
-      if (updatedData.status === 'completed' && existingGoal?.status !== 'completed') {
+
+      if (payloadData.start_time !== undefined && existingGoal.start_time !== payloadData.start_time) {
+        logEvent('goal_time_updated', { goal_id: id, start_time: payloadData.start_time, end_time: payloadData.end_time });
+      }
+      if (payloadData.status === 'completed' && existingGoal?.status !== 'completed') {
         logEvent('goal_completed', { goal_id: id });
         addNotification('goal', 'Objetivo Concluído!', existingGoal.title);
         if (existingGoal.start_time) {
           logEvent('goal_completed_with_schedule', { goal_id: id });
         }
-      } else if (updatedData.status === 'archived') {
+      } else if (payloadData.status === 'archived') {
         logEvent('goal_archived', { goal_id: id });
-      } else if (existingGoal && (existingGoal.status === 'completed' || existingGoal.status === 'archived') && updatedData.status === 'active') {
+      } else if (existingGoal && (existingGoal.status === 'completed' || existingGoal.status === 'archived') && payloadData.status === 'active') {
         logEvent('goal_reopened', { goal_id: id });
       }
     }
-  }, [currentUser, goals, goalTasks, logEvent, addNotification]);
+  }, [currentUser, goals, goalTasks, tasks, logEvent, addNotification]);
 
   const handleDeleteGoal = useCallback(async (id) => {
     if (!currentUser?.id) return;
@@ -2266,11 +2315,9 @@ export function AppProvider({ children }) {
 
     // 2. Executa a deleção imediatamente no banco
     if (currentUser.isDemo) {
-      const mockGoals = goals.filter(g => g.id !== id);
-      const updatedGT = goalTasks.filter(gt => gt.goal_id !== id);
-      setGoals(mockGoals);
-      setGoalTasks(updatedGT);
-      localStorage.setItem(`flowday_demo_goals_${currentUser.id}`, JSON.stringify({ goals: mockGoals, goalTasks: updatedGT }));
+      const updatedGoals = goals.map(g => g.id === id ? { ...g, deletedAt: nowIso, deleted_at: nowIso } : g);
+      setGoals(updatedGoals);
+      localStorage.setItem(`flowday_demo_goals_${currentUser.id}`, JSON.stringify({ goals: updatedGoals, goalTasks }));
       logEvent('goal_deleted', { goal_id: id });
     } else {
       goalsService.delete(currentUser.id, id).then(({ error }) => {
@@ -2283,13 +2330,11 @@ export function AppProvider({ children }) {
     // 3. Agenda a expiração do undo
     const timerId = setTimeout(() => {
       setUndoAction(null);
-      const updatedGoals = goals.filter((g) => g.id !== id);
-      if (!currentUser.isDemo) {
-        setGoals(updatedGoals);
-        setGoalTasks((prev) => prev.filter((gt) => gt.goal_id !== id));
-      }
-      resetAchievementsIfEmpty(currentUser.id, tasks, updatedGoals);
-    }, 5000);
+      setGoals(currentGoals => {
+        resetAchievementsIfEmpty(currentUser.id, tasks, currentGoals);
+        return currentGoals;
+      });
+    }, 3000);
 
     // 4. Ativa o Undo
     setUndoAction({
@@ -2328,7 +2373,7 @@ export function AppProvider({ children }) {
       });
     }
 
-    // 4. Agenda a expiração do undo (10 segundos)
+    // 4. Agenda a expiração do undo (3 segundos)
     const timerId = setTimeout(() => {
       setUndoAction(null);
       const finalGoals = goals.filter(g => !ids.includes(g.id));
@@ -2337,7 +2382,7 @@ export function AppProvider({ children }) {
         setGoalTasks(prev => prev.filter(gt => !ids.includes(gt.goal_id)));
       }
       resetAchievementsIfEmpty(currentUser.id, tasks, finalGoals);
-    }, 10000);
+    }, 3000);
 
     // 5. Ativa o Undo
     setUndoAction({
@@ -2374,7 +2419,7 @@ export function AppProvider({ children }) {
       });
     }
 
-    // 4. Agenda a expiração do undo (10 segundos)
+    // 4. Agenda a expiração do undo (3 segundos)
     const timerId = setTimeout(() => {
       setUndoAction(null);
       const finalGoals = goals.filter(g => !ids.includes(g.id));
@@ -2383,7 +2428,7 @@ export function AppProvider({ children }) {
         setGoalTasks(prev => prev.filter(gt => !ids.includes(gt.goal_id)));
       }
       resetAchievementsIfEmpty(currentUser.id, tasks, finalGoals);
-    }, 10000);
+    }, 3000);
 
     // 5. Ativa o Undo
     setUndoAction({
@@ -2508,7 +2553,10 @@ export function AppProvider({ children }) {
 
   const closePaywall = useCallback(() => {
     setIsPaywallOpen(false);
-  }, []);
+    if (['coach', 'revenue'].includes(activeTab)) {
+      setActiveTab('home');
+    }
+  }, [activeTab]);
 
   const handleCancelSubscription = useCallback(async () => {
     if (!currentUser?.id) return;
@@ -2631,16 +2679,29 @@ export function AppProvider({ children }) {
     
     // Restaura localmente na UI e no banco
     if (undoAction.type === 'task') {
-      setTasks(prev => prev.map(t => t.id === undoAction.id ? { ...t, deletedAt: null } : t));
+      setTasks(prev => {
+        const exists = prev.some(t => t.id === undoAction.id);
+        if (exists) {
+          return prev.map(t => t.id === undoAction.id ? { ...t, deletedAt: null } : t);
+        } else if (undoAction.item) {
+          return [...prev, { ...undoAction.item, deletedAt: null }];
+        }
+        return prev;
+      });
       if (!currentUser.isDemo) {
         await tasksService.restore(currentUser.id, undoAction.id);
       } else {
-        const updated = tasks.map(t => t.id === undoAction.id ? { ...t, deletedAt: null } : t);
-        localStorage.setItem(`flowday_demo_tasks_${currentUser.id}`, JSON.stringify(updated));
+        const mockTasks = tasks.map(t => t.id === undoAction.id ? { ...t, deletedAt: null } : t);
+        localStorage.setItem(`flowday_demo_tasks_${currentUser.id}`, JSON.stringify(mockTasks));
       }
     } else if (undoAction.type === 'bulk_task') {
       const restoredIds = new Set(undoAction.ids);
-      setTasks(prev => prev.map(t => restoredIds.has(t.id) ? { ...t, deletedAt: null } : t));
+      setTasks(prev => {
+        const existingIds = new Set(prev.map(t => t.id));
+        const toAdd = (undoAction.items || []).filter(item => !existingIds.has(item.id)).map(item => ({ ...item, deletedAt: null }));
+        const updated = prev.map(t => restoredIds.has(t.id) ? { ...t, deletedAt: null } : t);
+        return [...updated, ...toAdd];
+      });
       if (!currentUser.isDemo) {
         await Promise.all(undoAction.ids.map(id => tasksService.restore(currentUser.id, id)));
       } else {
@@ -2648,7 +2709,15 @@ export function AppProvider({ children }) {
         localStorage.setItem(`flowday_demo_tasks_${currentUser.id}`, JSON.stringify(updated));
       }
     } else if (undoAction.type === 'goal') {
-      setGoals(prev => prev.map(g => g.id === undoAction.id ? { ...g, deletedAt: null } : g));
+      setGoals(prev => {
+        const exists = prev.some(g => g.id === undoAction.id);
+        if (exists) {
+          return prev.map(g => g.id === undoAction.id ? { ...g, deletedAt: null } : g);
+        } else if (undoAction.item) {
+          return [...prev, { ...undoAction.item, deletedAt: null }];
+        }
+        return prev;
+      });
       if (!currentUser.isDemo) {
         await goalsService.restore(currentUser.id, undoAction.id);
       } else {
@@ -2657,7 +2726,12 @@ export function AppProvider({ children }) {
       }
     } else if (undoAction.type === 'bulk_goal') {
       const restoredIds = new Set(undoAction.ids);
-      setGoals(prev => prev.map(g => restoredIds.has(g.id) ? { ...g, deletedAt: null } : g));
+      setGoals(prev => {
+        const existingIds = new Set(prev.map(g => g.id));
+        const toAdd = (undoAction.items || []).filter(item => !existingIds.has(item.id)).map(item => ({ ...item, deletedAt: null }));
+        const updated = prev.map(g => restoredIds.has(g.id) ? { ...g, deletedAt: null } : g);
+        return [...updated, ...toAdd];
+      });
       if (!currentUser.isDemo) {
         await Promise.all(undoAction.ids.map(id => goalsService.restore(currentUser.id, id)));
       } else {
@@ -2982,6 +3056,8 @@ export function AppProvider({ children }) {
     setActiveTab,
     shouldOpenGoalModal,
     setShouldOpenGoalModal,
+    selectedGoalIdFilter,
+    setSelectedGoalIdFilter,
 
     // Theme
     theme,

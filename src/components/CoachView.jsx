@@ -3,6 +3,148 @@ import { Sparkles, Brain, Clock, ShieldAlert, Award, ArrowUpRight, Zap, Target, 
 import { useAppContext } from '../contexts/AppContext';
 import { generateCoachMessage } from '../intelligence/coachEngine';
 import { supabase } from '../supabaseClient';
+import MFIcon from './MFIcon';
+
+// Formata a mensagem do coach em JSX interpretando markdown
+function formatCoachMessage(message = '', isPro = true, openPaywall = () => {}) {
+  if (!message) return null;
+  const lines = message.split('\n');
+  
+  let currentGroup = 'free'; // 'free' or 'pro'
+  const freeElements = [];
+  const proElements = [];
+
+  lines.forEach((line, idx) => {
+    const trimmed = line.trim();
+    if (trimmed.startsWith('**Tendência Atual:**') || trimmed.startsWith('**Insights do Mentor:**') || trimmed.startsWith('**Recomendação Prática:**')) {
+      currentGroup = 'pro';
+    }
+
+    const element = (() => {
+      if (!trimmed) return <div key={idx} style={{ height: '8px' }} />;
+      
+      if (trimmed.startsWith('### ')) {
+        return (
+          <h4 key={idx} style={{ 
+            fontSize: '15px', 
+            fontWeight: '850', 
+            color: 'var(--primary)', 
+            margin: '16px 0 8px 0',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            borderBottom: '1px solid var(--border-light)',
+            paddingBottom: '4px'
+          }}>
+            {trimmed.replace('### ', '')}
+          </h4>
+        );
+      }
+      if (trimmed.startsWith('**') && trimmed.endsWith('**')) {
+        return (
+          <strong key={idx} style={{ 
+            display: 'block', 
+            fontSize: '12.5px', 
+            color: 'var(--text-main)', 
+            marginTop: '12px',
+            fontWeight: '750'
+          }}>
+            {trimmed.replace(/\*\*/g, '')}
+          </strong>
+        );
+      }
+      if (trimmed.startsWith('* ')) {
+        return (
+          <div key={idx} style={{ 
+            fontSize: '12.5px', 
+            color: 'var(--text-muted)', 
+            lineHeight: '1.5',
+            margin: '6px 0',
+            paddingLeft: '16px',
+            position: 'relative'
+          }}>
+            <span style={{ position: 'absolute', left: '2px', color: 'var(--primary)', fontWeight: 'bold' }}>•</span>
+            {trimmed.replace(/^\*\s+/, '')}
+          </div>
+        );
+      }
+      
+      return (
+        <p key={idx} style={{ 
+          fontSize: '12.5px', 
+          color: 'var(--text-muted)', 
+          lineHeight: '1.5',
+          margin: '6px 0' 
+        }}>
+          {trimmed}
+        </p>
+      );
+    })();
+
+    if (currentGroup === 'free') {
+      freeElements.push(element);
+    } else {
+      proElements.push(element);
+    }
+  });
+
+  if (isPro || proElements.length === 0) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+        {freeElements}
+        {proElements}
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+      <div>{freeElements}</div>
+      <div style={{ position: 'relative', marginTop: '16px' }}>
+        {/* Blurred Content */}
+        <div style={{ filter: 'blur(4px)', opacity: 0.3, pointerEvents: 'none', userSelect: 'none' }}>
+          {proElements}
+        </div>
+        {/* Pro Overlay Trigger */}
+        <div 
+          onClick={() => openPaywall('coach_pro_insights')}
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            backgroundColor: 'rgba(255, 255, 255, 0.02)',
+            borderRadius: '8px',
+            padding: '16px'
+          }}
+        >
+          <div style={{
+            backgroundColor: 'var(--bg-card)',
+            border: '1px solid var(--border-medium)',
+            padding: '16px 24px',
+            borderRadius: 'var(--radius-md)',
+            boxShadow: 'var(--shadow-md)',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '8px',
+            textAlign: 'center'
+          }}>
+            <Lock size={18} style={{ color: 'var(--primary)' }} />
+            <span style={{ fontSize: '13.5px', fontWeight: '800', color: 'var(--text-main)' }}>Desbloquear Análise Completa</span>
+            <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Tendências e recomendações acionáveis são recursos Pro</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function CoachView() {
   const {
@@ -253,7 +395,6 @@ export default function CoachView() {
                 fontSize: '14.5px', 
                 color: 'var(--text-main)', 
                 lineHeight: '1.8', 
-                whiteSpace: 'pre-line',
                 fontFamily: 'inherit',
                 padding: '16px',
                 backgroundColor: 'var(--bg-app)',
@@ -262,7 +403,7 @@ export default function CoachView() {
                 marginBottom: '24px'
               }}
             >
-              {coachData.message}
+              {formatCoachMessage(coachData.message, isPro, openPaywall)}
             </div>
 
             {/* Positioning text inside the card */}

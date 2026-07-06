@@ -1,9 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
+import ReactDOM from 'react-dom';
 import { Bell, Check, Trash2, Search, Filter } from 'lucide-react';
 import { useAppContext } from '../contexts/AppContext';
 import MFIcon from './MFIcon';
 
-export default function NotificationCenter() {
+export default function NotificationCenter({ placement }) {
   const {
     notifications,
     markNotificationsAsRead,
@@ -15,12 +16,18 @@ export default function NotificationCenter() {
   const [filterType, setFilterType] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const containerRef = useRef(null);
+  const buttonRef = useRef(null);
+  const [coords, setCoords] = useState({ top: 0, left: 0 });
 
   const unreadCount = notifications.filter(n => !n.read).length;
 
   useEffect(() => {
     function handleClickOutside(event) {
-      if (containerRef.current && !containerRef.current.contains(event.target)) {
+      const dropdownEl = document.getElementById('notification-portal-dropdown');
+      if (
+        containerRef.current && !containerRef.current.contains(event.target) &&
+        (!dropdownEl || !dropdownEl.contains(event.target))
+      ) {
         setIsOpen(false);
       }
     }
@@ -29,6 +36,19 @@ export default function NotificationCenter() {
   }, []);
 
   const handleToggle = () => {
+    if (!isOpen && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      if (placement === 'bottom-left') {
+        const dropdownHeight = 360; 
+        const top = Math.max(10, rect.top - dropdownHeight - 8);
+        const left = Math.max(10, Math.min(window.innerWidth - 330, rect.left));
+        setCoords({ top, left });
+      } else {
+        const top = rect.bottom + 8;
+        const left = Math.max(10, Math.min(window.innerWidth - 330, rect.right - 320));
+        setCoords({ top, left });
+      }
+    }
     setIsOpen(!isOpen);
     if (!isOpen && unreadCount > 0) {
       markNotificationsAsRead();
@@ -102,6 +122,7 @@ export default function NotificationCenter() {
   return (
     <div className="notification-container" ref={containerRef} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '38px' }}>
       <button
+        ref={buttonRef}
         onClick={handleToggle}
         className="header-btn"
         title="Notificações"
@@ -113,10 +134,25 @@ export default function NotificationCenter() {
         )}
       </button>
 
-      {isOpen && (
-        <div className="notification-dropdown" style={{ width: '360px', padding: '16px' }}>
+      {isOpen && ReactDOM.createPortal(
+        <div 
+          className="notification-dropdown animate-scale-up" 
+          id="notification-portal-dropdown"
+          style={{ 
+            width: '320px', 
+            padding: '16px',
+            position: 'fixed',
+            zIndex: 11000,
+            top: `${coords.top}px`,
+            left: `${coords.left}px`,
+            backgroundColor: 'var(--bg-card)',
+            border: '1px solid var(--border-medium)',
+            borderRadius: 'var(--radius-md)',
+            boxShadow: 'var(--shadow-lg)',
+          }}
+        >
           <div className="notification-header" style={{ marginBottom: '12px' }}>
-            <h3 style={{ margin: 0, fontSize: '15px', fontWeight: '700' }}>Centro de Notificações</h3>
+            <h3 style={{ margin: 0, fontSize: '15px', fontWeight: '700', color: 'var(--text-main)' }}>Centro de Notificações</h3>
             <div style={{ display: 'flex', gap: '8px' }}>
               {unreadCount > 0 && (
                 <button 
@@ -217,7 +253,8 @@ export default function NotificationCenter() {
               ))
             )}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

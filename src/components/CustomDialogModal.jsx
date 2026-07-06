@@ -31,27 +31,38 @@ export default function CustomDialogModal({ isOpen, type = 'alert', title, messa
       left: 0,
       right: 0,
       bottom: 0,
-      backgroundColor: 'rgba(0, 0, 0, 0.75)',
-      backdropFilter: 'blur(8px)',
-      WebkitBackdropFilter: 'blur(8px)',
+      backgroundColor: 'rgba(0, 0, 0, 0.65)',
+      backdropFilter: 'blur(6px)',
+      WebkitBackdropFilter: 'blur(6px)',
       display: 'flex',
-      alignItems: 'center',
+      alignItems: 'flex-end',
       justifyContent: 'center',
-      zIndex: 10000,
-      padding: '20px'
+      zIndex: 11000,
     }}>
+      <style>{`
+        @keyframes customBottomSheetSlideUp {
+          from { transform: translateY(100%); }
+          to { transform: translateY(0); }
+        }
+      `}</style>
       <div style={{
         backgroundColor: 'var(--bg-card)',
-        border: '1px solid var(--border-light)',
-        borderRadius: 'var(--radius-lg, 16px)',
-        padding: '24px',
-        maxWidth: '420px',
+        borderTop: '1px solid var(--border-light)',
+        borderTopLeftRadius: '24px',
+        borderTopRightRadius: '24px',
+        padding: '24px 24px 36px 24px',
+        maxWidth: '500px',
         width: '100%',
-        boxShadow: 'var(--shadow-lg, 0 20px 25px -5px rgba(0, 0, 0, 0.3))',
+        boxShadow: '0 -8px 32px rgba(0, 0, 0, 0.25)',
         position: 'relative',
-        animation: 'modalSlideIn 0.2s ease-out'
+        animation: 'customBottomSheetSlideUp 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+        maxHeight: '80vh',
+        overflowY: 'auto',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '20px'
       }}>
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px', marginBottom: '20px' }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px' }}>
           <div style={{
             width: '48px',
             height: '48px',
@@ -88,20 +99,22 @@ export default function CustomDialogModal({ isOpen, type = 'alert', title, messa
           </div>
         </div>
 
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '20px' }}>
+        <div style={{ display: 'flex', gap: '10px', width: '100%' }}>
           {type === 'confirm' && (
             <button
               onClick={onCancel}
               style={{
-                padding: '10px 18px',
-                borderRadius: 'var(--radius-sm, 8px)',
+                flex: 1,
+                padding: '12px 18px',
+                borderRadius: '12px',
                 border: '1px solid var(--border-medium)',
                 backgroundColor: 'transparent',
                 color: 'var(--text-main)',
-                fontWeight: '600',
+                fontWeight: '700',
                 fontSize: '14px',
                 cursor: 'pointer',
-                transition: 'all 0.2s'
+                transition: 'all 0.2s',
+                textAlign: 'center'
               }}
             >
               {cancelText}
@@ -110,16 +123,18 @@ export default function CustomDialogModal({ isOpen, type = 'alert', title, messa
           <button
             onClick={onConfirm}
             style={{
-              padding: '10px 20px',
-              borderRadius: 'var(--radius-sm, 8px)',
+              flex: 1,
+              padding: '12px 20px',
+              borderRadius: '12px',
               border: 'none',
               backgroundColor: type === 'error' || type === 'confirm' ? 'var(--danger)' : 'var(--primary)',
               color: '#ffffff',
-              fontWeight: '600',
+              fontWeight: '700',
               fontSize: '14px',
               cursor: 'pointer',
               boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)',
-              transition: 'all 0.2s'
+              transition: 'all 0.2s',
+              textAlign: 'center'
             }}
           >
             {confirmText}

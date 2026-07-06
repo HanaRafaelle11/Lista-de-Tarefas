@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Calendar, Trash2, Edit2, AlertCircle, CalendarPlus, Check, Repeat, Unlink, Copy, Clock } from 'lucide-react';
+import { Calendar, Trash2, Edit2, AlertCircle, CalendarPlus, Check, Repeat, Unlink, Copy, Clock, Play, MoreVertical, Sparkles, Flame } from 'lucide-react';
 import { parseTaskMetadata, formatDescriptionWithoutMetadata, useAppContext } from '../contexts/AppContext';
 import { formatTaskDateDisplay, formatTaskTimeDisplay } from '../utils/dateUtils';
 import CategoryIcon from './CategoryIcon';
@@ -17,9 +17,10 @@ function exportTaskToCalendar(task) {
   window.open(url, '_blank');
 }
 
-export default function TodoItem({ item, onToggleComplete, onDelete, onEdit, goalId, onUnlinkGoal, onDuplicate }) {
+export default function TodoItem({ item, onToggleComplete, onDelete, onEdit, goalId, onUnlinkGoal, onDuplicate, isRecommended, isCritical, isStreak }) {
   const [calExported, setCalExported] = useState(false);
-  const { isPro, openPaywall, openCustomConfirm } = useAppContext();
+  const [showMenu, setShowMenu] = useState(false);
+  const { isPro, openPaywall, openCustomConfirm, setActiveTab } = useAppContext();
 
   const handleExportCalendar = () => {
     if (!isPro) {
@@ -49,9 +50,18 @@ export default function TodoItem({ item, onToggleComplete, onDelete, onEdit, goa
   const dateText = formatTaskDateDisplay(item.dueDate);
   const timeText = formatTaskTimeDisplay(item.dueDate, meta.due_time);
 
+  const getCardStyle = () => {
+    if (item.completed) return {};
+    if (isRecommended) return { border: '1px dashed var(--primary)', boxShadow: '0 0 10px rgba(94, 96, 206, 0.15)' };
+    if (isCritical) return { border: '1px dashed rgba(239, 68, 68, 0.4)', boxShadow: '0 0 10px rgba(239, 68, 68, 0.08)' };
+    if (isStreak) return { border: '1px dashed rgba(16, 185, 129, 0.4)', boxShadow: '0 0 10px rgba(16, 185, 129, 0.08)' };
+    return {};
+  };
+
   return (
     <div 
-      className={`todo-item-card ${item.completed ? 'completed' : ''} ${overdue ? 'overdue' : ''} animate-fade-in`}
+      className={`todo-item-card ${item.completed ? 'completed' : ''} ${overdue ? 'overdue' : ''} ${isRecommended ? 'todo-item-recommended' : ''} animate-fade-in`}
+      style={getCardStyle()}
     >
       {/* Checkbox Customizado */}
       <div 
@@ -62,8 +72,8 @@ export default function TodoItem({ item, onToggleComplete, onDelete, onEdit, goa
 
       {/* Conteúdo Central */}
       <div className="todo-item-content">
-        <div className="todo-item-title-wrapper">
-          <h3 className="todo-item-title">
+        <div className="todo-item-title-wrapper" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '6px' }}>
+          <h3 className="todo-item-title" style={{ margin: 0 }}>
             {item.title}
           </h3>
           
@@ -72,6 +82,28 @@ export default function TodoItem({ item, onToggleComplete, onDelete, onEdit, goa
             <span className="todo-item-overdue-badge" title="Tarefa atrasada!">
               <AlertCircle size={11} />
               <span>Atrasada</span>
+            </span>
+          )}
+
+          {/* Badges de Destaque */}
+          {isRecommended && !item.completed && (
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '10.5px', fontWeight: '800', backgroundColor: 'var(--primary-light)', color: 'var(--primary)', padding: '2px 8px', borderRadius: '4px', border: '1px solid rgba(94, 96, 206, 0.2)', textTransform: 'uppercase' }}>
+              <Sparkles size={11} />
+              <span>Recomendada IA</span>
+            </span>
+          )}
+          
+          {isCritical && !item.completed && (
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '10.5px', fontWeight: '800', backgroundColor: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', padding: '2px 8px', borderRadius: '4px', border: '1px solid rgba(239, 68, 68, 0.2)', textTransform: 'uppercase' }}>
+              <AlertCircle size={11} />
+              <span>Crítica</span>
+            </span>
+          )}
+
+          {isStreak && !item.completed && (
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '10.5px', fontWeight: '800', backgroundColor: 'rgba(16, 185, 129, 0.1)', color: '#10b981', padding: '2px 8px', borderRadius: '4px', border: '1px solid rgba(16, 185, 129, 0.2)', textTransform: 'uppercase' }}>
+              <Flame size={11} />
+              <span>Mantém Sequência</span>
             </span>
           )}
         </div>
@@ -122,72 +154,122 @@ export default function TodoItem({ item, onToggleComplete, onDelete, onEdit, goa
         </div>
       </div>
 
-      {/* Ações (Agenda / Editar / Excluir) */}
-      <div className="todo-item-actions" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-        {/* Botão Adicionar à Agenda */}
-        <button
-          onClick={handleExportCalendar}
-          className="todo-item-action-btn"
-          title={calExported ? 'Abrindo Google Calendar...' : 'Adicionar ao Google Calendar'}
-          aria-label="Adicionar tarefa ao Google Calendar"
-          style={{
-            color: calExported ? '#22c55e' : 'var(--text-light)',
-            transition: 'color 0.3s',
-          }}
-        >
-          {calExported ? <Check size={15} /> : <CalendarPlus size={15} />}
-        </button>
-
-        {goalId && onUnlinkGoal && (
-          <button 
-            onClick={() => {
-              openCustomConfirm(
-                "Deseja realmente desvincular esta tarefa do objetivo? Ela voltará para a lista de tarefas gerais.",
-                "Desvincular Tarefa",
-                () => onUnlinkGoal(goalId, item.id)
-              );
-            }}
-            className="todo-item-action-btn unlink-btn"
-            title="Desvincular do objetivo"
-            aria-label="Desvincular do objetivo"
-            style={{ color: 'var(--text-light)' }}
-          >
-            <Unlink size={15} />
-          </button>
-        )}
-
-        {onDuplicate && (
-          <button 
-            onClick={() => onDuplicate(item.id)}
-            className="todo-item-action-btn duplicate-btn"
-            title="Duplicar tarefa"
-          >
-            <Copy size={14} />
-          </button>
-        )}
-
+      {/* Ações Simplificadas (Execução) */}
+      <div className="todo-item-actions" style={{ display: 'flex', alignItems: 'center', gap: '8px', position: 'relative' }}>
         {!item.completed && (
           <button 
-            onClick={() => onEdit(item)}
-            className="todo-item-action-btn edit-btn"
-            title="Editar tarefa"
+            onClick={() => {
+              localStorage.setItem('flowday_pomodoro_selected_task_id', item.id);
+              setActiveTab('focus');
+            }}
+            className="todo-item-action-btn play-btn"
+            title="Iniciar modo Foco (Pomodoro)"
+            aria-label="Focar nesta tarefa"
+            style={{ color: 'var(--primary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
           >
-            <Edit2 size={15} />
+            <Play size={16} fill="var(--primary)" />
           </button>
         )}
-        
-        {/* Botão Excluir Restaurado e Destacado */}
-        <button 
-          onClick={() => { if (onDelete) onDelete(item); }}
-          className="todo-item-action-btn delete-btn"
-          title="Excluir tarefa"
-          aria-label="Excluir tarefa"
-          style={{ color: 'var(--danger)', cursor: 'pointer' }}
-        >
-          <Trash2 size={15} />
-        </button>
-      </div>
 
+        {/* Menu Kebab */}
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            setShowMenu(!showMenu);
+          }}
+          className="todo-item-action-btn more-btn"
+          title="Mais Ações"
+          style={{ color: 'var(--text-light)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+        >
+          <MoreVertical size={16} />
+        </button>
+
+        {/* Dropdown Menu */}
+        {showMenu && (
+          <>
+            <div 
+              style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 999 }}
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowMenu(false);
+              }}
+            />
+            <div 
+              className="todo-item-dropdown animate-scale-up" 
+              style={{
+                position: 'absolute',
+                top: '100%',
+                right: 0,
+                marginTop: '4px',
+                backgroundColor: 'var(--bg-card)',
+                border: '1px solid var(--border-medium)',
+                borderRadius: '8px',
+                boxShadow: 'var(--shadow-md)',
+                zIndex: 1000,
+                display: 'flex',
+                flexDirection: 'column',
+                minWidth: '160px',
+                padding: '4px 0',
+                overflow: 'hidden'
+              }}
+            >
+              <button 
+                onClick={(e) => { e.stopPropagation(); handleExportCalendar(); setShowMenu(false); }}
+                style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', fontSize: '12.5px', border: 'none', background: 'none', color: 'var(--text-main)', width: '100%', textAlign: 'left', cursor: 'pointer' }}
+              >
+                {calExported ? <Check size={14} style={{ color: '#10b981' }} /> : <CalendarPlus size={14} />}
+                <span>{calExported ? 'Adicionado!' : 'Exportar Google'}</span>
+              </button>
+
+              {onDuplicate && (
+                <button 
+                  onClick={(e) => { e.stopPropagation(); onDuplicate(item.id); setShowMenu(false); }}
+                  style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', fontSize: '12.5px', border: 'none', background: 'none', color: 'var(--text-main)', width: '100%', textAlign: 'left', cursor: 'pointer' }}
+                >
+                  <Copy size={14} />
+                  <span>Duplicar</span>
+                </button>
+              )}
+
+              {goalId && onUnlinkGoal && (
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowMenu(false);
+                    openCustomConfirm(
+                      "Deseja realmente desvincular esta tarefa do objetivo? Ela voltará para a lista de tarefas gerais.",
+                      "Desvincular Tarefa",
+                      () => onUnlinkGoal(goalId, item.id)
+                    );
+                  }}
+                  style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', fontSize: '12.5px', border: 'none', background: 'none', color: 'var(--text-main)', width: '100%', textAlign: 'left', cursor: 'pointer' }}
+                >
+                  <Unlink size={14} />
+                  <span>Desvincular</span>
+                </button>
+              )}
+
+              {!item.completed && (
+                <button 
+                  onClick={(e) => { e.stopPropagation(); onEdit(item); setShowMenu(false); }}
+                  style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', fontSize: '12.5px', border: 'none', background: 'none', color: 'var(--text-main)', width: '100%', textAlign: 'left', cursor: 'pointer' }}
+                >
+                  <Edit2 size={14} />
+                  <span>Editar</span>
+                </button>
+              )}
+
+              <button 
+                onClick={(e) => { e.stopPropagation(); if (onDelete) onDelete(item); setShowMenu(false); }}
+                style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', fontSize: '12.5px', border: 'none', background: 'none', color: 'var(--danger)', width: '100%', textAlign: 'left', cursor: 'pointer' }}
+              >
+                <Trash2 size={14} />
+                <span>Excluir</span>
+              </button>
+            </div>
+          </>
+        )}
+      </div>
     </div>
   );
 }

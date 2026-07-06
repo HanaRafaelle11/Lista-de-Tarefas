@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sun, Moon, User } from 'lucide-react';
+import { Sun, Moon, User, Settings, LogOut } from 'lucide-react';
 import { useAppContext } from '../contexts/AppContext';
 import MFIcon from './MFIcon';
 import DefaultAvatar from './DefaultAvatar';
@@ -22,7 +22,6 @@ export default function Navbar() {
 
   const navItems = [
     { key: 'home',        icon: 'consistency',  label: 'Início'    },
-    { key: 'goals',       icon: 'objectives',   label: 'Objetivos' },
     { key: 'tasks',       icon: 'tasks',        label: 'Tarefas'   },
     { key: 'focus',       icon: 'focus',        label: 'Foco'      },
     { key: 'coach',       icon: 'insights',     label: 'Coach'     },
@@ -110,7 +109,16 @@ export default function Navbar() {
               title="Configurações"
               style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '38px', height: '38px', padding: 0, margin: 0, flexShrink: 0, color: activeTab === 'settings' ? 'var(--primary)' : 'var(--text-muted)' }}
             >
-              <User size={22} strokeWidth={2} className="header-btn-icon" />
+              <Settings size={22} strokeWidth={2} className="header-btn-icon" />
+            </button>
+            <button
+              onClick={handleLogout}
+              className="header-btn"
+              title="Sair do App"
+              aria-label="Sair do App"
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '38px', height: '38px', padding: 0, margin: 0, flexShrink: 0, color: '#ef4444' }}
+            >
+              <LogOut size={20} strokeWidth={2} />
             </button>
             
             <div 
@@ -118,7 +126,7 @@ export default function Navbar() {
               onClick={() => setActiveTab('profile')}
               style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '42px', height: '42px', margin: 0, flexShrink: 0 }}
             >
-              <div className="app-top-avatar" title={userProfile?.name || currentUser?.name} style={{ width: '42px', height: '42px', borderRadius: '50%', overflow: 'hidden', border: '1px solid var(--border-medium)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <div className="app-top-avatar" title={userProfile?.nickname || userProfile?.name || currentUser?.name} style={{ width: '42px', height: '42px', borderRadius: '50%', overflow: 'hidden', border: activeTab === 'profile' ? '2px solid var(--primary)' : '1px solid var(--border-medium)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, backgroundColor: 'var(--bg-card-hover)' }}>
                 {userProfile?.avatar_url ? (
                   <img src={userProfile.avatar_url} alt="Avatar" style={{ width: '42px', height: '42px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
                 ) : (

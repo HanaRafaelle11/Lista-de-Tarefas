@@ -13,7 +13,9 @@ export default function PaywallModal() {
     userProfile,
     isPro,
     subscriptionStatus,
-    churnRisk
+    churnRisk,
+    logEvent,
+    paywallSource
   } = useAppContext();
 
   const [checkoutStatus, setCheckoutStatus] = useState('checkout'); // 'checkout' | 'processing' | 'success' | 'error'
@@ -37,12 +39,27 @@ export default function PaywallModal() {
     }
   }, [isPaywallOpen, isPro]);
 
+  // ESC key listener
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && isPaywallOpen) {
+        closePaywall();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isPaywallOpen, closePaywall]);
+
   if (!isPaywallOpen) return null;
 
   const handleStartCheckout = async () => {
     if (isPro) {
       setCheckoutStatus('success');
       return;
+    }
+
+    if (logEvent) {
+      logEvent('upgrade_clicked', { source: paywallSource || 'unknown' });
     }
 
     closePaywall(); // Fecha o modal de paywall
@@ -169,6 +186,27 @@ export default function PaywallModal() {
           <span style={{ fontSize: '11.5px', color: '#9ca3af', textAlign: 'center', display: 'block', fontStyle: 'italic' }}>
             Pagamento seguro processado via Asaas. Cancele a qualquer momento.
           </span>
+          <button
+            type="button"
+            onClick={closePaywall}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: '#9ca3af',
+              fontSize: '13px',
+              cursor: 'pointer',
+              textDecoration: 'underline',
+              marginTop: '4px',
+              textAlign: 'center',
+              width: '100%',
+              fontFamily: 'inherit',
+              transition: 'color 0.2s'
+            }}
+            onMouseEnter={e => e.currentTarget.style.color = '#ffffff'}
+            onMouseLeave={e => e.currentTarget.style.color = '#9ca3af'}
+          >
+            Quero continuar no plano gratuito
+          </button>
         </div>
       </div>
     );

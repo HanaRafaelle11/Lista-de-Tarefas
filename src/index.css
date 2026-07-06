@@ -6479,6 +6479,12 @@ body,
   animation: fadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
+@media (max-width: 768px) {
+  .undo-toast {
+    bottom: 96px;
+  }
+}
+
 .dark .undo-toast {
   background-color: #f3f4f6;
   color: #111827;
@@ -6933,4 +6939,424 @@ body,
     grid-template-columns: 1fr;
     gap: 12px;
   }
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   SIDEBAR & RESPONSIVE LAYOUT (MYFLOWDAY REDESIGN)
+   ────────────────────────────────────────────────────────────────────────── */
+
+/* Grid e Layout Geral */
+.app-wrapper {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  width: 100%;
+  background-color: var(--bg-app);
+}
+
+.app-body-container {
+  display: flex;
+  flex-direction: row;
+  flex: 1;
+  width: 100%;
+  min-height: 0;
+}
+
+.app-main-content {
+  flex: 1;
+  min-width: 0;
+  padding: 24px;
+  position: relative;
+}
+
+@media (max-width: 1023px) {
+  .app-body-container {
+    flex-direction: column;
+  }
+  .app-main-content {
+    padding: 16px;
+    padding-top: 80px; /* Espaço para o cabeçalho superior mobile */
+    padding-bottom: 80px; /* Espaço para o bottom nav */
+  }
+}
+
+/* Responsividade de visibilidade */
+.hide-on-mobile {
+  display: flex !important;
+}
+.hide-on-desktop {
+  display: none !important;
+}
+
+@media (max-width: 1023px) {
+  .hide-on-mobile {
+    display: none !important;
+  }
+  .hide-on-desktop {
+    display: flex !important;
+  }
+}
+
+/* ── Cabeçalho Superior Mobile ── */
+.mobile-top-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 64px;
+  background-color: var(--bg-nav-glass);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--border-light);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+}
+
+.mobile-header-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.mobile-logo {
+  height: 38px;
+  width: auto;
+  object-fit: contain;
+  cursor: pointer;
+}
+
+.mobile-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.mobile-avatar-wrapper {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 1px solid var(--border-medium);
+  cursor: pointer;
+}
+
+.mobile-avatar-wrapper.active {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px var(--primary-glow);
+}
+
+.mobile-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* ── Bottom Nav Mobile ── */
+.mobile-bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 64px;
+  background-color: var(--bg-nav-glass);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-top: 1px solid var(--border-light);
+  z-index: 1000;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  padding: 0 8px;
+}
+
+.mobile-bottom-nav-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 6px;
+  width: 70px;
+  gap: 3px;
+  transition: all 0.2s ease;
+}
+
+.mobile-bottom-nav-btn.active {
+  color: var(--primary);
+}
+
+.mobile-bottom-nav-btn .nav-text {
+  font-size: 10px;
+  font-weight: 700;
+}
+
+/* ── Sidebar Desktop ── */
+.app-sidebar {
+  width: 240px;
+  height: 100vh;
+  position: sticky;
+  top: 0;
+  background-color: var(--bg-card);
+  border-right: 1px solid var(--border-light);
+  display: flex;
+  flex-direction: column;
+  padding: 24px 16px;
+  flex-shrink: 0;
+  z-index: 1000;
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.02);
+}
+
+.sidebar-brand-wrapper {
+  margin-bottom: 32px;
+  cursor: pointer;
+  display: flex;
+  justify-content: flex-start;
+  padding-left: 8px;
+}
+
+.sidebar-logo {
+  height: 48px;
+  width: auto;
+  object-fit: contain;
+}
+
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  flex: 1;
+}
+
+.sidebar-nav-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sidebar-section-divider {
+  height: 1px;
+  background-color: var(--border-light);
+  margin: 12px 8px;
+}
+
+.sidebar-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border: none;
+  background: none;
+  color: var(--text-muted);
+  font-size: 14.5px;
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.2s ease;
+  width: 100%;
+}
+
+.sidebar-nav-item:hover {
+  background-color: var(--bg-card-hover);
+  color: var(--text-main);
+}
+
+.sidebar-nav-item.active {
+  background-color: var(--primary-light);
+  color: var(--primary);
+}
+
+.sidebar-icon {
+  flex-shrink: 0;
+}
+
+.sidebar-label {
+  flex-grow: 1;
+}
+
+.sidebar-footer {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-light);
+}
+
+.sidebar-footer-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  gap: 8px;
+  padding: 4px;
+  background-color: var(--bg-card-hover);
+  border-radius: var(--radius-sm);
+}
+
+.sidebar-footer-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  transition: all 0.2s ease;
+}
+
+.sidebar-footer-btn:hover {
+  background-color: var(--bg-card);
+  color: var(--text-main);
+  box-shadow: var(--shadow-sm);
+}
+
+.sidebar-footer-btn.active {
+  color: var(--primary);
+}
+
+.sidebar-profile-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 1px solid transparent;
+}
+
+.sidebar-profile-card:hover {
+  background-color: var(--bg-card-hover);
+  border-color: var(--border-light);
+}
+
+.sidebar-profile-card.active {
+  background-color: var(--primary-light);
+  border-color: rgba(94, 96, 206, 0.25);
+}
+
+.sidebar-avatar-container {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 1px solid var(--border-medium);
+  flex-shrink: 0;
+}
+
+.sidebar-avatar {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.sidebar-profile-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.sidebar-username {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-main);
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.sidebar-user-tier {
+  font-size: 11px;
+  color: var(--text-light);
+  font-weight: 500;
+  margin-top: 1px;
+}
+
+/* Estilos de customização da tela Meu Dia */
+.myday-goal-accordion-card:hover {
+  border-color: var(--border-medium) !important;
+}
+
+.myday-goal-accordion-card .todo-item-card {
+  box-shadow: none !important;
+  border-radius: var(--radius-sm) !important;
+}
+
+.myday-goals-section {
+  animation: slide-up 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Collapsed Sidebar overrides */
+.app-sidebar {
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), padding 0.3s ease !important;
+}
+
+.app-sidebar--collapsed {
+  width: 72px !important;
+  padding: 24px 8px !important;
+}
+
+.app-sidebar--collapsed .sidebar-label,
+.app-sidebar--collapsed .sidebar-profile-info,
+.app-sidebar--collapsed .sidebar-section-divider,
+.app-sidebar--collapsed .sidebar-username,
+.app-sidebar--collapsed .sidebar-user-tier {
+  display: none !important;
+}
+
+.app-sidebar--collapsed .sidebar-brand-wrapper {
+  padding-left: 0 !important;
+  justify-content: center !important;
+  margin-bottom: 24px !important;
+}
+
+.app-sidebar--collapsed .sidebar-logo {
+  height: 28px !important;
+}
+
+.app-sidebar--collapsed .sidebar-nav-item {
+  justify-content: center !important;
+  padding: 10px 0 !important;
+  gap: 0 !important;
+}
+
+.app-sidebar--collapsed .sidebar-footer-actions {
+  flex-direction: column !important;
+  gap: 12px !important;
+  align-items: center !important;
+}
+
+.app-sidebar--collapsed .sidebar-profile-card {
+  justify-content: center !important;
+  padding: 6px 0 !important;
+  background: transparent !important;
+  border: none !important;
+}
+
+.sidebar-collapse-toggle-btn {
+  background: none;
+  border: none;
+  color: var(--text-light);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  border-radius: 50%;
+  margin: 0 auto 16px auto;
+  transition: all 0.2s;
+}
+
+.sidebar-collapse-toggle-btn:hover {
+  background-color: var(--bg-card-hover);
+  color: var(--text-main);
 }

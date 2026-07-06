@@ -40,7 +40,7 @@ const ICONS = {
   ),
 
   consistency: (
-    <path d="M12 2 L15.5 9 L22 12 L15.5 15 L12 22 L8.5 15 L2 12 L8.5 9 Z" />
+    <path d="M12 2 L15.5 9 L22 12 L15.5 15 L12 22 L8.5 15 L2 12 L8.5 9 Z" fill="none" />
   ),
 
   achievements: (
@@ -643,6 +643,7 @@ const ICONS = {
 ICONS.sprout = ICONS.seedling;
 ICONS.target = ICONS.objectives;
 ICONS.briefcase = ICONS.career;
+ICONS.book = ICONS.reading;
 
 /**
  * @param {object} props
@@ -654,13 +655,47 @@ ICONS.briefcase = ICONS.career;
  * @param {string} [props.title] - Accessible title
  */
 export function MFIcon({ name, size = 24, color, className = '', style = {}, title }) {
-  const paths = ICONS[name];
+  if (!name) return null;
+
+  const isEmoji = /\p{Emoji}/u.test(name) && !/^[a-zA-Z0-9-]+$/.test(name);
+  if (isEmoji) {
+    return (
+      <span 
+        className={className} 
+        style={{ 
+          fontSize: `${size * 0.9}px`, 
+          lineHeight: 1, 
+          display: 'inline-block', 
+          verticalAlign: 'middle',
+          ...style 
+        }} 
+        role="img" 
+        aria-label={title || "ícone"}
+      >
+        {name}
+      </span>
+    );
+  }
+
+  const paths = ICONS[name.toLowerCase() ? name.toLowerCase() : name];
 
   if (!paths) {
-    if (import.meta.env.DEV) {
-      console.warn(`[MFIcon] Ícone não encontrado: "${name}". Ícones disponíveis: ${Object.keys(ICONS).join(', ')}`);
-    }
-    return null;
+    return (
+      <span 
+        className={`mf-icon-emoji ${className}`} 
+        style={{ 
+          fontSize: `${size * 0.9}px`, 
+          lineHeight: 1, 
+          display: 'inline-block', 
+          verticalAlign: 'middle',
+          ...style 
+        }} 
+        role="img" 
+        aria-label={title || "ícone"}
+      >
+        {name}
+      </span>
+    );
   }
 
   return (

@@ -399,7 +399,7 @@ export default function GoalModal({ isOpen, onClose, onSave, onDelete, editingGo
                   <span>Outro emoji...</span>
                 </button>
                 {showEmojiPicker && (
-                  <div style={{ position: 'absolute', top: '100%', left: 0, zIndex: 9999, marginTop: '4px', width: 'min(320px, 80vw)' }}>
+                  <div style={{ position: 'absolute', top: '100%', right: 0, left: 'auto', zIndex: 9999, marginTop: '4px', width: 'min(320px, 75vw)' }}>
                     <EmojiPicker
                       onEmojiClick={(emojiData) => {
                         setIcon(emojiData.emoji);
@@ -407,7 +407,7 @@ export default function GoalModal({ isOpen, onClose, onSave, onDelete, editingGo
                       }}
                       autoFocusSearch={false}
                       lazyLoadEmojis={true}
-                      height={380}
+                      height={350}
                       width="100%"
                       searchPlaceholder="Buscar emoji..."
                       previewConfig={{ showPreview: false }}
@@ -494,39 +494,37 @@ export default function GoalModal({ isOpen, onClose, onSave, onDelete, editingGo
           </div>
 
           {/* Ações (Tarefas vinculadas) dinâmico */}
-          {!editingGoal && (
-            <div className="todo-form-group">
-              <label className="todo-form-label">Ações Iniciais (Tarefas)</label>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {actions.map((action, index) => (
-                  <div key={index} style={{ display: 'flex', gap: '8px' }}>
-                    <input
-                      type="text"
-                      placeholder={`Ação ${index + 1}`}
-                      value={action}
-                      onChange={(e) => handleActionChange(index, e.target.value)}
-                      className="todo-modal-input"
-                      style={{ flex: 1 }}
-                    />
-                    <button 
-                      type="button" 
-                      onClick={() => handleRemoveAction(index)}
-                      style={{ padding: '8px', background: 'transparent', color: 'var(--text-light)', border: 'none', cursor: 'pointer' }}
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
-                ))}
-                <button
-                  type="button"
-                  onClick={handleAddAction}
-                  style={{ alignSelf: 'flex-start', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '13px', color: 'var(--primary)', background: 'transparent', border: 'none', cursor: 'pointer', padding: '4px 0' }}
-                >
-                  <Plus size={14} /> Adicionar ação
-                </button>
-              </div>
+          <div className="todo-form-group">
+            <label className="todo-form-label">{editingGoal ? 'Incluir Novas Ações (Tarefas)' : 'Ações Iniciais (Tarefas)'}</label>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {actions.map((action, index) => (
+                <div key={index} style={{ display: 'flex', gap: '8px' }}>
+                  <input
+                    type="text"
+                    placeholder={`Ação ${index + 1}`}
+                    value={action}
+                    onChange={(e) => handleActionChange(index, e.target.value)}
+                    className="todo-modal-input"
+                    style={{ flex: 1 }}
+                  />
+                  <button 
+                    type="button" 
+                    onClick={() => handleRemoveAction(index)}
+                    style={{ padding: '8px', background: 'transparent', color: 'var(--text-light)', border: 'none', cursor: 'pointer' }}
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={handleAddAction}
+                style={{ alignSelf: 'flex-start', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '13px', color: 'var(--primary)', background: 'transparent', border: 'none', cursor: 'pointer', padding: '4px 0' }}
+              >
+                <Plus size={14} /> Adicionar ação
+              </button>
             </div>
-          )}
+          </div>
 
           {/* Ações */}
           <div className="todo-modal-actions" style={{ justifyContent: 'space-between', width: '100%' }}>

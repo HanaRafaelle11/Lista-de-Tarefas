@@ -58,7 +58,7 @@ function GoalsEmptyState({ filter, onAdd, hasAnyGoals }) {
 
 export default function GoalsView() {
   const {
-    goals, goalTasks, tasks,
+    goals = [], goalTasks = [], tasks = [],
     handleAddGoal: onAddGoal,
     handleUpdateGoal: onUpdateGoal,
     handleDeleteGoal: onDeleteGoal,
@@ -72,7 +72,7 @@ export default function GoalsView() {
     isInitializing,
     handleBulkDeleteCompletedGoals,
     handleDeleteAllGoals,
-    deletedGoals,
+    deletedGoals = [],
     setActiveTab,
     setSettingsTab,
     handleDuplicateGoal,
@@ -479,7 +479,7 @@ export default function GoalsView() {
           isOpen={isGoalModalOpen}
           onClose={() => { setIsGoalModalOpen(false); setEditingGoal(null); }}
           onSave={handleSaveGoal}
-          onDelete={() => handleDeleteGoalWithConfirm(editingGoal.id)}
+          onDelete={editingGoal ? () => handleDeleteGoalWithConfirm(editingGoal.id) : null}
           editingGoal={editingGoal}
         />
       )}

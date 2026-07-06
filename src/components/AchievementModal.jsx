@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { X } from 'lucide-react';
+import MFIcon from './MFIcon';
 
 export default function AchievementModal({ isOpen, onClose, title, message, icon }) {
   const modalRef = useRef(null);
@@ -39,7 +40,7 @@ export default function AchievementModal({ isOpen, onClose, title, message, icon
       >
         <div className="achievement-modal-header">
           <div className="achievement-modal-icon-wrapper">
-            <span className="achievement-modal-icon">{icon}</span>
+            <MFIcon name={icon || 'trophy'} size={40} color="#eab308" />
           </div>
           <h2 id="achievement-modal-title" className="achievement-modal-title">{title}</h2>
           <button onClick={onClose} className="modal-close-btn" aria-label="Fechar modal">

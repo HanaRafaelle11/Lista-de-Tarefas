@@ -121,6 +121,19 @@ export const goalsService = {
 
         if (error) throw error;
         goalTasks = data || [];
+
+        // Atualiza cache local com os dados mais recentes do Supabase
+        try {
+          await localDB.clear('goal_tasks');
+          const localItems = goalTasks.map(gt => ({
+            id: `${gt.goal_id}_${gt.task_id}`,
+            goal_id: gt.goal_id,
+            task_id: gt.task_id
+          }));
+          await localDB.putMany('goal_tasks', localItems);
+        } catch (e) {
+          log('failed to update cache for goal_tasks', e.message);
+        }
       }
 
       let allGoals = [...mappedGoals];
@@ -165,11 +178,23 @@ export const goalsService = {
     } catch (error) {
       log('getAll failed -> offline fallback', error.message);
 
-      const localGoals = await localDB.getAll('goals');
-      const userGoals = localGoals.filter(g => g.user_id === userId && !g.deletedAt);
+      let userGoals = [];
+      try {
+        const localGoals = await localDB.getAll('goals');
+        userGoals = localGoals.filter(g => g.user_id === userId && !g.deletedAt);
+      } catch (e) {
+        log('failed to load local goals', e.message);
+      }
+
+      let localGT = [];
+      try {
+        localGT = await localDB.getAll('goal_tasks');
+      } catch (e) {
+        log('failed to load local goal_tasks', e.message);
+      }
 
       return {
-        data: { goals: userGoals, goalTasks: [] },
+        data: { goals: userGoals, goalTasks: localGT },
         error,
         degraded: true
       };
@@ -285,13 +310,53 @@ export const goalsService = {
 
       log('update result', { data, error });
 
-      if (error) throw error;
+      if (error) {
+        // Fallback para colunas inexistentes (start_time/end_time) no update
+        if (error.code === 'PGRST204' || (error.message && error.message.includes("end_time"))) {
+          const { start_time, end_time, ...fallbackPayload } = payload;
+          const { data: fallbackData, error: fallbackError } = await supabase
+            .from('goals')
+            .update(fallbackPayload)
+            .eq('id', id)
+            .eq('user_id', userId)
+            .select()
+            .single();
+
+          if (fallbackError) throw fallbackError;
+          return { data: mapGoal(fallbackData), error: null };
+        }
+        throw error;
+      }
 
       return { data: mapGoal(data), error: null };
 
     } catch (error) {
-      log('update failed', error.message);
-      return { error, degraded: true };
+      log('update failed -> offline fallback', error.message);
+      // Atualiza IndexedDB local de qualquer forma
+      try {
+        const localGoal = await localDB.get('goals', id);
+        if (localGoal) {
+          const updatedLocal = {
+            ...localGoal,
+            ...updates,
+            description: enrichedDescription,
+            updatedAt: nowIso
+          };
+          await localDB.put('goals', updatedLocal);
+        }
+      } catch (e) {}
+
+      return { 
+        data: { 
+          id, 
+          user_id: userId,
+          ...updates, 
+          description: enrichedDescription,
+          updated_at: nowIso 
+        }, 
+        error, 
+        degraded: true 
+      };
     }
   },
 

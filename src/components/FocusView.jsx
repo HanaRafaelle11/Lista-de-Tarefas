@@ -5,6 +5,8 @@ import { useAppContext, parseTaskMetadata } from '../contexts/AppContext';
 export default function FocusView() {
   const {
     tasks,
+    goals = [],
+    goalTasks = [],
     handleToggleComplete,
     logEvent,
     isPro,
@@ -17,8 +19,10 @@ export default function FocusView() {
     setIsAmbientPlaying,
     audioBlocked,
     setAudioBlocked,
-    openCustomAlert
+    openCustomAlert,
+    setActiveTab
   } = useAppContext();
+
   const pendingTasks = tasks.filter(t => !t.completed);
 
   // Estados do Timer
@@ -47,13 +51,12 @@ export default function FocusView() {
   });
 
   const [showConfig, setShowConfig] = useState(false);
+  const [showSuccessAnimation, setShowSuccessAnimation] = useState(false);
   const isFirstMount = useRef(true);
 
   // Estados temporários do painel de configuração
   const [tempFocus, setTempFocus] = useState(focusTime);
   const [tempBreak, setTempBreak] = useState(breakTime);
-
-
 
   const timerRef = useRef(null);
 
@@ -66,7 +69,6 @@ export default function FocusView() {
     if (!isActive) {
       setTimeLeft((mode === 'focus' ? focusTime : breakTime) * 60);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focusTime, breakTime, mode]);
 
   // Efeito on-mount para completar timer se terminou enquanto fora
@@ -84,7 +86,6 @@ export default function FocusView() {
         handleTimerComplete();
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Persiste estado do timer a cada tick/mudança
@@ -124,31 +125,47 @@ export default function FocusView() {
     }
   }, [timeLeft, isActive]);
 
+  // Limpeza de áudio ao sair da tela de foco
+  useEffect(() => {
+    return () => {
+      setIsAmbientPlaying(false);
+    };
+  }, [setIsAmbientPlaying]);
+
   const handleTimerComplete = () => {
     setIsActive(false);
     playNotificationSound();
     
     if (mode === 'focus') {
+      setShowSuccessAnimation(true);
       logEvent('focus_timer_completed', { duration_minutes: focusTime, task_id: selectedTaskId });
       logEvent('focus_completed', { duration_minutes: focusTime, task_id: selectedTaskId });
       logEvent('pomodoro_completed', { duration_minutes: focusTime, task_id: selectedTaskId });
       logEvent('focus_session_completed', { duration_minutes: focusTime, task_id: selectedTaskId });
-      // Envia notificação nativa se disponível
+      
       if ('Notification' in window && Notification.permission === 'granted') {
-        new Notification('Flowday - Timer', {
-          body: 'Ciclo de foco concluído! Hora de uma pausa de ' + breakTime + ' minutos.',
-          icon: '/icon.svg'
-        });
+        try {
+          new Notification('Flowday - Timer', {
+            body: 'Ciclo de foco concluído! Hora de uma pausa de ' + breakTime + ' minutos.',
+            icon: '/icon.svg'
+          });
+        } catch (e) {
+          console.warn('[FocusView] Erro ao disparar notificação de foco:', e);
+        }
       }
       setMode('break');
       setTimeLeft(breakTime * 60);
     } else {
       logEvent('break_timer_completed', { duration_minutes: breakTime });
       if ('Notification' in window && Notification.permission === 'granted') {
-        new Notification('Flowday - Timer', {
-          body: 'A pausa acabou! Hora de voltar ao foco.',
-          icon: '/icon.svg'
-        });
+        try {
+          new Notification('Flowday - Timer', {
+            body: 'A pausa acabou! Hora de voltar ao foco.',
+            icon: '/icon.svg'
+          });
+        } catch (e) {
+          console.warn('[FocusView] Erro ao disparar notificação de pausa:', e);
+        }
       }
       setMode('focus');
       setTimeLeft(focusTime * 60);
@@ -166,7 +183,6 @@ export default function FocusView() {
       }
     } else {
       logEvent('focus_session_paused', { mode, timeLeft });
-      logEvent('focus_timer_paused', { mode, timeLeft });
     }
     setIsActive(!isActive);
   };
@@ -176,7 +192,6 @@ export default function FocusView() {
     setMode('focus');
     setTimeLeft(focusTime * 60);
     logEvent('focus_session_cancelled', { mode, timeLeft });
-    logEvent('focus_timer_reset');
   };
 
   const handleSaveConfig = () => {
@@ -218,7 +233,6 @@ export default function FocusView() {
     }
   };
 
-  // Toca um beep amigável usando Web Audio API (100% offline-ready e sem carregar arquivos)
   const playNotificationSound = () => {
     try {
       const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -229,8 +243,8 @@ export default function FocusView() {
       gainNode.connect(audioCtx.destination);
       
       oscillator.type = 'sine';
-      oscillator.frequency.setValueAtTime(587.33, audioCtx.currentTime); // Ré5
-      oscillator.frequency.setValueAtTime(880.00, audioCtx.currentTime + 0.15); // Lá5
+      oscillator.frequency.setValueAtTime(587.33, audioCtx.currentTime);
+      oscillator.frequency.setValueAtTime(880.00, audioCtx.currentTime + 0.15);
       
       gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
       gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
@@ -242,7 +256,6 @@ export default function FocusView() {
     }
   };
 
-  // Formata MM:SS
   const formatTime = (seconds) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
@@ -264,23 +277,52 @@ export default function FocusView() {
     { value: 'white-noise.wav', label: 'Ruído Branco', emoji: '💤' },
   ];
 
-
   return (
-    <div className="focus-view-container animate-fade-in">
-      {/* O áudio ambiente global é controlado de forma persistente através do AppContext */}
-
-
-      <div className="tasks-page-header" style={{ marginBottom: '24px' }}>
-        <h1 className="tasks-page-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+    <div className="focus-view-container animate-fade-in" style={{ paddingBottom: '90px' }}>
+      
+      {/* Botão de retorno e Cabeçalho */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '24px' }}>
+        <button 
+          onClick={() => setActiveTab('myday')} 
+          className="btn-secondary" 
+          style={{ 
+            display: 'inline-flex', 
+            alignItems: 'center', 
+            gap: '8px', 
+            alignSelf: 'flex-start',
+            padding: '8px 16px', 
+            fontSize: '13px', 
+            fontWeight: '600',
+            cursor: 'pointer',
+            backgroundColor: 'var(--bg-card)',
+            border: '1px solid var(--border-medium)',
+            color: 'var(--text-main)',
+            borderRadius: 'var(--radius-sm)'
+          }}
+        >
+          ← Voltar ao Meu Dia
+        </button>
+        
+        <h1 className="tasks-page-title" style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: '8px 0 0 0' }}>
           <Clock size={22} style={{ color: 'var(--primary)' }} /> Modo Foco
         </h1>
         <p className="tasks-page-subtitle">Pomodoro para concentração máxima</p>
       </div>
 
-      <div className="focus-main-grid">
+      {/* Timer Centralizado de Coluna Única */}
+      <div style={{ maxWidth: '460px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '20px' }}>
         
-        {/* Lado Esquerdo: O Timer Pomodoro */}
-        <div className="focus-card-panel left-panel" style={{ backgroundColor: 'var(--bg-card)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-light)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+        <div className="focus-card-panel" style={{ 
+          backgroundColor: 'var(--bg-card)', 
+          borderRadius: 'var(--radius-lg)', 
+          border: '1px solid var(--border-light)', 
+          padding: '32px 24px',
+          display: 'flex', 
+          flexDirection: 'column', 
+          alignItems: 'center', 
+          position: 'relative',
+          boxShadow: 'var(--shadow-md)'
+        }}>
           
           <button 
             onClick={() => {
@@ -290,21 +332,22 @@ export default function FocusView() {
               }
               setShowConfig(!showConfig);
             }}
-            style={{ position: 'absolute', top: '20px', right: '20px', padding: '8px', color: 'var(--text-light)', background: 'transparent', cursor: 'pointer' }}
+            style={{ position: 'absolute', top: '20px', right: '20px', padding: '8px', color: 'var(--text-light)', background: 'transparent', cursor: 'pointer', border: 'none' }}
             title="Ajustar Tempos"
           >
             <Settings size={20} />
           </button>
 
-          {/* Configurações customizáveis (Premium Flags check) */}
+          {/* Configurações dos Ciclos */}
           {showConfig && (
             <div style={{ position: 'absolute', top: '60px', right: '20px', backgroundColor: 'var(--bg-app)', border: '1px solid var(--border-medium)', borderRadius: 'var(--radius-md)', padding: '16px', zIndex: 10, width: '220px', boxShadow: 'var(--shadow-md)' }} className="animate-fade-in">
               <h4 style={{ fontSize: '13px', fontWeight: '600', marginBottom: '12px', color: 'var(--text-main)' }}>Configurar Ciclos</h4>
               
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '12px' }}>
                 <div>
-                  <label style={{ display: 'block', color: 'var(--text-light)', marginBottom: '2px' }}>Tempo Foco (1-120 min)</label>
+                  <label htmlFor="pomodoro-focus-input" style={{ display: 'block', color: 'var(--text-light)', marginBottom: '2px' }}>Tempo Foco (1-120 min)</label>
                   <input 
+                    id="pomodoro-focus-input"
                     type="number" 
                     value={tempFocus} 
                     onChange={(e) => setTempFocus(e.target.value)}
@@ -314,8 +357,9 @@ export default function FocusView() {
                   />
                 </div>
                 <div>
-                  <label style={{ display: 'block', color: 'var(--text-light)', marginBottom: '2px' }}>Pausa Curta (1-60 min)</label>
+                  <label htmlFor="pomodoro-break-input" style={{ display: 'block', color: 'var(--text-light)', marginBottom: '2px' }}>Pausa Curta (1-60 min)</label>
                   <input 
+                    id="pomodoro-break-input"
                     type="number" 
                     value={tempBreak} 
                     onChange={(e) => setTempBreak(e.target.value)}
@@ -327,28 +371,28 @@ export default function FocusView() {
               </div>
               <button 
                 onClick={handleSaveConfig} 
-                style={{ marginTop: '12px', width: '100%', padding: '6px', borderRadius: '6px', backgroundColor: 'var(--primary)', color: 'white', fontWeight: '600', fontSize: '11px', border: 'none', cursor: 'pointer' }}
+                style={{ marginTop: '12px', width: '100%', padding: '8px', borderRadius: '6px', backgroundColor: 'var(--primary)', color: 'white', fontWeight: '700', fontSize: '12px', border: 'none', cursor: 'pointer' }}
               >
                 Salvar Tempos
               </button>
             </div>
           )}
 
-          {/* Modo Label */}
-          <div style={{ textTransform: 'uppercase', fontSize: '12px', fontWeight: '700', letterSpacing: '0.1em', color: mode === 'focus' ? 'var(--primary)' : 'var(--prio-alta-text)', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+          {/* Modo Foco / Pausa */}
+          <div style={{ textTransform: 'uppercase', fontSize: '12px', fontWeight: '700', letterSpacing: '0.1em', color: mode === 'focus' ? 'var(--primary)' : 'var(--prio-alta-text)', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '6px' }}>
             {mode === 'focus' ? (
               <>
-                <Target size={14} /> Foco
+                <Target size={14} /> Foco ativo
               </>
             ) : (
               <>
-                <Coffee size={14} /> Pausa
+                <Coffee size={14} /> Pausa de descanso
               </>
             )}
           </div>
 
-          {/* Gráfico circular de progresso */}
-          <div style={{ position: 'relative', width: '220px', height: '220px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          {/* Círculo Progress */}
+          <div style={{ position: 'relative', width: '220px', height: '220px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '24px' }}>
             <svg width="220" height="220" viewBox="0 0 100 100" style={{ transform: 'rotate(-90deg)', width: '100%', height: '100%' }}>
               <circle 
                 cx="50" cy="50" r="45" 
@@ -368,56 +412,129 @@ export default function FocusView() {
               />
             </svg>
             <div style={{ position: 'absolute', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-              <span style={{ fontSize: '44px', fontWeight: '800', fontFamily: 'var(--font-display)', color: 'var(--text-main)', letterSpacing: '-0.02em', lineHeight: 1 }}>
+              <span style={{ fontSize: '46px', fontWeight: '800', fontFamily: 'var(--font-display)', color: 'var(--text-main)', letterSpacing: '-0.02em', lineHeight: 1 }}>
                 {formatTime(timeLeft)}
               </span>
             </div>
           </div>
 
-          {/* Controles do Timer */}
-          <div className="focus-timer-controls">
+          {/* Controles Principais */}
+          <div className="focus-timer-controls" style={{ display: 'flex', gap: '16px', alignItems: 'center', marginBottom: '24px' }}>
             <button 
               onClick={resetTimer}
-              style={{ width: '48px', height: '48px', borderRadius: '50%', border: '1px solid var(--border-medium)', color: 'var(--text-light)', display: 'flex', alignItems: 'center', justifyContext: 'center', justifyContent: 'center', backgroundColor: 'var(--bg-app)', transition: 'all 0.2s' }}
+              style={{ width: '48px', height: '48px', borderRadius: '50%', border: '1px solid var(--border-medium)', color: 'var(--text-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'var(--bg-app)', transition: 'all 0.2s', cursor: 'pointer' }}
               title="Reiniciar"
+              aria-label="Reiniciar cronômetro"
             >
               <RotateCcw size={18} />
             </button>
             
             <button 
               onClick={toggleTimer}
-              style={{ width: '64px', height: '64px', borderRadius: '50%', backgroundColor: mode === 'focus' ? 'var(--primary)' : 'var(--prio-alta-text)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: 'var(--shadow-md)', transition: 'all 0.2s', scale: isActive ? '1' : '1.05' }}
+              style={{ width: '64px', height: '64px', borderRadius: '50%', backgroundColor: mode === 'focus' ? 'var(--primary)' : 'var(--prio-alta-text)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: 'var(--shadow-md)', transition: 'all 0.2s', cursor: 'pointer', transform: isActive ? 'scale(1)' : 'scale(1.05)' }}
+              aria-label={isActive ? 'Pausar cronômetro' : 'Iniciar cronômetro'}
             >
               {isActive ? <Pause size={24} fill="white" /> : <Play size={24} fill="white" style={{ marginLeft: '4px' }} />}
             </button>
             
             <button 
               onClick={playNotificationSound}
-              style={{ width: '48px', height: '48px', borderRadius: '50%', border: '1px solid var(--border-medium)', color: 'var(--text-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'var(--bg-app)', transition: 'all 0.2s' }}
+              style={{ width: '48px', height: '48px', borderRadius: '50%', border: '1px solid var(--border-medium)', color: 'var(--text-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'var(--bg-app)', transition: 'all 0.2s', cursor: 'pointer' }}
               title="Testar Som"
             >
               <Volume2 size={18} />
             </button>
           </div>
 
-          {/* Controles de Áudio Ambiente */}
-          <div style={{ marginTop: '32px', width: '80%', display: 'flex', flexDirection: 'column', gap: '15px', padding: '15px', border: '1px solid var(--border-medium)', borderRadius: 'var(--radius-md)', backgroundColor: 'var(--bg-app)' }}>
-            <h4 style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '5px' }}>
-              <Music size={16} /> Sons Ambientes
-            </h4>
+          {/* Detalhe da Tarefa Ativa */}
+          <div className="focus-task-detail" style={{ width: '100%', textAlign: 'center' }}>
+            {activeTask ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', width: '100%', textAlign: 'left' }}>
+                {/* Cabeçalho da Tarefa Ativa */}
+                <div style={{ padding: '12px 20px', borderRadius: 'var(--radius-md)', backgroundColor: 'var(--primary-glow)', border: '1px solid var(--primary-light)', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <button 
+                    onClick={() => handleTaskComplete(activeTask.id)}
+                    style={{ color: 'var(--primary)', background: 'transparent', cursor: 'pointer', border: 'none', padding: 0, display: 'flex', alignItems: 'center' }}
+                    title="Concluir Tarefa"
+                  >
+                    <CheckCircle2 size={22} />
+                  </button>
+                  <div style={{ flex: 1 }}>
+                    <span style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--primary)', fontWeight: '700' }}>Tarefa Ativa</span>
+                    <h4 style={{ fontSize: '13.5px', fontWeight: '700', color: 'var(--text-main)', margin: 0 }}>{activeTask.title}</h4>
+                  </div>
+                </div>
+
+                {/* Painel do Briefing da Missão (Visível quando o cronômetro está parado) */}
+                {!isActive && (
+                  <div className="animate-fade-in" style={{
+                    backgroundColor: 'var(--bg-card-hover)',
+                    border: '1px solid var(--border-medium)',
+                    borderRadius: 'var(--radius-md)',
+                    padding: '16px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '12px'
+                  }}>
+                    <span style={{ fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-light)', borderBottom: '1px solid var(--border-light)', paddingBottom: '6px', display: 'block' }}>
+                      📋 Briefing da Missão
+                    </span>
+                    
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '12.5px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span style={{ color: 'var(--text-light)' }}>🎯 Objetivo Relacionado:</span>
+                        <strong style={{ color: 'var(--text-main)' }}>
+                          {(() => {
+                            const relation = goalTasks.find(gt => gt.task_id === activeTask.id);
+                            const goalObj = relation ? goals.find(g => g.id === relation.goal_id) : null;
+                            return goalObj ? goalObj.title : 'Geral (Nenhum)';
+                          })()}
+                        </strong>
+                      </div>
+
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span style={{ color: 'var(--text-light)' }}>⏱️ Tempo Estimado:</span>
+                        <strong style={{ color: 'var(--text-main)' }}>{focusTime} minutos</strong>
+                      </div>
+
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span style={{ color: 'var(--text-light)' }}>⚡ XP Estimado:</span>
+                        <strong style={{ color: 'var(--primary)' }}>+{focusTime} XP</strong>
+                      </div>
+
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span style={{ color: 'var(--text-light)' }}>📈 Impacto na Evolução:</span>
+                        <strong style={{ color: '#10b981' }}>Sequência & Pets</strong>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <p style={{ fontSize: '13px', color: 'var(--text-light)', fontStyle: 'italic', margin: 0 }}>
+                Inicie o cronômetro do Pomodoro. Você pode ativar o foco a partir de uma tarefa na aba "Meu Dia".
+              </p>
+            )}
+          </div>
+
+          {/* Sons Ambientes colapsados em um details */}
+          <details style={{ width: '100%', marginTop: '24px', border: '1px solid var(--border-medium)', borderRadius: 'var(--radius-md)', backgroundColor: 'var(--bg-app)', padding: '12px 16px', overflow: 'hidden' }}>
+            <summary style={{ cursor: 'pointer', fontSize: '13px', fontWeight: '700', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '6px', userSelect: 'none' }}>
+              <Music size={15} style={{ color: 'var(--primary)' }} />
+              <span>Sons Ambientes</span>
+            </summary>
             
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              {/* Seletor de som */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '12px' }}>
               <div>
-                <label htmlFor="ambient-sound-selector" style={{ display: 'block', color: 'var(--text-light)', fontSize: '12px', marginBottom: '5px' }}>Escolha o Som:</label>
+                <label htmlFor="ambient-sound-selector" style={{ display: 'block', color: 'var(--text-light)', fontSize: '11px', marginBottom: '4px' }}>Escolha o som:</label>
                 <select 
                   id="ambient-sound-selector"
                   value={ambientSoundFile} 
                   onChange={(e) => {
                     setAmbientSoundFile(e.target.value);
-                    setIsAmbientPlaying(false); // Evita bloqueio de autoplay em dispositivos móveis
+                    setIsAmbientPlaying(false);
                   }}
-                  style={{ width: '100%', padding: '8px', border: '1px solid var(--border-medium)', borderRadius: '6px', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)', fontSize: '13px' }}
+                  style={{ width: '100%', padding: '6px', border: '1px solid var(--border-medium)', borderRadius: '6px', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)', fontSize: '12.5px' }}
                 >
                   {ambientSounds.map(sound => (
                     <option key={sound.value} value={sound.value}>{sound.emoji} {sound.label}</option>
@@ -425,16 +542,13 @@ export default function FocusView() {
                 </select>
               </div>
 
-              {/* Controles de Play/Pause e Volume */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <button 
-                  onClick={() => {
-                    setIsAmbientPlaying(!isAmbientPlaying);
-                  }}
+                  onClick={() => setIsAmbientPlaying(!isAmbientPlaying)}
                   disabled={ambientSoundFile === 'none'}
                   style={{ 
-                    width: '36px', 
-                    height: '36px', 
+                    width: '32px', 
+                    height: '32px', 
                     borderRadius: '50%', 
                     backgroundColor: isAmbientPlaying ? 'var(--prio-alta-text)' : 'var(--primary)', 
                     color: 'white', 
@@ -445,13 +559,12 @@ export default function FocusView() {
                     cursor: 'pointer',
                     opacity: ambientSoundFile === 'none' ? 0.5 : 1
                   }}
-                  title={isAmbientPlaying ? 'Pausar som ambiente' : 'Tocar som ambiente'}
-                  aria-label={isAmbientPlaying ? 'Pausar som ambiente' : 'Tocar som ambiente'}
+                  title={isAmbientPlaying ? 'Pausar' : 'Tocar'}
                 >
-                  {isAmbientPlaying ? <Pause size={18} fill="white" /> : <Play size={18} fill="white" style={{ marginLeft: '2px' }} />}
+                  {isAmbientPlaying ? <Pause size={14} fill="white" /> : <Play size={14} fill="white" style={{ marginLeft: '2px' }} />}
                 </button>
                 
-                <Volume2 size={18} color="var(--text-light)" />
+                <Volume2 size={16} color="var(--text-light)" />
                 <input 
                   type="range" 
                   min="0" 
@@ -459,117 +572,149 @@ export default function FocusView() {
                   step="0.1" 
                   value={ambientSoundVolume} 
                   onChange={(e) => setAmbientSoundVolume(Number(e.target.value))}
-                  aria-label="Volume do som ambiente"
+                  aria-label="Volume do som"
                   disabled={ambientSoundFile === 'none'}
-                  style={{ flex: 1, height: '4px', backgroundColor: 'var(--border-medium)', borderRadius: '2px', outline: 'none', WebkitAppearance: 'none', appearance: 'none', cursor: ambientSoundFile === 'none' ? 'default' : 'pointer' }}
+                  style={{ flex: 1, height: '4px', backgroundColor: 'var(--border-medium)', borderRadius: '2px', outline: 'none', WebkitAppearance: 'none', cursor: 'pointer' }}
                 />
-                {ambientSoundVolume === 0 && <VolumeX size={18} color="var(--text-light)" />}
               </div>
 
-              {/* Banner de aviso de autoplay bloqueado */}
               {audioBlocked && (
                 <div style={{
                   display: 'flex', alignItems: 'center', gap: '8px',
                   padding: '8px 12px', borderRadius: '8px',
                   backgroundColor: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)',
-                  fontSize: '12px', color: '#92400e',
+                  fontSize: '11px', color: '#92400e',
                 }}>
-                  <VolumeX size={16} style={{ flexShrink: 0, color: '#92400e' }} />
+                  <VolumeX size={14} style={{ flexShrink: 0 }} />
                   <span>
-                    <strong>Clique para ativar o som.</strong>{' '}
-                    O navegador bloqueou a reprodução automática. Clique no botão ▶ acima para iniciar.
+                    Clique no botão de reprodução acima para ativar o som.
                   </span>
                 </div>
               )}
             </div>
-          </div>
+          </details>
 
-          {/* Detalhe da Tarefa Selecionada */}
-          <div className="focus-task-detail">
-            {activeTask ? (
-              <div style={{ padding: '12px 20px', borderRadius: 'var(--radius-md)', backgroundColor: 'var(--primary-glow)', border: '1px solid var(--primary-light)', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <button 
-                  onClick={() => handleTaskComplete(activeTask.id)}
-                  style={{ color: 'var(--primary)', background: 'transparent', cursor: 'pointer' }}
-                  title="Concluir Tarefa"
-                >
-                  <CheckCircle2 size={20} />
-                </button>
-                <div style={{ textAlign: 'left' }}>
-                  <span style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--primary)', fontWeight: '700' }}>Focando em</span>
-                  <h4 style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-main)', margin: 0 }}>{activeTask.title}</h4>
-                </div>
-              </div>
-            ) : (
-              <>
-                <p className="focus-helper-text-desktop" style={{ fontSize: '13px', color: 'var(--text-light)', fontStyle: 'italic' }}>
-                  Selecione uma tarefa na barra lateral para iniciar seu ciclo de foco.
-                </p>
-                <p className="focus-helper-text-mobile" style={{ fontSize: '13px', color: 'var(--text-light)', fontStyle: 'italic', display: 'none' }}>
-                  Suas tarefas estão abaixo
-                </p>
-              </>
-            )}
-          </div>
-
-        </div>
-
-        {/* Lado Direito: Seletor de Tarefas Pendentes */}
-        <div className="focus-card-panel right-panel" style={{ backgroundColor: 'var(--bg-card)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-light)', display: 'flex', flexDirection: 'column' }}>
-          <h3 style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-main)', marginBottom: '16px' }}>Selecione a Tarefa</h3>
-          
-          <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '380px' }}>
-            {pendingTasks.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '32px 16px', color: 'var(--text-light)' }}>
-                <p style={{ fontSize: '13px' }}>Nenhuma tarefa pendente para focar.</p>
-              </div>
-            ) : (
-              pendingTasks.map(t => (
-                <button
-                  key={t.id}
-                  onClick={() => setSelectedTaskId(t.id)}
-                  style={{ 
-                    textAlign: 'left',
-                    padding: '12px',
-                    borderRadius: 'var(--radius-sm)',
-                    border: `1px solid ${selectedTaskId === t.id ? 'var(--primary)' : 'var(--border-light)'}`,
-                    backgroundColor: selectedTaskId === t.id ? 'var(--primary-glow)' : 'var(--bg-app)',
-                    color: 'var(--text-main)',
-                    fontSize: '13px',
-                    fontWeight: selectedTaskId === t.id ? '600' : '500',
-                    cursor: 'pointer',
-                    transition: 'all 0.15s',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '4px'
-                  }}
-                >
-                  <span>{t.title}</span>
-                  <div style={{ display: 'flex', gap: '8px', fontSize: '10px', color: 'var(--text-light)' }}>
-                    <span>{t.category || 'Sem Categoria'}</span>
-                    <span>•</span>
-                    <span style={{ color: t.priority === 'Alta' ? 'var(--prio-alta-text)' : 'inherit' }}>{t.priority}</span>
-                  </div>
-                </button>
-              ))
-            )}
-          </div>
-
-          {!isPro && (
-            <div style={{ marginTop: '20px', padding: '12px', border: '1px dashed var(--border-medium)', borderRadius: 'var(--radius-sm)', textAlign: 'center', backgroundColor: 'var(--bg-app)' }}>
-              <span style={{ fontSize: '11px', fontWeight: '700', color: 'var(--primary)' }}>Versão Pro Desbloqueia</span>
-              <p style={{ fontSize: '10px', color: 'var(--text-muted)', margin: '4px 0 8px' }}>Pomodoro personalizável superior a 25 minutos e gráficos de produtividade.</p>
-              <button 
-                onClick={() => openPaywall('focus_bottom_upsell')}
-                style={{ padding: '6px 12px', fontSize: '10px', fontWeight: '600', backgroundColor: 'var(--primary-light)', color: 'var(--primary)', borderRadius: '6px', width: '100%', cursor: 'pointer' }}
-              >
-                Testar Pro Grátis
-              </button>
-            </div>
-          )}
         </div>
 
       </div>
+
+      {/* Modal de Celebração de Sucesso Pomodoro */}
+      {showSuccessAnimation && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.75)',
+          backdropFilter: 'blur(8px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 9999,
+          padding: '20px'
+        }} className="animate-fade-in">
+          <div style={{
+            backgroundColor: 'var(--bg-card)',
+            border: '1px solid var(--border-medium)',
+            borderRadius: 'var(--radius-lg)',
+            padding: '32px 24px',
+            maxWidth: '440px',
+            width: '100%',
+            textAlign: 'center',
+            boxShadow: 'var(--shadow-lg)',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '20px'
+          }} className="animate-scale-up">
+            
+            {/* Ícone Celebrativo Animado */}
+            <div style={{
+              width: '80px',
+              height: '80px',
+              borderRadius: '50%',
+              backgroundColor: 'var(--primary-glow)',
+              border: '2px solid var(--primary-light)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              boxShadow: '0 0 20px rgba(94, 96, 206, 0.3)',
+              animation: 'pulse 2s infinite'
+            }}>
+              <Award size={40} style={{ color: 'var(--primary)' }} />
+            </div>
+
+            <div>
+              <h2 style={{ fontSize: '22px', fontWeight: '800', color: 'var(--text-main)', margin: '0 0 8px 0' }}>
+                Missão Cumprida! 🎉
+              </h2>
+              <p style={{ fontSize: '13.5px', color: 'var(--text-muted)', margin: 0 }}>
+                Você concluiu seu ciclo de foco de {focusTime} minutos com maestria.
+              </p>
+            </div>
+
+            {/* Checklist de Progresso / Recompensas */}
+            <div style={{
+              width: '100%',
+              backgroundColor: 'var(--bg-app)',
+              borderRadius: 'var(--radius-md)',
+              padding: '16px',
+              border: '1px solid var(--border-light)',
+              textAlign: 'left',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '12px'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <span style={{ color: 'var(--primary)', fontSize: '16px' }}>⚡</span>
+                <span style={{ fontSize: '13px', color: 'var(--text-main)' }}>
+                  <strong>+{focusTime} XP</strong> de Foco Coletado!
+                </span>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <span style={{ color: 'var(--accent-orange, #f97316)', fontSize: '16px' }}>🔥</span>
+                <span style={{ fontSize: '13px', color: 'var(--text-main)' }}>
+                  Sua sequência de consistência está <strong>protegida!</strong>
+                </span>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <span style={{ color: '#10b981', fontSize: '16px' }}>🌱</span>
+                <span style={{ fontSize: '13px', color: 'var(--text-main)' }}>
+                  Seu Companheiro recebeu experiência para <strong>evoluir!</strong>
+                </span>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <span style={{ color: 'var(--accent-yellow, #eab308)', fontSize: '16px' }}>🏆</span>
+                <span style={{ fontSize: '13px', color: 'var(--text-main)' }}>
+                  O Coach registrou seu progresso na aba <strong>Evolução!</strong>
+                </span>
+              </div>
+            </div>
+
+            <button
+              onClick={() => {
+                setShowSuccessAnimation(false);
+              }}
+              className="btn-primary-glow"
+              style={{
+                width: '100%',
+                padding: '14px',
+                fontSize: '14px',
+                fontWeight: '700',
+                borderRadius: 'var(--radius-md)',
+                cursor: 'pointer'
+              }}
+            >
+              Iniciar Pausa Coletiva
+            </button>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
