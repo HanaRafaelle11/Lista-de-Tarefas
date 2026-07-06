@@ -1024,31 +1024,45 @@ export default function LandingPage({ onEnterApp }) {
                   'Planejamento semanal drag & drop',
                   'Exportação PDF',
                   'Sincronização offline'
-                ].map((f, i) => (
-                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '14px', color: '#E2E8F0' }}>
-                    <span style={{ color: '#10B981', fontSize: '16px', flexShrink: 0 }}>✓</span>
-                    {f}
-                  </div>
-                ))}
+                ].map((f, i) => {
+                  const isFirst = i === 0;
+                  return (
+                    <div 
+                      key={i} 
+                      style={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: '10px', 
+                        fontSize: '14px', 
+                        color: isFirst ? '#E2E8F0' : 'rgba(226, 232, 240, 0.25)',
+                        filter: isFirst ? 'none' : 'blur(1.5px)',
+                        transition: 'filter 0.3s, color 0.3s'
+                      }}
+                    >
+                      <span style={{ color: isFirst ? '#10B981' : '#475569', fontSize: '16px', flexShrink: 0 }}>✓</span>
+                      {f}
+                    </div>
+                  );
+                })}
               </div>
               <button
                 onClick={onEnterApp}
+                className="btn-purple-glow"
                 style={{
                   width: '100%',
                   padding: '14px',
                   borderRadius: '12px',
-                  border: '1px solid rgba(255, 255, 255, 0.1)',
-                  background: 'transparent',
+                  border: 'none',
+                  background: 'linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%)',
                   color: '#FFFFFF',
                   fontWeight: 700,
                   fontSize: '15px',
                   cursor: 'pointer',
-                  transition: 'all 0.2s',
+                  transition: 'all 0.3s',
+                  boxShadow: '0 4px 20px rgba(99, 102, 241, 0.35)',
                 }}
-                onMouseOver={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; }}
-                onMouseOut={e => { e.currentTarget.style.background = 'transparent'; }}
               >
-                Começar Gratuitamente
+                Fazer Upgrade
               </button>
             </div>
 
@@ -1095,20 +1109,20 @@ export default function LandingPage({ onEnterApp }) {
               </div>
               <button
                 onClick={onEnterApp}
-                className="btn-purple-glow"
                 style={{
                   width: '100%',
                   padding: '14px',
                   borderRadius: '12px',
-                  border: 'none',
-                  background: 'linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  background: 'transparent',
                   color: '#FFFFFF',
                   fontWeight: 700,
                   fontSize: '15px',
                   cursor: 'pointer',
-                  transition: 'all 0.3s',
-                  boxShadow: '0 4px 20px rgba(99, 102, 241, 0.3)',
+                  transition: 'all 0.2s',
                 }}
+                onMouseOver={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; }}
+                onMouseOut={e => { e.currentTarget.style.background = 'transparent'; }}
               >
                 Assinar Pro
               </button>
