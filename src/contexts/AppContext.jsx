@@ -27,6 +27,7 @@ import { isAdmin as checkIsAdmin } from '../../lib/auth/adminAuth.js';
 import { useAuthMachine } from '../hooks/useAuthMachine.js';
 import AccountReactivationModal from '../components/AccountReactivationModal.jsx';
 import CustomDialogModal from '../components/CustomDialogModal.jsx';
+import { ensureDateTimezoneNoon } from '../utils/dateUtils';
 
 // ─── Helpers para Metadados de Tarefas (Horário e Recorrência) ───────────────
 export function parseTaskMetadata(description = '') {
@@ -1464,7 +1465,7 @@ export function AppProvider({ children }) {
         description: payload.description || '',
         category: payload.category,
         priority: payload.priority,
-        dueDate: payload.dueDate || '',
+        dueDate: payload.dueDate ? ensureDateTimezoneNoon(payload.dueDate) : '',
         completed: false,
         createdAt: new Date().toISOString(),
         completedAt: null,
@@ -2526,10 +2527,20 @@ export function AppProvider({ children }) {
     }
     const updatedCustom = [...currentCustom, newCat];
     try {
-      const { error } = await supabase.auth.updateUser({
-        data: { custom_categories: updatedCustom }
-      });
-      if (error) throw error;
+      if (!currentUser.isDemo) {
+        const { error } = await supabase.auth.updateUser({
+          data: { custom_categories: updatedCustom }
+        });
+        if (error) throw error;
+      } else {
+        const localKey = `flowday_demo_user_${currentUser.id}`;
+        const localUserData = localStorage.getItem(localKey);
+        if (localUserData) {
+          const parsed = JSON.parse(localUserData);
+          parsed.user_metadata = { ...parsed.user_metadata, custom_categories: updatedCustom };
+          localStorage.setItem(localKey, JSON.stringify(parsed));
+        }
+      }
       setCurrentUser(prev => ({
         ...prev,
         user_metadata: { ...prev.user_metadata, custom_categories: updatedCustom }
@@ -2545,10 +2556,20 @@ export function AppProvider({ children }) {
     const currentCustom = currentUser.user_metadata?.custom_categories || [];
     const updatedCustom = currentCustom.map(c => c.id === id ? { ...c, name, emoji, color } : c);
     try {
-      const { error } = await supabase.auth.updateUser({
-        data: { custom_categories: updatedCustom }
-      });
-      if (error) throw error;
+      if (!currentUser.isDemo) {
+        const { error } = await supabase.auth.updateUser({
+          data: { custom_categories: updatedCustom }
+        });
+        if (error) throw error;
+      } else {
+        const localKey = `flowday_demo_user_${currentUser.id}`;
+        const localUserData = localStorage.getItem(localKey);
+        if (localUserData) {
+          const parsed = JSON.parse(localUserData);
+          parsed.user_metadata = { ...parsed.user_metadata, custom_categories: updatedCustom };
+          localStorage.setItem(localKey, JSON.stringify(parsed));
+        }
+      }
       setCurrentUser(prev => ({
         ...prev,
         user_metadata: { ...prev.user_metadata, custom_categories: updatedCustom }
@@ -2564,10 +2585,20 @@ export function AppProvider({ children }) {
     const currentCustom = currentUser.user_metadata?.custom_categories || [];
     const updatedCustom = currentCustom.filter(c => c.id !== id);
     try {
-      const { error } = await supabase.auth.updateUser({
-        data: { custom_categories: updatedCustom }
-      });
-      if (error) throw error;
+      if (!currentUser.isDemo) {
+        const { error } = await supabase.auth.updateUser({
+          data: { custom_categories: updatedCustom }
+        });
+        if (error) throw error;
+      } else {
+        const localKey = `flowday_demo_user_${currentUser.id}`;
+        const localUserData = localStorage.getItem(localKey);
+        if (localUserData) {
+          const parsed = JSON.parse(localUserData);
+          parsed.user_metadata = { ...parsed.user_metadata, custom_categories: updatedCustom };
+          localStorage.setItem(localKey, JSON.stringify(parsed));
+        }
+      }
       setCurrentUser(prev => ({
         ...prev,
         user_metadata: { ...prev.user_metadata, custom_categories: updatedCustom }

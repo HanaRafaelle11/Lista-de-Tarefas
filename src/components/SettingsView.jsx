@@ -88,7 +88,7 @@ export default function SettingsView() {
   const [feedbackAttachments, setFeedbackAttachments] = useState([]);
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
   const [isSyncModalOpen, setIsSyncModalOpen] = useState(false);
-  const [isDeleteAllTasksModalOpen, setIsDeleteAllTasksModalOpen] = useState(false);
+
   const notifications = useNotifications();
 
   // Password States
@@ -1688,7 +1688,16 @@ export default function SettingsView() {
           </div>
           <button
             className="danger-btn"
-            onClick={() => setIsDeleteAllTasksModalOpen(true)}
+            onClick={() => {
+              openCustomConfirm(
+                "Deseja realmente excluir todas as tarefas? Esta ação é permanente e não pode ser desfeita.",
+                "Excluir Todas as Tarefas",
+                async () => {
+                  await handleDeleteAllTasks();
+                  openCustomAlert("Todas as tarefas foram concluídas/excluídas com sucesso.");
+                }
+              );
+            }}
             style={{ padding: '12px 24px', backgroundColor: '#FAF0F0', color: '#C06C6C', borderRadius: '8px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '8px' }}
           >
             <Trash2 size={16} /> Excluir todas as tarefas
@@ -1805,32 +1814,7 @@ export default function SettingsView() {
         </div>
       )}
 
-      {/* Modal de confirmação para excluir todas as tarefas */}
-      {isDeleteAllTasksModalOpen && (
-        <div className="modal-overlay" onClick={() => setIsDeleteAllTasksModalOpen(false)} style={{ zIndex: 12000 }}>
-          <div 
-            className="modal-content" 
-            onClick={e => e.stopPropagation()}
-            style={{ maxWidth: '400px', width: '90%', padding: '24px', backgroundColor: 'var(--bg-card)', borderRadius: 'var(--radius-lg)' }}
-          >
-            <h3 style={{ fontSize: '18px', marginBottom: '12px', color: '#ef4444' }}>Excluir todas as tarefas?</h3>
-            <p style={{ fontSize: '14px', color: 'var(--text-light)', marginBottom: '24px' }}>Esta ação é permanente e não pode ser desfeita.</p>
-            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-              <button onClick={() => setIsDeleteAllTasksModalOpen(false)} style={{ padding: '8px 16px', borderRadius: '6px', border: '1px solid var(--border-medium)', background: 'transparent', cursor: 'pointer', color: 'var(--text-main)' }}>Cancelar</button>
-              <button 
-                onClick={async () => {
-                  setIsDeleteAllTasksModalOpen(false);
-                  await handleDeleteAllTasks();
-                  openCustomAlert('Todas as tarefas foram excluídas com sucesso.');
-                }} 
-                style={{ padding: '8px 16px', borderRadius: '6px', background: '#ef4444', color: 'white', border: 'none', cursor: 'pointer' }}
-              >
-                Sim, excluir tudo
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+
     </div>
   );
 }

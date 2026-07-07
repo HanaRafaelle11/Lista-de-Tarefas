@@ -70,8 +70,9 @@ Você não possui nenhuma tarefa ou objetivo ativo no momento.
     (t.createdAt ? new Date(t.createdAt) >= sevenDaysAgo : true)
   ).length;
 
+  const activeHabitIds = (habitsManager?.habits || []).map(h => h.id);
   const recentHabitsCount = habitsManager?.habitLogs
-    ? habitsManager.habitLogs.filter(l => new Date(l.completed_date) >= sevenDaysAgo).length
+    ? habitsManager.habitLogs.filter(l => activeHabitIds.includes(l.habit_id) && new Date(l.completed_date) >= sevenDaysAgo).length
     : 0;
 
   const currentStreak = calcStreak(tasks) || 0;

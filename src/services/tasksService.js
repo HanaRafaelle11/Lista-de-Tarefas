@@ -1,6 +1,7 @@
 import { supabase } from '../supabaseClient';
 import { enqueue, dequeue, generateId } from './syncQueue';
 import { localDB } from '../db/localDB';
+import { ensureDateTimezoneNoon } from '../utils/dateUtils';
 
 // Mapper: converte registro do banco para objeto do app
 const mapTask = (t) => ({
@@ -123,6 +124,7 @@ export const tasksService = {
     requireUser(userId);
     const clientId = generateId();
     const nowIso = new Date().toISOString();
+    const formattedDueDate = ensureDateTimezoneNoon(taskData.dueDate);
     
     const optimistic = {
       id:          clientId,
@@ -131,7 +133,7 @@ export const tasksService = {
       description: taskData.description || '',
       category:    taskData.category,
       priority:    taskData.priority,
-      dueDate:     taskData.dueDate || '',
+      dueDate:     formattedDueDate || '',
       completed:   false,
       createdAt:   nowIso,
       completedAt: null,
@@ -159,7 +161,7 @@ export const tasksService = {
           description: taskData.description || '',
           category:    taskData.category,
           priority:    taskData.priority,
-          due_date:    taskData.dueDate || null,
+          due_date:    formattedDueDate || null,
           completed:   false,
           completed_at: null
         }])
@@ -184,6 +186,10 @@ export const tasksService = {
   update: async (userId, id, updates) => {
     requireUser(userId);
     const nowIso = new Date().toISOString();
+    
+    if (updates && updates.dueDate !== undefined) {
+      updates.dueDate = ensureDateTimezoneNoon(updates.dueDate);
+    }
     
     // 1. Atualiza no cache do IndexedDB
     try {

@@ -482,8 +482,9 @@ export default function EvolutionView() {
     const counts = { matutino: 0, vespertino: 0, noturno: 0, madrugada: 0 };
     
     activeTasks.filter(t => t.completed).forEach(task => {
-      if (!task.completedAt) return;
-      const hour = new Date(task.completedAt).getHours();
+      const dateToUse = task.completedAt || task.updatedAt || task.createdAt;
+      if (!dateToUse) return;
+      const hour = new Date(dateToUse).getHours();
       if (hour >= 6 && hour < 12) counts.matutino++;
       else if (hour >= 12 && hour < 18) counts.vespertino++;
       else if (hour >= 18 && hour < 24) counts.noturno++;
@@ -539,18 +540,9 @@ export default function EvolutionView() {
       }
     });
 
-    const completedGoalsList = activeGoals.filter(g => g.status === 'completed');
-    completedGoalsList.forEach(goal => {
-      const date = goal.updated_at?.split('T')[0] || goal.created_at?.split('T')[0];
-      if (date) {
-        const d = new Date(date + 'T12:00:00');
-        days[d.getDay()]++;
-      }
-    });
-
     const maxVal = Math.max(...days, 1);
     const dayNames = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
-    const totalEvents = completedTasksList.length + completedGoalsList.length;
+    const totalEvents = completedTasksList.length;
 
     const radarData = days.map((val, idx) => {
       const pct = (val / maxVal) * 100;
@@ -702,10 +694,14 @@ export default function EvolutionView() {
           </table>
 
           <script>
-            setTimeout(function() {
-              window.print();
-              window.close();
-            }, 500);
+            window.onload = function() {
+              setTimeout(function() {
+                window.print();
+              }, 100);
+              window.onafterprint = function() {
+                window.close();
+              };
+            };
           </script>
         </body>
       </html>
@@ -914,7 +910,10 @@ export default function EvolutionView() {
               <button 
                 onClick={() => {
                   const el = document.getElementById('achievements-section-anchor');
-                  if (el) el.scrollIntoView({ behavior: 'smooth' });
+                  if (el) {
+                    el.open = true;
+                    el.scrollIntoView({ behavior: 'smooth' });
+                  }
                 }}
                 className="btn-secondary"
                 style={{ width: '100%', padding: '10px', fontSize: '12.5px', fontWeight: '600' }}
@@ -1142,16 +1141,21 @@ export default function EvolutionView() {
           </details>
 
           {/* ── Conquistas Accordion ── */}
-          <details className="evo-details-accordion" style={{
-            backgroundColor: 'var(--bg-card)',
-            border: '1px solid var(--border-light)',
-            borderRadius: 'var(--radius-lg)',
-            boxShadow: 'var(--shadow-sm)',
-            overflow: 'hidden',
-            marginBottom: '24px'
-          }}>
+          <details 
+            id="achievements-section-anchor"
+            className="evo-details-accordion" 
+            style={{
+              backgroundColor: 'var(--bg-card)',
+              border: '1px solid var(--border-light)',
+              borderRadius: 'var(--radius-lg)',
+              boxShadow: 'var(--shadow-sm)',
+              overflow: 'hidden',
+              marginBottom: '24px'
+            }}
+          >
             <summary style={{
               padding: '18px 24px',
+              summary: 'Suas Conquistas',
               fontSize: '15px',
               fontWeight: '800',
               color: 'var(--text-main)',
@@ -1172,22 +1176,7 @@ export default function EvolutionView() {
             </summary>
 
             <div style={{ paddingTop: '20px' }}>
-              {/* Progress Bar das conquistas estilo PS5 */}
-              <div style={{ padding: '0 24px 20px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12.5px', marginBottom: '6px' }}>
-                  <span style={{ color: 'var(--text-muted)' }}>Progresso da Coleção</span>
-                  <strong style={{ color: 'var(--primary)' }}>{Math.round((unlockedCount / ACHIEVEMENTS.length) * 100)}% concluído</strong>
-                </div>
-                <div style={{ height: '8px', backgroundColor: 'var(--bg-app)', borderRadius: '4px', overflow: 'hidden', border: '1px solid var(--border-light)' }}>
-                  <div style={{ 
-                    height: '100%', 
-                    width: `${(unlockedCount / ACHIEVEMENTS.length) * 100}%`, 
-                    background: 'linear-gradient(90deg, var(--primary) 0%, var(--accent-yellow, #eab308) 100%)', 
-                    borderRadius: '4px',
-                    transition: 'width 0.4s ease-out'
-                  }} />
-                </div>
-              </div>
+              {/* Progress Bar removed to prevent duplication */}
 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px', padding: '0 24px 24px' }}>
                 {/* Platina / Master Trophy */}

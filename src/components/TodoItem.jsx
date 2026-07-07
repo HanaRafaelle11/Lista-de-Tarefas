@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
+import ReactDOM from 'react-dom';
 import { Calendar, Trash2, Edit2, AlertCircle, CalendarPlus, Check, Repeat, Unlink, Copy, Clock, Play, MoreVertical, Sparkles, Flame, Archive } from 'lucide-react';
 import { parseTaskMetadata, formatDescriptionWithoutMetadata, buildDescriptionWithMetadata, useAppContext } from '../contexts/AppContext';
 import { formatTaskDateDisplay, formatTaskTimeDisplay } from '../utils/dateUtils';
@@ -20,6 +21,8 @@ function exportTaskToCalendar(task) {
 export default function TodoItem({ item, onToggleComplete, onDelete, onEdit, goalId, onUnlinkGoal, onDuplicate, isRecommended, isCritical, isStreak }) {
   const [calExported, setCalExported] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
+  const [coords, setCoords] = useState({ top: 0, left: 0 });
+  const buttonRef = useRef(null);
   const { isPro, openPaywall, openCustomConfirm, setActiveTab, handleUpdateTask } = useAppContext();
 
   const handleExportCalendar = () => {
@@ -173,8 +176,16 @@ export default function TodoItem({ item, onToggleComplete, onDelete, onEdit, goa
 
         {/* Menu Kebab */}
         <button
+          ref={buttonRef}
           onClick={(e) => {
             e.stopPropagation();
+            if (!showMenu && buttonRef.current) {
+              const rect = buttonRef.current.getBoundingClientRect();
+              setCoords({
+                top: rect.bottom + window.scrollY,
+                left: Math.min(window.innerWidth - 168 + window.scrollX, Math.max(8, rect.right - 160 + window.scrollX))
+              });
+            }
             setShowMenu(!showMenu);
           }}
           className="todo-item-action-btn more-btn"
@@ -185,10 +196,10 @@ export default function TodoItem({ item, onToggleComplete, onDelete, onEdit, goa
         </button>
 
         {/* Dropdown Menu */}
-        {showMenu && (
+        {showMenu && ReactDOM.createPortal(
           <>
             <div 
-              style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 999 }}
+              style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9999 }}
               onClick={(e) => {
                 e.stopPropagation();
                 setShowMenu(false);
@@ -198,14 +209,14 @@ export default function TodoItem({ item, onToggleComplete, onDelete, onEdit, goa
               className="todo-item-dropdown animate-scale-up" 
               style={{
                 position: 'absolute',
-                top: '100%',
-                right: 0,
+                top: `${coords.top}px`,
+                left: `${coords.left}px`,
                 marginTop: '4px',
                 backgroundColor: 'var(--bg-card)',
                 border: '1px solid var(--border-medium)',
                 borderRadius: '8px',
                 boxShadow: 'var(--shadow-md)',
-                zIndex: 1000,
+                zIndex: 10000,
                 display: 'flex',
                 flexDirection: 'column',
                 minWidth: '160px',
@@ -287,7 +298,8 @@ export default function TodoItem({ item, onToggleComplete, onDelete, onEdit, goa
                 <span>Excluir</span>
               </button>
             </div>
-          </>
+          </>,
+          document.body
         )}
       </div>
     </div>

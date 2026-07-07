@@ -179,7 +179,10 @@ export default function HomeView() {
       setActiveTab('tasks');
     }
   };
-  const pendingTasks = tasks.filter(t => !t.completed);
+  const activeTasksList = useMemo(() => tasks.filter(t => !t.deletedAt), [tasks]);
+  const activeGoalsList = useMemo(() => goals.filter(g => !g.deletedAt), [goals]);
+
+  const pendingTasks = activeTasksList.filter(t => !t.completed);
 
   // Lógica de priorização do Hero Card
   const getPriorityTask = () => {
@@ -201,24 +204,21 @@ export default function HomeView() {
 
   // Top 3 objetivos ativos com progresso calculado
   const topGoals = useMemo(() => {
-    const activeGoals = goals.filter(g => g.status === 'active');
+    const activeGoals = activeGoalsList.filter(g => g.status === 'active');
 
     return activeGoals
       .map(goal => {
         const linkedIds = goalTasks.filter(gt => gt.goal_id === goal.id).map(gt => gt.task_id);
-        const linked = tasks.filter(t => linkedIds.includes(t.id));
+        const linked = activeTasksList.filter(t => linkedIds.includes(t.id));
         const done = linked.filter(t => t.completed).length;
         const pct = linked.length > 0 ? Math.round((done / linked.length) * 100) : 0;
         return { goal, linkedTasks: linked, pct };
       })
       .sort((a, b) => b.pct - a.pct)
       .slice(0, 3);
-  }, [goals, goalTasks, tasks]);
+  }, [activeGoalsList, goalTasks, activeTasksList]);
 
   // Estatísticas rápidas (Filtrando exclusões lógicas)
-  const activeTasksList = useMemo(() => tasks.filter(t => !t.deletedAt), [tasks]);
-  const activeGoalsList = useMemo(() => goals.filter(g => !g.deletedAt), [goals]);
-
   const totalTasks = activeTasksList.length;
   const completedTasks = activeTasksList.filter(t => t.completed).length;
   const completionRate = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
@@ -269,6 +269,20 @@ export default function HomeView() {
     return 'task';
   };
 
+  const detectCategory = (text) => {
+    const t = text.toLowerCase();
+    if (t.includes('cantar') || t.includes('tocar') || t.includes('jogar') || t.includes('assistir') || t.includes('filme') || t.includes('série') || t.includes('lazer') || t.includes('passear') || t.includes('amigos') || t.includes('festa') || t.includes('divertir') || t.includes('música') || t.includes('hobby')) {
+      return 'Lazer';
+    }
+    if (t.includes('estudar') || t.includes('ler') || t.includes('curso') || t.includes('aula') || t.includes('faculdade') || t.includes('estudos') || t.includes('livro') || t.includes('aprender') || t.includes('pesquisar')) {
+      return 'Estudos';
+    }
+    if (t.includes('comprar') || t.includes('mercado') || t.includes('casa') || t.includes('limpar') || t.includes('arrumar') || t.includes('pessoal') || t.includes('família') || t.includes('médico') || t.includes('dentista') || t.includes('pagar') || t.includes('boleto')) {
+      return 'Pessoal';
+    }
+    return 'Trabalho';
+  };
+
   const handleQuickSubmit = async (e) => {
     e.preventDefault();
     if (!quickInput.trim()) return;
@@ -289,11 +303,12 @@ export default function HomeView() {
     } else {
       try {
         const todayStr = todayDate;
+        const detectedCat = detectCategory(text);
         await handleAddTask({
           title: text,
           dueDate: todayStr,
           priority: 'Média',
-          category: 'Trabalho'
+          category: detectedCat
         });
         setQuickInput('');
         setLocalNotification({
@@ -1018,25 +1033,32 @@ export default function HomeView() {
         />
       )}
 
-      {/* NOTIFICAÇÃO LOCAL / TOAST DA HOME */}
       {localNotification && ReactDOM.createPortal(
-        <div className="animate-scale-up animate-fade-in" style={{ 
-          position: 'fixed', 
-          top: '24px', 
-          right: '24px', 
-          zIndex: 11000, 
-          backgroundColor: 'var(--bg-card)',
-          border: '1px solid var(--border-medium)',
-          borderLeft: `4px solid ${localNotification.type === 'success' ? '#10b981' : '#3b82f6'}`,
-          borderRadius: 'var(--radius-md)',
-          boxShadow: 'var(--shadow-lg)',
-          padding: '16px 20px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '12px',
-          maxWidth: '360px',
-          width: '90vw'
-        }}>
+        <div 
+          className="animate-scale-up animate-fade-in" 
+          onClick={() => {
+            setActiveTab('tasks');
+            setLocalNotification(null);
+          }}
+          style={{ 
+            position: 'fixed', 
+            top: '24px', 
+            right: '24px', 
+            zIndex: 11000, 
+            backgroundColor: 'var(--bg-card)',
+            border: '1px solid var(--border-medium)',
+            borderLeft: `4px solid ${localNotification.type === 'success' ? '#10b981' : '#3b82f6'}`,
+            borderRadius: 'var(--radius-md)',
+            boxShadow: 'var(--shadow-lg)',
+            padding: '16px 20px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+            maxWidth: '360px',
+            width: '90vw',
+            cursor: 'pointer'
+          }}
+        >
           <Sparkles size={18} style={{ color: localNotification.type === 'success' ? '#10b981' : '#3b82f6', flexShrink: 0 }} />
           <div>
             <strong style={{ display: 'block', fontSize: '13.5px', fontWeight: '700', color: 'var(--text-main)', margin: 0 }}>{localNotification.title}</strong>

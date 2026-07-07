@@ -131,3 +131,16 @@ export function isTaskOverdue(dueDateStr, completed) {
   const now = new Date();
   return taskDate < now;
 }
+
+/**
+ * Intercepta datas no formato puro YYYY-MM-DD e as define no formato de meio-dia local (T12:00:00).
+ * Isso impede que a conversão ISO subsequente desloque a data para o dia anterior no Brasil.
+ */
+export function ensureDateTimezoneNoon(dateStr) {
+  if (!dateStr) return '';
+  const str = String(dateStr).trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(str)) {
+    return `${str}T12:00:00`;
+  }
+  return dateStr;
+}

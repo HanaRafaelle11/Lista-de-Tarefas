@@ -76,20 +76,18 @@ export default function LandingPage({ onEnterApp }) {
             justifyContent: 'space-between' 
           }}
         >
-          <div className="landing-logo-container" style={{ display: 'flex', alignItems: 'center', height: '40px', cursor: 'pointer' }} onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
+          <div className="landing-logo-container" style={{ display: 'flex', alignItems: 'center', height: '56px', cursor: 'pointer' }} onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
             <img
               src={logo.src}
               alt={logo.alt}
-              style={{ height: '44px', width: 'auto', objectFit: 'contain' }}
+              style={{ height: '56px', width: 'auto', objectFit: 'contain', marginTop: '-4px' }}
               onError={(e) => { e.target.style.display = 'none'; }}
             />
           </div>
           
           <div className="landing-nav-links" style={{ display: 'flex', alignItems: 'center', gap: '28px' }}>
-            <a href="#problema" className="nav-link">O Problema</a>
             <a href="#como-funciona" className="nav-link">Como Funciona</a>
-            <a href="#ecossistema" className="nav-link">O Ecossistema</a>
-            <a href="#coach" className="nav-link">O Coach</a>
+            <a href="#problema" className="nav-link">O Problema</a>
             <a href="#comparativo" className="nav-link">Comparação</a>
             <a href="#planos" className="nav-link">Planos</a>
           </div>
@@ -347,74 +345,6 @@ export default function LandingPage({ onEnterApp }) {
 
       </section>
 
-      {/* ── 2. O PROBLEMA ─────────────────────────────────────────────── */}
-      <section
-        id="problema"
-        style={{
-          padding: '100px 24px',
-          background: '#090D12',
-          borderTop: '1px solid rgba(255, 255, 255, 0.03)',
-          position: 'relative'
-        }}
-      >
-        <Container>
-          <div style={{ textAlign: 'center', marginBottom: '60px' }}>
-            <span style={{ fontSize: '12px', fontWeight: 700, color: '#C084FC', textTransform: 'uppercase', letterSpacing: '0.05em' }}>O Grande Problema</span>
-            <h2 style={{ fontSize: 'clamp(28px, 4vw, 42px)', fontWeight: 800, color: '#FFFFFF', marginTop: '10px', letterSpacing: '-0.02em' }}>
-              A maioria dos aplicativos só organiza tarefas.
-            </h2>
-            <p style={{ color: '#94A3B8', fontSize: '16px', maxWidth: '600px', margin: '12px auto 0' }}>
-              Você perde tempo e foco pulando entre ferramentas fragmentadas que não se comunicam.
-            </p>
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '40px', alignItems: 'stretch' }} className="problem-comparison-grid">
-            
-            {/* Antes: Ferramentas Fragmentadas */}
-            <div style={{ background: 'rgba(239, 68, 68, 0.02)', border: '1px solid rgba(239, 68, 68, 0.1)', padding: '36px', borderRadius: '16px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-              <div>
-                <h3 style={{ fontSize: '20px', fontWeight: 700, color: '#FCA5A5', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  ❌ ANTES: Fragmentação Exaustiva
-                </h3>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginBottom: '30px' }}>
-                  <span className="tag-fragmented">Todoist</span>
-                  <span className="tag-fragmented">Habit Tracker</span>
-                  <span className="tag-fragmented">Pomodoro</span>
-                  <span className="tag-fragmented">ChatGPT</span>
-                  <span className="tag-fragmented">Calendário</span>
-                  <span className="tag-fragmented">Notas</span>
-                  <span className="tag-fragmented">Planilhas</span>
-                </div>
-              </div>
-              <p style={{ color: '#FCA5A5', fontSize: '15px', fontWeight: 600, margin: 0, lineHeight: 1.5 }}>
-                👉 Você passa o dia inteiro trocando de aplicativo e preenchendo as mesmas informações em planilhas e agendas para tentar ver algum progresso.
-              </p>
-            </div>
-
-            {/* Depois: MyFlowDay Tudo Conectado */}
-            <div style={{ background: 'rgba(99, 102, 241, 0.03)', border: '1px solid rgba(99, 102, 241, 0.15)', padding: '36px', borderRadius: '16px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', boxShadow: '0 0 40px rgba(99, 102, 241, 0.05)' }}>
-              <div>
-                <h3 style={{ fontSize: '20px', fontWeight: 700, color: '#818CF8', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  ✨ DEPOIS: Tudo Conectado
-                </h3>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginBottom: '30px' }}>
-                  <span className="tag-connected">Objetivos Globais</span>
-                  <span className="tag-connected">Meu Dia (Tasks)</span>
-                  <span className="tag-connected">Cronômetro Foco</span>
-                  <span className="tag-connected">Coach IA Integrado</span>
-                  <span className="tag-connected">Companion Evolutivo</span>
-                  <span className="tag-connected">Métricas & Insights</span>
-                </div>
-              </div>
-              <p style={{ color: '#818CF8', fontSize: '15px', fontWeight: 600, margin: 0, lineHeight: 1.5 }}>
-                👉 Uma única inteligência centralizada acompanha você durante todo o seu dia. Seus dados se integram automaticamente e geram recomendações reais de produtividade.
-              </p>
-            </div>
-
-          </div>
-        </Container>
-      </section>
-
       {/* ── 3. COMO FUNCIONA (4 PASSOS) ───────────────────────────────── */}
       <section
         id="como-funciona"
@@ -490,74 +420,67 @@ export default function LandingPage({ onEnterApp }) {
         </Container>
       </section>
 
-      {/* ── 4. O ECOSSISTEMA ──────────────────────────────────────────── */}
+      {/* ── 2. O PROBLEMA ─────────────────────────────────────────────── */}
       <section
-        id="ecossistema"
+        id="problema"
         style={{
           padding: '100px 24px',
           background: '#090D12',
           borderTop: '1px solid rgba(255, 255, 255, 0.03)',
+          position: 'relative'
         }}
       >
         <Container>
           <div style={{ textAlign: 'center', marginBottom: '60px' }}>
-            <span style={{ fontSize: '12px', fontWeight: 700, color: '#818CF8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Integração Absoluta</span>
+            <span style={{ fontSize: '12px', fontWeight: 700, color: '#C084FC', textTransform: 'uppercase', letterSpacing: '0.05em' }}>O Grande Problema</span>
             <h2 style={{ fontSize: 'clamp(28px, 4vw, 42px)', fontWeight: 800, color: '#FFFFFF', marginTop: '10px', letterSpacing: '-0.02em' }}>
-              Tudo trabalha junto.
+              A maioria dos aplicativos só organiza tarefas.
             </h2>
             <p style={{ color: '#94A3B8', fontSize: '16px', maxWidth: '600px', margin: '12px auto 0' }}>
-              Nenhum módulo é isolado. Cada tarefa cumprida reverbera em todo o seu ecossistema pessoal.
+              Você perde tempo e foco pulando entre ferramentas fragmentadas que não se comunicam.
             </p>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '40px', alignItems: 'stretch' }} className="problem-comparison-grid">
             
-            <div className="ecosystem-card">
-              <h4 style={{ color: '#818CF8', fontSize: '17px', fontWeight: 700, marginBottom: '8px' }}>🎯 Objetivos</h4>
-              <p style={{ fontSize: '14px', color: '#94A3B8', margin: 0, lineHeight: 1.5 }}>
-                Definem o rumo. Todas as tarefas e hábitos nascem vinculados a metas concretas para dar propósito a cada ação diária.
+            {/* Antes: Ferramentas Fragmentadas */}
+            <div style={{ background: 'rgba(239, 68, 68, 0.02)', border: '1px solid rgba(239, 68, 68, 0.1)', padding: '36px', borderRadius: '16px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+              <div>
+                <h3 style={{ fontSize: '20px', fontWeight: 700, color: '#FCA5A5', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  ❌ ANTES: Fragmentação Exaustiva
+                </h3>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginBottom: '30px' }}>
+                  <span className="tag-fragmented">Todoist</span>
+                  <span className="tag-fragmented">Habit Tracker</span>
+                  <span className="tag-fragmented">Pomodoro</span>
+                  <span className="tag-fragmented">ChatGPT</span>
+                  <span className="tag-fragmented">Calendário</span>
+                  <span className="tag-fragmented">Notas</span>
+                  <span className="tag-fragmented">Planilhas</span>
+                </div>
+              </div>
+              <p style={{ color: '#FCA5A5', fontSize: '15px', fontWeight: 600, margin: 0, lineHeight: 1.5 }}>
+                👉 Você passa o dia inteiro trocando de aplicativo e preenchendo as mesmas informações em planilhas e agendas para tentar ver algum progresso.
               </p>
             </div>
 
-            <div className="ecosystem-card">
-              <h4 style={{ color: '#A78BFA', fontSize: '17px', fontWeight: 700, marginBottom: '8px' }}>📅 Meu Dia</h4>
-              <p style={{ fontSize: '14px', color: '#94A3B8', margin: 0, lineHeight: 1.5 }}>
-                Sua central de execução limpa. Exibe tarefas e hábitos filtrados e organizados de forma cronológica e por prioridade de impacto.
-              </p>
-            </div>
-
-            <div className="ecosystem-card">
-              <h4 style={{ color: '#34D399', fontSize: '17px', fontWeight: 700, marginBottom: '8px' }}>⏱️ Sessão de Foco</h4>
-              <p style={{ fontSize: '14px', color: '#94A3B8', margin: 0, lineHeight: 1.5 }}>
-                Timer Pomodoro imersivo que coleta tempo sob foco e envia diretamente para as suas estatísticas de evolução e aprendizado do Coach.
-              </p>
-            </div>
-
-            <div className="ecosystem-card">
-              <h4 style={{ color: '#FB7185', fontSize: '17px', fontWeight: 700, marginBottom: '8px' }}>🧠 Coach IA</h4>
-              <p style={{ fontSize: '14px', color: '#94A3B8', margin: 0, lineHeight: 1.5 }}>
-                A inteligência analítica que observa seus padrões de comportamento e sugere correções nos dias e horários para maior produtividade.
-              </p>
-            </div>
-
-            <div className="ecosystem-card">
-              <h4 style={{ color: '#FBBF24', fontSize: '17px', fontWeight: 700, marginBottom: '8px' }}>🌱 Companheiro Pet</h4>
-              <p style={{ fontSize: '14px', color: '#94A3B8', margin: 0, lineHeight: 1.5 }}>
-                Uma planta viva na Home que ganha XP e evolui a cada tarefa e foco completado. O maior indicador visual da sua consistência.
-              </p>
-            </div>
-
-            <div className="ecosystem-card">
-              <h4 style={{ color: '#60A5FA', fontSize: '17px', fontWeight: 700, marginBottom: '8px' }}>📊 Evolução</h4>
-              <p style={{ fontSize: '14px', color: '#94A3B8', margin: 0, lineHeight: 1.5 }}>
-                Gráficos claros de ritmo semanal, notas de produtividade e consistência para você enxergar seus progressos reais de forma honesta.
-              </p>
-            </div>
-
-            <div className="ecosystem-card" style={{ gridColumn: '1 / -1' }}>
-              <h4 style={{ color: '#22D3EE', fontSize: '17px', fontWeight: 700, marginBottom: '8px' }}>🏆 Conquistas</h4>
-              <p style={{ fontSize: '14px', color: '#94A3B8', margin: 0, lineHeight: 1.5 }}>
-                Sons harmônicos sintetizados e medalhas de raridades variadas (Comum a Lendária) que destravam por marcos de produtividade reais.
+            {/* Depois: MyFlowDay Tudo Conectado */}
+            <div style={{ background: 'rgba(99, 102, 241, 0.03)', border: '1px solid rgba(99, 102, 241, 0.15)', padding: '36px', borderRadius: '16px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', boxShadow: '0 0 40px rgba(99, 102, 241, 0.05)' }}>
+              <div>
+                <h3 style={{ fontSize: '20px', fontWeight: 700, color: '#818CF8', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  ✨ DEPOIS: Tudo Conectado
+                </h3>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginBottom: '30px' }}>
+                  <span className="tag-connected">Objetivos Globais</span>
+                  <span className="tag-connected">Meu Dia (Tasks)</span>
+                  <span className="tag-connected">Cronômetro Foco</span>
+                  <span className="tag-connected">Coach IA Integrado</span>
+                  <span className="tag-connected">Companion Evolutivo</span>
+                  <span className="tag-connected">Métricas & Insights</span>
+                </div>
+              </div>
+              <p style={{ color: '#818CF8', fontSize: '15px', fontWeight: 600, margin: 0, lineHeight: 1.5 }}>
+                👉 Uma única inteligência centralizada acompanha você durante todo o seu dia. Seus dados se integram automaticamente e geram recomendações reais de produtividade.
               </p>
             </div>
 
@@ -741,69 +664,7 @@ export default function LandingPage({ onEnterApp }) {
         </Container>
       </section>
 
-      {/* ── 6. O COACH ────────────────────────────────────────────────── */}
-      <section
-        id="coach"
-        style={{
-          padding: '100px 24px',
-          background: '#090D12',
-          borderTop: '1px solid rgba(255, 255, 255, 0.03)',
-        }}
-      >
-        <Container>
-          <div style={{ textAlign: 'center', marginBottom: '60px' }}>
-            <span style={{ fontSize: '12px', fontWeight: 700, color: '#10B981', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Inteligência Prática</span>
-            <h2 style={{ fontSize: 'clamp(28px, 4vw, 42px)', fontWeight: 800, color: '#FFFFFF', marginTop: '10px', letterSpacing: '-0.02em' }}>
-              Um coach que realmente aprende com você.
-            </h2>
-            <p style={{ color: '#94A3B8', fontSize: '16px', maxWidth: '600px', margin: '12px auto 0' }}>
-              Esqueça conselhos genéricos. Nossos diálogos são gerados a partir do seu comportamento e ritmo semanais reais.
-            </p>
-          </div>
 
-          <div className="coach-chat-showcase">
-            <div className="chat-bubble-large">
-              <span className="chat-avatar">🧠</span>
-              <div className="chat-text-wrapper">
-                <div style={{ fontWeight: 700, color: '#FFFFFF', marginBottom: '4px' }}>Coach MyFlowDay</div>
-                <p style={{ margin: 0, color: '#E2E8F0', lineHeight: 1.5 }}>
-                  "Você produz melhor <b>às terças-feiras no período da tarde</b>. Aproveite esse dia para programar tarefas que requerem foco profundo e evite reuniões neste bloco."
-                </p>
-              </div>
-            </div>
-
-            <div className="chat-bubble-large">
-              <span className="chat-avatar">🧠</span>
-              <div className="chat-text-wrapper">
-                <div style={{ fontWeight: 700, color: '#FFFFFF', marginBottom: '4px' }}>Coach MyFlowDay</div>
-                <p style={{ margin: 0, color: '#E2E8F0', lineHeight: 1.5 }}>
-                  "Seu objetivo 'Tutor de Pet Perfeito' <b>está parado há quatro dias</b>. Que tal tirarmos 5 minutos hoje para resolver uma pendência simples dele e reatar o progresso?"
-                </p>
-              </div>
-            </div>
-
-            <div className="chat-bubble-large">
-              <span className="chat-avatar">🧠</span>
-              <div className="chat-text-wrapper">
-                <div style={{ fontWeight: 700, color: '#FFFFFF', marginBottom: '4px' }}>Coach MyFlowDay</div>
-                <p style={{ margin: 0, color: '#E2E8F0', lineHeight: 1.5 }}>
-                  "Você está a <b>apenas duas tarefas do próximo nível</b> do seu companion. Conclua seus hábitos de hoje para desbloquear o próximo estágio evolutivo!"
-                </p>
-              </div>
-            </div>
-
-            <div className="chat-bubble-large">
-              <span className="chat-avatar">🧠</span>
-              <div className="chat-text-wrapper">
-                <div style={{ fontWeight: 700, color: '#FFFFFF', marginBottom: '4px' }}>Coach MyFlowDay</div>
-                <p style={{ margin: 0, color: '#E2E8F0', lineHeight: 1.5 }}>
-                  "Hoje é <b>um ótimo dia para concluir esse projeto</b>. Seu ritmo semanal está 25% maior em relação ao mesmo dia da semana anterior. Aproveite o embalo!"
-                </p>
-              </div>
-            </div>
-          </div>
-        </Container>
-      </section>
 
       {/* ── 7. O DIFERENCIAL (ANIMAÇÃO CASCATA) ────────────────────────── */}
       <section
@@ -920,66 +781,7 @@ export default function LandingPage({ onEnterApp }) {
         </Container>
       </section>
 
-      {/* ── 10. DEPOIMENTOS ───────────────────────────────────────────── */}
-      <section
-        style={{
-          padding: '100px 24px',
-          background: '#090D12',
-          borderTop: '1px solid rgba(255, 255, 255, 0.03)',
-        }}
-      >
-        <Container>
-          <div style={{ textAlign: 'center', marginBottom: '60px' }}>
-            <span style={{ fontSize: '12px', fontWeight: 700, color: '#818CF8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Comunidade</span>
-            <h2 style={{ fontSize: 'clamp(28px, 4vw, 42px)', fontWeight: 800, color: '#FFFFFF', marginTop: '10px', letterSpacing: '-0.02em' }}>
-              O que dizem nossos beta testers
-            </h2>
-          </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px' }}>
-            
-            <div className="testimonial-card">
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
-                <span className="avatar-placeholder" style={{ background: '#6366F1' }}>M</span>
-                <div>
-                  <div style={{ fontSize: '15px', fontWeight: 700, color: '#FFFFFF' }}>Mariana Santos</div>
-                  <div style={{ fontSize: '12px', color: '#94A3B8' }}>Designer de Produto</div>
-                </div>
-              </div>
-              <p style={{ fontSize: '14px', color: '#E2E8F0', fontStyle: 'italic', margin: 0, lineHeight: 1.6 }}>
-                "Pela primeira vez senti que um aplicativo entendia como eu trabalho. Os insights do Coach de IA sobre o meu rendimento nas terças-feiras mudaram totalmente a organização da minha semana."
-              </p>
-            </div>
-
-            <div className="testimonial-card">
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
-                <span className="avatar-placeholder" style={{ background: '#8B5CF6' }}>R</span>
-                <div>
-                  <div style={{ fontSize: '15px', fontWeight: 700, color: '#FFFFFF' }}>Rodrigo Lima</div>
-                  <div style={{ fontSize: '12px', color: '#94A3B8' }}>Desenvolvedor Full-Stack</div>
-                </div>
-              </div>
-              <p style={{ fontSize: '14px', color: '#E2E8F0', fontStyle: 'italic', margin: 0, lineHeight: 1.6 }}>
-                "Não preciso mais usar cinco aplicativos diferentes. Centralizar o Pomodoro, a lista cronológica do Meu Dia e a consistência de hábitos no mesmo ecossistema salvou minha atenção e foco diários."
-              </p>
-            </div>
-
-            <div className="testimonial-card">
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
-                <span className="avatar-placeholder" style={{ background: '#10B981' }}>C</span>
-                <div>
-                  <div style={{ fontSize: '15px', fontWeight: 700, color: '#FFFFFF' }}>Camila Ferreira</div>
-                  <div style={{ fontSize: '12px', color: '#94A3B8' }}>Empreendedora</div>
-                </div>
-              </div>
-              <p style={{ fontSize: '14px', color: '#E2E8F0', fontStyle: 'italic', margin: 0, lineHeight: 1.6 }}>
-                "O Coach me ajudou a perceber padrões que eu nunca tinha notado, como o fato de eu abandonar metas quando fico mais de 3 dias sem dar check-in nelas. É um verdadeiro espelho da minha evolução."
-              </p>
-            </div>
-
-          </div>
-        </Container>
-      </section>
 
       {/* ── 11. PRICING GRID ──────────────────────────────────────────── */}
       <section
@@ -1016,16 +818,15 @@ export default function LandingPage({ onEnterApp }) {
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '32px' }}>
                 {[
-                  'Tarefas, hábitos e objetivos ilimitados',
-                  'Timer Pomodoro com áudio ambiente',
-                  'Companion virtual evolutivo',
-                  'Coach IA — insights semanais básicos',
-                  'Conquistas e gamificação completa',
-                  'Planejamento semanal drag & drop',
-                  'Exportação PDF',
-                  'Sincronização offline'
+                  { text: 'Tarefas, hábitos e objetivos ilimitados', active: true },
+                  { text: 'Timer Pomodoro com áudio ambiente', active: true },
+                  { text: 'Companion virtual evolutivo', active: true },
+                  { text: 'Conquistas e gamificação completa', active: true },
+                  { text: 'Planejamento semanal drag & drop', active: true },
+                  { text: 'Coach IA — insights semanais básicos', active: true },
+                  { text: 'Análises detalhadas por horário (Pro)', active: false },
+                  { text: 'Mentor de Inteligência Avançada (Pro)', active: false }
                 ].map((f, i) => {
-                  const isFirst = i === 0;
                   return (
                     <div 
                       key={i} 
@@ -1034,13 +835,13 @@ export default function LandingPage({ onEnterApp }) {
                         alignItems: 'center', 
                         gap: '10px', 
                         fontSize: '14px', 
-                        color: isFirst ? '#E2E8F0' : 'rgba(226, 232, 240, 0.25)',
-                        filter: isFirst ? 'none' : 'blur(1.5px)',
+                        color: f.active ? '#E2E8F0' : 'rgba(226, 232, 240, 0.25)',
+                        filter: f.active ? 'none' : 'blur(1.5px)',
                         transition: 'filter 0.3s, color 0.3s'
                       }}
                     >
-                      <span style={{ color: isFirst ? '#10B981' : '#475569', fontSize: '16px', flexShrink: 0 }}>✓</span>
-                      {f}
+                      <span style={{ color: f.active ? '#10B981' : '#475569', fontSize: '16px', flexShrink: 0 }}>✓</span>
+                      {f.text}
                     </div>
                   );
                 })}
@@ -1062,7 +863,7 @@ export default function LandingPage({ onEnterApp }) {
                   boxShadow: '0 4px 20px rgba(99, 102, 241, 0.35)',
                 }}
               >
-                Fazer Upgrade
+                Entrar no Flow
               </button>
             </div>
 

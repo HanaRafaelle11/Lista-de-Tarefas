@@ -321,12 +321,38 @@ export default function TodoView() {
   const [quickTitle, setQuickTitle] = useState('');
 
   const getCategoryEmoji = (cat) => {
-    if (cat.emoji) return cat.emoji;
-    const name = (cat.name || cat.id || '').toLowerCase();
+    const emojiMap = {
+      briefcase: '💼',
+      user: '🏠',
+      book: '📚',
+      dumbbell: '💪',
+      heart: '❤️',
+      palette: '🎨',
+      music: '🎵',
+      plane: '✈️',
+      sprout: '🌱',
+      trending: '📈',
+      star: '⭐',
+      users: '👥',
+      trabalho: '💼',
+      pessoal: '🏠',
+      estudos: '📚',
+      lazer: '🧘'
+    };
+
+    const val = cat.emoji || cat.iconName || cat.id || '';
+    const key = val.toLowerCase();
+    
+    if (emojiMap[key]) return emojiMap[key];
+    
+    const name = (cat.name || '').toLowerCase();
     if (name.includes('trabalho') || name.includes('work')) return '💼';
     if (name.includes('pessoal') || name.includes('personal')) return '🏠';
     if (name.includes('estudo') || name.includes('study') || name.includes('academic')) return '📚';
     if (name.includes('lazer') || name.includes('leisure') || name.includes('free time')) return '🧘';
+    
+    if (val.length <= 2 && !/^[a-zA-Z0-9]$/.test(val)) return val;
+
     return '📁';
   };
 
@@ -665,6 +691,10 @@ export default function TodoView() {
   // Filtragem de tarefas
   const baseFiltered = useMemo(() => {
     return tasks.filter(task => {
+      if (task.deletedAt) return false;
+      const meta = parseTaskMetadata(task.description);
+      if (meta.archived) return false;
+
       const q = searchQuery.toLowerCase();
       const matchesSearch = task.title.toLowerCase().includes(q) ||
         (task.description && task.description.toLowerCase().includes(q));
@@ -683,6 +713,10 @@ export default function TodoView() {
   // Filtragem exclusiva para o Kanban que ignora o filtro de status superior (all/active/completed)
   const kanbanFiltered = useMemo(() => {
     return tasks.filter(task => {
+      if (task.deletedAt) return false;
+      const meta = parseTaskMetadata(task.description);
+      if (meta.archived) return false;
+
       const q = searchQuery.toLowerCase();
       const matchesSearch = task.title.toLowerCase().includes(q) ||
         (task.description && task.description.toLowerCase().includes(q));
@@ -696,9 +730,10 @@ export default function TodoView() {
   const sections = useMemo(() => categorizeTasks(baseFiltered, goals, goalTasks), [baseFiltered, goals, goalTasks]);
 
   // Estatísticas rápidas
-  const total = tasks.length;
-  const active = tasks.filter(t => !t.completed).length;
-  const completed = tasks.filter(t => t.completed).length;
+  const activeTasks = useMemo(() => tasks.filter(t => !t.deletedAt), [tasks]);
+  const total = activeTasks.length;
+  const active = activeTasks.filter(t => !t.completed).length;
+  const completed = activeTasks.filter(t => t.completed).length;
   const rate = total > 0 ? Math.round((completed / total) * 100) : 0;
 
   // Lógica Kanban

@@ -37,7 +37,7 @@ export default function CustomDialogModal({ isOpen, type = 'alert', title, messa
       display: 'flex',
       alignItems: 'flex-end',
       justifyContent: 'center',
-      zIndex: 11000,
+      zIndex: 13000,
     }}>
       <style>{`
         @keyframes customBottomSheetSlideUp {

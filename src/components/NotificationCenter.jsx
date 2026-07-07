@@ -142,7 +142,7 @@ export default function NotificationCenter({ placement }) {
             width: '320px', 
             padding: '16px',
             position: 'fixed',
-            zIndex: 11000,
+            zIndex: 12000,
             top: `${coords.top}px`,
             left: `${coords.left}px`,
             backgroundColor: 'var(--bg-card)',
