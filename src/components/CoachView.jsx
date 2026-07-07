@@ -162,7 +162,10 @@ export default function CoachView() {
     setShouldOpenGoalModal
   } = useAppContext();
 
-  const hasData = goals.length > 0 || tasks.length > 0;
+  const activeTasks = useMemo(() => tasks.filter(t => !t.deletedAt), [tasks]);
+  const activeGoals = useMemo(() => goals.filter(g => !g.deletedAt), [goals]);
+
+  const hasData = activeGoals.length > 0 || activeTasks.length > 0;
 
   // Carregar periodicidade preferida das configurações do usuário (user_metadata)
   const [periodicity, setPeriodicity] = useState(() => {
@@ -174,15 +177,15 @@ export default function CoachView() {
   // Mensagem do Coach gerada com base nos dados do usuário
   const coachData = useMemo(() => {
     return generateCoachMessage({
-      tasks,
-      goals,
+      tasks: activeTasks,
+      goals: activeGoals,
       goalTasks,
       habitsManager,
       consistencyScore,
       currentUser,
       isPro
     });
-  }, [tasks, goals, goalTasks, habitsManager, consistencyScore, currentUser, isPro]);
+  }, [activeTasks, activeGoals, goalTasks, habitsManager, consistencyScore, currentUser, isPro]);
 
   // Handler para alterar a periodicidade
   const handlePeriodicityChange = async (newVal) => {

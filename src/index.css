@@ -6999,7 +6999,7 @@ body,
 
 /* ── Cabeçalho Superior Mobile ── */
 .mobile-top-header {
-  position: fixed;
+  position: absolute;
   top: 0;
   left: 0;
   right: 0;
@@ -7359,4 +7359,63 @@ body,
 .sidebar-collapse-toggle-btn:hover {
   background-color: var(--bg-card-hover);
   color: var(--text-main);
+}
+
+/* PWA Install Prompt premium styles */
+.pwa-install-prompt {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  width: calc(100% - 32px);
+  max-width: 420px;
+  background-color: var(--bg-card);
+  border: 1px solid var(--primary-light);
+  border-radius: var(--radius-md, 12px);
+  padding: 16px;
+  box-shadow: var(--shadow-lg);
+  z-index: 12000;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  touch-action: pan-y;
+}
+
+@media (max-width: 1023px) {
+  .pwa-install-prompt {
+    bottom: 82px; /* Positioned neatly above the mobile bottom navigation bar */
+    left: 16px;
+    right: 16px;
+    margin: 0 auto;
+    width: auto;
+  }
+}
+
+/* Trash responsive rows */
+.trash-item-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm, 8px);
+  background-color: var(--bg-app);
+  gap: 12px;
+}
+
+.trash-item-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+@media (max-width: 480px) {
+  .trash-item-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+  .trash-item-actions {
+    justify-content: flex-end;
+    margin-top: 4px;
+  }
 }

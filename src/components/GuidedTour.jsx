@@ -137,7 +137,7 @@ export default function GuidedTour() {
           }}
           style={{
             position: 'fixed',
-            bottom: isMobile ? '84px' : '24px',
+            bottom: isMobile ? '96px' : '24px',
             right: '24px',
             width: '42px',
             height: '42px',

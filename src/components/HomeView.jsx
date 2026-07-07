@@ -460,6 +460,15 @@ export default function HomeView() {
   }, currentPetData.stages.length);
   const currentStage = currentPetData.stages[stageIndex];
 
+  useEffect(() => {
+    if (hasNoItems && growthPet !== 'plant') {
+      setGrowthPet('plant');
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('flowday_growth_pet', 'plant');
+      }
+    }
+  }, [hasNoItems, growthPet]);
+
   const petSpeechText = useMemo(() => {
     const completedTasksList = tasks.filter(t => t.completed && !t.deletedAt);
     if (completedTasksList.length > 0) {

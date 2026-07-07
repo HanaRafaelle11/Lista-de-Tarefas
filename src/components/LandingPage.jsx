@@ -884,7 +884,7 @@ export default function LandingPage({ onEnterApp }) {
               <div style={{ marginBottom: '24px' }}>
                 <span style={{ fontSize: '13px', fontWeight: 700, color: '#8B5CF6', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Pro</span>
                 <div style={{ fontSize: '48px', fontWeight: 800, color: '#FFFFFF', marginTop: '8px', lineHeight: 1 }}>
-                  R$19
+                  R$14,90
                   <span style={{ fontSize: '16px', fontWeight: 500, color: '#64748B' }}>/mês</span>
                 </div>
                 <p style={{ color: '#94A3B8', fontSize: '14px', marginTop: '12px', lineHeight: 1.5 }}>

@@ -1687,33 +1687,60 @@ export function AppProvider({ children }) {
   const handleDeleteAllTasks = useCallback(async () => {
     if (!currentUser?.id) return;
     
-    // Check if there are tasks to delete
-    const tasksToDelete = tasks.filter(t => !t.deletedAt);
-    if (tasksToDelete.length === 0) return 0;
-    
     const nowIso = new Date().toISOString();
-    const ids = tasksToDelete.map(t => t.id);
+    let activeIds = [];
     
-    // 1. Soft delete immediate on UI
-    setTasks(prev => prev.map(t => ids.includes(t.id) ? { ...t, deletedAt: nowIso } : t));
-    
-    // 2. Clear any undo action to prevent conflicts
+    setTasks(prev => {
+      activeIds = prev.filter(t => !t.deletedAt).map(t => t.id);
+      if (activeIds.length === 0) return prev;
+      
+      const updatedList = prev.map(t => activeIds.includes(t.id) ? { ...t, deletedAt: nowIso } : t);
+      if (currentUser.isDemo) {
+        localStorage.setItem(`flowday_demo_tasks_${currentUser.id}`, JSON.stringify(updatedList));
+      } else {
+        Promise.all(activeIds.map(id => tasksService.delete(currentUser.id, id))).then(() => {
+          logEvent('all_tasks_deleted', { count: activeIds.length });
+        }).catch(err => console.error('Error batch deleting tasks:', err));
+      }
+      return updatedList;
+    });
+
     if (undoAction?.timerId) clearTimeout(undoAction.timerId);
     setUndoAction(null);
-    
-    // 3. Delete in backend or demo storage
+  }, [currentUser, undoAction, logEvent]);
+
+  const handleResetAllData = useCallback(async () => {
+    if (!currentUser?.id) return;
+
+    // Clean states functionally
+    setTasks([]);
+    setGoals([]);
+    setGoalTasks([]);
+    setHabits([]);
+    setHabitLogs([]);
+
     if (currentUser.isDemo) {
-      const updatedList = tasks.map(t => ids.includes(t.id) ? { ...t, deletedAt: nowIso } : t);
-      localStorage.setItem(`flowday_demo_tasks_${currentUser.id}`, JSON.stringify(updatedList));
-      logEvent('all_tasks_deleted', { count: ids.length });
+      localStorage.removeItem(`flowday_demo_tasks_${currentUser.id}`);
+      localStorage.removeItem(`flowday_demo_goals_${currentUser.id}`);
+      localStorage.removeItem(`flowday_demo_habits_${currentUser.id}`);
+      localStorage.removeItem(`flowday_demo_achievements_${currentUser.id}`);
     } else {
-      Promise.all(ids.map(id => tasksService.delete(currentUser.id, id))).then(() => {
-        logEvent('all_tasks_deleted', { count: ids.length });
-      });
+      try {
+        await Promise.all([
+          supabase.from('tasks').delete().eq('user_id', currentUser.id),
+          supabase.from('goals').delete().eq('user_id', currentUser.id),
+          supabase.from('habits').delete().eq('user_id', currentUser.id),
+          supabase.from('habit_logs').delete().eq('user_id', currentUser.id),
+          supabase.from('user_achievements').delete().eq('user_id', currentUser.id)
+        ]);
+      } catch (err) {
+        console.error('Error clearing all database data:', err);
+      }
     }
-    
-    return ids.length;
-  }, [currentUser, tasks, undoAction, logEvent]);
+
+    addNotification('system', 'Dados limpos', 'Todos os seus dados foram excluídos permanentemente.');
+    resetAchievementsIfEmpty(currentUser.id, [], []);
+  }, [currentUser, addNotification, resetAchievementsIfEmpty]);
 
   const handleToggleComplete = useCallback(async (id) => {
     if (!currentUser?.id) return;
@@ -2830,22 +2857,21 @@ export function AppProvider({ children }) {
     if (!currentUser?.id) return;
     
     const proceed = async () => {
-      let finalTasks = [];
-      setTasks(prev => {
-        finalTasks = prev.filter(t => t.id !== id);
-        if (currentUser.isDemo) {
-          localStorage.setItem(`flowday_demo_tasks_${currentUser.id}`, JSON.stringify(finalTasks));
-        }
-        return finalTasks;
-      });
-      setGoalTasks(prev => prev.filter(gt => gt.task_id !== id));
+      const nextTasks = tasks.filter(t => t.id !== id);
+      const nextGoalTasks = goalTasks.filter(gt => gt.task_id !== id);
       
-      if (!currentUser.isDemo) {
+      setTasks(nextTasks);
+      setGoalTasks(nextGoalTasks);
+      
+      if (currentUser.isDemo) {
+        localStorage.setItem(`flowday_demo_tasks_${currentUser.id}`, JSON.stringify(nextTasks));
+        localStorage.setItem(`flowday_demo_goals_${currentUser.id}`, JSON.stringify({ goals, goalTasks: nextGoalTasks }));
+      } else {
         await tasksService.deletePermanent(currentUser.id, id);
         addNotification('system', 'Tarefa excluída', 'A tarefa foi removida em definitivo.');
       }
       
-      resetAchievementsIfEmpty(currentUser.id, finalTasks, goals);
+      resetAchievementsIfEmpty(currentUser.id, nextTasks, goals);
     };
 
     if (force) {
@@ -2876,25 +2902,20 @@ export function AppProvider({ children }) {
     if (!currentUser?.id) return;
     
     const proceed = async () => {
-      let finalGoals = [];
-      setGoals(prev => {
-        finalGoals = prev.filter(g => g.id !== id);
-        return finalGoals;
-      });
-      setGoalTasks(prev => {
-        const updatedGT = prev.filter(gt => gt.goal_id !== id);
-        if (currentUser.isDemo) {
-          localStorage.setItem(`flowday_demo_goals_${currentUser.id}`, JSON.stringify({ goals: finalGoals, goalTasks: updatedGT }));
-        }
-        return updatedGT;
-      });
+      const nextGoals = goals.filter(g => g.id !== id);
+      const nextGoalTasks = goalTasks.filter(gt => gt.goal_id !== id);
       
-      if (!currentUser.isDemo) {
+      setGoals(nextGoals);
+      setGoalTasks(nextGoalTasks);
+      
+      if (currentUser.isDemo) {
+        localStorage.setItem(`flowday_demo_goals_${currentUser.id}`, JSON.stringify({ goals: nextGoals, goalTasks: nextGoalTasks }));
+      } else {
         await goalsService.deletePermanent(currentUser.id, id);
         addNotification('system', 'Objetivo excluído', 'O objetivo foi removido em definitivo.');
       }
       
-      resetAchievementsIfEmpty(currentUser.id, tasks, finalGoals);
+      resetAchievementsIfEmpty(currentUser.id, tasks, nextGoals);
     };
 
     if (force) {
@@ -2911,35 +2932,40 @@ export function AppProvider({ children }) {
   const handleEmptyTrash = useCallback(async () => {
     if (!currentUser?.id) return;
 
-    const deletedTaskIds = tasks.filter(t => t.deletedAt).map(t => t.id);
-    const deletedGoalIds = goals.filter(g => g.deletedAt).map(g => g.id);
+    let deletedTaskIds = [];
+    let deletedGoalIds = [];
+    let finalTasksList = [];
+    let finalGoalsList = [];
 
-    if (deletedTaskIds.length === 0 && deletedGoalIds.length === 0) return;
-
-    let finalTasks = [];
-    let finalGoals = [];
-
+    // 1. Get task IDs functionally and update state
     setTasks(prev => {
-      finalTasks = prev.filter(t => !deletedTaskIds.includes(t.id));
+      const deletedTasks = prev.filter(t => t.deletedAt);
+      deletedTaskIds = deletedTasks.map(t => t.id);
+      finalTasksList = prev.filter(t => !t.deletedAt);
       if (currentUser.isDemo) {
-        localStorage.setItem(`flowday_demo_tasks_${currentUser.id}`, JSON.stringify(finalTasks));
+        localStorage.setItem(`flowday_demo_tasks_${currentUser.id}`, JSON.stringify(finalTasksList));
       }
-      return finalTasks;
+      return finalTasksList;
     });
 
+    // 2. Get goal IDs functionally and update state
     setGoals(prev => {
-      finalGoals = prev.filter(g => !deletedGoalIds.includes(g.id));
-      return finalGoals;
+      const deletedGoals = prev.filter(g => g.deletedAt);
+      deletedGoalIds = deletedGoals.map(g => g.id);
+      finalGoalsList = prev.filter(g => !g.deletedAt);
+      return finalGoalsList;
     });
 
+    // 3. Update goal-tasks link functionally
     setGoalTasks(prev => {
       const updatedGT = prev.filter(gt => !deletedTaskIds.includes(gt.task_id) && !deletedGoalIds.includes(gt.goal_id));
       if (currentUser.isDemo) {
-        localStorage.setItem(`flowday_demo_goals_${currentUser.id}`, JSON.stringify({ goals: finalGoals, goalTasks: updatedGT }));
+        localStorage.setItem(`flowday_demo_goals_${currentUser.id}`, JSON.stringify({ goals: finalGoalsList, goalTasks: updatedGT }));
       }
       return updatedGT;
     });
 
+    // 4. Run background DB deletes if not in demo
     if (!currentUser.isDemo) {
       try {
         const taskDeletions = deletedTaskIds.map(id => tasksService.deletePermanent(currentUser.id, id));
@@ -2951,8 +2977,8 @@ export function AppProvider({ children }) {
     }
 
     addNotification('system', 'Lixeira esvaziada', 'Todos os itens foram excluídos permanentemente.');
-    resetAchievementsIfEmpty(currentUser.id, finalTasks, finalGoals);
-  }, [currentUser, tasks, goals, addNotification, resetAchievementsIfEmpty]);
+    resetAchievementsIfEmpty(currentUser.id, finalTasksList, finalGoalsList);
+  }, [currentUser, addNotification, resetAchievementsIfEmpty]);
 
   // ── Explicação Detalhada do Health Score (Consistency Score) ──
   const consistencyScoreExplanation = useMemo(() => {
@@ -3219,6 +3245,7 @@ export function AppProvider({ children }) {
     handleDeleteTask,
     handleBulkDeleteCompleted,
     handleDeleteAllTasks,
+    handleResetAllData,
     handleToggleComplete,
     handleRestoreTask,
     handleDeleteTaskPermanent,

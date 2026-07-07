@@ -80,7 +80,8 @@ export default function SettingsView() {
     openCustomConfirm,
     handleUpdateProfileFields,
     logAuthEvent,
-    handleDeleteAllTasks
+    handleDeleteAllTasks,
+    handleResetAllData
   } = useAppContext();
   const effectiveTheme = useEffectiveTheme(theme);
   const [loading, setLoading] = useState(false);
@@ -360,11 +361,6 @@ export default function SettingsView() {
       openPaywall('export_pdf');
       return;
     }
-    const printWindow = window.open("", "_blank");
-    if (!printWindow) {
-      openCustomAlert("Por favor, libere popups para gerar o relatório em PDF.");
-      return;
-    }
 
     const today = new Date().toLocaleDateString('pt-BR');
     const tasksList = (allTasks || []).filter(t => !t.deletedAt);
@@ -394,7 +390,18 @@ export default function SettingsView() {
       </tr>
     `).join('');
 
-    printWindow.document.write(`
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    document.body.appendChild(iframe);
+
+    const printDoc = iframe.contentWindow.document;
+    printDoc.open();
+    printDoc.write(`
       <html>
         <head>
           <title>Relatório de Evolução MyFlowDay - ${today}</title>
@@ -443,15 +450,17 @@ export default function SettingsView() {
           </table>
 
           <script>
-            setTimeout(function() {
+            window.onload = function() {
               window.print();
-              window.close();
-            }, 500);
+              setTimeout(function() {
+                window.parent.document.body.removeChild(window.frameElement);
+              }, 1000);
+            }
           </script>
         </body>
       </html>
     `);
-    printWindow.document.close();
+    printDoc.close();
   };
 
   const handleExportPNGData = () => {
@@ -882,11 +891,11 @@ export default function SettingsView() {
                 <h3 style={{ fontSize: '14px', fontWeight: '700', marginBottom: '12px', color: 'var(--text-main)', borderBottom: '1px solid var(--border-light)', paddingBottom: '6px' }}>Objetivos Excluídos</h3>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                   {deletedGoals.map(goal => (
-                    <div key={goal.id} style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', padding: '12px', border: '1px solid var(--border-light)', borderRadius: 'var(--radius-sm)', backgroundColor: 'var(--bg-app)', gap: '12px' }}>
+                    <div key={goal.id} className="trash-item-row">
                       <span style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '6px', flex: '1 1 200px', minWidth: 0, wordBreak: 'break-word' }}>
                         <span>{goal.title}</span>
                       </span>
-                      <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
+                      <div className="trash-item-actions">
                         <button 
                           onClick={() => handleRestoreGoal(goal.id)}
                           style={{ fontSize: '12px', fontWeight: '600', padding: '6px 12px', color: 'var(--primary)', backgroundColor: 'var(--primary-light)', borderRadius: '4px', cursor: 'pointer' }}
@@ -911,12 +920,12 @@ export default function SettingsView() {
                 <h3 style={{ fontSize: '14px', fontWeight: '700', marginBottom: '12px', color: 'var(--text-main)', borderBottom: '1px solid var(--border-light)', paddingBottom: '6px' }}>Tarefas Excluídas</h3>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                   {deletedTasks.map(task => (
-                    <div key={task.id} style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', padding: '12px', border: '1px solid var(--border-light)', borderRadius: 'var(--radius-sm)', backgroundColor: 'var(--bg-app)', gap: '12px' }}>
+                    <div key={task.id} className="trash-item-row">
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', alignItems: 'flex-start', flex: '1 1 200px', minWidth: 0 }}>
                         <span style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-main)', wordBreak: 'break-word' }}>{task.title}</span>
                         <span style={{ fontSize: '10px', color: 'var(--text-light)' }}>Categoria: {task.category}</span>
                       </div>
-                      <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
+                      <div className="trash-item-actions">
                         <button 
                           onClick={() => handleRestoreTask(task.id)}
                           style={{ fontSize: '12px', fontWeight: '600', padding: '6px 12px', color: 'var(--primary)', backgroundColor: 'var(--primary-light)', borderRadius: '4px', cursor: 'pointer' }}
@@ -1682,22 +1691,40 @@ export default function SettingsView() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '13px', color: 'var(--text-light)', marginBottom: '24px' }}>
             <p>Ações destrutivas. Tenha certeza absoluta antes de prosseguir.</p>
           </div>
-          <button
-            className="danger-btn"
-            onClick={() => {
-              openCustomConfirm(
-                "Deseja realmente excluir todas as tarefas? Esta ação é permanente e não pode ser desfeita.",
-                "Excluir Todas as Tarefas",
-                async () => {
-                  await handleDeleteAllTasks();
-                  openCustomAlert("Todas as tarefas foram concluídas/excluídas com sucesso.");
-                }
-              );
-            }}
-            style={{ padding: '12px 24px', backgroundColor: '#FAF0F0', color: '#C06C6C', borderRadius: '8px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '8px' }}
-          >
-            <Trash2 size={16} /> Excluir todas as tarefas
-          </button>
+          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+            <button
+              className="danger-btn"
+              onClick={() => {
+                openCustomConfirm(
+                  "Deseja realmente excluir todas as tarefas? Esta ação é permanente e não pode ser desfeita.",
+                  "Excluir Todas as Tarefas",
+                  async () => {
+                    await handleDeleteAllTasks();
+                    openCustomAlert("Todas as tarefas foram concluídas/excluídas com sucesso.");
+                  }
+                );
+              }}
+              style={{ padding: '12px 24px', backgroundColor: '#FAF0F0', color: '#C06C6C', borderRadius: '8px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '8px' }}
+            >
+              <Trash2 size={16} /> Excluir todas as tarefas
+            </button>
+            <button
+              className="danger-btn"
+              onClick={() => {
+                openCustomConfirm(
+                  "Deseja realmente apagar TODOS os seus dados do Flowday (tarefas, objetivos, hábitos e conquistas)? Esta ação é permanente e não poderá ser revertida.",
+                  "Limpar Todos os Dados",
+                  async () => {
+                    await handleResetAllData();
+                    openCustomAlert("Todos os seus dados foram apagados com sucesso.");
+                  }
+                );
+              }}
+              style={{ padding: '12px 24px', backgroundColor: '#FAF0F0', color: '#C06C6C', borderRadius: '8px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '8px' }}
+            >
+              <Trash2 size={16} /> Limpar todos os dados (Começar do Zero)
+            </button>
+          </div>
         </div>
 
         {/* PWA & Sistema */}

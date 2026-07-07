@@ -400,6 +400,21 @@ export default function EvolutionView() {
   const [isAchievementsExpanded, setIsAchievementsExpanded] = useState(false);
   const [isGoalsExpanded, setIsGoalsExpanded] = useState(false);
 
+  const achievementsRef = useRef(null);
+  const goalsRef = useRef(null);
+
+  useEffect(() => {
+    if (isAchievementsExpanded && achievementsRef.current) {
+      achievementsRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  }, [isAchievementsExpanded]);
+
+  useEffect(() => {
+    if (isGoalsExpanded && goalsRef.current) {
+      goalsRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  }, [isGoalsExpanded]);
+
   const dismissGuide = () => {
     setShowGuide(false);
     localStorage.setItem('flowday_hide_evo_guide', 'true');
@@ -408,6 +423,7 @@ export default function EvolutionView() {
   // Filtra itens deletados antes de calcular stats
   const activeTasks = useMemo(() => tasks.filter(t => !t.deletedAt), [tasks]);
   const activeGoals = useMemo(() => goals.filter(g => !g.deletedAt), [goals]);
+  const hasAnyData = activeTasks.length > 0 || activeGoals.length > 0;
 
   const stats = useMemo(() => calcStats(activeTasks, activeGoals), [activeTasks, activeGoals]);
   const streak = stats.currentStreak;
@@ -421,6 +437,8 @@ export default function EvolutionView() {
   }, [unlockedAchievements]);
 
   const unlockedCount = Object.keys(unlockedMap).length;
+  const displayUnlockedCount = hasAnyData ? unlockedCount : 0;
+  const displayUnlockedMap = hasAnyData ? unlockedMap : {};
 
   const coachData = useMemo(() => {
     return generateCoachMessage({
@@ -613,11 +631,6 @@ export default function EvolutionView() {
       openPaywall('export_pdf');
       return;
     }
-    const printWindow = window.open("", "_blank");
-    if (!printWindow) {
-      alert("Por favor, libere popups para gerar o relatório em PDF.");
-      return;
-    }
 
     const today = new Date().toLocaleDateString('pt-BR');
     const tasksList = activeTasks;
@@ -647,7 +660,18 @@ export default function EvolutionView() {
       </tr>
     `).join('');
 
-    printWindow.document.write(`
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    document.body.appendChild(iframe);
+
+    const printDoc = iframe.contentWindow.document;
+    printDoc.open();
+    printDoc.write(`
       <html>
         <head>
           <title>Relatório de Evolução MyFlowDay - ${today}</title>
@@ -697,18 +721,16 @@ export default function EvolutionView() {
 
           <script>
             window.onload = function() {
+              window.print();
               setTimeout(function() {
-                window.print();
-              }, 100);
-              window.onafterprint = function() {
-                window.close();
-              };
-            };
+                window.parent.document.body.removeChild(window.frameElement);
+              }, 1000);
+            }
           </script>
         </body>
       </html>
     `);
-    printWindow.document.close();
+    printDoc.close();
   };
 
   // Abas internas da Central de Evolução (Jornada vs Coach) com persistência
@@ -725,8 +747,6 @@ export default function EvolutionView() {
       localStorage.setItem('flowday_active_evo_tab', tab);
     }
   };
-
-  const hasAnyData = activeTasks.length > 0 || activeGoals.length > 0;
 
   return (
     <div className="evo-view animate-fade-in" style={{ paddingBottom: '90px' }}>
@@ -881,7 +901,7 @@ export default function EvolutionView() {
             </section>
 
             {/* Card 2: Conquistas (PS5 style) */}
-            <section className="evo-card" style={{ margin: 0, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', transition: 'all 0.3s ease' }}>
+            <section ref={achievementsRef} className="evo-card" style={{ margin: 0, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', transition: 'all 0.3s ease' }}>
               <div>
                 <div 
                   className="evo-card-header" 
@@ -892,7 +912,7 @@ export default function EvolutionView() {
                     <MFIcon name="achievements" size={20} style={{ color: 'var(--accent-yellow, #eab308)' }} /> Conquistas
                   </h3>
                   <span className="evo-achievements-count" style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-light)' }}>
-                    {unlockedCount} de {ACHIEVEMENTS.length}
+                    {displayUnlockedCount} de {ACHIEVEMENTS.length}
                   </span>
                 </div>
 
@@ -902,12 +922,12 @@ export default function EvolutionView() {
                 >
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11.5px', marginBottom: '6px' }}>
                     <span style={{ color: 'var(--text-muted)' }}>Progresso da Coleção</span>
-                    <strong style={{ color: 'var(--primary)' }}>{Math.round((unlockedCount / ACHIEVEMENTS.length) * 100)}%</strong>
+                    <strong style={{ color: 'var(--primary)' }}>{Math.round((displayUnlockedCount / ACHIEVEMENTS.length) * 100)}%</strong>
                   </div>
                   <div style={{ height: '6px', backgroundColor: 'var(--bg-app)', borderRadius: '3px', overflow: 'hidden' }}>
                     <div style={{ 
                       height: '100%', 
-                      width: `${(unlockedCount / ACHIEVEMENTS.length) * 100}%`, 
+                      width: `${(displayUnlockedCount / ACHIEVEMENTS.length) * 100}%`, 
                       background: 'linear-gradient(90deg, var(--primary) 0%, var(--accent-yellow, #eab308) 100%)', 
                       borderRadius: '3px',
                       transition: 'width 0.4s ease-out'
@@ -935,10 +955,10 @@ export default function EvolutionView() {
                 >
                   {/* Master Trophy */}
                   <div style={{
-                    background: unlockedCount === ACHIEVEMENTS.length
+                    background: displayUnlockedCount === ACHIEVEMENTS.length
                       ? 'linear-gradient(135deg, rgba(0, 210, 255, 0.15) 0%, rgba(56, 189, 248, 0.03) 100%)' 
                       : 'var(--bg-app)',
-                    border: unlockedCount === ACHIEVEMENTS.length
+                    border: displayUnlockedCount === ACHIEVEMENTS.length
                       ? '1px solid rgba(0, 210, 255, 0.35)' 
                       : '1px dashed var(--border-medium)',
                     padding: '12px',
@@ -946,7 +966,7 @@ export default function EvolutionView() {
                     display: 'flex',
                     alignItems: 'center',
                     gap: '12px',
-                    opacity: unlockedCount === ACHIEVEMENTS.length ? 1 : 0.6
+                    opacity: displayUnlockedCount === ACHIEVEMENTS.length ? 1 : 0.6
                   }}>
                     <MFIcon name="trophy" size={20} color="#00d2ff" />
                     <div style={{ flex: 1, minWidth: 0 }}>
@@ -960,8 +980,8 @@ export default function EvolutionView() {
                     <AchievementBadge
                       key={a.key}
                       achievement={a}
-                      unlocked={!!unlockedMap[a.key]}
-                      unlockedAt={unlockedMap[a.key]}
+                      unlocked={!!displayUnlockedMap[a.key]}
+                      unlockedAt={displayUnlockedMap[a.key]}
                     />
                   ))}
                 </div>
@@ -1004,6 +1024,84 @@ export default function EvolutionView() {
               >
                 <Zap size={13} style={{ display: 'inline', marginRight: '4px', verticalAlign: 'middle' }} />
                 Planejar Semana
+              </button>
+            </section>
+
+            {/* Card 4: Objetivos Alcançados */}
+            <section ref={goalsRef} className="evo-card" style={{ margin: 0, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', transition: 'all 0.3s ease' }}>
+              <div>
+                <div 
+                  className="evo-card-header" 
+                  style={{ padding: '0 0 12px 0', borderBottom: 'none', cursor: 'pointer' }}
+                  onClick={() => setIsGoalsExpanded(!isGoalsExpanded)}
+                >
+                  <h3 className="evo-card-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <MFIcon name="consistency" size={20} style={{ color: 'var(--primary)' }} /> Objetivos Alcançados
+                  </h3>
+                  <span className="evo-achievements-count" style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-light)' }}>
+                    {completedGoals.length}
+                  </span>
+                </div>
+
+                <div 
+                  style={{ marginBottom: '16px', cursor: 'pointer' }}
+                  onClick={() => setIsGoalsExpanded(!isGoalsExpanded)}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11.5px', marginBottom: '6px' }}>
+                    <span style={{ color: 'var(--text-muted)' }}>Metas Concluídas</span>
+                    <strong style={{ color: 'var(--primary)' }}>
+                      {completedGoals.length} concluída{completedGoals.length !== 1 ? 's' : ''}
+                    </strong>
+                  </div>
+                  <p style={{ fontSize: '12px', color: 'var(--text-light)', margin: 0, lineHeight: '1.4' }}>
+                    Acompanhe sua lista de grandes marcos e sonhos concluídos com sucesso.
+                  </p>
+                </div>
+              </div>
+
+              {/* Lista de Objetivos Expandida Inline */}
+              {isGoalsExpanded && (
+                <div 
+                  className="animate-fade-in" 
+                  style={{ 
+                    marginTop: '12px', 
+                    paddingTop: '16px', 
+                    borderTop: '1px solid var(--border-light)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '12px',
+                    maxHeight: '320px',
+                    overflowY: 'auto',
+                    paddingRight: '4px',
+                    marginBottom: '16px'
+                  }}
+                >
+                  {completedGoals.length === 0 ? (
+                    <div style={{ textAlign: 'center', color: 'var(--text-light)', padding: '24px 0', fontSize: '12.5px' }}>
+                      Nenhum objetivo concluído ainda. Vamos focar nas suas metas!
+                    </div>
+                  ) : (
+                    completedGoals.map(g => (
+                      <div key={g.id} className="evo-completed-goal-row" style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '8px 0', borderBottom: '1px solid var(--border-light)' }}>
+                        <span className="evo-completed-goal-icon" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                           <MFIcon name={g.icon || 'target'} size={18} color={g.color} />
+                        </span>
+                        <span className="evo-completed-goal-title" style={{ flex: 1, fontSize: '13.5px', color: 'var(--text-main)', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>{g.title}</span>
+                        {g.updated_at && (
+                          <span className="evo-completed-goal-date" style={{ fontSize: '11.5px', color: 'var(--text-light)' }}>{formatDate(g.updated_at)}</span>
+                        )}
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
+
+              <button 
+                onClick={() => setIsGoalsExpanded(!isGoalsExpanded)}
+                className="btn-secondary"
+                style={{ width: '100%', padding: '10px', fontSize: '12.5px', fontWeight: '600' }}
+              >
+                {isGoalsExpanded ? 'Recolher Objetivos' : 'Ver Meus Objetivos'}
               </button>
             </section>
 
@@ -1194,56 +1292,6 @@ export default function EvolutionView() {
             </div>
           </details>
 
-          {/* ── Objetivos concluídos Accordion ── */}
-          {completedGoals.length > 0 && (
-            <details
-              className="evo-details-accordion"
-              open={isGoalsExpanded}
-              onToggle={(e) => setIsGoalsExpanded(e.target.open)}
-              style={{
-                backgroundColor: 'var(--bg-card)',
-                border: '1px solid var(--border-light)',
-                borderRadius: 'var(--radius-lg)',
-                boxShadow: 'var(--shadow-sm)',
-                overflow: 'hidden',
-                marginBottom: '24px'
-              }}
-            >
-              <summary style={{
-                padding: '18px 24px',
-                fontSize: '15px',
-                fontWeight: '800',
-                color: 'var(--text-main)',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                backgroundColor: 'var(--bg-card-hover)',
-                userSelect: 'none'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <MFIcon name="consistency" size={20} style={{ color: 'var(--primary)' }} />
-                  <span>Objetivos alcançados</span>
-                </div>
-                <span style={{ fontSize: '12.5px', fontWeight: '600', color: 'var(--text-light)', backgroundColor: 'var(--bg-app)', padding: '2px 8px', borderRadius: '12px', border: '1px solid var(--border-light)' }}>
-                  {completedGoals.length}
-                </span>
-              </summary>
-              <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '12px', borderTop: '1px solid var(--border-light)' }} className="evo-completed-goals-list">
-                {completedGoals.map(g => (
-                  <div key={g.id} className="evo-completed-goal-row" style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '8px 0', borderBottom: '1px solid var(--border-light)' }}>
-                    <span className="evo-completed-goal-icon" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
-                       <MFIcon name={g.icon || 'target'} size={18} color={g.color} />
-                    </span>
-                    <span className="evo-completed-goal-title" style={{ flex: 1, fontSize: '13.5px', color: 'var(--text-main)' }}>{g.title}</span>
-                    {g.updated_at && (
-                      <span className="evo-completed-goal-date" style={{ fontSize: '11.5px', color: 'var(--text-light)' }}>{formatDate(g.updated_at)}</span>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </details>
-          )}
         </>
       )}
 

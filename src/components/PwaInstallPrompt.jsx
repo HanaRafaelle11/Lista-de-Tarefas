@@ -104,24 +104,9 @@ export default function PwaInstallPrompt() {
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
       style={{
-        position: 'fixed',
-        top: '20px',
-        left: '50%',
-        transform: `translateX(calc(-50% + ${offset}px))`,
+        transform: `translateX(${offset}px)`,
         opacity: opacityVal,
-        transition: isSwiping ? 'none' : 'transform 0.3s ease, opacity 0.3s ease',
-        width: '92%',
-        maxWidth: '420px',
-        backgroundColor: 'var(--bg-card)',
-        border: '1px solid var(--primary-light)',
-        borderRadius: 'var(--radius-md)',
-        padding: '16px',
-        boxShadow: 'var(--shadow-lg)',
-        zIndex: 9999,
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '12px',
-        touchAction: 'pan-y'
+        transition: isSwiping ? 'none' : 'transform 0.3s ease, opacity 0.3s ease'
       }}
     >
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>

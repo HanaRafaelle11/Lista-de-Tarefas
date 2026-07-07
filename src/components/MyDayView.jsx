@@ -273,6 +273,18 @@ function EmptyState({ filter, searchQuery, onAdd }) {
     );
   }
 
+  if (filter === 'archived') {
+    return (
+      <div className="tasks-empty-state">
+        <div className="tasks-empty-icon-wrap" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <Archive size={24} style={{ color: 'var(--text-light)' }} />
+        </div>
+        <h3 className="tasks-empty-title">Nenhum item arquivado</h3>
+        <p className="tasks-empty-desc">Arquive tarefas concluídas ou antigas para manter sua lista organizada.</p>
+      </div>
+    );
+  }
+
   if (filter === 'completed') {
     return (
       <div className="tasks-empty-state">
@@ -831,7 +843,12 @@ export default function MyDayView() {
     return tasks.filter(task => {
       if (task.deletedAt) return false;
       const meta = parseTaskMetadata(task.description);
-      if (meta.archived) return false;
+      
+      if (meta.archived) {
+        if (filter !== 'archived') return false;
+      } else {
+        if (filter === 'archived') return false;
+      }
 
       const q = searchQuery.toLowerCase();
       const matchesSearch = task.title.toLowerCase().includes(q) ||
@@ -840,6 +857,7 @@ export default function MyDayView() {
       const matchesStatus =
         filter === 'all' ? true :
         filter === 'active' ? !task.completed :
+        filter === 'archived' ? true :
         task.completed;
 
       const matchesCat = categoryFilter === 'all' || task.category === categoryFilter;
@@ -1058,6 +1076,28 @@ export default function MyDayView() {
             >
               <Trash2 size={12} />
               <span>Lixeira ({deletedTasks?.length || 0})</span>
+            </button>
+            <button
+              onClick={() => setIsArchivedModalOpen(true)}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px',
+                fontSize: '11px',
+                fontWeight: '500',
+                padding: '4px 8px',
+                borderRadius: '12px',
+                backgroundColor: 'rgba(99, 102, 241, 0.08)',
+                color: 'var(--primary)',
+                border: '1px solid rgba(99, 102, 241, 0.15)',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                verticalAlign: 'middle'
+              }}
+              title="Ver itens arquivados"
+            >
+              <Archive size={12} />
+              <span>Arquivados ({(goals || []).filter(g => g.status === 'archived' && !g.deletedAt).length + (tasks || []).filter(t => parseTaskMetadata(t.description).archived === true && !t.deletedAt).length})</span>
             </button>
           </h1>
           <p className="tasks-page-subtitle">
@@ -1313,6 +1353,7 @@ export default function MyDayView() {
               { key: 'all', label: 'Todas', count: total },
               { key: 'active', label: 'Pendentes', count: active },
               { key: 'completed', label: 'Concluídas', count: completed },
+              { key: 'archived', label: 'Arquivados', count: (goals || []).filter(g => g.status === 'archived' && !g.deletedAt).length + (tasks || []).filter(t => parseTaskMetadata(t.description).archived === true && !t.deletedAt).length }
             ].map(({ key, label, count }) => (
               <button
                 key={key}

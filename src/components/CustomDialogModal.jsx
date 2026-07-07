@@ -35,28 +35,28 @@ export default function CustomDialogModal({ isOpen, type = 'alert', title, messa
       backdropFilter: 'blur(6px)',
       WebkitBackdropFilter: 'blur(6px)',
       display: 'flex',
-      alignItems: 'flex-end',
+      alignItems: 'center',
       justifyContent: 'center',
       zIndex: 13000,
+      padding: '20px'
     }}>
       <style>{`
-        @keyframes customBottomSheetSlideUp {
-          from { transform: translateY(100%); }
-          to { transform: translateY(0); }
+        @keyframes customModalFadeScale {
+          from { transform: scale(0.95); opacity: 0; }
+          to { transform: scale(1); opacity: 1; }
         }
       `}</style>
       <div style={{
         backgroundColor: 'var(--bg-card)',
-        borderTop: '1px solid var(--border-light)',
-        borderTopLeftRadius: '24px',
-        borderTopRightRadius: '24px',
-        padding: '24px 24px 36px 24px',
+        border: '1px solid var(--border-medium)',
+        borderRadius: 'var(--radius-lg, 16px)',
+        padding: '24px',
         maxWidth: '500px',
         width: '100%',
-        boxShadow: '0 -8px 32px rgba(0, 0, 0, 0.25)',
+        boxShadow: 'var(--shadow-lg, 0 10px 25px -5px rgba(0,0,0,0.3))',
         position: 'relative',
-        animation: 'customBottomSheetSlideUp 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards',
-        maxHeight: '80vh',
+        animation: 'customModalFadeScale 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+        maxHeight: '85vh',
         overflowY: 'auto',
         display: 'flex',
         flexDirection: 'column',
