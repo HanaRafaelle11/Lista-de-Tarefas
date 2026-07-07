@@ -55,13 +55,27 @@ class GlobalErrorBoundary extends React.Component {
           await registration.unregister();
         }
       }
-      localStorage.clear();
+      // Remove apenas chaves do flowday, mas mantém supabase.auth.token
+      if (typeof window !== 'undefined') {
+        const keysToRemove = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && !key.startsWith('sb-') && !key.includes('supabase')) {
+            keysToRemove.push(key);
+          }
+        }
+        keysToRemove.forEach(key => localStorage.removeItem(key));
+      }
       sessionStorage.clear();
     } catch (e) {
       console.warn('Erro ao restaurar cache local:', e);
     } finally {
       window.location.href = '/';
     }
+  };
+
+  handleRetry = () => {
+    this.setState({ hasError: false, error: null });
   };
 
   render() {
@@ -92,26 +106,47 @@ class GlobalErrorBoundary extends React.Component {
               MyFlowDay
             </h2>
             <p style={{ fontSize: '14.5px', color: '#94a3b8', lineHeight: '1.6', margin: '0 0 24px' }}>
-              O sistema foi atualizado para uma versão mais recente ou identificou uma oscilação temporária de cache no seu navegador.
+              Ocorreu um erro temporário ao carregar esta seção. Seus dados estão salvos e seguros no servidor.
             </p>
-            <button 
-              onClick={this.handleReset}
-              style={{
-                width: '100%',
-                padding: '14px 24px',
-                backgroundColor: '#3b82f6',
-                color: '#ffffff',
-                border: 'none',
-                borderRadius: '10px',
-                fontWeight: '600',
-                fontSize: '15px',
-                cursor: 'pointer',
-                boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)',
-                transition: 'transform 0.1s ease'
-              }}
-            >
-              Atualizar e Carregar Aplicativo
-            </button>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <button 
+                onClick={this.handleRetry}
+                style={{
+                  width: '100%',
+                  padding: '14px 24px',
+                  backgroundColor: '#3b82f6',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '10px',
+                  fontWeight: '700',
+                  fontSize: '15px',
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)',
+                  transition: 'transform 0.1s ease'
+                }}
+              >
+                Tentar novamente
+              </button>
+              <button 
+                onClick={this.handleReset}
+                style={{
+                  width: '100%',
+                  padding: '12px 24px',
+                  backgroundColor: 'transparent',
+                  color: '#94a3b8',
+                  border: '1px solid #334155',
+                  borderRadius: '10px',
+                  fontWeight: '600',
+                  fontSize: '14px',
+                  cursor: 'pointer',
+                  transition: 'background-color 0.2s'
+                }}
+                onMouseEnter={e => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.02)'}
+                onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+              >
+                Limpar Cache e Recarregar
+              </button>
+            </div>
           </div>
         </div>
       );

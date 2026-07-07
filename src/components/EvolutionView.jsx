@@ -1,5 +1,5 @@
 import React, { useMemo, useState, lazy, Suspense } from 'react';
-import { CheckCircle, Clock, AlertTriangle, BarChart3, PieChart, Target, Star, Award, ShieldAlert, Zap, Calendar, X, Brain } from 'lucide-react';
+import { CheckCircle, Clock, AlertTriangle, BarChart3, PieChart, Target, Star, Award, ShieldAlert, Zap, Calendar, X, Brain, RefreshCw } from 'lucide-react';
 import { ACHIEVEMENTS, calcStats, calcStreak } from '../hooks/useAchievements';
 import { useAppContext } from '../contexts/AppContext';
 import CategoryIcon from './CategoryIcon';
@@ -392,8 +392,18 @@ export default function EvolutionView() {
     handleToggleComplete,
     currentUser,
     setActiveTab,
-    consistencyScore
+    consistencyScore,
+    isAccessChecked
   } = useAppContext();
+
+  if (!isAccessChecked || goalTasks === null) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '300px', color: 'var(--text-light)', gap: '12px' }}>
+        <RefreshCw style={{ animation: 'spin 2s linear infinite' }} size={32} />
+        <p style={{ fontSize: '14.5px', color: 'var(--text-muted)' }}>Carregando dados de evolução...</p>
+      </div>
+    );
+  }
 
   const [isWeeklyPlannerOpen, setIsWeeklyPlannerOpen] = useState(false);
   const [showGuide, setShowGuide] = useState(() => localStorage.getItem('flowday_hide_evo_guide') !== 'true');
@@ -588,7 +598,7 @@ export default function EvolutionView() {
     today.setHours(0, 0, 0, 0);
 
     return activeGoals.map(goal => {
-      const linkedTaskIds = goalTasks.filter(gt => gt.goal_id === goal.id).map(gt => gt.task_id);
+      const linkedTaskIds = (goalTasks || []).filter(gt => gt.goal_id === goal.id).map(gt => gt.task_id);
       const linked = tasks.filter(t => linkedTaskIds.includes(t.id));
       const done = linked.filter(t => t.completed);
       const progressPct = linked.length > 0 ? (done.length / linked.length) * 100 : 0;

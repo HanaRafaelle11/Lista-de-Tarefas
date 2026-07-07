@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect, useRef, lazy, Suspense } from 'react';
 import { createPortal } from 'react-dom';
-import { 
-  Plus, Search, X, Calendar, ChevronDown, ChevronRight, 
+import {
+  Plus, Search, X, Calendar, ChevronDown, ChevronRight,
   List, Columns, Grid, Trash2, Edit2, AlertCircle, ArrowLeft, ArrowRight,
   Sparkles, Award, Sprout, Pin, Zap, CheckCircle, Moon, Sun, Tag, AlertTriangle, RotateCcw, Copy, Check, Download,
   Archive, Target, MoreVertical, Trash
@@ -17,17 +17,17 @@ import { TASK_TEMPLATES } from '../data/taskTemplates';
 import HabitsWidget from './HabitsWidget';
 import GoalModal from './GoalModal';
 const WeeklyPlannerModal = lazy(() => import('./WeeklyPlannerModal'));
-import { 
-  useAppContext, 
-  parseTaskMetadata, 
-  formatDescriptionWithoutMetadata, 
-  buildDescriptionWithMetadata 
+import {
+  useAppContext,
+  parseTaskMetadata,
+  formatDescriptionWithoutMetadata,
+  buildDescriptionWithMetadata
 } from '../contexts/AppContext';
-import { 
-  combineDateAndTime, 
-  extractDateAndTimeParts, 
-  formatTaskDateDisplay, 
-  formatTaskTimeDisplay 
+import {
+  combineDateAndTime,
+  extractDateAndTimeParts,
+  formatTaskDateDisplay,
+  formatTaskTimeDisplay
 } from '../utils/dateUtils';
 
 // Importar SVGs personalizados
@@ -61,7 +61,7 @@ const isTaskOnDate = (task, dateStr) => {
   if (!task.dueDate) return false;
   const taskDateOnly = extractDateAndTimeParts(task.dueDate).datePart;
   if (taskDateOnly === dateStr) return true;
-  
+
   // Recorrência diária espelhada em todos os dias subsequentes se não concluída
   if (taskDateOnly < dateStr && !task.completed) {
     const meta = parseTaskMetadata(task.description);
@@ -163,7 +163,7 @@ const sortByTime = (tasksList) =>
 
     if (dateA && dateB) {
       if (dateA !== dateB) return dateA.localeCompare(dateB);
-      
+
       const metaA = parseTaskMetadata(a.description);
       const metaB = parseTaskMetadata(b.description);
       const timeA = metaA.due_time || '';
@@ -203,7 +203,7 @@ function TaskSection({ title, tasks, icon, accent, onEdit, onDelete, onToggle, d
     const taskDateStr = task.dueDate ? (task.dueDate.includes('T') ? task.dueDate : `${task.dueDate}T23:59:59`) : null;
     const taskDateObj = taskDateStr ? new Date(taskDateStr) : null;
     const overdue = taskDateObj && taskDateObj < now;
-    
+
     const todayStr = new Date().toISOString().split('T')[0];
     const isToday = task.dueDate && task.dueDate.split('T')[0] === todayStr;
     const isCritical = overdue || (task.priority === 'Alta' && isToday);
@@ -340,7 +340,7 @@ export default function MyDayView() {
     handleAddCategory,
     handleDeleteCategory,
     habitsManager,
-    logEvent = () => {},
+    logEvent = () => { },
     goals = [],
     goalTasks = [],
     handleUnlinkTask,
@@ -425,15 +425,15 @@ export default function MyDayView() {
 
     const val = cat.emoji || cat.iconName || cat.id || '';
     const key = val.toLowerCase();
-    
+
     if (emojiMap[key]) return emojiMap[key];
-    
+
     const name = (cat.name || '').toLowerCase();
     if (name.includes('trabalho') || name.includes('work')) return '💼';
     if (name.includes('pessoal') || name.includes('personal')) return '🏠';
     if (name.includes('estudo') || name.includes('study') || name.includes('academic')) return '📚';
     if (name.includes('lazer') || name.includes('leisure') || name.includes('free time')) return '🧘';
-    
+
     if (val.length <= 2 && !/^[a-zA-Z0-9]$/.test(val)) return val;
 
     return '📁';
@@ -575,18 +575,18 @@ export default function MyDayView() {
   const openEditTaskModal = (task) => {
     setEditingTask(task);
     setTitle(task.title);
-    
+
     const meta = parseTaskMetadata(task.description);
     const cleanDesc = formatDescriptionWithoutMetadata(task.description);
     const { datePart, timePart } = extractDateAndTimeParts(task.dueDate);
-    
+
     setDescription(cleanDesc);
     setCategory(task.category);
     setPriority(task.priority);
     setDueDate(datePart || '');
     setDueTime(timePart || meta.due_time || '');
     setRecurrence(meta.recurrence || 'nenhuma');
-    
+
     setIsModalOpen(true);
   };
 
@@ -656,12 +656,12 @@ export default function MyDayView() {
   // Lógica para Achievement Modal: Verificar "Primeira do Dia"
   const handleToggleCompleteWithAchievement = async (taskId) => {
     const taskToToggle = tasks.find(t => t.id === taskId);
-    
+
     // Só verifica conquista se a tarefa estiver sendo marcada como concluída
     if (taskToToggle && !taskToToggle.completed) {
       const today = todayStr();
       // Filtrar tarefas *já* completadas hoje (excluindo a tarefa atual)
-      const completedTasksTodayBefore = tasks.filter(t => 
+      const completedTasksTodayBefore = tasks.filter(t =>
         t.id !== taskId && t.completed && t.completedAt && t.completedAt.startsWith(today)
       );
 
@@ -789,7 +789,7 @@ export default function MyDayView() {
     for (const t of enabledTasks) {
       const metaDescription = `\n\n--flowday-meta--\n${JSON.stringify({ due_time: '', recurrence: 'nenhuma', template_name: customizingTemplate.title })}`;
       const finalDesc = t.description ? `${t.description}${metaDescription}` : metaDescription;
-      
+
       const catExists = categories.some(cat => cat.id === t.category || cat.name === t.category);
       const categoryId = catExists ? t.category : (categories[0]?.id || 'Trabalho');
 
@@ -843,7 +843,7 @@ export default function MyDayView() {
     return tasks.filter(task => {
       if (task.deletedAt) return false;
       const meta = parseTaskMetadata(task.description);
-      
+
       if (meta.archived) {
         if (filter !== 'archived') return false;
       } else {
@@ -856,9 +856,9 @@ export default function MyDayView() {
 
       const matchesStatus =
         filter === 'all' ? true :
-        filter === 'active' ? !task.completed :
-        filter === 'archived' ? true :
-        task.completed;
+          filter === 'active' ? !task.completed :
+            filter === 'archived' ? true :
+              task.completed;
 
       const matchesCat = categoryFilter === 'all' || task.category === categoryFilter;
 
@@ -907,7 +907,7 @@ export default function MyDayView() {
     if (selectedGoalIdFilter !== 'all') {
       baseGoals = baseGoals.filter(g => g.id === selectedGoalIdFilter);
     }
-    
+
     // Sort goals chronologically by target_date
     return [...baseGoals].sort((a, b) => {
       const dateA = a.target_date || '';
@@ -957,18 +957,18 @@ export default function MyDayView() {
   const handleMoveKanban = (task, nextCol) => {
     const isCompleted = nextCol === 'completed';
     const wasCompleted = task.completed;
-    
+
     const meta = parseTaskMetadata(task.description);
     const updatedMeta = { ...meta, kanban_status: nextCol };
     const nextDesc = `${formatDescriptionWithoutMetadata(task.description)}\n\n--flowday-meta--\n${JSON.stringify(updatedMeta)}`;
-    
+
     // We update description and completed status in a single pass
     const updates = { description: nextDesc };
     if (isCompleted !== wasCompleted) {
       updates.completed = isCompleted;
       updates.completedAt = isCompleted ? new Date().toISOString() : null;
     }
-    
+
     onUpdateTask(task.id, updates);
   };
 
@@ -1104,8 +1104,8 @@ export default function MyDayView() {
             {active > 0
               ? `${active} pendente${active > 1 ? 's' : ''} · ${rate}% concluído`
               : rate === 100 && total > 0
-              ? 'Tudo concluído!'
-              : 'Nenhuma tarefa ainda'}
+                ? 'Tudo concluído!'
+                : 'Nenhuma tarefa ainda'}
           </p>
         </div>
 
@@ -1132,7 +1132,7 @@ export default function MyDayView() {
 
       {/* Aviso de Tarefas Ocultas (Plano Free) */}
       {!isPro && hiddenTasksCount > 0 && (
-        <div 
+        <div
           className="animate-fade-in"
           style={{
             display: 'flex',
@@ -1176,8 +1176,8 @@ export default function MyDayView() {
 
       {/* Caixa de Entrada Rápida (Inbox Bloco 4) */}
       <form onSubmit={handleQuickAddSubmit} className="quick-inbox-container">
-        <input 
-          type="text" 
+        <input
+          type="text"
           placeholder="Digite uma tarefa e pressione Enter..."
           value={quickTitle}
           onChange={e => setQuickTitle(e.target.value)}
@@ -1210,29 +1210,29 @@ export default function MyDayView() {
           )}
         </div>
 
-        <div 
+        <div
           className="no-scrollbar"
-          style={{ 
-            display: 'flex', 
-            gap: '8px', 
-            overflowX: 'auto', 
-            width: '100%', 
+          style={{
+            display: 'flex',
+            gap: '8px',
+            overflowX: 'auto',
+            width: '100%',
             whiteSpace: 'nowrap',
             paddingBottom: '4px',
             flexShrink: 0
           }}
         >
-          <button 
-            onClick={() => setShowCategoryManager(!showCategoryManager)} 
-            className="tasks-add-btn" 
+          <button
+            onClick={() => setShowCategoryManager(!showCategoryManager)}
+            className="tasks-add-btn"
             style={{ backgroundColor: 'var(--bg-card)', color: 'var(--text-main)', border: '1px solid var(--border-medium)', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
           >
             <Tag size={14} />
             <span>Categorias</span>
           </button>
-          <button 
-            onClick={() => setIsTemplatesOpen(true)} 
-            className="tasks-add-btn" 
+          <button
+            onClick={() => setIsTemplatesOpen(true)}
+            className="tasks-add-btn"
             style={{ backgroundColor: 'var(--bg-card)', color: 'var(--text-main)', border: '1px solid var(--border-medium)', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
           >
             <Sparkles size={14} style={{ color: 'var(--primary)' }} />
@@ -1242,9 +1242,9 @@ export default function MyDayView() {
             <Calendar size={16} />
             <span className="hide-on-mobile">Planejar Semana</span>
           </button>
-          <button 
-            onClick={openNewGoalModal} 
-            className="tasks-add-btn" 
+          <button
+            onClick={openNewGoalModal}
+            className="tasks-add-btn"
             style={{ backgroundColor: 'var(--bg-card)', color: 'var(--text-main)', border: '1px solid var(--border-medium)', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
           >
             <Target size={14} style={{ color: 'var(--primary)' }} />
@@ -1261,7 +1261,7 @@ export default function MyDayView() {
       {showCategoryManager && (
         <div className="category-manager-panel animate-fade-in">
           <h4 className="category-manager-title">Gerenciar Categorias Customizadas</h4>
-          
+
           <div className="categories-list">
             {categories.map(cat => {
               // Apenas categorias customizadas possuem id que não é id padrão
@@ -1278,8 +1278,8 @@ export default function MyDayView() {
                     <span className="category-item-color-dot" style={{ backgroundColor: cat.color }} />
                   </div>
                   {isCustom ? (
-                    <button 
-                      onClick={() => handleDeleteCategory(cat.id)} 
+                    <button
+                      onClick={() => handleDeleteCategory(cat.id)}
                       style={{ color: '#ef4444', fontSize: '12px', padding: '4px 8px', borderRadius: '4px', background: 'rgba(239, 68, 68, 0.08)' }}
                     >
                       Excluir
@@ -1293,9 +1293,9 @@ export default function MyDayView() {
           </div>
 
           <form onSubmit={handleCreateCategory} className="category-form-inline">
-            <input 
-              type="text" 
-              placeholder="Nome da Categoria" 
+            <input
+              type="text"
+              placeholder="Nome da Categoria"
               value={newCatName}
               onChange={e => setNewCatName(e.target.value)}
               className="form-input category-input-text"
@@ -1472,7 +1472,7 @@ export default function MyDayView() {
                       Filtrado por objetivo: <strong style={{ color: activeGoal.color || 'var(--primary)' }}>{activeGoal.title}</strong>
                     </span>
                   </div>
-                  <button 
+                  <button
                     onClick={() => setSelectedGoalIdFilter('all')}
                     style={{
                       border: 'none',
@@ -1503,7 +1503,7 @@ export default function MyDayView() {
                   {activeGoals.length}
                 </span>
               </h3>
-              
+
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 {activeGoals.map(goal => {
                   const linkedTasks = tasks.filter(t => {
@@ -1517,13 +1517,13 @@ export default function MyDayView() {
                   const isMatchingCategory = categoryFilter === 'all' || linkedTasks.some(t => t.category === categoryFilter);
 
                   return (
-                    <div 
-                      key={goal.id} 
+                    <div
+                      key={goal.id}
                       className="myday-goal-accordion-card"
                       style={{
                         backgroundColor: 'var(--bg-card)',
-                        border: isMatchingCategory 
-                          ? `2px solid ${goal.color || 'var(--primary)'}` 
+                        border: isMatchingCategory
+                          ? `2px solid ${goal.color || 'var(--primary)'}`
                           : `1px solid var(--border-light)`,
                         borderRadius: 'var(--radius-md)',
                         overflow: 'hidden',
@@ -1533,7 +1533,7 @@ export default function MyDayView() {
                       }}
                     >
                       {/* Accordion Header */}
-                      <div 
+                      <div
                         style={{
                           display: 'flex',
                           alignItems: 'center',
@@ -1566,7 +1566,7 @@ export default function MyDayView() {
                         </div>
 
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0, position: 'relative' }} onClick={e => e.stopPropagation()}>
-                          
+
                           {/* Goal Kebab Menu Trigger */}
                           <button
                             onClick={() => setActiveGoalKebabId(activeGoalKebabId === goal.id ? null : goal.id)}
@@ -1580,11 +1580,11 @@ export default function MyDayView() {
                           {/* Kebab Dropdown Panel */}
                           {activeGoalKebabId === goal.id && (
                             <>
-                              <div 
-                                style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 999 }} 
+                              <div
+                                style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 999 }}
                                 onClick={() => setActiveGoalKebabId(null)}
                               />
-                              <div 
+                              <div
                                 style={{
                                   position: 'absolute',
                                   top: '32px',
@@ -1942,7 +1942,7 @@ export default function MyDayView() {
                           </span>
                         )}
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '6px', alignItems: 'center' }}>
-                          <button 
+                          <button
                             onClick={() => handleMoveKanban(task, 'in_progress')}
                             className="todo-item-action-btn edit-btn"
                             style={{ display: 'flex', alignItems: 'center', gap: '2px', fontSize: '11px', padding: '4px 8px' }}
@@ -2067,7 +2067,7 @@ export default function MyDayView() {
                       );
                     })
                   ) : kanbanTasks.completed.length > 0 ? (
-                    <div 
+                    <div
                       onClick={() => setShowCompletedKanban(true)}
                       style={{
                         padding: '16px',
@@ -2150,9 +2150,9 @@ export default function MyDayView() {
             {calendarCells.map((cell, idx) => {
               const dayTasks = tasks.filter(t => isTaskOnDate(t, cell.dateStr));
               const habitsDone = habitsManager.habitLogs.filter(l => l.completed_date === cell.dateStr);
-              
+
               return (
-                <div 
+                <div
                   key={idx}
                   onClick={() => {
                     setSelectedCalendarDay(cell.dateStr);
@@ -2188,7 +2188,7 @@ export default function MyDayView() {
                 <X size={18} />
               </button>
             </div>
-            
+
             <h4 style={{ fontSize: '13px', fontWeight: '700', textTransform: 'uppercase', color: 'var(--text-light)', marginBottom: '8px', borderBottom: '1px solid var(--border-light)', paddingBottom: '4px' }}>Tarefas do Dia</h4>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px', maxHeight: '180px', overflowY: 'auto' }}>
               {tasks.filter(t => isTaskOnDate(t, selectedCalendarDay)).length === 0 ? (
@@ -2196,14 +2196,14 @@ export default function MyDayView() {
               ) : (
                 tasks.filter(t => isTaskOnDate(t, selectedCalendarDay)).map(task => (
                   <div key={task.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px', border: '1px solid var(--border-light)', borderRadius: 'var(--radius-sm)', backgroundColor: 'var(--bg-app)', opacity: task.completed ? 0.6 : 1 }}>
-                    <input 
-                      type="checkbox" 
-                      checked={task.completed} 
+                    <input
+                      type="checkbox"
+                      checked={task.completed}
                       onChange={() => handleToggleCompleteWithAchievement(task.id)} // Usar a função com lógica de conquista
                       style={{ cursor: 'pointer' }}
                     />
                     <span style={{ fontSize: '13px', textDecoration: task.completed ? 'line-through' : 'none', color: task.completed ? 'var(--text-muted)' : 'var(--text-main)', flex: 1 }}>{task.title}</span>
-                    
+
                     {/* Botão Adicionar ao Google Calendar */}
                     {task.dueDate && (
                       <button
@@ -2217,9 +2217,9 @@ export default function MyDayView() {
                       </button>
                     )}
 
-                    <button 
-                      onClick={() => onDeleteTask(task.id)} 
-                      style={{ padding: '4px', color: 'var(--text-light)', background: 'transparent', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center' }} 
+                    <button
+                      onClick={() => onDeleteTask(task.id)}
+                      style={{ padding: '4px', color: 'var(--text-light)', background: 'transparent', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
                       title="Excluir tarefa"
                     >
                       <Trash2 size={14} />
@@ -2238,7 +2238,7 @@ export default function MyDayView() {
                   const isCompleted = habitsManager.habitLogs.some(l => l.habit_id === habit.id && l.completed_date === selectedCalendarDay);
                   return (
                     <div key={habit.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px', border: '1px solid var(--border-light)', borderRadius: 'var(--radius-sm)', backgroundColor: 'var(--bg-app)' }}>
-                      <button 
+                      <button
                         onClick={() => habitsManager.toggleHabitLog(habit.id, selectedCalendarDay)}
                         style={{
                           backgroundColor: isCompleted ? 'var(--primary)' : 'transparent',
@@ -2265,7 +2265,7 @@ export default function MyDayView() {
               )}
             </div>
 
-            <button 
+            <button
               onClick={() => {
                 setSelectedCalendarDay(null);
                 openNewTaskModal();
@@ -2432,7 +2432,7 @@ export default function MyDayView() {
 
       {/* Modal de Planejamento Semanal */}
       <Suspense fallback={null}>
-        <WeeklyPlannerModal 
+        <WeeklyPlannerModal
           isOpen={isPlannerOpen}
           onClose={() => setIsPlannerOpen(false)}
           tasks={tasks}
@@ -2452,10 +2452,10 @@ export default function MyDayView() {
       {/* Modal de Escolha de Sincronização do Calendário */}
       {isSyncModalOpen && (
         <div className="modal-overlay" onClick={() => setIsSyncModalOpen(false)} style={{ zIndex: 11000 }}>
-          <div 
-            className="modal-content" 
-            role="dialog" 
-            aria-modal="true" 
+          <div
+            className="modal-content"
+            role="dialog"
+            aria-modal="true"
             onClick={e => e.stopPropagation()}
             style={{ maxWidth: '420px', width: '90%', padding: '24px', textAlign: 'center' }}
           >
@@ -2463,8 +2463,8 @@ export default function MyDayView() {
               <h3 style={{ fontSize: '16px', fontWeight: '700', color: 'var(--text-main)', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <Calendar size={18} style={{ color: 'var(--primary)' }} /> Sincronizar Calendário
               </h3>
-              <button 
-                onClick={() => setIsSyncModalOpen(false)} 
+              <button
+                onClick={() => setIsSyncModalOpen(false)}
                 className="todo-modal-close-btn"
                 style={{ background: 'none', border: 'none', color: 'var(--text-light)', cursor: 'pointer', padding: '4px' }}
               >
@@ -2530,11 +2530,11 @@ export default function MyDayView() {
       )}
 
       {/* Drawer de Templates de Tarefas */}
-      <div 
+      <div
         className={`templates-drawer-overlay ${isTemplatesOpen ? 'open' : ''}`}
         onClick={() => setIsTemplatesOpen(false)}
       >
-        <div 
+        <div
           className="templates-drawer"
           onClick={e => e.stopPropagation()}
         >
@@ -2543,7 +2543,7 @@ export default function MyDayView() {
               <Sparkles size={18} style={{ color: 'var(--primary)' }} />
               Modelos de Tarefa
             </h3>
-            <button 
+            <button
               className="templates-drawer-close"
               onClick={() => setIsTemplatesOpen(false)}
               aria-label="Fechar modelos"
@@ -2551,7 +2551,7 @@ export default function MyDayView() {
               <X size={18} />
             </button>
           </div>
-          
+
           <div className="templates-drawer-body">
             {customizingTemplate ? (
               <div className="template-customizer-container">
@@ -2645,7 +2645,7 @@ export default function MyDayView() {
                 <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '20px', lineHeight: '1.5' }}>
                   Selecione um modelo baseado na sua persona para injetar tarefas sugeridas automaticamente na sua lista.
                 </p>
-                
+
                 {TASK_TEMPLATES.map(template => {
                   const isAlreadyActive = activeTemplates.has(template.title);
                   const templateIconMap = {
@@ -2657,8 +2657,8 @@ export default function MyDayView() {
                   const iconName = templateIconMap[template.category] || 'briefcase';
 
                   return (
-                    <div 
-                      key={template.id} 
+                    <div
+                      key={template.id}
                       className={`template-persona-card ${isAlreadyActive ? 'template-disabled-card' : ''}`}
                     >
                       <h4 className="template-persona-title">
@@ -2666,7 +2666,7 @@ export default function MyDayView() {
                         {template.title}
                       </h4>
                       <p className="template-persona-desc">{template.description}</p>
-                      
+
                       {isAlreadyActive && (
                         <div style={{ color: '#ef4444', fontSize: '11px', fontWeight: '700', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '4px' }}>
                           <AlertTriangle size={12} /> Modelo já ativo (Tarefas importadas)
@@ -2681,7 +2681,7 @@ export default function MyDayView() {
                           </div>
                         ))}
                       </div>
-                      
+
                       <button
                         className="template-load-btn"
                         onClick={() => handleLoadTemplate(template)}
@@ -2698,7 +2698,7 @@ export default function MyDayView() {
           </div>
         </div>
       </div>
-      
+
       {/* Modal Global de Confirmação de Deleção (Lixeira / Soft Delete) */}
       {taskToDelete && createPortal(
         <div style={{
@@ -2718,14 +2718,14 @@ export default function MyDayView() {
               Tem certeza que deseja mover a tarefa <strong>"{taskToDelete.title}"</strong> para a lixeira? Ela poderá ser restaurada a qualquer momento a partir da aba Lixeira.
             </p>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
-              <button 
+              <button
                 onClick={() => setTaskToDelete(null)}
                 className="btn-secondary"
                 style={{ padding: '8px 16px', borderRadius: '6px', cursor: 'pointer', border: '1px solid var(--border-medium)', background: 'transparent', color: 'var(--text-main)' }}
               >
                 Cancelar
               </button>
-              <button 
+              <button
                 ref={el => { if (el) el.focus({ preventScroll: true }); }}
                 onClick={() => {
                   onDeleteTask(taskToDelete.id);
@@ -2775,14 +2775,14 @@ export default function MyDayView() {
               Este objetivo possui tarefas pendentes. Deseja marcar todas as tarefas vinculadas a ele como concluídas também?
             </p>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', flexWrap: 'wrap' }}>
-              <button 
+              <button
                 onClick={() => setPendingCompleteGoalId(null)}
                 className="btn-secondary"
                 style={{ padding: '8px 16px', borderRadius: '6px', cursor: 'pointer', border: '1px solid var(--border-medium)', background: 'transparent', color: 'var(--text-main)' }}
               >
                 Cancelar
               </button>
-              <button 
+              <button
                 onClick={() => {
                   onUpdateGoal(pendingCompleteGoalId, { status: 'completed' });
                   setPendingCompleteGoalId(null);
@@ -2792,7 +2792,7 @@ export default function MyDayView() {
               >
                 Apenas Objetivo
               </button>
-              <button 
+              <button
                 onClick={confirmCompleteGoalWithTasks}
                 className="btn-primary"
                 style={{ backgroundColor: 'var(--primary)', color: 'white', padding: '8px 16px', borderRadius: '6px', cursor: 'pointer', border: 'none', fontWeight: '600' }}
@@ -2806,8 +2806,8 @@ export default function MyDayView() {
 
       {/* Modal de Itens Arquivados */}
       {isArchivedModalOpen && (
-        <div 
-          className="modal-overlay animate-fade-in" 
+        <div
+          className="modal-overlay animate-fade-in"
           style={{
             position: 'fixed',
             top: 0,
@@ -2823,8 +2823,8 @@ export default function MyDayView() {
             padding: '16px'
           }}
         >
-          <div 
-            className="modal-content animate-scale-up" 
+          <div
+            className="modal-content animate-scale-up"
             style={{
               backgroundColor: 'var(--bg-card)',
               border: '1px solid var(--border-medium)',
@@ -2844,7 +2844,7 @@ export default function MyDayView() {
                 <Archive size={20} style={{ color: 'var(--primary)' }} />
                 <span>Itens Arquivados</span>
               </h3>
-              <button 
+              <button
                 onClick={() => setIsArchivedModalOpen(false)}
                 style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
               >
@@ -2899,8 +2899,8 @@ export default function MyDayView() {
                   </div>
                 ) : (
                   (goals || []).filter(g => g.status === 'archived' && !g.deletedAt).map(goal => (
-                    <div 
-                      key={goal.id} 
+                    <div
+                      key={goal.id}
                       style={{
                         display: 'flex',
                         alignItems: 'center',
@@ -2968,8 +2968,8 @@ export default function MyDayView() {
                     const meta = parseTaskMetadata(task.description);
                     const cleanDesc = formatDescriptionWithoutMetadata(task.description);
                     return (
-                      <div 
-                        key={task.id} 
+                      <div
+                        key={task.id}
                         style={{
                           display: 'flex',
                           alignItems: 'center',

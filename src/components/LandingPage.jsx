@@ -31,6 +31,12 @@ export default function LandingPage({ onEnterApp }) {
   const [scrolled, setScrolled] = useState(false);
   const [openFaq, setOpenFaq] = useState(null);
   const [activeShowcaseTab, setActiveShowcaseTab] = useState('home');
+  const [estimatedTimeGained, setEstimatedTimeGained] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return parseInt(localStorage.getItem('flowday_estimated_time_gained') || '3');
+    }
+    return 3;
+  });
   const logo = getLogo('dark', 'legal');
 
   useEffect(() => {
@@ -155,7 +161,53 @@ export default function LandingPage({ onEnterApp }) {
             O MyFlowDay conecta objetivos, tarefas, hábitos, foco, inteligência artificial e um coach personalizado para transformar pequenos passos em progresso consistente.
           </p>
 
-          <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', justifyCenter: 'center', marginBottom: '80px' }}>
+          <div 
+            style={{
+              background: 'rgba(255, 255, 255, 0.02)',
+              border: '1px solid rgba(255, 255, 255, 0.05)',
+              borderRadius: '16px',
+              padding: '20px 24px',
+              maxWidth: '480px',
+              width: '100%',
+              marginBottom: '28px',
+              textAlign: 'left',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '12px'
+            }}
+          >
+            <label style={{ fontSize: '13.5px', color: '#E2E8F0', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span>⏱️</span> Quanto tempo você acredita que pode ganhar usando o MyFlowDay?
+            </label>
+            <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+              <input 
+                type="range"
+                min="1"
+                max="15"
+                value={estimatedTimeGained}
+                onChange={(e) => {
+                  const val = parseInt(e.target.value);
+                  setEstimatedTimeGained(val);
+                  localStorage.setItem('flowday_estimated_time_gained', val.toString());
+                }}
+                style={{
+                  flex: 1,
+                  accentColor: 'var(--primary, #6366F1)',
+                  cursor: 'pointer',
+                  height: '6px',
+                  borderRadius: '3px'
+                }}
+              />
+              <span style={{ fontSize: '15px', fontWeight: '800', color: '#818CF8', minWidth: '70px', textAlign: 'right' }}>
+                {estimatedTimeGained} {estimatedTimeGained === 1 ? 'hora' : 'horas'}/sem
+              </span>
+            </div>
+            <p style={{ color: '#94A3B8', fontSize: '12.5px', margin: 0, lineHeight: '1.4' }}>
+              ✨ Isso equivale a <strong>{estimatedTimeGained * 52} horas por ano</strong> recuperadas para focar no que importa! Nós ajudamos você a focar através do Coach IA e rotinas sem distrações.
+            </p>
+          </div>
+
+          <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', justifyContent: 'center', marginBottom: '80px' }}>
             <button 
               onClick={onEnterApp} 
               className="btn-purple-glow"
@@ -349,13 +401,13 @@ export default function LandingPage({ onEnterApp }) {
       <section
         id="como-funciona"
         style={{
-          padding: '100px 24px',
+          padding: '60px 24px',
           background: '#07090C',
           position: 'relative'
         }}
       >
         <Container>
-          <div style={{ textAlign: 'center', marginBottom: '80px' }}>
+          <div style={{ textAlign: 'center', marginBottom: '40px' }}>
             <span style={{ fontSize: '12px', fontWeight: 700, color: '#10B981', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Simplicidade Acionável</span>
             <h2 style={{ fontSize: 'clamp(28px, 4vw, 42px)', fontWeight: 800, color: '#FFFFFF', marginTop: '10px', letterSpacing: '-0.02em' }}>
               Como o MyFlowDay conduz sua evolução
@@ -424,14 +476,14 @@ export default function LandingPage({ onEnterApp }) {
       <section
         id="problema"
         style={{
-          padding: '100px 24px',
+          padding: '60px 24px',
           background: '#090D12',
           borderTop: '1px solid rgba(255, 255, 255, 0.03)',
           position: 'relative'
         }}
       >
         <Container>
-          <div style={{ textAlign: 'center', marginBottom: '60px' }}>
+          <div style={{ textAlign: 'center', marginBottom: '40px' }}>
             <span style={{ fontSize: '12px', fontWeight: 700, color: '#C084FC', textTransform: 'uppercase', letterSpacing: '0.05em' }}>O Grande Problema</span>
             <h2 style={{ fontSize: 'clamp(28px, 4vw, 42px)', fontWeight: 800, color: '#FFFFFF', marginTop: '10px', letterSpacing: '-0.02em' }}>
               A maioria dos aplicativos só organiza tarefas.
@@ -492,12 +544,12 @@ export default function LandingPage({ onEnterApp }) {
       <section
         id="conheca"
         style={{
-          padding: '100px 24px',
+          padding: '60px 24px',
           background: '#07090C',
         }}
       >
         <Container>
-          <div style={{ textAlign: 'center', marginBottom: '50px' }}>
+          <div style={{ textAlign: 'center', marginBottom: '35px' }}>
             <span style={{ fontSize: '12px', fontWeight: 700, color: '#C084FC', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Tour Visual</span>
             <h2 style={{ fontSize: 'clamp(28px, 4vw, 42px)', fontWeight: 800, color: '#FFFFFF', marginTop: '10px', letterSpacing: '-0.02em' }}>
               Explore a Interface do Flow
@@ -666,54 +718,19 @@ export default function LandingPage({ onEnterApp }) {
 
 
 
-      {/* ── 7. O DIFERENCIAL (ANIMAÇÃO CASCATA) ────────────────────────── */}
-      <section
-        style={{
-          padding: '100px 24px',
-          background: '#07090C',
-          borderTop: '1px solid rgba(255, 255, 255, 0.03)',
-        }}
-      >
-        <Container>
-          <div style={{ textAlign: 'center', marginBottom: '60px' }}>
-            <span style={{ fontSize: '12px', fontWeight: 700, color: '#C084FC', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Sem Esforço Duplicado</span>
-            <h2 style={{ fontSize: 'clamp(28px, 4vw, 42px)', fontWeight: 800, color: '#FFFFFF', marginTop: '10px', letterSpacing: '-0.02em' }}>
-              Não é só IA. É inteligência contínua.
-            </h2>
-            <p style={{ color: '#94A3B8', fontSize: '16px', maxWidth: '600px', margin: '12px auto 0' }}>
-              Veja como o efeito cascata do MyFlowDay conecta uma simples ação diária à sua evolução geral em tempo real.
-            </p>
-          </div>
 
-          <div className="cascade-animation-wrapper">
-            <div className="cascade-step shadow-indigo"><span className="cascade-icon" style={{ background: '#6366F1' }}>✓</span> <b>Concluir tarefa</b></div>
-            <div className="cascade-connector"><ArrowDown size={22} color="#6366F1" /></div>
-            <div className="cascade-step shadow-purple"><span className="cascade-icon" style={{ background: '#8B5CF6' }}>🎯</span> <b>Objetivo avança</b></div>
-            <div className="cascade-connector"><ArrowDown size={22} color="#8B5CF6" /></div>
-            <div className="cascade-step shadow-orange"><span className="cascade-icon" style={{ background: '#F59E0B' }}>🌱</span> <b>Pet ganha XP</b></div>
-            <div className="cascade-connector"><ArrowDown size={22} color="#F59E0B" /></div>
-            <div className="cascade-step shadow-emerald"><span className="cascade-icon" style={{ background: '#10B981' }}>🧠</span> <b>Coach aprende</b></div>
-            <div className="cascade-connector"><ArrowDown size={22} color="#10B981" /></div>
-            <div className="cascade-step shadow-sky"><span className="cascade-icon" style={{ background: '#0EA5E9' }}>📊</span> <b>Insights atualizados</b></div>
-            <div className="cascade-connector"><ArrowDown size={22} color="#0EA5E9" /></div>
-            <div className="cascade-step shadow-cyan"><span className="cascade-icon" style={{ background: '#06B6D4' }}>🏆</span> <b>Conquista progride</b></div>
-            <div className="cascade-connector"><ArrowDown size={22} color="#06B6D4" /></div>
-            <div className="cascade-step shadow-pink"><span className="cascade-icon" style={{ background: '#EC4899' }}>🏠</span> <b>Home muda recomendações</b></div>
-          </div>
-        </Container>
-      </section>
 
       {/* ── 8. COMPARAÇÃO ─────────────────────────────────────────────── */}
       <section
         id="comparativo"
         style={{
-          padding: '100px 24px',
+          padding: '60px 24px',
           background: '#090D12',
           borderTop: '1px solid rgba(255, 255, 255, 0.03)',
         }}
       >
         <Container>
-          <div style={{ textAlign: 'center', marginBottom: '60px' }}>
+          <div style={{ textAlign: 'center', marginBottom: '40px' }}>
             <span style={{ fontSize: '12px', fontWeight: 700, color: '#818CF8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Métricas Honestas</span>
             <h2 style={{ fontSize: 'clamp(28px, 4vw, 42px)', fontWeight: 800, color: '#FFFFFF', marginTop: '10px', letterSpacing: '-0.02em' }}>
               Por que escolher o MyFlowDay?
@@ -787,13 +804,13 @@ export default function LandingPage({ onEnterApp }) {
       <section
         id="planos"
         style={{
-          padding: '100px 24px',
+          padding: '60px 24px',
           background: '#07090C',
           borderTop: '1px solid rgba(255, 255, 255, 0.03)',
         }}
       >
         <Container>
-          <div style={{ textAlign: 'center', marginBottom: '60px' }}>
+          <div style={{ textAlign: 'center', marginBottom: '40px' }}>
             <span style={{ fontSize: '12px', fontWeight: 700, color: '#10B981', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Planos</span>
             <h2 style={{ fontSize: 'clamp(28px, 4vw, 42px)', fontWeight: 800, color: '#FFFFFF', marginTop: '10px', letterSpacing: '-0.02em' }}>
               Comece grátis. Evolua quando quiser.
@@ -935,13 +952,13 @@ export default function LandingPage({ onEnterApp }) {
       {/* ── 12. FAQ ───────────────────────────────────────────────────── */}
       <section
         style={{
-          padding: '100px 24px',
+          padding: '60px 24px',
           background: '#090D12',
           borderTop: '1px solid rgba(255, 255, 255, 0.03)',
         }}
       >
         <Container>
-          <div style={{ textAlign: 'center', marginBottom: '60px' }}>
+          <div style={{ textAlign: 'center', marginBottom: '40px' }}>
             <span style={{ fontSize: '12px', fontWeight: 700, color: '#C084FC', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Perguntas Frequentes</span>
             <h2 style={{ fontSize: 'clamp(28px, 4vw, 42px)', fontWeight: 800, color: '#FFFFFF', marginTop: '10px', letterSpacing: '-0.02em' }}>
               Respostas Rápidas
@@ -1214,31 +1231,36 @@ export default function LandingPage({ onEnterApp }) {
         /* ── STEPS FLOW ── */
         .steps-flow-container {
           position: relative;
-          max-width: 650px;
-          margin: 0 auto;
+          width: 100%;
           padding: 20px 0;
           display: flex;
-          flex-direction: column;
-          gap: 40px;
+          flex-direction: row;
+          gap: 24px;
+          overflow-x: auto;
+          scrollbar-width: thin;
+          padding-bottom: 24px;
         }
         
         .steps-flow-container::before {
           content: '';
           position: absolute;
-          left: 24px;
-          top: 30px;
-          bottom: 30px;
-          width: 2px;
-          background: linear-gradient(180deg, #6366F1 0%, #C084FC 33%, #10B981 66%, #F59E0B 100%);
+          left: 45px;
+          right: 45px;
+          top: 45px;
+          height: 2px;
+          background: linear-gradient(90deg, #6366F1 0%, #C084FC 33%, #10B981 66%, #F59E0B 100%);
           z-index: 1;
         }
 
         .step-row {
           display: flex;
+          flex-direction: column;
           align-items: center;
-          gap: 24px;
+          gap: 16px;
           position: relative;
           z-index: 2;
+          min-width: 250px;
+          flex: 1 0 250px;
         }
 
         .step-num-col {
@@ -1268,6 +1290,9 @@ export default function LandingPage({ onEnterApp }) {
           border: 1px solid rgba(255, 255, 255, 0.04);
           padding: 20px 24px;
           border-radius: 16px;
+          text-align: center;
+          width: 100%;
+          box-sizing: border-box;
           flex: 1;
         }
 
@@ -1562,8 +1587,26 @@ export default function LandingPage({ onEnterApp }) {
             gap: 24px;
           }
           .pricing-grid {
-            grid-template-columns: 1fr !important;
-            max-width: 420px !important;
+            display: flex !important;
+            flex-direction: row !important;
+            overflow-x: auto !important;
+            scroll-snap-type: x mandatory;
+            gap: 16px !important;
+            padding-bottom: 16px;
+            scroll-behavior: smooth;
+            -webkit-overflow-scrolling: touch;
+            max-width: 100% !important;
+          }
+          .pricing-grid > .pricing-card {
+            min-width: 290px !important;
+            flex: 1 0 45% !important;
+            scroll-snap-align: center;
+          }
+        }
+
+        @media (max-width: 550px) {
+          .pricing-grid > .pricing-card {
+            flex: 0 0 85% !important;
           }
         }
 
@@ -1583,6 +1626,7 @@ export default function LandingPage({ onEnterApp }) {
             padding-bottom: 16px;
             scroll-behavior: smooth;
             -webkit-overflow-scrolling: touch;
+            max-width: 100% !important;
           }
           .problem-comparison-grid > div {
             min-width: 280px !important;

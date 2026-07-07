@@ -8,12 +8,12 @@ import React, {
   useMemo,
 } from 'react';
 import { supabase } from '../supabaseClient';
-import { tasksService }        from '../services/tasksService';
-import { goalsService }         from '../services/goalsService';
-import { habitsService }        from '../services/habitsService';
-import { achievementsService }  from '../services/achievementsService';
-import { eventsService }        from '../services/eventsService';
-import { profilesService }      from '../services/profilesService';
+import { tasksService } from '../services/tasksService';
+import { goalsService } from '../services/goalsService';
+import { habitsService } from '../services/habitsService';
+import { achievementsService } from '../services/achievementsService';
+import { eventsService } from '../services/eventsService';
+import { profilesService } from '../services/profilesService';
 import { ACHIEVEMENTS, calcStats, calcStreak } from '../hooks/useAchievements';
 import { subscribe as subscribeSync, initSyncQueue, generateId } from '../services/syncQueue';
 import { initEventBatcher } from '../services/eventBatcher';
@@ -63,10 +63,10 @@ export function calculateNextOccurrence(dueDateStr, recurrence) {
     today.setDate(today.getDate() + 1);
     return today.toISOString().split('T')[0];
   }
-  
+
   const [year, month, day] = dueDateStr.split('-').map(Number);
   const date = new Date(year, month - 1, day);
-  
+
   if (recurrence === 'diaria') {
     date.setDate(date.getDate() + 1);
   } else if (recurrence === 'semanal') {
@@ -74,7 +74,7 @@ export function calculateNextOccurrence(dueDateStr, recurrence) {
   } else if (recurrence === 'mensal') {
     date.setMonth(date.getMonth() + 1);
   }
-  
+
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 }
 
@@ -105,7 +105,7 @@ export function AppProvider({ children }) {
   const authMachine = useAuthMachine();
 
   // Derivados da machine — usados pelo restante do contexto e componentes.
-  const currentUser    = authMachine.user;
+  const currentUser = authMachine.user;
   const isInitializing = authMachine.isLoading;
 
   // setCurrentUser: shim de compatibilidade para código legado que ainda chama
@@ -134,7 +134,7 @@ export function AppProvider({ children }) {
   const [syncWarnings, setSyncWarnings] = useState([]);
 
   // ── Perfil do Usuário ──
-  const [userProfile, setUserProfile]       = useState(null);
+  const [userProfile, setUserProfile] = useState(null);
 
   // ── Navegação ────────────────────────────────────────────────────────────────
   const VALID_TABS = new Set(['home', 'myday', 'focus', 'evolution', 'profile', 'admin', 'revenue', 'settings', 'goals', 'tasks', 'coach', 'analytics', 'performance']);
@@ -171,7 +171,7 @@ export function AppProvider({ children }) {
           return rawHash;
         }
       }
-    } catch (_) {}
+    } catch (_) { }
     return 'home';
   });
   const [settingsTab, setSettingsTab] = useState('general'); // 'general' | 'trash'
@@ -275,24 +275,24 @@ export function AppProvider({ children }) {
   const [appBgColor, setAppBgColor] = useState(localStorage.getItem('app_bg_color') || '#F8FAFC');
 
   // ── Dados ────────────────────────────────────────────────────────────────────
-  const [tasks, setTasks]           = useState([]);
-  const [goals, setGoals]           = useState([]);
-  const [goalTasks, setGoalTasks]   = useState([]);
+  const [tasks, setTasks] = useState([]);
+  const [goals, setGoals] = useState([]);
+  const [goalTasks, setGoalTasks] = useState([]);
   const [selectedGoalIdFilter, setSelectedGoalIdFilter] = useState('all');
 
   // ── Conquistas ───────────────────────────────────────────────────────────────
   const [unlockedAchievements, setUnlockedAchievements] = useState(null);
-  const [unlockedKeys, setUnlockedKeys]                 = useState(null);
-  const [toastQueue, setToastQueue]                     = useState([]);
+  const [unlockedKeys, setUnlockedKeys] = useState(null);
+  const [toastQueue, setToastQueue] = useState([]);
 
   // ── Hábitos ──────────────────────────────────────────────────────────────────
-  const [habits, setHabits]         = useState([]);
-  const [habitLogs, setHabitLogs]   = useState([]);
+  const [habits, setHabits] = useState([]);
+  const [habitLogs, setHabitLogs] = useState([]);
   const [habitsLoading, setHabitsLoading] = useState(false);
 
   // ── Notificações & Undo (Soft Delete) ──────────────────────────────────────────
   const [notifications, setNotifications] = useState([]);
-  const [undoAction, setUndoAction]       = useState(null);
+  const [undoAction, setUndoAction] = useState(null);
 
   // ── Ref para lock de conquistas ───────────────────────────────────────────────
   const achievementChecking = useRef(false);
@@ -307,16 +307,16 @@ export function AppProvider({ children }) {
 
   // ── User State Intelligence (Growth) ─────────────────────────────────────────────
   const [userState, setUserState] = useState({
-    stage:               'new',
-    activation_score:    0,
+    stage: 'new',
+    activation_score: 0,
     last_success_action: null,
-    time_to_value_ms:    null,
-    days_since_active:   0,
-    has_first_success:   false,
+    time_to_value_ms: null,
+    days_since_active: 0,
+    has_first_success: false,
   });
 
   // ── Product Intelligence & Retention (Fase 2.0) ──
-  const [insights, setInsights]       = useState([]);
+  const [insights, setInsights] = useState([]);
   const [suggestions, setSuggestions] = useState([]);
 
   useEffect(() => {
@@ -365,8 +365,8 @@ export function AppProvider({ children }) {
     message: '',
     confirmText: 'OK',
     cancelText: 'Cancelar',
-    onConfirm: () => {},
-    onCancel: () => {}
+    onConfirm: () => { },
+    onCancel: () => { }
   });
 
   const openCustomAlert = useCallback((message, title = 'MyFlowDay') => {
@@ -407,7 +407,7 @@ export function AppProvider({ children }) {
   // ═══════════════════════════════════════════════════════════════════════════
   const handleLoginSuccess = useCallback((user) => {
     setCurrentUser(user);
-    eventsService.logEvent(user.id, 'login', { method: 'explicit' }).catch(() => {});
+    eventsService.logEvent(user.id, 'login', { method: 'explicit' }).catch(() => { });
     setActiveTab('home');
   }, []);
 
@@ -415,13 +415,13 @@ export function AppProvider({ children }) {
     try {
       if (currentUser?.id) {
         if (!currentUser.isDemo) {
-          await eventsService.logEvent(currentUser.id, 'logout').catch(() => {});
+          await eventsService.logEvent(currentUser.id, 'logout').catch(() => { });
         }
       }
       if (!currentUser?.isDemo) {
-        await supabase.auth.signOut().catch(() => {});
+        await supabase.auth.signOut().catch(() => { });
       }
-      
+
       if (currentUser?.isDemo) {
         localStorage.removeItem(`flowday_demo_tasks_${currentUser.id}`);
         localStorage.removeItem(`flowday_demo_goals_${currentUser.id}`);
@@ -430,12 +430,12 @@ export function AppProvider({ children }) {
       }
 
       // Limpa caches locais no IndexedDB para isolamento multiusuário
-      await localDB.clear('tasks').catch(() => {});
-      await localDB.clear('goals').catch(() => {});
-      await localDB.clear('habits').catch(() => {});
-      await localDB.clear('profile').catch(() => {});
-      await localDB.clear('events').catch(() => {});
-      await localDB.clear('notifications').catch(() => {});
+      await localDB.clear('tasks').catch(() => { });
+      await localDB.clear('goals').catch(() => { });
+      await localDB.clear('habits').catch(() => { });
+      await localDB.clear('profile').catch(() => { });
+      await localDB.clear('events').catch(() => { });
+      await localDB.clear('notifications').catch(() => { });
 
       // Redireciona imediatamente, limpando toda a memória da aba do navegador de forma limpa
       window.location.href = '/';
@@ -463,8 +463,8 @@ export function AppProvider({ children }) {
         const expiresAt = data.expires_at || data.current_period_end;
 
         const active = (status === 'active') &&
-                       (plan === 'pro' || plan === 'premium') &&
-                       (!expiresAt || new Date(expiresAt) > new Date());
+          (plan === 'pro' || plan === 'premium') &&
+          (!expiresAt || new Date(expiresAt) > new Date());
 
         // Previne sobrescrever para falso se o checkServerAccess (SSOT) determinou true
         setIsPro(prev => prev === true ? true : active);
@@ -579,13 +579,13 @@ export function AppProvider({ children }) {
 
   const addNotification = useCallback(async (type, title, description, metadata = {}) => {
     if (!currentUser?.id) return;
-    
+
     const notifId = metadata?.notification_id || generateId();
-    
+
     setNotifications(prev => {
       // Evita duplicações por ID idêntico ou por conteúdo recente idêntico (5 segundos)
-      const isDuplicate = prev.some(n => 
-        n.id === notifId || 
+      const isDuplicate = prev.some(n =>
+        n.id === notifId ||
         (n.title === title && n.description === description && Math.abs(new Date(n.timestamp) - new Date()) < 5000)
       );
       if (isDuplicate) return prev;
@@ -611,23 +611,23 @@ export function AppProvider({ children }) {
         if (typeof navigator !== 'undefined' && navigator.vibrate) {
           navigator.vibrate([100, 50, 100]);
         }
-        
+
         const AudioContextClass = window.AudioContext || window.webkitAudioContext;
         if (AudioContextClass) {
           const audioCtx = new AudioContextClass();
           const oscillator = audioCtx.createOscillator();
           const gainNode = audioCtx.createGain();
-          
+
           oscillator.connect(gainNode);
           gainNode.connect(audioCtx.destination);
-          
+
           oscillator.type = 'sine';
           oscillator.frequency.setValueAtTime(587.33, audioCtx.currentTime); // Ré5
           oscillator.frequency.setValueAtTime(880.00, audioCtx.currentTime + 0.12); // Lá5
-          
+
           gainNode.gain.setValueAtTime(0.15, audioCtx.currentTime);
           gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
-          
+
           oscillator.start(audioCtx.currentTime);
           oscillator.stop(audioCtx.currentTime + 0.4);
         }
@@ -731,11 +731,11 @@ export function AppProvider({ children }) {
       const yesterday = new Date();
       yesterday.setDate(yesterday.getDate() - 1);
       const yesterdayStr = yesterday.toISOString().split('T')[0];
-      
+
       mockLogs.push({ id: 'dl1', habit_id: 'dh2', completed_date: today, user_id: currentUser.id });
       mockLogs.push({ id: 'dl2', habit_id: 'dh1', completed_date: yesterdayStr, user_id: currentUser.id });
       mockLogs.push({ id: 'dl3', habit_id: 'dh2', completed_date: yesterdayStr, user_id: currentUser.id });
-      
+
       setHabits(mockHabits);
       setHabitLogs(mockLogs);
       localStorage.setItem(demoHabitsKey, JSON.stringify({ habits: mockHabits, habitLogs: mockLogs }));
@@ -759,7 +759,7 @@ export function AppProvider({ children }) {
     setSubscriptionPlan('pro');
     // isInitializing is derived from authMachine.isLoading — no setter needed.
     // The machine transitions to AUTHENTICATED when setCurrentUser dispatches SIGNED_IN.
-    
+
     // Notificação de boas vindas
     setTimeout(() => {
       addNotification('system', 'Modo Demo Ativo', 'Você está experimentando o Flowday com uma conta temporária. Fique à vontade para explorar!');
@@ -785,13 +785,13 @@ export function AppProvider({ children }) {
     try {
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-      
+
       const allTasks = await localDB.getAll('tasks');
       const oldTasks = allTasks.filter(t => t.user_id === userId && t.deletedAt && new Date(t.deletedAt) < thirtyDaysAgo);
       for (const t of oldTasks) {
         await tasksService.deletePermanent(userId, t.id);
       }
-      
+
       // Purga de goals via banco — defensivo para quando deleted_at não existir
       try {
         const { data: oldGoals, error: goalsErr } = await supabase
@@ -800,7 +800,7 @@ export function AppProvider({ children }) {
           .eq('user_id', userId)
           .not('deleted_at', 'is', null)
           .lt('deleted_at', thirtyDaysAgo.toISOString());
-        
+
         if (goalsErr && (goalsErr.code === '42703' || goalsErr.message?.includes('deleted_at'))) {
           // deleted_at column doesn't exist yet — purge only from local cache
           console.warn('[AppContext] Coluna goals.deleted_at ausente — purgando apenas cache local.');
@@ -902,8 +902,8 @@ export function AppProvider({ children }) {
     const goalRate = activeGoalsFiltered.length > 0 ? (totalPct / activeGoalsFiltered.length) : 0;
 
     const finalScore = Math.min(100, Math.round(
-      (taskRate * 40) + 
-      (habitRate * 40) + 
+      (taskRate * 40) +
+      (habitRate * 40) +
       (goalRate * 20)
     ));
     return isNaN(finalScore) ? 0 : finalScore;
@@ -948,12 +948,12 @@ export function AppProvider({ children }) {
   const loadProfile = useCallback(async (userId) => {
     const { data } = await profilesService.getProfile(userId);
     let profileData = data || { id: userId, avatar_url: '' };
-    
+
     const localAvatar = localStorage.getItem(`flowday_user_avatar_${userId}`);
     if (localAvatar && (!profileData.avatar_url || profileData.avatar_url === '')) {
       profileData.avatar_url = localAvatar;
     }
-    
+
     setUserProfile(profileData);
   }, []);
 
@@ -1010,12 +1010,12 @@ export function AppProvider({ children }) {
       if (response.ok) {
         const data = await response.json();
         const active = !!data.canAccessPro;
-        
+
         // Só atualiza se realmente mudar, prevenindo loops de re-render
         setIsPro(prev => prev !== active ? active : prev);
         setSubscriptionStatus(prev => prev !== (data.status || 'free').toUpperCase() ? (data.status || 'free').toUpperCase() : prev);
         setSubscriptionPlan(prev => prev !== (data.plan || 'free') ? (data.plan || 'free') : prev);
-        
+
         if (data.churn) {
           setChurnScore(prev => prev !== data.churn.score ? data.churn.score : prev);
           setChurnRisk(prev => prev !== data.churn.risk ? data.churn.risk : prev);
@@ -1059,7 +1059,7 @@ export function AppProvider({ children }) {
     if (typeof window !== 'undefined') {
       localStorage.removeItem('flowday_access_checked');
     }
-    
+
     // Tratamento para Modo Demo
     if (currentUser.isDemo) {
       initDemoData();
@@ -1177,24 +1177,24 @@ export function AppProvider({ children }) {
         },
         (payload) => {
           console.log('[Realtime] Perfil do usuário atualizado remotamente:', payload.new);
-          
+
           setUserProfile(prevProfile => {
             if (!prevProfile) return payload.new;
-            
+
             // Só atualiza o estado do perfil se houver mudanças estruturais ou de cobrança
             const planoChanged = prevProfile.plano !== payload.new.plano;
             const statusChanged = prevProfile.assinatura_status !== payload.new.assinatura_status;
             const expiraChanged = prevProfile.assinatura_expira_em !== payload.new.assinatura_expira_em;
-            const infoChanged = prevProfile.name !== payload.new.name || 
-                                prevProfile.nickname !== payload.new.nickname ||
-                                prevProfile.avatar_url !== payload.new.avatar_url ||
-                                prevProfile.bio !== payload.new.bio ||
-                                prevProfile.profession !== payload.new.profession;
-            
+            const infoChanged = prevProfile.name !== payload.new.name ||
+              prevProfile.nickname !== payload.new.nickname ||
+              prevProfile.avatar_url !== payload.new.avatar_url ||
+              prevProfile.bio !== payload.new.bio ||
+              prevProfile.profession !== payload.new.profession;
+
             if (planoChanged || statusChanged || expiraChanged || infoChanged) {
               return payload.new;
             }
-            
+
             return prevProfile; // Previne re-render se o registro for idêntico
           });
 
@@ -1270,10 +1270,10 @@ export function AppProvider({ children }) {
             setUnlockedKeys((prev) => { const n = new Set(prev); n.add(a.key); return n; });
             setUnlockedAchievements((prev) => [
               ...(prev || []),
-              { 
-                achievement_key: a.key, 
-                unlocked_at: new Date().toISOString(), 
-                seen: true, 
+              {
+                achievement_key: a.key,
+                unlocked_at: new Date().toISOString(),
+                seen: true,
                 viewed_at: new Date().toISOString(),
                 dismissed_at: null
               },
@@ -1316,7 +1316,7 @@ export function AppProvider({ children }) {
           try {
             const val = localStorage.getItem(dismissedLocalKey);
             if (val) dismissedLocal = JSON.parse(val);
-          } catch (_) {}
+          } catch (_) { }
 
           if (dismissedLocal[a.key]) {
             // Já foi dispensada antes — apenas marca no unlockedKeys, sem toast
@@ -1334,10 +1334,10 @@ export function AppProvider({ children }) {
           setUnlockedKeys((prev) => { const n = new Set(prev); n.add(a.key); return n; });
           setUnlockedAchievements((prev) => [
             ...(prev || []),
-            { 
-              achievement_key: a.key, 
-              unlocked_at: new Date().toISOString(), 
-              seen: true, 
+            {
+              achievement_key: a.key,
+              unlocked_at: new Date().toISOString(),
+              seen: true,
               viewed_at: new Date().toISOString(),
               dismissed_at: null
             },
@@ -1455,7 +1455,7 @@ export function AppProvider({ children }) {
   const handleAddTask = useCallback(async (taskData) => {
     if (!currentUser?.id) return;
     const { goal_id, ...payload } = taskData;
-    
+
     if (currentUser.isDemo) {
       const demoId = 'dt_' + Date.now();
       const newTask = {
@@ -1476,7 +1476,7 @@ export function AppProvider({ children }) {
       setTasks(updated);
       localStorage.setItem(`flowday_demo_tasks_${currentUser.id}`, JSON.stringify(updated));
       logEvent('task_created', { taskId: demoId, title: payload.title });
-      
+
       if (goal_id) {
         const updatedGT = [...goalTasks, { goal_id, task_id: demoId }];
         setGoalTasks(updatedGT);
@@ -1538,19 +1538,19 @@ export function AppProvider({ children }) {
 
   const handleUpdateTask = useCallback(async (id, updatedData) => {
     if (!currentUser?.id) return;
-    
+
     const existingTask = tasks.find(t => t.id === id);
-    
+
     // OPTIMISTIC UPDATE
     setTasks((prev) => prev.map((t) => t.id === id ? { ...t, ...updatedData } : t));
     logEvent('task_updated', { task_id: id });
-    
+
     if (updatedData.completed === true) {
       logEvent('task_completed', { taskId: id });
       if (existingTask && existingTask.dueDate) {
         logEvent('calendar_task_completed', { taskId: id });
       }
-      
+
       if (tasks.length > 0) {
         const alreadyHadSuccess = tasks.some(t => t.id !== id && t.completed);
         if (!alreadyHadSuccess && !firstSuccessLogged.current) {
@@ -1584,7 +1584,7 @@ export function AppProvider({ children }) {
 
   const handleDeleteTask = useCallback(async (id) => {
     if (!currentUser?.id) return;
-    
+
     if (undoAction && undoAction.id === id) {
       clearTimeout(undoAction.timerId);
     }
@@ -1686,14 +1686,14 @@ export function AppProvider({ children }) {
 
   const handleDeleteAllTasks = useCallback(async () => {
     if (!currentUser?.id) return;
-    
+
     const nowIso = new Date().toISOString();
     let activeIds = [];
-    
+
     setTasks(prev => {
       activeIds = prev.filter(t => !t.deletedAt).map(t => t.id);
       if (activeIds.length === 0) return prev;
-      
+
       const updatedList = prev.map(t => activeIds.includes(t.id) ? { ...t, deletedAt: nowIso } : t);
       if (currentUser.isDemo) {
         localStorage.setItem(`flowday_demo_tasks_${currentUser.id}`, JSON.stringify(updatedList));
@@ -1746,10 +1746,10 @@ export function AppProvider({ children }) {
     if (!currentUser?.id) return;
     const task = tasks.find((t) => t.id === id);
     if (!task) return;
-    
+
     const next = !task.completed;
     const completedAt = next ? new Date().toISOString() : null;
-    
+
     setTasks((prev) => {
       const updated = prev.map((t) => t.id === id ? { ...t, completed: next, completedAt } : t);
       if (currentUser.isDemo) {
@@ -1837,7 +1837,7 @@ export function AppProvider({ children }) {
 
   const handleUploadAvatar = useCallback(async (file) => {
     if (!currentUser?.id) return;
-    
+
     // Instant base64 local preview
     const reader = new FileReader();
     reader.onloadend = async () => {
@@ -1864,7 +1864,7 @@ export function AppProvider({ children }) {
 
   const handleDeleteAvatar = useCallback(async () => {
     if (!currentUser?.id) return;
-    
+
     setUserProfile(prev => ({ ...prev, avatar_url: '' }));
     localStorage.removeItem(`flowday_user_avatar_${currentUser.id}`);
     logEvent('profile_updated', { avatar: false });
@@ -1910,10 +1910,10 @@ export function AppProvider({ children }) {
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       };
-      
+
       const newTasks = [];
       const newGoalTasks = [];
-      
+
       originalTasks.forEach((ot, idx) => {
         const newTaskId = `dt_${Date.now()}_${idx}`;
         newTasks.push({
@@ -1937,10 +1937,10 @@ export function AppProvider({ children }) {
       setGoals(updatedGoals);
       setTasks(prev => [...newTasks, ...prev]);
       setGoalTasks(prev => [...newGoalTasks, ...prev]);
-      
+
       localStorage.setItem(`flowday_demo_goals_${currentUser.id}`, JSON.stringify({ goals: updatedGoals, goalTasks: [...newGoalTasks, ...goalTasks] }));
       localStorage.setItem(`flowday_demo_tasks_${currentUser.id}`, JSON.stringify([...newTasks, ...tasks]));
-      
+
       logEvent('goal_created', { title: duplicatePayload.title, duplicated_from: goalId });
       addNotification('goal', 'Objetivo duplicado', duplicatePayload.title);
       return;
@@ -1963,7 +1963,7 @@ export function AppProvider({ children }) {
       const { data: newGoalData } = await goalsService.create(currentUser.id, duplicatePayload);
       if (newGoalData) {
         setGoals((prev) => prev.map(g => g.id === tempGoalId ? newGoalData : g));
-        
+
         // 2. Duplicar as tarefas e vincular
         if (originalTasks.length > 0) {
           const newTasksData = originalTasks.map(ot => ({
@@ -1974,7 +1974,7 @@ export function AppProvider({ children }) {
             dueDate: ot.dueDate || null,
             completed: false
           }));
-          
+
           for (const taskPayload of newTasksData) {
             const { data: createdTask } = await tasksService.create(currentUser.id, taskPayload);
             if (createdTask) {
@@ -1986,7 +1986,7 @@ export function AppProvider({ children }) {
             }
           }
         }
-        
+
         logEvent('goal_created', { title: duplicatePayload.title, duplicated_from: goalId });
         addNotification('goal', 'Objetivo duplicado', duplicatePayload.title);
       } else {
@@ -2035,7 +2035,7 @@ export function AppProvider({ children }) {
       setTasks(updated);
       localStorage.setItem(`flowday_demo_tasks_${currentUser.id}`, JSON.stringify(updated));
       logEvent('task_created', { taskId: demoId, title: duplicatePayload.title, duplicated_from: taskId });
-      
+
       if (goal_id) {
         const updatedGT = [...goalTasks, { goal_id, task_id: demoId }];
         setGoalTasks(updatedGT);
@@ -2096,7 +2096,7 @@ export function AppProvider({ children }) {
   const handleAddGoal = useCallback(async (goalData) => {
     if (!currentUser?.id) return;
     const { actions, category, ...goalPayload } = goalData;
-    
+
     if (currentUser.isDemo) {
       const demoGoalId = 'dg_' + Date.now();
       const newGoal = {
@@ -2187,7 +2187,7 @@ export function AppProvider({ children }) {
           }
         });
       });
-      
+
       setTasks((prev) => [...tempActions.map(ta => ta.task), ...prev]);
       setGoalTasks((prev) => [...prev, ...tempActions.map(ta => ({ goal_id: tempGoalId, task_id: ta.tempId }))]);
     }
@@ -2215,9 +2215,9 @@ export function AppProvider({ children }) {
             if (taskResponse) {
               setTasks((prev) => prev.map(t => t.id === ta.tempId ? taskResponse : t));
               await goalsService.linkTask(data.id, taskResponse.id);
-              setGoalTasks((prev) => prev.map(gt => 
-                (gt.goal_id === tempGoalId && gt.task_id === ta.tempId) 
-                  ? { goal_id: data.id, task_id: taskResponse.id } 
+              setGoalTasks((prev) => prev.map(gt =>
+                (gt.goal_id === tempGoalId && gt.task_id === ta.tempId)
+                  ? { goal_id: data.id, task_id: taskResponse.id }
                   : gt
               ));
             } else {
@@ -2250,11 +2250,11 @@ export function AppProvider({ children }) {
     if (!currentUser?.id) return;
     const existingGoal = goals.find(g => g.id === id);
     const { actions, ...payloadData } = updatedData;
-    
+
     if (currentUser.isDemo) {
       const updatedGoals = goals.map((g) => g.id === id ? { ...g, ...payloadData } : g);
       setGoals(updatedGoals);
-      
+
       let currentDemoTasks = [...tasks];
       let currentDemoGT = [...goalTasks];
 
@@ -2333,9 +2333,9 @@ export function AppProvider({ children }) {
           if (taskResponse) {
             setTasks((prev) => prev.map(t => t.id === nt.tempId ? taskResponse : t));
             await goalsService.linkTask(id, taskResponse.id);
-            setGoalTasks((prev) => prev.map(gt => 
-              (gt.goal_id === id && gt.task_id === nt.tempId) 
-                ? { goal_id: id, task_id: taskResponse.id } 
+            setGoalTasks((prev) => prev.map(gt =>
+              (gt.goal_id === id && gt.task_id === nt.tempId)
+                ? { goal_id: id, task_id: taskResponse.id }
                 : gt
             ));
           } else {
@@ -2364,7 +2364,7 @@ export function AppProvider({ children }) {
 
   const handleDeleteGoal = useCallback(async (id) => {
     if (!currentUser?.id) return;
-    
+
     if (undoAction && undoAction.id === id) {
       clearTimeout(undoAction.timerId);
     }
@@ -2510,7 +2510,7 @@ export function AppProvider({ children }) {
       console.log('[AppContext] handleLinkTask already linked, ignoring');
       return;
     }
-    
+
     if (currentUser?.isDemo) {
       const updatedGT = [...goalTasks, { goal_id: goalId, task_id: taskId }];
       console.log('[AppContext] handleLinkTask Demo mode, setting goalTasks:', updatedGT);
@@ -2550,9 +2550,9 @@ export function AppProvider({ children }) {
   const handleAddCategory = useCallback(async (newCat) => {
     if (!currentUser?.id) return;
     const currentCustom = currentUser.user_metadata?.custom_categories || [];
-    
-    if (currentCustom.some(c => c.id.toLowerCase() === newCat.id.toLowerCase()) || 
-        defaultCategories.some(c => c.id.toLowerCase() === newCat.id.toLowerCase())) {
+
+    if (currentCustom.some(c => c.id.toLowerCase() === newCat.id.toLowerCase()) ||
+      defaultCategories.some(c => c.id.toLowerCase() === newCat.id.toLowerCase())) {
       openCustomAlert('Essa categoria já existe.');
       return;
     }
@@ -2657,7 +2657,7 @@ export function AppProvider({ children }) {
     if (!currentUser?.id) return;
     try {
       logEvent('downgrade_clicked');
-      
+
       const response = await fetch('/api/subscription/cancel', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -2673,7 +2673,7 @@ export function AppProvider({ children }) {
         setIsPro(false);
         setSubscriptionStatus('canceled');
         setSubscriptionPlan('free');
-        
+
         // Atualiza o perfil localmente se estiver carregado
         if (userProfile) {
           setUserProfile(prev => ({
@@ -2682,7 +2682,7 @@ export function AppProvider({ children }) {
             assinatura_status: 'canceled'
           }));
         }
-        
+
         addNotification('system', 'Assinatura Cancelada', 'Sua assinatura Premium foi cancelada com sucesso. Você retornou ao plano Free.');
       } else {
         throw new Error(data.error || 'Erro ao cancelar assinatura.');
@@ -2771,7 +2771,7 @@ export function AppProvider({ children }) {
   const triggerUndo = useCallback(async () => {
     if (!undoAction) return;
     clearTimeout(undoAction.timerId);
-    
+
     // Restaura localmente na UI e no banco
     if (undoAction.type === 'task') {
       setTasks(prev => {
@@ -2834,7 +2834,7 @@ export function AppProvider({ children }) {
         localStorage.setItem(`flowday_demo_goals_${currentUser.id}`, JSON.stringify({ goals: mockGoals, goalTasks }));
       }
     }
-    
+
     setUndoAction(null);
     addNotification('system', 'Ação Desfeita', 'Os itens removidos foram restaurados com sucesso.');
   }, [currentUser, undoAction, tasks, goals, goalTasks, addNotification]);
@@ -2843,7 +2843,7 @@ export function AppProvider({ children }) {
   const handleRestoreTask = useCallback(async (id) => {
     if (!currentUser?.id) return;
     setTasks(prev => prev.map(t => t.id === id ? { ...t, deletedAt: null } : t));
-    
+
     if (currentUser.isDemo) {
       const updated = tasks.map(t => t.id === id ? { ...t, deletedAt: null } : t);
       localStorage.setItem(`flowday_demo_tasks_${currentUser.id}`, JSON.stringify(updated));
@@ -2855,14 +2855,14 @@ export function AppProvider({ children }) {
 
   const handleDeleteTaskPermanent = useCallback(async (id, force = false) => {
     if (!currentUser?.id) return;
-    
+
     const proceed = async () => {
       const nextTasks = tasks.filter(t => t.id !== id);
       const nextGoalTasks = goalTasks.filter(gt => gt.task_id !== id);
-      
+
       setTasks(nextTasks);
       setGoalTasks(nextGoalTasks);
-      
+
       if (currentUser.isDemo) {
         localStorage.setItem(`flowday_demo_tasks_${currentUser.id}`, JSON.stringify(nextTasks));
         localStorage.setItem(`flowday_demo_goals_${currentUser.id}`, JSON.stringify({ goals, goalTasks: nextGoalTasks }));
@@ -2870,7 +2870,7 @@ export function AppProvider({ children }) {
         await tasksService.deletePermanent(currentUser.id, id);
         addNotification('system', 'Tarefa excluída', 'A tarefa foi removida em definitivo.');
       }
-      
+
       resetAchievementsIfEmpty(currentUser.id, nextTasks, goals);
     };
 
@@ -2888,7 +2888,7 @@ export function AppProvider({ children }) {
   const handleRestoreGoal = useCallback(async (id) => {
     if (!currentUser?.id) return;
     setGoals(prev => prev.map(g => g.id === id ? { ...g, deletedAt: null } : g));
-    
+
     if (currentUser.isDemo) {
       const mockGoals = goals.map(g => g.id === id ? { ...g, deletedAt: null } : g);
       localStorage.setItem(`flowday_demo_goals_${currentUser.id}`, JSON.stringify({ goals: mockGoals, goalTasks }));
@@ -2900,21 +2900,21 @@ export function AppProvider({ children }) {
 
   const handleDeleteGoalPermanent = useCallback(async (id, force = false) => {
     if (!currentUser?.id) return;
-    
+
     const proceed = async () => {
       const nextGoals = goals.filter(g => g.id !== id);
       const nextGoalTasks = goalTasks.filter(gt => gt.goal_id !== id);
-      
+
       setGoals(nextGoals);
       setGoalTasks(nextGoalTasks);
-      
+
       if (currentUser.isDemo) {
         localStorage.setItem(`flowday_demo_goals_${currentUser.id}`, JSON.stringify({ goals: nextGoals, goalTasks: nextGoalTasks }));
       } else {
         await goalsService.deletePermanent(currentUser.id, id);
         addNotification('system', 'Objetivo excluído', 'O objetivo foi removido em definitivo.');
       }
-      
+
       resetAchievementsIfEmpty(currentUser.id, tasks, nextGoals);
     };
 
@@ -2983,7 +2983,7 @@ export function AppProvider({ children }) {
   // ── Explicação Detalhada do Health Score (Consistency Score) ──
   const consistencyScoreExplanation = useMemo(() => {
     if (!currentUser) return { positives: [], negatives: [], breakdown: {}, motivationalMessage: '' };
-    
+
     const positives = [];
     const negatives = [];
     const sevenDaysAgo = new Date();
@@ -3000,7 +3000,7 @@ export function AppProvider({ children }) {
     });
     const taskCount = recentTasks.length;
     const completedTaskCount = recentTasks.filter(t => t.completed).length;
-    
+
     if (completedTaskCount > 0) {
       positives.push({ text: `${completedTaskCount} tarefas concluídas nos últimos 7 dias`, value: `+${Math.round((completedTaskCount / Math.max(1, taskCount)) * 40)}%` });
     } else if (taskCount > 0) {
@@ -3025,7 +3025,7 @@ export function AppProvider({ children }) {
       const pct = linked.length > 0 ? (done / linked.length) : 0;
       totalPct += pct;
     });
-    
+
     if (activeGoalsFiltered.length > 0) {
       const avgGoalProgress = Math.round((totalPct / activeGoalsFiltered.length) * 100);
       if (avgGoalProgress > 0) {
@@ -3048,7 +3048,7 @@ export function AppProvider({ children }) {
     }
 
     // ─── CÁLCULO DO DETALHAMENTO TRANSPARENTE (6 COMPONENTES) ───
-    
+
     // A. Dias ativos recentes
     const activeDates = new Set();
     activeTasks.filter(t => t.completed && t.completedAt).forEach(t => {
