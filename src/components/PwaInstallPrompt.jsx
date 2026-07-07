@@ -10,6 +10,34 @@ export default function PwaInstallPrompt() {
   const [isIOS, setIsIOS] = useState(false);
   const [isStandalone, setIsStandalone] = useState(false);
 
+  // Estados para gesto de swipe horizontal
+  const [touchStartX, setTouchStartX] = useState(0);
+  const [touchCurrentX, setTouchCurrentX] = useState(0);
+  const [isSwiping, setIsSwiping] = useState(false);
+
+  const handleTouchStart = (e) => {
+    setTouchStartX(e.targetTouches[0].clientX);
+    setTouchCurrentX(e.targetTouches[0].clientX);
+    setIsSwiping(true);
+  };
+
+  const handleTouchMove = (e) => {
+    if (!isSwiping) return;
+    setTouchCurrentX(e.targetTouches[0].clientX);
+  };
+
+  const handleTouchEnd = () => {
+    if (!isSwiping) return;
+    setIsSwiping(false);
+    const diffX = touchCurrentX - touchStartX;
+    if (Math.abs(diffX) > 100) {
+      handleDismiss();
+    }
+  };
+
+  const offset = isSwiping ? touchCurrentX - touchStartX : 0;
+  const opacityVal = isSwiping ? Math.max(0, 1 - Math.abs(offset) / 300) : 1;
+
   useEffect(() => {
     // Check if already installed
     const isAppStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
@@ -22,7 +50,7 @@ export default function PwaInstallPrompt() {
     const isIosDevice = /iphone|ipad|ipod/.test(userAgent);
     setIsIOS(isIosDevice);
 
-    if (isIosDevice && !localStorage.getItem('pwa_prompt_dismissed')) {
+    if (isIosDevice && !sessionStorage.getItem('pwa_prompt_dismissed')) {
       // Small delay before showing iOS prompt
       setTimeout(() => setShowPrompt(true), 2000);
     }
@@ -31,7 +59,7 @@ export default function PwaInstallPrompt() {
     const handleBeforeInstallPrompt = (e) => {
       e.preventDefault();
       setDeferredPrompt(e);
-      if (!localStorage.getItem('pwa_prompt_dismissed')) {
+      if (!sessionStorage.getItem('pwa_prompt_dismissed')) {
         setShowPrompt(true);
       }
     };
@@ -64,29 +92,38 @@ export default function PwaInstallPrompt() {
 
   const handleDismiss = () => {
     setShowPrompt(false);
-    localStorage.setItem('pwa_prompt_dismissed', 'true');
+    sessionStorage.setItem('pwa_prompt_dismissed', 'true');
   };
 
   if (!showPrompt || isStandalone) return null;
 
   return (
-    <div className="pwa-install-prompt animate-fade-in" style={{
-      position: 'fixed',
-      top: '20px',
-      left: '50%',
-      transform: 'translateX(-50%)',
-      width: '92%',
-      maxWidth: '420px',
-      backgroundColor: 'var(--bg-card)',
-      border: '1px solid var(--primary-light)',
-      borderRadius: 'var(--radius-md)',
-      padding: '16px',
-      boxShadow: 'var(--shadow-lg)',
-      zIndex: 9999,
-      display: 'flex',
-      flexDirection: 'column',
-      gap: '12px'
-    }}>
+    <div 
+      className="pwa-install-prompt animate-fade-in" 
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+      style={{
+        position: 'fixed',
+        top: '20px',
+        left: '50%',
+        transform: `translateX(calc(-50% + ${offset}px))`,
+        opacity: opacityVal,
+        transition: isSwiping ? 'none' : 'transform 0.3s ease, opacity 0.3s ease',
+        width: '92%',
+        maxWidth: '420px',
+        backgroundColor: 'var(--bg-card)',
+        border: '1px solid var(--primary-light)',
+        borderRadius: 'var(--radius-md)',
+        padding: '16px',
+        boxShadow: 'var(--shadow-lg)',
+        zIndex: 9999,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '12px',
+        touchAction: 'pan-y'
+      }}
+    >
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <div style={{ padding: '2px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>

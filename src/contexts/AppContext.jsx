@@ -1594,15 +1594,17 @@ export function AppProvider({ children }) {
 
     // 1. Marca visualmente como excluído na UI (esconde definindo deletedAt temporário)
     const nowIso = new Date().toISOString();
-    setTasks(prev => prev.map(t => t.id === id ? { ...t, deletedAt: nowIso } : t));
 
     // 2. Executa a deleção lógica imediatamente no banco/cache
     if (currentUser.isDemo) {
-      const updatedTasks = tasks.map(t => t.id === id ? { ...t, deletedAt: nowIso } : t);
-      setTasks(updatedTasks);
-      localStorage.setItem(`flowday_demo_tasks_${currentUser.id}`, JSON.stringify(updatedTasks));
+      setTasks(prev => {
+        const updatedTasks = prev.map(t => t.id === id ? { ...t, deletedAt: nowIso } : t);
+        localStorage.setItem(`flowday_demo_tasks_${currentUser.id}`, JSON.stringify(updatedTasks));
+        return updatedTasks;
+      });
       logEvent('task_deleted', { task_id: id });
     } else {
+      setTasks(prev => prev.map(t => t.id === id ? { ...t, deletedAt: nowIso } : t));
       tasksService.delete(currentUser.id, id).then(({ error, degraded }) => {
         if (!error || degraded) {
           logEvent('task_deleted', { task_id: id });
@@ -2345,15 +2347,17 @@ export function AppProvider({ children }) {
 
     // 1. Marca visualmente como excluído
     const nowIso = new Date().toISOString();
-    setGoals(prev => prev.map(g => g.id === id ? { ...g, deletedAt: nowIso } : g));
 
     // 2. Executa a deleção imediatamente no banco
     if (currentUser.isDemo) {
-      const updatedGoals = goals.map(g => g.id === id ? { ...g, deletedAt: nowIso, deleted_at: nowIso } : g);
-      setGoals(updatedGoals);
-      localStorage.setItem(`flowday_demo_goals_${currentUser.id}`, JSON.stringify({ goals: updatedGoals, goalTasks }));
+      setGoals(prev => {
+        const updatedGoals = prev.map(g => g.id === id ? { ...g, deletedAt: nowIso, deleted_at: nowIso } : g);
+        localStorage.setItem(`flowday_demo_goals_${currentUser.id}`, JSON.stringify({ goals: updatedGoals, goalTasks }));
+        return updatedGoals;
+      });
       logEvent('goal_deleted', { goal_id: id });
     } else {
+      setGoals(prev => prev.map(g => g.id === id ? { ...g, deletedAt: nowIso } : g));
       goalsService.delete(currentUser.id, id).then(({ error }) => {
         if (!error) {
           logEvent('goal_deleted', { goal_id: id });
@@ -2822,26 +2826,30 @@ export function AppProvider({ children }) {
     addNotification('system', 'Tarefa restaurada', 'A tarefa foi movida de volta à lista ativa.');
   }, [currentUser, tasks, addNotification]);
 
-  const handleDeleteTaskPermanent = useCallback((id, force = false) => {
+  const handleDeleteTaskPermanent = useCallback(async (id, force = false) => {
     if (!currentUser?.id) return;
     
     const proceed = async () => {
-      setTasks(prev => prev.filter(t => t.id !== id));
+      let finalTasks = [];
+      setTasks(prev => {
+        finalTasks = prev.filter(t => t.id !== id);
+        if (currentUser.isDemo) {
+          localStorage.setItem(`flowday_demo_tasks_${currentUser.id}`, JSON.stringify(finalTasks));
+        }
+        return finalTasks;
+      });
       setGoalTasks(prev => prev.filter(gt => gt.task_id !== id));
       
-      if (currentUser.isDemo) {
-        const updated = tasks.filter(t => t.id !== id);
-        const updatedGT = goalTasks.filter(gt => gt.task_id !== id);
-        localStorage.setItem(`flowday_demo_tasks_${currentUser.id}`, JSON.stringify(updated));
-        localStorage.setItem(`flowday_demo_goals_${currentUser.id}`, JSON.stringify({ goals, goalTasks: updatedGT }));
-        return;
+      if (!currentUser.isDemo) {
+        await tasksService.deletePermanent(currentUser.id, id);
+        addNotification('system', 'Tarefa excluída', 'A tarefa foi removida em definitivo.');
       }
-      await tasksService.deletePermanent(currentUser.id, id);
-      addNotification('system', 'Tarefa excluída', 'A tarefa foi removida em definitivo.');
+      
+      resetAchievementsIfEmpty(currentUser.id, finalTasks, goals);
     };
 
     if (force) {
-      proceed();
+      await proceed();
     } else {
       openCustomConfirm(
         'Excluir esta tarefa permanentemente? Esta ação não pode ser desfeita.',
@@ -2849,7 +2857,7 @@ export function AppProvider({ children }) {
         proceed
       );
     }
-  }, [currentUser, tasks, goalTasks, goals, addNotification, openCustomConfirm]);
+  }, [currentUser, tasks, goalTasks, goals, addNotification, openCustomConfirm, resetAchievementsIfEmpty]);
 
   const handleRestoreGoal = useCallback(async (id) => {
     if (!currentUser?.id) return;
@@ -2864,25 +2872,33 @@ export function AppProvider({ children }) {
     addNotification('system', 'Objetivo restaurado', 'O objetivo foi restaurado com sucesso.');
   }, [currentUser, goals, goalTasks, addNotification]);
 
-  const handleDeleteGoalPermanent = useCallback((id, force = false) => {
+  const handleDeleteGoalPermanent = useCallback(async (id, force = false) => {
     if (!currentUser?.id) return;
     
     const proceed = async () => {
-      setGoals(prev => prev.filter(g => g.id !== id));
-      setGoalTasks(prev => prev.filter(gt => gt.goal_id !== id));
+      let finalGoals = [];
+      setGoals(prev => {
+        finalGoals = prev.filter(g => g.id !== id);
+        return finalGoals;
+      });
+      setGoalTasks(prev => {
+        const updatedGT = prev.filter(gt => gt.goal_id !== id);
+        if (currentUser.isDemo) {
+          localStorage.setItem(`flowday_demo_goals_${currentUser.id}`, JSON.stringify({ goals: finalGoals, goalTasks: updatedGT }));
+        }
+        return updatedGT;
+      });
       
-      if (currentUser.isDemo) {
-        const mockGoals = goals.filter(g => g.id !== id);
-        const updatedGT = goalTasks.filter(gt => gt.goal_id !== id);
-        localStorage.setItem(`flowday_demo_goals_${currentUser.id}`, JSON.stringify({ goals: mockGoals, goalTasks: updatedGT }));
-        return;
+      if (!currentUser.isDemo) {
+        await goalsService.deletePermanent(currentUser.id, id);
+        addNotification('system', 'Objetivo excluído', 'O objetivo foi removido em definitivo.');
       }
-      await goalsService.deletePermanent(currentUser.id, id);
-      addNotification('system', 'Objetivo excluído', 'O objetivo foi removido em definitivo.');
+      
+      resetAchievementsIfEmpty(currentUser.id, tasks, finalGoals);
     };
 
     if (force) {
-      proceed();
+      await proceed();
     } else {
       openCustomConfirm(
         'Excluir este objetivo permanentemente? Isso removerá todas as referências dele.',
@@ -2890,7 +2906,53 @@ export function AppProvider({ children }) {
         proceed
       );
     }
-  }, [currentUser, goals, goalTasks, addNotification, openCustomConfirm]);
+  }, [currentUser, goals, goalTasks, tasks, addNotification, openCustomConfirm, resetAchievementsIfEmpty]);
+
+  const handleEmptyTrash = useCallback(async () => {
+    if (!currentUser?.id) return;
+
+    const deletedTaskIds = tasks.filter(t => t.deletedAt).map(t => t.id);
+    const deletedGoalIds = goals.filter(g => g.deletedAt).map(g => g.id);
+
+    if (deletedTaskIds.length === 0 && deletedGoalIds.length === 0) return;
+
+    let finalTasks = [];
+    let finalGoals = [];
+
+    setTasks(prev => {
+      finalTasks = prev.filter(t => !deletedTaskIds.includes(t.id));
+      if (currentUser.isDemo) {
+        localStorage.setItem(`flowday_demo_tasks_${currentUser.id}`, JSON.stringify(finalTasks));
+      }
+      return finalTasks;
+    });
+
+    setGoals(prev => {
+      finalGoals = prev.filter(g => !deletedGoalIds.includes(g.id));
+      return finalGoals;
+    });
+
+    setGoalTasks(prev => {
+      const updatedGT = prev.filter(gt => !deletedTaskIds.includes(gt.task_id) && !deletedGoalIds.includes(gt.goal_id));
+      if (currentUser.isDemo) {
+        localStorage.setItem(`flowday_demo_goals_${currentUser.id}`, JSON.stringify({ goals: finalGoals, goalTasks: updatedGT }));
+      }
+      return updatedGT;
+    });
+
+    if (!currentUser.isDemo) {
+      try {
+        const taskDeletions = deletedTaskIds.map(id => tasksService.deletePermanent(currentUser.id, id));
+        const goalDeletions = deletedGoalIds.map(id => goalsService.deletePermanent(currentUser.id, id));
+        await Promise.all([...taskDeletions, ...goalDeletions]);
+      } catch (err) {
+        console.error('Error emptying trash in Supabase:', err);
+      }
+    }
+
+    addNotification('system', 'Lixeira esvaziada', 'Todos os itens foram excluídos permanentemente.');
+    resetAchievementsIfEmpty(currentUser.id, finalTasks, finalGoals);
+  }, [currentUser, tasks, goals, addNotification, resetAchievementsIfEmpty]);
 
   // ── Explicação Detalhada do Health Score (Consistency Score) ──
   const consistencyScoreExplanation = useMemo(() => {
@@ -3171,6 +3233,7 @@ export function AppProvider({ children }) {
     handleUnlinkTask,
     handleRestoreGoal,
     handleDeleteGoalPermanent,
+    handleEmptyTrash,
 
     // Habits
     habitsManager,

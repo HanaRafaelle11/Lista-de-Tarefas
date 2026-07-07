@@ -70,6 +70,7 @@ export default function SettingsView() {
     handleDeleteTaskPermanent,
     handleRestoreGoal,
     handleDeleteGoalPermanent,
+    handleEmptyTrash,
     openPaywall,
     handleCancelSubscription,
     logEvent,
@@ -777,12 +778,7 @@ export default function SettingsView() {
         `Tem certeza que deseja excluir permanentemente todos os ${deletedTasks.length + deletedGoals.length} itens da lixeira? Esta ação não pode ser desfeita.`,
         'Excluir tudo permanentemente',
         async () => {
-          for (const task of deletedTasks) {
-            await handleDeleteTaskPermanent(task.id, true);
-          }
-          for (const goal of deletedGoals) {
-            await handleDeleteGoalPermanent(goal.id, true);
-          }
+          await handleEmptyTrash();
         }
       );
     };
@@ -886,11 +882,11 @@ export default function SettingsView() {
                 <h3 style={{ fontSize: '14px', fontWeight: '700', marginBottom: '12px', color: 'var(--text-main)', borderBottom: '1px solid var(--border-light)', paddingBottom: '6px' }}>Objetivos Excluídos</h3>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                   {deletedGoals.map(goal => (
-                    <div key={goal.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', border: '1px solid var(--border-light)', borderRadius: 'var(--radius-sm)', backgroundColor: 'var(--bg-app)' }}>
-                      <span style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <div key={goal.id} style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', padding: '12px', border: '1px solid var(--border-light)', borderRadius: 'var(--radius-sm)', backgroundColor: 'var(--bg-app)', gap: '12px' }}>
+                      <span style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '6px', flex: '1 1 200px', minWidth: 0, wordBreak: 'break-word' }}>
                         <span>{goal.title}</span>
                       </span>
-                      <div style={{ display: 'flex', gap: '8px' }}>
+                      <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
                         <button 
                           onClick={() => handleRestoreGoal(goal.id)}
                           style={{ fontSize: '12px', fontWeight: '600', padding: '6px 12px', color: 'var(--primary)', backgroundColor: 'var(--primary-light)', borderRadius: '4px', cursor: 'pointer' }}
@@ -915,12 +911,12 @@ export default function SettingsView() {
                 <h3 style={{ fontSize: '14px', fontWeight: '700', marginBottom: '12px', color: 'var(--text-main)', borderBottom: '1px solid var(--border-light)', paddingBottom: '6px' }}>Tarefas Excluídas</h3>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                   {deletedTasks.map(task => (
-                    <div key={task.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', border: '1px solid var(--border-light)', borderRadius: 'var(--radius-sm)', backgroundColor: 'var(--bg-app)' }}>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', alignItems: 'flex-start' }}>
-                        <span style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-main)' }}>{task.title}</span>
+                    <div key={task.id} style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', padding: '12px', border: '1px solid var(--border-light)', borderRadius: 'var(--radius-sm)', backgroundColor: 'var(--bg-app)', gap: '12px' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', alignItems: 'flex-start', flex: '1 1 200px', minWidth: 0 }}>
+                        <span style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-main)', wordBreak: 'break-word' }}>{task.title}</span>
                         <span style={{ fontSize: '10px', color: 'var(--text-light)' }}>Categoria: {task.category}</span>
                       </div>
-                      <div style={{ display: 'flex', gap: '8px' }}>
+                      <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
                         <button 
                           onClick={() => handleRestoreTask(task.id)}
                           style={{ fontSize: '12px', fontWeight: '600', padding: '6px 12px', color: 'var(--primary)', backgroundColor: 'var(--primary-light)', borderRadius: '4px', cursor: 'pointer' }}

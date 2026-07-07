@@ -451,7 +451,7 @@ export default function HomeView() {
 
   const weeklyTotal = ritmoSemanal.reduce((acc, d) => acc + d.count, 0);
   const currentPetData = EVOLUTION_CATEGORIES[growthPet] || EVOLUTION_CATEGORIES.plant;
-  const hasNoItems = activeTasksList.length === 0 && activeGoalsList.length === 0;
+  const hasNoItems = activeTasksList.length === 0 && activeGoalsList.length === 0 && habits.length === 0;
   const stageIndex = hasNoItems ? 0 : getEvolutionStage({
     weeklyTotal,
     currentStreak,

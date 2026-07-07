@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef, lazy, Suspense } from 'react';
+import { createPortal } from 'react-dom';
 import { 
   Plus, Search, X, Calendar, ChevronDown, ChevronRight, 
   List, Columns, Grid, Trash2, Edit2, AlertCircle, ArrowLeft, ArrowRight,
@@ -2102,7 +2103,7 @@ export default function TodoView() {
       </div>
       
       {/* Modal Global de Confirmação de Deleção (Lixeira / Soft Delete) */}
-      {taskToDelete && (
+      {taskToDelete && createPortal(
         <div style={{
           position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
           backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', justifyContent: 'center', alignItems: 'center',
@@ -2128,6 +2129,7 @@ export default function TodoView() {
                 Cancelar
               </button>
               <button 
+                ref={el => { if (el) el.focus({ preventScroll: true }); }}
                 onClick={() => {
                   onDeleteTask(taskToDelete.id);
                   setTaskToDelete(null);
@@ -2139,7 +2141,8 @@ export default function TodoView() {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

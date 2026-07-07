@@ -121,6 +121,7 @@ export default function CustomDialogModal({ isOpen, type = 'alert', title, messa
             </button>
           )}
           <button
+            ref={el => { if (el) el.focus({ preventScroll: true }); }}
             onClick={onConfirm}
             style={{
               flex: 1,

@@ -397,6 +397,8 @@ export default function EvolutionView() {
 
   const [isWeeklyPlannerOpen, setIsWeeklyPlannerOpen] = useState(false);
   const [showGuide, setShowGuide] = useState(() => localStorage.getItem('flowday_hide_evo_guide') !== 'true');
+  const [isAchievementsExpanded, setIsAchievementsExpanded] = useState(false);
+  const [isGoalsExpanded, setIsGoalsExpanded] = useState(false);
 
   const dismissGuide = () => {
     setShowGuide(false);
@@ -879,9 +881,13 @@ export default function EvolutionView() {
             </section>
 
             {/* Card 2: Conquistas (PS5 style) */}
-            <section className="evo-card" style={{ margin: 0, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+            <section className="evo-card" style={{ margin: 0, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', transition: 'all 0.3s ease' }}>
               <div>
-                <div className="evo-card-header" style={{ padding: '0 0 12px 0', borderBottom: 'none' }}>
+                <div 
+                  className="evo-card-header" 
+                  style={{ padding: '0 0 12px 0', borderBottom: 'none', cursor: 'pointer' }}
+                  onClick={() => setIsAchievementsExpanded(!isAchievementsExpanded)}
+                >
                   <h3 className="evo-card-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <MFIcon name="achievements" size={20} style={{ color: 'var(--accent-yellow, #eab308)' }} /> Conquistas
                   </h3>
@@ -890,7 +896,10 @@ export default function EvolutionView() {
                   </span>
                 </div>
 
-                <div style={{ marginBottom: '16px' }}>
+                <div 
+                  style={{ marginBottom: '16px', cursor: 'pointer' }}
+                  onClick={() => setIsAchievementsExpanded(!isAchievementsExpanded)}
+                >
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11.5px', marginBottom: '6px' }}>
                     <span style={{ color: 'var(--text-muted)' }}>Progresso da Coleção</span>
                     <strong style={{ color: 'var(--primary)' }}>{Math.round((unlockedCount / ACHIEVEMENTS.length) * 100)}%</strong>
@@ -907,18 +916,63 @@ export default function EvolutionView() {
                 </div>
               </div>
 
+              {/* Galeria de Conquistas Expandida Inline */}
+              {isAchievementsExpanded && (
+                <div 
+                  className="animate-fade-in" 
+                  style={{ 
+                    marginTop: '12px', 
+                    paddingTop: '16px', 
+                    borderTop: '1px solid var(--border-light)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '12px',
+                    maxHeight: '320px',
+                    overflowY: 'auto',
+                    paddingRight: '4px',
+                    marginBottom: '16px'
+                  }}
+                >
+                  {/* Master Trophy */}
+                  <div style={{
+                    background: unlockedCount === ACHIEVEMENTS.length
+                      ? 'linear-gradient(135deg, rgba(0, 210, 255, 0.15) 0%, rgba(56, 189, 248, 0.03) 100%)' 
+                      : 'var(--bg-app)',
+                    border: unlockedCount === ACHIEVEMENTS.length
+                      ? '1px solid rgba(0, 210, 255, 0.35)' 
+                      : '1px dashed var(--border-medium)',
+                    padding: '12px',
+                    borderRadius: 'var(--radius-sm)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    opacity: unlockedCount === ACHIEVEMENTS.length ? 1 : 0.6
+                  }}>
+                    <MFIcon name="trophy" size={20} color="#00d2ff" />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <strong style={{ fontSize: '13px', color: 'var(--text-main)', display: 'block', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>Platina: Mestre do Flowday</strong>
+                      <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>Desbloqueie todas as outras conquistas.</span>
+                    </div>
+                  </div>
+
+                  {/* List of achievements */}
+                  {ACHIEVEMENTS.map(a => (
+                    <AchievementBadge
+                      key={a.key}
+                      achievement={a}
+                      unlocked={!!unlockedMap[a.key]}
+                      unlockedAt={unlockedMap[a.key]}
+                    />
+                  ))}
+                </div>
+              )}
+
               <button 
-                onClick={() => {
-                  const el = document.getElementById('achievements-section-anchor');
-                  if (el) {
-                    el.open = true;
-                    el.scrollIntoView({ behavior: 'smooth' });
-                  }
-                }}
+                onClick={() => setIsAchievementsExpanded(!isAchievementsExpanded)}
                 className="btn-secondary"
                 style={{ width: '100%', padding: '10px', fontSize: '12.5px', fontWeight: '600' }}
               >
-                Ver Minha Galeria
+                {isAchievementsExpanded ? 'Recolher Galeria' : 'Ver Minha Galeria'}
               </button>
             </section>
 
@@ -1140,144 +1194,55 @@ export default function EvolutionView() {
             </div>
           </details>
 
-          {/* ── Conquistas Accordion ── */}
-          <details 
-            id="achievements-section-anchor"
-            className="evo-details-accordion" 
-            style={{
-              backgroundColor: 'var(--bg-card)',
-              border: '1px solid var(--border-light)',
-              borderRadius: 'var(--radius-lg)',
-              boxShadow: 'var(--shadow-sm)',
-              overflow: 'hidden',
-              marginBottom: '24px'
-            }}
-          >
-            <summary style={{
-              padding: '18px 24px',
-              summary: 'Suas Conquistas',
-              fontSize: '15px',
-              fontWeight: '800',
-              color: 'var(--text-main)',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              backgroundColor: 'var(--bg-card-hover)',
-              userSelect: 'none'
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <MFIcon name="achievements" size={20} style={{ color: 'var(--accent-yellow, #eab308)' }} />
-                <span>Suas Conquistas</span>
-              </div>
-              <span style={{ fontSize: '12.5px', fontWeight: '600', color: 'var(--text-light)', backgroundColor: 'var(--bg-app)', padding: '2px 8px', borderRadius: '12px', border: '1px solid var(--border-light)' }}>
-                {unlockedCount} de {ACHIEVEMENTS.length}
-              </span>
-            </summary>
-
-            <div style={{ paddingTop: '20px' }}>
-              {/* Progress Bar removed to prevent duplication */}
-
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px', padding: '0 24px 24px' }}>
-                {/* Platina / Master Trophy */}
-                <div style={{
-                  gridColumn: '1 / -1',
-                  background: unlockedCount === ACHIEVEMENTS.length
-                    ? 'linear-gradient(135deg, rgba(0, 210, 255, 0.25) 0%, rgba(56, 189, 248, 0.05) 100%)' 
-                    : 'var(--bg-card)',
-                  border: unlockedCount === ACHIEVEMENTS.length
-                    ? '1px solid rgba(0, 210, 255, 0.5)' 
-                    : '1px dashed var(--border-medium)',
-                  padding: '20px',
-                  borderRadius: 'var(--radius-lg)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '20px',
-                  opacity: unlockedCount === ACHIEVEMENTS.length ? 1 : 0.65,
-                  filter: unlockedCount === ACHIEVEMENTS.length ? 'none' : 'grayscale(80%)',
-                  boxShadow: unlockedCount === ACHIEVEMENTS.length ? '0 8px 30px rgba(0, 210, 255, 0.15)' : 'none',
-                  transition: 'all 0.3s ease',
-                }}>
-                  <div style={{
-                    width: '54px',
-                    height: '54px',
-                    borderRadius: '50%',
-                    backgroundColor: unlockedCount === ACHIEVEMENTS.length ? 'rgba(255, 255, 255, 0.12)' : 'var(--bg-app)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '28px',
-                    border: `3px solid ${unlockedCount === ACHIEVEMENTS.length ? '#00d2ff' : 'var(--border-medium)'}`,
-                    boxShadow: unlockedCount === ACHIEVEMENTS.length ? '0 0 12px rgba(0, 210, 255, 0.2)' : 'none',
-                    flexShrink: 0
-                  }}>
-                    <MFIcon name="trophy" size={24} color="#00d2ff" />
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <strong style={{ fontSize: '15px', color: 'var(--text-main)' }}>Platina: Mestre do Flowday</strong>
-                      <span style={{ 
-                        fontSize: '9.5px', 
-                        fontWeight: '800', 
-                        textTransform: 'uppercase', 
-                        color: '#00d2ff',
-                        backgroundColor: 'rgba(0, 210, 255, 0.1)',
-                        padding: '2px 8px',
-                        borderRadius: '4px'
-                      }}>
-                        PLATINA
-                      </span>
-                    </div>
-                    <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: '4px 0 0', lineHeight: '1.4' }}>
-                      Desbloqueie todas as outras 10 conquistas para alcançar a maestria absoluta.
-                    </p>
-                    {unlockedCount === ACHIEVEMENTS.length ? (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#10b981', fontWeight: '700', fontSize: '13px', margin: '8px 0 0' }}>
-                        <MFIcon name="sparkle" size={14} color="#10b981" /> Coleção 100% Concluída! Você é uma lenda da produtividade.
-                      </div>
-                    ) : (
-                      <span style={{ fontSize: '11px', color: 'var(--text-light)', display: 'block', marginTop: '8px', fontStyle: 'italic' }}>
-                        Faltam {ACHIEVEMENTS.length - unlockedCount} conquistas para liberar.
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                {ACHIEVEMENTS.map(a => (
-                  <AchievementBadge
-                    key={a.key}
-                    achievement={a}
-                    unlocked={!!unlockedMap[a.key]}
-                    unlockedAt={unlockedMap[a.key]}
-                  />
-                ))}
-              </div>
-            </div>
-          </details>
-
-          {/* ── Objetivos concluídos ─────────────────────────── */}
+          {/* ── Objetivos concluídos Accordion ── */}
           {completedGoals.length > 0 && (
-            <section className="evo-card">
-              <div className="evo-card-header">
-                <h3 className="evo-card-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <MFIcon name="consistency" size={20} style={{ color: 'var(--primary)' }} /> Objetivos alcançados
-                </h3>
-                <span className="evo-achievements-count">{completedGoals.length}</span>
-              </div>
-              <div className="evo-completed-goals-list">
+            <details
+              className="evo-details-accordion"
+              open={isGoalsExpanded}
+              onToggle={(e) => setIsGoalsExpanded(e.target.open)}
+              style={{
+                backgroundColor: 'var(--bg-card)',
+                border: '1px solid var(--border-light)',
+                borderRadius: 'var(--radius-lg)',
+                boxShadow: 'var(--shadow-sm)',
+                overflow: 'hidden',
+                marginBottom: '24px'
+              }}
+            >
+              <summary style={{
+                padding: '18px 24px',
+                fontSize: '15px',
+                fontWeight: '800',
+                color: 'var(--text-main)',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                backgroundColor: 'var(--bg-card-hover)',
+                userSelect: 'none'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <MFIcon name="consistency" size={20} style={{ color: 'var(--primary)' }} />
+                  <span>Objetivos alcançados</span>
+                </div>
+                <span style={{ fontSize: '12.5px', fontWeight: '600', color: 'var(--text-light)', backgroundColor: 'var(--bg-app)', padding: '2px 8px', borderRadius: '12px', border: '1px solid var(--border-light)' }}>
+                  {completedGoals.length}
+                </span>
+              </summary>
+              <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '12px', borderTop: '1px solid var(--border-light)' }} className="evo-completed-goals-list">
                 {completedGoals.map(g => (
-                  <div key={g.id} className="evo-completed-goal-row">
+                  <div key={g.id} className="evo-completed-goal-row" style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '8px 0', borderBottom: '1px solid var(--border-light)' }}>
                     <span className="evo-completed-goal-icon" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
                        <MFIcon name={g.icon || 'target'} size={18} color={g.color} />
                     </span>
-                    <span className="evo-completed-goal-title">{g.title}</span>
+                    <span className="evo-completed-goal-title" style={{ flex: 1, fontSize: '13.5px', color: 'var(--text-main)' }}>{g.title}</span>
                     {g.updated_at && (
-                      <span className="evo-completed-goal-date">{formatDate(g.updated_at)}</span>
+                      <span className="evo-completed-goal-date" style={{ fontSize: '11.5px', color: 'var(--text-light)' }}>{formatDate(g.updated_at)}</span>
                     )}
                   </div>
                 ))}
               </div>
-            </section>
+            </details>
           )}
         </>
       )}

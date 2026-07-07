@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef, lazy, Suspense } from 'react';
+import { createPortal } from 'react-dom';
 import { 
   Plus, Search, X, Calendar, ChevronDown, ChevronRight, 
   List, Columns, Grid, Trash2, Edit2, AlertCircle, ArrowLeft, ArrowRight,
@@ -1188,14 +1189,6 @@ export default function MyDayView() {
           >
             <Tag size={14} />
             <span>Categorias</span>
-          </button>
-          <button 
-            onClick={() => setIsArchivedModalOpen(true)} 
-            className="tasks-add-btn" 
-            style={{ backgroundColor: 'var(--bg-card)', color: 'var(--text-main)', border: '1px solid var(--border-medium)', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
-          >
-            <Archive size={14} style={{ color: 'var(--text-muted)' }} />
-            <span>Arquivados</span>
           </button>
           <button 
             onClick={() => setIsTemplatesOpen(true)} 
@@ -2666,7 +2659,7 @@ export default function MyDayView() {
       </div>
       
       {/* Modal Global de Confirmação de Deleção (Lixeira / Soft Delete) */}
-      {taskToDelete && (
+      {taskToDelete && createPortal(
         <div style={{
           position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
           backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', justifyContent: 'center', alignItems: 'center',
@@ -2692,6 +2685,7 @@ export default function MyDayView() {
                 Cancelar
               </button>
               <button 
+                ref={el => { if (el) el.focus({ preventScroll: true }); }}
                 onClick={() => {
                   onDeleteTask(taskToDelete.id);
                   setTaskToDelete(null);
@@ -2703,7 +2697,8 @@ export default function MyDayView() {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Modal de Criação / Edição de Objetivos */}
