@@ -64,62 +64,60 @@ export default function LandingPage({ onEnterApp }) {
   ];
 
   const benefits = [
-    { icon: Heart, color: '#818CF8', title: 'Menos ansiedade', desc: 'Tudo organizado em um lugar. Você sabe o que precisa fazer — sem a sensação de estar perdendo algo.' },
+    { icon: Heart, color: '#818CF8', title: 'Menos ansiedade', desc: 'Tudo organizado em um lugar. Você sabe o que precisa fazer, sem a sensação de estar perdendo algo.' },
     { icon: Target, color: '#10B981', title: 'Clareza total',   desc: 'Cada manhã você sabe exatamente o próximo passo. Sem paralisia por excesso de listas.' },
     { icon: RefreshCw, color: '#38BDF8', title: 'Consistência diária', desc: 'Hábitos e tarefas conectados ao sistema criam ritmo automático. A rotina se consolida sozinha.' },
-    { icon: Award, color: '#F59E0B', title: 'Motivação real',  desc: 'Ver sua planta crescer e seu companion evoluir gera motivação genuína — não só checkboxes.' },
+    { icon: Award, color: '#F59E0B', title: 'Motivação real',  desc: 'Ver sua planta crescer e seu companion evoluir gera motivação genuína, indo além dos simples checkboxes.' },
     { icon: Zap, color: '#C084FC', title: 'Menos procrastinação', desc: 'Com o Coach IA sugerindo o próximo passo e o timer integrado, começar ficou simples.' },
     { icon: TrendingUp, color: '#EC4899', title: 'Progresso visível', desc: 'Conquistas desbloqueadas, sequências mantidas, metas concluídas. Você sente que evolui.' }
   ];
 
 
   const compRows = [
-    { f: 'Lista de tarefas',           o: '✅ Sim',             m: '✅ Integrada a objetivos' },
-    { f: 'Rastreador de hábitos',      o: '⚠️ Apps separados',  m: '✅ Nativo e conectado' },
-    { f: 'Timer Pomodoro',             o: '⚠️ Apps separados',  m: '✅ Com áudio e XP' },
-    { f: 'Metas e objetivos',          o: '⚠️ Isolados',        m: '✅ 100% integrado' },
-    { f: 'Coach com IA',               o: '❌ Não possui',       m: '✅ Personalizado' },
-    { f: 'Gamificação e companion',    o: '❌ Não possui',       m: '✅ Pet + conquistas' },
-    { f: 'Ecossistema 100% conectado', o: '❌ Ferramentas isoladas', m: '✅ Tudo trabalha junto' }
+    { f: 'Foco da experiência',       o: 'Você organiza',      m: 'Você evolui' },
+    { f: 'Estrutura de ferramentas',   o: 'Ferramentas separadas', m: 'Tudo conectado' },
+    { f: 'Uso de dados da rotina',     o: 'Dados isolados',     m: 'IA aprende com sua rotina' },
+    { f: 'Sensação de progresso',      o: 'Checklists simples', m: 'Progresso visível' }
   ];
 
   const faqs = [
-    { q: 'O que é o MyFlowDay?', a: 'É um sistema integrado de evolução pessoal que conecta objetivos, tarefas, hábitos, timer Pomodoro, gamificação e IA — tudo em um único ecossistema para gerar progresso consistente.' },
-    { q: 'Como o Coach IA funciona?', a: 'Ele analisa sua rotina real: horários de maior foco, hábitos cumpridos, objetivos em atraso — e gera sugestões acionáveis e insights semanais personalizados para você.' },
+    { q: 'O que é o MyFlowDay?', a: 'É um sistema integrado de evolução pessoal que conecta objetivos, tarefas, hábitos, timer Pomodoro, gamificação e IA, reunindo tudo em um único ecossistema para gerar progresso consistente.' },
+    { q: 'Como o Coach IA funciona?', a: 'Ele analisa sua rotina real: horários de maior foco, hábitos cumpridos e objetivos em atraso, gerando sugestões acionáveis e insights semanais personalizados.' },
     { q: 'O que é o companheiro virtual?', a: 'É um avatar dinâmico (planta, pet ou bebê) que cresce de nível à medida que você conclui tarefas e mantém hábitos. É o espelho visual do seu progresso.' },
     { q: 'O app funciona offline?', a: 'Sim. O MyFlowDay usa IndexedDB local para salvar dados. Quando a conexão é restaurada, tudo sincroniza automaticamente com a nuvem via Supabase.' },
     { q: 'Qual a diferença entre Gratuito e Pro?', a: 'O Gratuito já inclui todos os módulos essenciais. O Pro desbloqueia análises avançadas do Coach IA, tendências por horário, companions exclusivos e suporte prioritário.' }
   ];
 
   const freeFeatures = [
-    { text: 'Organize sua rotina (Tarefas)', on: true },
-    { text: 'Crie metas e objetivos', on: true },
-    { text: 'Rastreamento de hábitos', on: true },
+    { text: 'Tarefas e objetivos ilimitados', on: true },
+    { text: 'Rastreamento de hábitos diários', on: true },
     { text: 'Timer Pomodoro integrado', on: true },
-    { text: 'Companion básico', on: true },
+    { text: 'Companion virtual básico', on: true },
+    { text: 'Coach IA básico (insights semanais)', on: true },
+    { text: 'Relatórios de progresso essenciais', on: true },
     { text: 'Coach IA ilimitado', on: false },
-    { text: 'Relatórios e análises inteligentes', on: false }
+    { text: 'Relatórios de foco avançados', on: false }
   ];
 
   const proFeatures = [
     'Tudo do plano Gratuito',
     'Coach IA ilimitado',
     'Insights diários personalizados',
-    'Relatórios de foco completos',
-    'Análises de produtividade inteligentes',
+    'Relatórios de foco avançados',
+    'Análises preditivas de produtividade',
+    'Histórico de evolução completo',
     'Companions e avatares exclusivos',
     'Temas exclusivos (Dark/Glow Premium)',
-    'Histórico de evolução ilimitado',
-    'Acesso antecipado a novidades'
+    'Acesso antecipado a novos recursos'
   ];
 
   const showcaseTabs = [
-    { id: 'home',      label: '🏠 Início' },
-    { id: 'meudia',   label: '📋 Meu Dia' },
-    { id: 'foco',     label: '⏱️ Foco' },
-    { id: 'coach',    label: '🧠 Mentor' },
-    { id: 'evolucao', label: '📈 Evolução' },
-    { id: 'conquistas', label: '🏆 Conquistas' }
+    { id: 'home',      label: 'Início', icon: Flame },
+    { id: 'meudia',   label: 'Meu Dia', icon: Calendar },
+    { id: 'foco',     label: 'Foco', icon: Clock },
+    { id: 'coach',    label: 'Coach IA', icon: Brain },
+    { id: 'evolucao', label: 'Evolução', icon: TrendingUp },
+    { id: 'conquistas', label: 'Conquistas', icon: Award }
   ];
 
   /* ── Shared inline styles ─── */
@@ -164,7 +162,7 @@ export default function LandingPage({ onEnterApp }) {
 
           {/* Eyebrow */}
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '6px 14px', borderRadius: '99px', background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.25)', fontSize: '11.5px', fontWeight: 700, color: '#818CF8', marginBottom: '28px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            <Sparkles size={12} /> Sistema integrado de evolução pessoal
+            <Sparkles size={12} /> O único app que conecta tarefas, hábitos, foco e IA em um único sistema
           </div>
 
           {/* Headline */}
@@ -322,7 +320,7 @@ export default function LandingPage({ onEnterApp }) {
                 {/* Input 2 */}
                 <div>
                   <label style={{ display: 'block', fontSize: '14px', fontWeight: 700, color: '#CBD5E1', marginBottom: '10px' }}>
-                    Quanto tempo você perde procurando o que fazer?
+                    Quanto tempo você perde decidindo o que fazer ou alternando entre aplicativos?
                   </label>
                   <div style={{ display: 'flex', gap: '10px' }}>
                     {[5, 10, 15, 20].map((t) => (
@@ -398,6 +396,10 @@ export default function LandingPage({ onEnterApp }) {
                 >
                   Começar a recuperar meu tempo
                 </button>
+                
+                <span style={{ fontSize: '10px', color: '#475569', marginTop: '12px', display: 'block', lineHeight: 1.4 }}>
+                  * Estimativa baseada no tempo médio gasto organizando atividades e alternando entre ferramentas.
+                </span>
               </div>
 
             </div>
@@ -515,16 +517,27 @@ export default function LandingPage({ onEnterApp }) {
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '28px' }}>
-            {showcaseTabs.map(tab => (
-              <button key={tab.id} onClick={() => setActiveShowcaseTab(tab.id)} className={`showcase-tab ${activeShowcaseTab === tab.id ? 'active' : ''}`}>{tab.label}</button>
-            ))}
+            {showcaseTabs.map(tab => {
+              const TabIcon = tab.icon;
+              return (
+                <button 
+                  key={tab.id} 
+                  onClick={() => setActiveShowcaseTab(tab.id)} 
+                  className={`showcase-tab ${activeShowcaseTab === tab.id ? 'active' : ''}`}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                >
+                  <TabIcon size={14} />
+                  {tab.label}
+                </button>
+              );
+            })}
           </div>
           <div style={{ background: '#0F1318', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '20px', padding: '28px', minHeight: '360px', display: 'flex', flexDirection: 'column', justifyContent: 'center', boxShadow: '0 20px 60px rgba(0,0,0,0.4)' }}>
             {activeShowcaseTab === 'home' && (
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '30px', alignItems: 'center' }} className="showcase-content-grid">
                 <div>
                   <h3 style={{ fontSize: '22px', fontWeight: 800, color: '#FFFFFF', marginBottom: '12px' }}>Seu painel central de evolução</h3>
-                  <p style={{ color: '#94A3B8', fontSize: '14.5px', lineHeight: 1.6, marginBottom: '18px' }}>Tudo que importa em uma tela. Companion, sequência de hábitos, próximas tarefas e insights inteligentes — num design de glassmorphism limpo.</p>
+                  <p style={{ color: '#94A3B8', fontSize: '14.5px', lineHeight: 1.6, marginBottom: '18px' }}>Tudo conectado. Uma tarefa concluída atualiza sua evolução, fortalece seus hábitos, faz seu companion evoluir e gera novos insights do Coach IA.</p>
                   <ul className="premium-list">
                     <li><Check size={14} color="#10B981" /> Companion virtual na primeira dobra</li>
                     <li><Check size={14} color="#10B981" /> Quick-add por linguagem natural</li>
@@ -543,7 +556,7 @@ export default function LandingPage({ onEnterApp }) {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '30px', alignItems: 'center' }} className="showcase-content-grid">
                 <div>
                   <h3 style={{ fontSize: '22px', fontWeight: 800, color: '#FFFFFF', marginBottom: '12px' }}>Meu Dia: execução sem ruído</h3>
-                  <p style={{ color: '#94A3B8', fontSize: '14.5px', lineHeight: 1.6, marginBottom: '18px' }}>Lista inteligente que destaca o que importa. Sem pop-ups, sem distrações — só você e as tarefas que movem seus objetivos.</p>
+                  <p style={{ color: '#94A3B8', fontSize: '14.5px', lineHeight: 1.6, marginBottom: '18px' }}>Lista inteligente que destaca o que importa. Sem pop-ups, sem distrações, apenas você e as tarefas que movem seus objetivos.</p>
                   <ul className="premium-list">
                     <li><Check size={14} color="#10B981" /> Destaques automáticos de prioridade</li>
                     <li><Check size={14} color="#10B981" /> Filtros inteligentes de contexto</li>
@@ -580,8 +593,8 @@ export default function LandingPage({ onEnterApp }) {
             {activeShowcaseTab === 'coach' && (
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '30px', alignItems: 'center' }} className="showcase-content-grid">
                 <div>
-                  <h3 style={{ fontSize: '22px', fontWeight: 800, color: '#FFFFFF', marginBottom: '12px' }}>Mentor Inteligente: seu guia pessoal</h3>
-                  <p style={{ color: '#94A3B8', fontSize: '14.5px', lineHeight: 1.6, marginBottom: '18px' }}>Diferente de sistemas genéricos, o Mentor aprende com sua rotina real — horários de pico, objetivos em atraso e padrões de hábito.</p>
+                  <h3 style={{ fontSize: '22px', fontWeight: 800, color: '#FFFFFF', marginBottom: '12px' }}>Coach IA: seu guia pessoal</h3>
+                  <p style={{ color: '#94A3B8', fontSize: '14.5px', lineHeight: 1.6, marginBottom: '18px' }}>Diferente de sistemas genéricos, o Coach IA aprende com sua rotina real, mapeando seus horários de pico, objetivos em atraso e padrões de hábito.</p>
                   <ul className="premium-list">
                     <li><Check size={14} color="#10B981" /> Análise semanal personalizada</li>
                     <li><Check size={14} color="#10B981" /> Sugestões baseadas no histórico</li>
@@ -589,7 +602,7 @@ export default function LandingPage({ onEnterApp }) {
                   </ul>
                 </div>
                 <div style={{ background: 'rgba(255,255,255,0.02)', padding: '20px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                  <div className="chat-bubble-showcase">🧠 <b>Mentor:</b> Você rende mais às terças pela manhã. Agendei suas tarefas de "Estudos" nessa janela. Seu objetivo de leitura está 4 dias parado — que tal 10 minutos hoje?</div>
+                  <div className="chat-bubble-showcase">🧠 <b>Coach IA:</b> Você rende mais às terças pela manhã. Agendei suas tarefas de "Estudos" nessa janela. Seu objetivo de leitura está 4 dias parado, que tal 10 minutos hoje?</div>
                 </div>
               </div>
             )}
@@ -597,7 +610,7 @@ export default function LandingPage({ onEnterApp }) {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '30px', alignItems: 'center' }} className="showcase-content-grid">
                 <div>
                   <h3 style={{ fontSize: '22px', fontWeight: 800, color: '#FFFFFF', marginBottom: '12px' }}>Métricas reais de progresso</h3>
-                  <p style={{ color: '#94A3B8', fontSize: '14.5px', lineHeight: 1.6, marginBottom: '18px' }}>Consistência diária, sequências de hábitos, objetivos completados e crescimento do companion — tudo em um painel visual.</p>
+                  <p style={{ color: '#94A3B8', fontSize: '14.5px', lineHeight: 1.6, marginBottom: '18px' }}>Consistência diária, sequências de hábitos, objetivos completados e crescimento do companion, tudo em um painel visual.</p>
                   <ul className="premium-list">
                     <li><Check size={14} color="#10B981" /> Consistência e ritmo semanal</li>
                     <li><Check size={14} color="#10B981" /> Progresso de cada objetivo ativo</li>
@@ -681,7 +694,7 @@ export default function LandingPage({ onEnterApp }) {
             <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '480px' }}>
               <thead>
                 <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', background: 'rgba(255,255,255,0.02)' }}>
-                  <th style={{ padding: '16px 22px', fontWeight: 700, color: '#FFFFFF', fontSize: '13px' }}>Funcionalidade</th>
+                  <th style={{ padding: '16px 22px', fontWeight: 700, color: '#FFFFFF', fontSize: '13px' }}>Critério</th>
                   <th style={{ padding: '16px 22px', fontWeight: 700, color: '#64748B', fontSize: '13px' }}>Outros Apps</th>
                   <th style={{ padding: '16px 22px', fontWeight: 700, color: '#818CF8', fontSize: '13px' }}>MyFlowDay</th>
                 </tr>
@@ -690,8 +703,8 @@ export default function LandingPage({ onEnterApp }) {
                 {compRows.map((row, i) => (
                   <tr key={i} style={{ borderBottom: i < compRows.length - 1 ? '1px solid rgba(255,255,255,0.03)' : 'none' }}>
                     <td style={{ padding: '14px 22px', fontWeight: 600, color: '#CBD5E1', fontSize: '13.5px' }}>{row.f}</td>
-                    <td style={{ padding: '14px 22px', color: row.o.startsWith('✅') ? '#10B981' : row.o.startsWith('⚠️') ? '#F59E0B' : '#EF4444', fontSize: '13px' }}>{row.o}</td>
-                    <td style={{ padding: '14px 22px', color: '#10B981', fontWeight: 700, fontSize: '13px' }}>{row.m}</td>
+                    <td style={{ padding: '14px 22px', color: '#94A3B8', fontSize: '13.5px', fontWeight: 500 }}>{row.o}</td>
+                    <td style={{ padding: '14px 22px', color: '#10B981', fontWeight: 700, fontSize: '13.5px' }}>{row.m}</td>
                   </tr>
                 ))}
               </tbody>
@@ -811,8 +824,11 @@ export default function LandingPage({ onEnterApp }) {
               <h2 style={{ fontSize: 'clamp(24px,4vw,34px)', fontWeight: 800, color: '#FFFFFF', marginBottom: '14px', letterSpacing: '-0.02em' }}>
                 Grandes mudanças começam<br />com pequenas ações.
               </h2>
-              <p style={{ color: '#64748B', fontSize: '15px', lineHeight: 1.6, maxWidth: '440px', margin: '0 auto 26px' }}>
-                Crie sua conta gratuita e dê o primeiro passo hoje. Sem cartão, sem compromisso.
+              <p style={{ color: '#64748B', fontSize: '15px', lineHeight: 1.6, maxWidth: '440px', margin: '0 auto 12px' }}>
+                Crie sua conta gratuita e comece hoje mesmo. Sem cartão, sem compromisso.
+              </p>
+              <p style={{ color: '#94A3B8', fontSize: '14px', fontWeight: 600, marginBottom: '24px' }}>
+                Você não precisa mudar sua vida hoje. Só precisa dar o primeiro passo.
               </p>
               <button onClick={onEnterApp} className="btn-purple-glow" style={{ ...S.ctaBtn, padding: '16px 40px' }}>
                 Começar gratuitamente <ArrowRight size={16} />
