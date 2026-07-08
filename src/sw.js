@@ -1,3 +1,11 @@
+// Intercepta e ignora cache se a requisição tiver clear=true ou reload=true
+self.addEventListener('fetch', (event) => {
+  const url = new URL(event.request.url);
+  if (url.searchParams.has('clear') || url.searchParams.has('reload')) {
+    event.respondWith(fetch(event.request));
+  }
+});
+
 import { precacheAndRoute } from 'workbox-precaching';
 
 // Precaching files injected by workbox
