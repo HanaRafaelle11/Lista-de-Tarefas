@@ -6,23 +6,23 @@ import { supabase } from './supabaseClient';
 import Auth from './components/Auth';
 import CreatePasswordModal from './components/CreatePasswordModal';
 import Sidebar from './components/Sidebar';
-import LandingPage from './components/LandingPage';
 import PrivacyView from './components/PrivacyView';
 import TermsView from './components/TermsView';
 import FaqView from './components/FaqView';
 
-import AchievementToastManager from './components/AchievementToast';
 import SyncStatusBanner from './components/SyncStatusBanner';
 import PaywallModal from './components/PaywallModal';
-
-import HomeView from './components/HomeView';
-import MyDayView from './components/MyDayView';
-import FocusView from './components/FocusView';
-import EvolutionView from './components/EvolutionView';
-import ProfileView from './components/ProfileView';
-import AdminDashboard from './components/AdminDashboard';
-import SettingsView from './components/SettingsView';
 import MFIcon from './components/MFIcon';
+
+const LandingPage = lazy(() => import('./components/LandingPage'));
+const HomeView = lazy(() => import('./components/HomeView'));
+const MyDayView = lazy(() => import('./components/MyDayView'));
+const FocusView = lazy(() => import('./components/FocusView'));
+const EvolutionView = lazy(() => import('./components/EvolutionView'));
+const ProfileView = lazy(() => import('./components/ProfileView'));
+const AdminDashboard = lazy(() => import('./components/AdminDashboard'));
+const SettingsView = lazy(() => import('./components/SettingsView'));
+const AchievementToastManager = lazy(() => import('./components/AchievementToast'));
 
 const RevenueDashboard = lazy(() => import('./pages/RevenueDashboard'));
 const Checkout = lazy(() => import('./pages/Checkout'));
@@ -382,7 +382,16 @@ function AppLayout() {
   if (!currentUser) {
     // Exibe landing page pública antes da tela de autenticação
     if (showLanding) {
-      return <LandingPage onEnterApp={() => setShowLanding(false)} />;
+      return (
+        <Suspense fallback={
+          <div className="app-loading-container">
+            <div className="app-loading-spinner" />
+            <span className="app-loading-text">Carregando o Flowday...</span>
+          </div>
+        }>
+          <LandingPage onEnterApp={() => setShowLanding(false)} />
+        </Suspense>
+      );
     }
     return <Auth onLoginSuccess={handleLoginSuccess} initialMode={authMode} onBackToLanding={() => setShowLanding(true)} />;
   }
@@ -483,7 +492,6 @@ function AppLayout() {
 
 
 
-      <AchievementToastManager queue={toastQueue} onDismiss={dismissToast} />
       <PaywallModal />
       {showCreatePasswordModal && (
         <CreatePasswordModal
@@ -492,6 +500,7 @@ function AppLayout() {
         />
       )}
       <Suspense fallback={null}>
+        <AchievementToastManager queue={toastQueue} onDismiss={dismissToast} />
         <GuidedTour />
         <NotificationEngine />
         <PwaInstallPrompt />

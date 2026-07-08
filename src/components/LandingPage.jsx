@@ -162,7 +162,7 @@ export default function LandingPage({ onEnterApp }) {
 
           {/* Eyebrow */}
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '6px 14px', borderRadius: '99px', background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.25)', fontSize: '11.5px', fontWeight: 700, color: '#818CF8', marginBottom: '28px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            <Sparkles size={12} /> O único app que conecta tarefas, hábitos, foco e IA em um único sistema
+            <Sparkles size={12} /> O único app que conecta tarefas, hábitos, foco e IA em um só lugar
           </div>
 
           {/* Headline */}
@@ -189,8 +189,13 @@ export default function LandingPage({ onEnterApp }) {
           </div>
 
           {/* Trust signals */}
-          <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap', justifyContent: 'center', marginBottom: '56px' }}>
-            {['Gratuito', 'Sem cartão', 'Configuração em 2 minutos'].map((t, i) => <TrustBadge key={i} text={t} />)}
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', marginBottom: '56px' }}>
+            <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap', justifyContent: 'center' }}>
+              {['Gratuito', 'Sem cartão', 'Configuração em 2 minutos'].map((t, i) => <TrustBadge key={i} text={t} />)}
+            </div>
+            <span style={{ fontSize: '13px', color: '#64748B', fontWeight: 600, fontStyle: 'italic', letterSpacing: '0.02em', marginTop: '4px' }}>
+              "Organize sua rotina. Construa consistência."
+            </span>
           </div>
         </div>
 
@@ -729,7 +734,7 @@ export default function LandingPage({ onEnterApp }) {
           </p>
           
           <p style={{ fontSize: 'clamp(15px, 2vw, 17px)', color: '#CBD5E1', lineHeight: 1.7, fontWeight: 500 }}>
-            O MyFlowDay foi criado para transformar pequenas ações diárias em progresso visível, ajudando você a construir uma rotina sustentável sem depender apenas de força de vontade.
+            O MyFlowDay foi criado para transformar pequenas ações diárias em resultados visíveis, ajudando você a construir uma rotina sustentável sem depender apenas de força de vontade.
           </p>
         </Container>
       </section>
@@ -784,7 +789,7 @@ export default function LandingPage({ onEnterApp }) {
               <button onClick={onEnterApp} style={{ width: '100%', padding: '13px', borderRadius: '12px', border: 'none', background: 'linear-gradient(135deg,#6366F1 0%,#8B5CF6 100%)', color: '#FFFFFF', fontWeight: 700, fontSize: '14.5px', cursor: 'pointer', boxShadow: '0 4px 20px rgba(99,102,241,0.3)' }}
                 onMouseOver={e => { e.currentTarget.style.filter = 'brightness(1.1)'; }}
                 onMouseOut={e => { e.currentTarget.style.filter = 'none'; }}>
-                Assinar Pro →
+                Começar com o Pro →
               </button>
             </div>
           </div>

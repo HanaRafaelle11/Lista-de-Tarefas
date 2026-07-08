@@ -7,28 +7,28 @@
  */
 
 // ── Plant stages ──────────────────────────────────────────
-import planta1 from '../assets/images/evolution/planta_1.png';
-import planta2 from '../assets/images/evolution/planta_2.png';
-import planta3 from '../assets/images/evolution/planta_3.png';
-import planta4 from '../assets/images/evolution/planta_4.png';
+import planta1 from '../assets/images/evolution/planta_1.webp';
+import planta2 from '../assets/images/evolution/planta_2.webp';
+import planta3 from '../assets/images/evolution/planta_3.webp';
+import planta4 from '../assets/images/evolution/planta_4.webp';
 
 // ── Baby stages ───────────────────────────────────────────
-import bebe1 from '../assets/images/evolution/bebe_1.png';
-import bebe2 from '../assets/images/evolution/bebe_2.png';
-import bebe3 from '../assets/images/evolution/bebe_3.png';
-import bebe4 from '../assets/images/evolution/bebe_4.png';
+import bebe1 from '../assets/images/evolution/bebe_1.webp';
+import bebe2 from '../assets/images/evolution/bebe_2.webp';
+import bebe3 from '../assets/images/evolution/bebe_3.webp';
+import bebe4 from '../assets/images/evolution/bebe_4.webp';
 
 // ── Dog stages ────────────────────────────────────────────
-import dog1 from '../assets/images/evolution/dog_1.png';
-import dog2 from '../assets/images/evolution/dog_2.png';
-import dog3 from '../assets/images/evolution/dog_3.png';
-import dog4 from '../assets/images/evolution/dog_4.png';
+import dog1 from '../assets/images/evolution/dog_1.webp';
+import dog2 from '../assets/images/evolution/dog_2.webp';
+import dog3 from '../assets/images/evolution/dog_3.webp';
+import dog4 from '../assets/images/evolution/dog_4.webp';
 
 // ── Cat stages ────────────────────────────────────────────
-import cat1 from '../assets/images/evolution/cat_1.png';
-import cat2 from '../assets/images/evolution/cat_2.png';
-import cat3 from '../assets/images/evolution/cat_3.png';
-import cat4 from '../assets/images/evolution/cat_4.png';
+import cat1 from '../assets/images/evolution/cat_1.webp';
+import cat2 from '../assets/images/evolution/cat_2.webp';
+import cat3 from '../assets/images/evolution/cat_3.webp';
+import cat4 from '../assets/images/evolution/cat_4.webp';
 
 export const EVOLUTION_CATEGORIES = {
   plant: {
