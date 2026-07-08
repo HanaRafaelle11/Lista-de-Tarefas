@@ -598,7 +598,7 @@ export default function MyDayView() {
     setCategory(task.category);
     setPriority(task.priority);
     setDueDate(datePart || '');
-    setDueTime(timePart || meta.due_time || '');
+    setDueTime(meta.due_time || '');
     setRecurrence(meta.recurrence || 'nenhuma');
 
     setIsModalOpen(true);
@@ -674,10 +674,11 @@ export default function MyDayView() {
     // Só verifica conquista se a tarefa estiver sendo marcada como concluída
     if (taskToToggle && !taskToToggle.completed) {
       const today = todayStr();
-      // Filtrar tarefas *já* completadas hoje (excluindo a tarefa atual)
-      const completedTasksTodayBefore = tasks.filter(t =>
-        t.id !== taskId && t.completed && t.completedAt && t.completedAt.startsWith(today)
-      );
+      const completedTasksTodayBefore = tasks.filter(t => {
+        if (t.id === taskId || !t.completed || !t.completedAt) return false;
+        const { datePart } = extractDateAndTimeParts(t.completedAt);
+        return datePart === today;
+      });
 
       if (completedTasksTodayBefore.length === 0) {
         setAchievementData({
@@ -1366,8 +1367,7 @@ export default function MyDayView() {
             {[
               { key: 'all', label: 'Todas', count: total },
               { key: 'active', label: 'Pendentes', count: active },
-              { key: 'completed', label: 'Concluídas', count: completed },
-              { key: 'archived', label: 'Arquivados', count: (goals || []).filter(g => g.status === 'archived' && !g.deletedAt).length + (tasks || []).filter(t => parseTaskMetadata(t.description).archived === true && !t.deletedAt).length }
+              { key: 'completed', label: 'Concluídas', count: completed }
             ].map(({ key, label, count }) => (
               <button
                 key={key}
@@ -1540,7 +1540,7 @@ export default function MyDayView() {
                           ? `2px solid ${goal.color || 'var(--primary)'}`
                           : `1px solid var(--border-light)`,
                         borderRadius: 'var(--radius-md)',
-                        overflow: 'hidden',
+                        overflow: activeGoalKebabId === goal.id ? 'visible' : 'hidden',
                         opacity: isMatchingCategory ? 1 : 0.45,
                         transition: 'all 0.2s ease',
                         boxShadow: isExpanded ? `0 4px 12px ${goal.color ? `${goal.color}15` : 'rgba(0,0,0,0.1)'}` : 'none'

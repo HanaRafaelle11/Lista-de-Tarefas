@@ -1,13 +1,5 @@
-/**
- * MFIcon — MyFlow Icons React Component
- *
- * Biblioteca proprietária MyFlow Icons v1.0
- * Outline monoline · 24×24px · stroke 2px · currentColor
- *
- * Usage:
- *   <MFIcon name="objectives" size={24} />
- *   <MFIcon name="streak" size={20} color="var(--primary)" />
- */
+import React from 'react';
+import * as LucideIcons from 'lucide-react';
 
 const ICONS = {
   objectives: (
@@ -702,6 +694,48 @@ export function MFIcon({ name, size = 24, color, className = '', style = {}, tit
   const paths = ICONS[resolvedName.toLowerCase() ? resolvedName.toLowerCase() : resolvedName];
 
   if (!paths) {
+    const lucideNameMap = {
+      target: 'Target',
+      rocket: 'Rocket',
+      book: 'BookOpen',
+      dollar: 'DollarSign',
+      home: 'Home',
+      globe: 'Globe',
+      dumbbell: 'Dumbbell',
+      brain: 'Brain',
+      heart: 'Heart',
+      palette: 'Palette',
+      music: 'Music',
+      plane: 'Plane',
+      sprout: 'Sprout',
+      trending: 'TrendingUp',
+      star: 'Star',
+      users: 'Users',
+      lock: 'Lock',
+      warning: 'AlertTriangle',
+      trash: 'Trash2',
+      chart: 'BarChart3',
+      streak: 'Flame',
+      achievements: 'Award',
+      check: 'Check',
+      bell: 'Bell'
+    };
+
+    const lucideKey = lucideNameMap[resolvedName.toLowerCase()] || 
+                      resolvedName.charAt(0).toUpperCase() + resolvedName.slice(1);
+    
+    const LucideComponent = LucideIcons[lucideKey];
+    if (LucideComponent) {
+      return (
+        <LucideComponent 
+          size={size} 
+          color={color} 
+          className={className} 
+          style={style} 
+        />
+      );
+    }
+
     const isEmoji = /\p{Emoji}/u.test(name) && !/^[a-zA-Z0-9-]+$/.test(name);
     return (
       <span 

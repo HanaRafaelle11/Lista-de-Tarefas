@@ -1723,7 +1723,7 @@ export function AppProvider({ children }) {
       localStorage.removeItem(`flowday_demo_tasks_${currentUser.id}`);
       localStorage.removeItem(`flowday_demo_goals_${currentUser.id}`);
       localStorage.removeItem(`flowday_demo_habits_${currentUser.id}`);
-      localStorage.removeItem(`flowday_demo_achievements_${currentUser.id}`);
+      localStorage.setItem(`flowday_demo_achievements_${currentUser.id}`, JSON.stringify([]));
     } else {
       try {
         await Promise.all([
@@ -1737,6 +1737,10 @@ export function AppProvider({ children }) {
         console.error('Error clearing all database data:', err);
       }
     }
+
+    // Resetar flags de onboarding para que o tour e guia reiniciem como no primeiro acesso
+    localStorage.removeItem(`flowday_tour_v2_${currentUser.id}`);
+    localStorage.removeItem('flowday_hide_evo_guide');
 
     addNotification('system', 'Dados limpos', 'Todos os seus dados foram excluídos permanentemente.');
     resetAchievementsIfEmpty(currentUser.id, [], []);

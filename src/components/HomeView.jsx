@@ -277,7 +277,7 @@ export default function HomeView() {
     if (t.includes('estudar') || t.includes('ler') || t.includes('curso') || t.includes('aula') || t.includes('faculdade') || t.includes('estudos') || t.includes('livro') || t.includes('aprender') || t.includes('pesquisar')) {
       return 'Estudos';
     }
-    if (t.includes('comprar') || t.includes('mercado') || t.includes('casa') || t.includes('limpar') || t.includes('arrumar') || t.includes('pessoal') || t.includes('família') || t.includes('médico') || t.includes('dentista') || t.includes('pagar') || t.includes('boleto')) {
+    if (t.includes('comprar') || t.includes('mercado') || t.includes('casa') || t.includes('limpar') || t.includes('arrumar') || t.includes('pessoal') || t.includes('família') || t.includes('médico') || t.includes('dentista') || t.includes('pagar') || t.includes('boleto') || t.includes('água') || t.includes('beber') || t.includes('academia') || t.includes('treino') || t.includes('treinar') || t.includes('exercício') || t.includes('exercitar') || t.includes('dormir') || t.includes('descanso') || t.includes('saúde') || t.includes('dieta') || t.includes('correr') || t.includes('caminhar') || t.includes('vitamina') || t.includes('remédio') || t.includes('meditação') || t.includes('meditar')) {
       return 'Pessoal';
     }
     return 'Trabalho';
@@ -1046,7 +1046,7 @@ export default function HomeView() {
         <div 
           className="animate-scale-up animate-fade-in" 
           onClick={() => {
-            setActiveTab('tasks');
+            setActiveTab('myday');
             setLocalNotification(null);
           }}
           style={{ 

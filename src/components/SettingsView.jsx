@@ -816,18 +816,18 @@ export default function SettingsView() {
         </div>
 
         {/* Contadores da Lixeira */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '12px', marginBottom: '8px' }}>
-          <div style={{ backgroundColor: 'var(--bg-card)', padding: '12px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-light)', textAlign: 'center' }}>
-            <span style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-light)', display: 'block', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Tarefas Excluídas</span>
-            <strong style={{ fontSize: '20px', color: 'var(--text-main)', display: 'block', marginTop: '4px' }}>{deletedTasks.length}</strong>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '8px' }}>
+          <div style={{ backgroundColor: 'var(--bg-card)', padding: '8px 14px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-light)', display: 'flex', alignItems: 'center', gap: '8px', flex: '1 1 auto', minWidth: 0 }}>
+            <strong style={{ fontSize: '18px', color: 'var(--text-main)', lineHeight: 1 }}>{deletedTasks.length}</strong>
+            <span style={{ fontSize: '11px', fontWeight: '600', color: 'var(--text-light)', textTransform: 'uppercase', letterSpacing: '0.4px' }}>Tarefas</span>
           </div>
-          <div style={{ backgroundColor: 'var(--bg-card)', padding: '12px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-light)', textAlign: 'center' }}>
-            <span style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-light)', display: 'block', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Objetivos Excluídos</span>
-            <strong style={{ fontSize: '20px', color: 'var(--text-main)', display: 'block', marginTop: '4px' }}>{deletedGoals.length}</strong>
+          <div style={{ backgroundColor: 'var(--bg-card)', padding: '8px 14px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-light)', display: 'flex', alignItems: 'center', gap: '8px', flex: '1 1 auto', minWidth: 0 }}>
+            <strong style={{ fontSize: '18px', color: 'var(--text-main)', lineHeight: 1 }}>{deletedGoals.length}</strong>
+            <span style={{ fontSize: '11px', fontWeight: '600', color: 'var(--text-light)', textTransform: 'uppercase', letterSpacing: '0.4px' }}>Objetivos</span>
           </div>
-          <div style={{ backgroundColor: 'var(--bg-card)', padding: '12px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-light)', textAlign: 'center' }}>
-            <span style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-light)', display: 'block', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Hábitos Excluídos</span>
-            <strong style={{ fontSize: '20px', color: 'var(--text-main)', display: 'block', marginTop: '4px' }}>{habits.filter(h => h.deletedAt).length}</strong>
+          <div style={{ backgroundColor: 'var(--bg-card)', padding: '8px 14px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-light)', display: 'flex', alignItems: 'center', gap: '8px', flex: '1 1 auto', minWidth: 0 }}>
+            <strong style={{ fontSize: '18px', color: 'var(--text-main)', lineHeight: 1 }}>{habits.filter(h => h.deletedAt).length}</strong>
+            <span style={{ fontSize: '11px', fontWeight: '600', color: 'var(--text-light)', textTransform: 'uppercase', letterSpacing: '0.4px' }}>Hábitos</span>
           </div>
         </div>
 
