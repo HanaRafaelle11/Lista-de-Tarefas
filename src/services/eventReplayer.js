@@ -30,6 +30,9 @@ export const eventReplayer = {
         count: 0,
         lastActive: null
       },
+      focusSessions: {
+        count: 0
+      },
       habits: {
         createdCount: 0,
         completedCount: 0
@@ -67,6 +70,10 @@ export const eventReplayer = {
           case 'onboarding_completed':
             projection.onboarding.completed = true;
             projection.onboarding.step = 5;
+            break;
+
+          case 'focus_session_completed':
+            projection.focusSessions.count += 1;
             break;
 
           case 'session_started':

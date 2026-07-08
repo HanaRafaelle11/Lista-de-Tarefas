@@ -179,8 +179,8 @@ export default function HomeView() {
       setActiveTab('tasks');
     }
   };
-  const activeTasksList = useMemo(() => tasks.filter(t => !t.deletedAt), [tasks]);
-  const activeGoalsList = useMemo(() => goals.filter(g => !g.deletedAt), [goals]);
+  const activeTasksList = useMemo(() => tasks.filter(t => !t.deletedAt && !t.deleted_at), [tasks]);
+  const activeGoalsList = useMemo(() => goals.filter(g => !g.deletedAt && !g.deleted_at), [goals]);
 
   const pendingTasks = activeTasksList.filter(t => !t.completed);
 
@@ -277,7 +277,7 @@ export default function HomeView() {
     if (t.includes('estudar') || t.includes('ler') || t.includes('curso') || t.includes('aula') || t.includes('faculdade') || t.includes('estudos') || t.includes('livro') || t.includes('aprender') || t.includes('pesquisar')) {
       return 'Estudos';
     }
-    if (t.includes('comprar') || t.includes('mercado') || t.includes('casa') || t.includes('limpar') || t.includes('arrumar') || t.includes('pessoal') || t.includes('família') || t.includes('médico') || t.includes('dentista') || t.includes('pagar') || t.includes('boleto') || t.includes('água') || t.includes('beber') || t.includes('academia') || t.includes('treino') || t.includes('treinar') || t.includes('exercício') || t.includes('exercitar') || t.includes('dormir') || t.includes('descanso') || t.includes('saúde') || t.includes('dieta') || t.includes('correr') || t.includes('caminhar') || t.includes('vitamina') || t.includes('remédio') || t.includes('meditação') || t.includes('meditar')) {
+    if (t.includes('comprar') || t.includes('mercado') || t.includes('casa') || t.includes('limpar') || t.includes('arrumar') || t.includes('pessoal') || t.includes('família') || t.includes('médico') || t.includes('dentista') || t.includes('pagar') || t.includes('boleto') || t.includes('água') || t.includes('beber') || t.includes('academia') || t.includes('treino') || t.includes('treinar') || t.includes('exercício') || t.includes('exercitar') || t.includes('dormir') || t.includes('descanso') || t.includes('saúde') || t.includes('dieta') || t.includes('correr') || t.includes('caminhar') || t.includes('vitamina') || t.includes('remédio') || t.includes('meditação') || t.includes('meditar') || t.includes('acordar') || t.includes('levantar') || t.includes('rotina') || t.includes('café') || t.includes('almoço') || t.includes('jantar') || t.includes('comer') || t.includes('comida') || t.includes('banho') || t.includes('dentes') || t.includes('escovar') || t.includes('sono')) {
       return 'Pessoal';
     }
     return 'Trabalho';
@@ -400,7 +400,7 @@ export default function HomeView() {
     
     // Add today's tasks
     tasks.forEach(t => {
-      if (t.completed || t.deletedAt) return;
+      if (t.completed || t.deletedAt || t.deleted_at) return;
       if (!t.dueDate) return;
       const taskDateOnly = extractDateAndTimeParts(t.dueDate).datePart;
       if (taskDateOnly === todayDate) {
@@ -419,7 +419,7 @@ export default function HomeView() {
 
     // Add today's goals
     goals.forEach(g => {
-      if (g.status !== 'active' || g.deletedAt) return;
+      if (g.status !== 'active' || g.deletedAt || g.deleted_at) return;
       if (!g.target_date) return;
       const goalDateOnly = extractDateAndTimeParts(g.target_date).datePart;
       if (goalDateOnly === todayDate) {
@@ -470,7 +470,14 @@ export default function HomeView() {
   }, [hasNoItems, growthPet]);
 
   const petSpeechText = useMemo(() => {
-    const completedTasksList = tasks.filter(t => t.completed && !t.deletedAt);
+    const completedTasksList = tasks.filter(t => t.completed && !t.deletedAt && !t.deleted_at);
+    const activeTasksList = tasks.filter(t => !t.deletedAt && !t.deleted_at);
+    const incompleteTasks = activeTasksList.filter(t => !t.completed);
+
+    if (activeTasksList.length > 0 && incompleteTasks.length === 0) {
+      return "Incrível! Todas as suas tarefas de hoje foram concluídas. Você está dominando o seu dia! 🌟";
+    }
+
     if (completedTasksList.length > 0) {
       const dates = completedTasksList.map(t => new Date(t.completedAt || t.updated_at || t.createdAt)).sort((a, b) => b - a);
       const lastCompletedDate = dates[0];
@@ -487,7 +494,7 @@ export default function HomeView() {
       return `Você está a apenas ${tasksNeeded} tarefa${tasksNeeded > 1 ? 's' : ''} do meu próximo nível! Vamos concluir juntas?`;
     }
 
-    const activeGoals = goals.filter(g => g.status === 'active' && !g.deletedAt);
+    const activeGoals = goals.filter(g => g.status === 'active' && !g.deletedAt && !g.deleted_at);
     if (activeGoals.length > 0) {
       const randomGoal = activeGoals[Math.floor(Math.random() * activeGoals.length)];
       return `Hoje é um excelente dia para dar atenção ao seu objetivo: "${randomGoal.title}". Vamos dar um passo nele hoje?`;

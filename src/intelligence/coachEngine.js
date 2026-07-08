@@ -16,13 +16,14 @@ export function generateCoachMessage({
   consistencyScore = 0,
   currentUser = null,
   userProfile = null,
-  isPro = false
+  isPro = false,
+  userState = null
 }) {
   const now = new Date();
   const userName = userProfile?.nickname || userProfile?.name || currentUser?.user_metadata?.name || currentUser?.name || 'Tester';
 
-  const allActiveTasks = tasks.filter(t => !t.deletedAt);
-  const activeGoals = goals.filter(g => g.status === 'active' && !g.deletedAt);
+  const allActiveTasks = tasks.filter(t => !t.deletedAt && !t.deleted_at);
+  const activeGoals = goals.filter(g => g.status === 'active' && !g.deletedAt && !g.deleted_at);
 
   // 1. Tratamento de Workspace Vazio
   if (allActiveTasks.length === 0 && activeGoals.length === 0) {
@@ -61,12 +62,12 @@ Você não possui nenhuma tarefa ou objetivo ativo no momento.
 
   const completedRecentTasks = tasks.filter(t => 
     t.completed && 
-    !t.deletedAt &&
+    !t.deletedAt && !t.deleted_at &&
     (t.completedAt ? new Date(t.completedAt) >= sevenDaysAgo : true)
   );
 
   const totalRecentTasks = tasks.filter(t => 
-    !t.deletedAt && 
+    !t.deletedAt && !t.deleted_at &&
     (t.createdAt ? new Date(t.createdAt) >= sevenDaysAgo : true)
   ).length;
 
@@ -127,7 +128,7 @@ Você não possui nenhuma tarefa ou objetivo ativo no momento.
   const dayCounts = Array(7).fill(0);
   tasks.forEach(t => {
     const dateStr = t.completedAt || t.dueDate || t.createdAt;
-    if (t.completed && !t.deletedAt && dateStr) {
+    if (t.completed && !t.deletedAt && !t.deleted_at && dateStr) {
       const day = new Date(dateStr).getDay();
       dayCounts[day]++;
     }
@@ -145,14 +146,82 @@ Você não possui nenhuma tarefa ou objetivo ativo no momento.
   const bestDayName = daysOfWeek[bestDayIdx];
   const preposition = (bestDayIdx === 0 || bestDayIdx === 6) ? 'aos' : 'às';
 
-  const insightsList = [
-    `Você rende muito mais ${preposition} ${bestDayName.toLowerCase()}. Aproveite este dia para tarefas de foco profundo.`,
-    `Dias com sessão de foco ativadas aumentam sua taxa de conclusão em 35%.`,
-    `Identifiquei que você costuma concluir 60% das suas tarefas entre 9h e 11h.`,
-    `Você tende a perder o ritmo de projetos após quatro dias sem atividade.`
-  ];
-  const insight1 = insightsList[weekNum % insightsList.length];
-  const insight2 = insightsList[(weekNum + 1) % insightsList.length];
+  // 7a. Produtividade por dia e período da faixa horária
+  const hourCompletions = {
+    'Manhã': 0,
+    'Tarde': 0,
+    'Noite': 0,
+    'Madrugada': 0
+  };
+  tasks.forEach(t => {
+    if (t.completed && !t.deletedAt && !t.deleted_at && t.completedAt) {
+      const hour = new Date(t.completedAt).getHours();
+      if (hour >= 6 && hour < 12) hourCompletions['Manhã']++;
+      else if (hour >= 12 && hour < 18) hourCompletions['Tarde']++;
+      else if (hour >= 18 && hour < 24) hourCompletions['Noite']++;
+      else hourCompletions['Madrugada']++;
+    }
+  });
+  let bestTimeRange = 'Manhã';
+  let maxHourCount = 0;
+  Object.entries(hourCompletions).forEach(([range, count]) => {
+    if (count > maxHourCount) {
+      maxHourCount = count;
+      bestTimeRange = range;
+    }
+  });
+
+  const insightDayAndTime = maxDayCount > 0
+    ? `Você rende muito mais ${preposition} ${bestDayName.toLowerCase()} no período da ${bestTimeRange.toLowerCase()}. Planeje suas tarefas mais difíceis para esse horário.`
+    : `Seu dia mais produtivo tem sido ${bestDayName}. Experimente agendar blocos de foco profundo nesse dia.`;
+
+  // 7b. Categoria mais concluída
+  const completedCategoryCounts = {};
+  tasks.forEach(t => {
+    if (t.completed && !t.deletedAt && !t.deleted_at && t.category) {
+      completedCategoryCounts[t.category] = (completedCategoryCounts[t.category] || 0) + 1;
+    }
+  });
+  let mostCompletedCategory = 'Nenhuma';
+  let maxCompletedCatCount = 0;
+  Object.entries(completedCategoryCounts).forEach(([cat, count]) => {
+    if (count > maxCompletedCatCount) {
+      maxCompletedCatCount = count;
+      mostCompletedCategory = cat;
+    }
+  });
+
+  const insightCompletedCategory = maxCompletedCatCount > 0
+    ? `Sua categoria mais concluída é **${mostCompletedCategory}** (${maxCompletedCatCount} tarefas finalizadas). Bom trabalho!`
+    : `Comece a concluir tarefas em categorias variadas para ver qual área da sua vida se move mais rápido.`;
+
+  // 7c. Categoria mais procrastinada
+  const activeCategoryCounts = {};
+  tasks.forEach(t => {
+    if (!t.completed && !t.deletedAt && !t.deleted_at && t.category) {
+      activeCategoryCounts[t.category] = (activeCategoryCounts[t.category] || 0) + 1;
+    }
+  });
+  let mostProcrastinatedCategory = 'Nenhuma';
+  let maxActiveCatCount = 0;
+  Object.entries(activeCategoryCounts).forEach(([cat, count]) => {
+    if (count > maxActiveCatCount) {
+      maxActiveCatCount = count;
+      mostProcrastinatedCategory = cat;
+    }
+  });
+
+  const insightProcrastinatedCategory = maxActiveCatCount > 0
+    ? `A categoria **${mostProcrastinatedCategory}** é a mais procrastinada no momento (${maxActiveCatCount} pendências). Dedique seu próximo foco a ela.`
+    : `Parabéns! Nenhuma categoria específica está acumulando tarefas pendentes no momento.`;
+
+  // 7d. Horas economizadas
+  const completedGoalsCount = goals.filter(g => g.status === 'completed' && !g.deletedAt && !g.deleted_at).length;
+  const focusCount = userState?.stats?.sessions || 0;
+  const finalFocusCount = (currentUser?.isDemo && focusCount === 0) ? 8 : focusCount;
+  const hoursSaved = (finalFocusCount * 0.5) + (completedRecentTasks.length * 0.25) + (completedGoalsCount * 2.0);
+  
+  const insightHoursSaved = `Você economizou aproximadamente **${hoursSaved.toFixed(1)} horas** esta semana com sessões de foco Pomodoro e conclusão de objetivos/tarefas.`;
 
   // 8. Geração de Textos com base no Tom de Voz
   let mainGreeting = `Olá, ${userName}! Sou seu mentor de produtividade.`;
@@ -198,8 +267,10 @@ ${feedbackParagraph}
 ${trendIndicator}
 
 **Insights do Mentor:**
-* 💡 ${insight1}
-* 💡 ${insight2}
+* 💡 ${insightDayAndTime}
+* 💡 ${insightCompletedCategory}
+* 💡 ${insightProcrastinatedCategory}
+* 💡 ${insightHoursSaved}
 
 **Recomendação Prática:**
 👉 ${suggestionText}`;

@@ -159,11 +159,12 @@ export default function CoachView() {
     openPaywall,
     logEvent,
     setActiveTab,
-    setShouldOpenGoalModal
+    setShouldOpenGoalModal,
+    userState
   } = useAppContext();
 
-  const activeTasks = useMemo(() => tasks.filter(t => !t.deletedAt), [tasks]);
-  const activeGoals = useMemo(() => goals.filter(g => !g.deletedAt), [goals]);
+  const activeTasks = useMemo(() => tasks.filter(t => !t.deletedAt && !t.deleted_at), [tasks]);
+  const activeGoals = useMemo(() => goals.filter(g => !g.deletedAt && !g.deleted_at), [goals]);
 
   const hasData = activeGoals.length > 0 || activeTasks.length > 0;
 
@@ -183,9 +184,10 @@ export default function CoachView() {
       habitsManager,
       consistencyScore,
       currentUser,
-      isPro
+      isPro,
+      userState
     });
-  }, [activeTasks, activeGoals, goalTasks, habitsManager, consistencyScore, currentUser, isPro]);
+  }, [activeTasks, activeGoals, goalTasks, habitsManager, consistencyScore, currentUser, isPro, userState]);
 
   // Handler para alterar a periodicidade
   const handlePeriodicityChange = async (newVal) => {

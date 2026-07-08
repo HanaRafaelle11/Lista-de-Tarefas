@@ -4,7 +4,7 @@ import {
   Plus, Search, X, Calendar, ChevronDown, ChevronRight,
   List, Columns, Grid, Trash2, Edit2, AlertCircle, ArrowLeft, ArrowRight,
   Sparkles, Award, Sprout, Pin, Zap, CheckCircle, Moon, Sun, Tag, AlertTriangle, RotateCcw, Copy, Check, Download,
-  Archive, Target, MoreVertical, Trash
+  Archive, Target, MoreVertical, Trash, Paperclip, Image
 } from 'lucide-react';
 import EmojiPicker from 'emoji-picker-react';
 import CategoryIcon from './CategoryIcon';
@@ -710,16 +710,13 @@ export default function MyDayView() {
 
   const activeTemplates = useMemo(() => {
     const active = new Set();
-    tasks.forEach(task => {
-      if (!task.completed && !task.deletedAt) {
-        const meta = parseTaskMetadata(task.description);
-        if (meta.template_name) {
-          active.add(meta.template_name);
-        }
+    goals.forEach(goal => {
+      if (goal.status === 'active' && !goal.deletedAt && !goal.deleted_at) {
+        active.add(goal.title);
       }
     });
     return active;
-  }, [tasks]);
+  }, [goals]);
 
   const handleLoadTemplate = (template) => {
     if (activeTemplates.has(template.title)) {
@@ -801,21 +798,36 @@ export default function MyDayView() {
       return;
     }
 
-    for (const t of enabledTasks) {
-      const metaDescription = `\n\n--flowday-meta--\n${JSON.stringify({ due_time: '', recurrence: 'nenhuma', template_name: customizingTemplate.title })}`;
-      const finalDesc = t.description ? `${t.description}${metaDescription}` : metaDescription;
+    const goalTitle = customizingTemplate.title;
+    const actions = enabledTasks.map(t => t.title.trim());
+    const category = customizingTemplate.category || 'Pessoal';
 
-      const catExists = categories.some(cat => cat.id === t.category || cat.name === t.category);
-      const categoryId = catExists ? t.category : (categories[0]?.id || 'Trabalho');
+    const categoryColors = {
+      'Pets': '#B5A296',
+      'Pessoal': '#10b981',
+      'Trabalho': '#6366f1',
+      'Estudos': '#3B82F6',
+      'Lazer': '#EC4899'
+    };
+    const categoryIcons = {
+      'Pets': 'pets',
+      'Pessoal': 'home',
+      'Trabalho': 'career',
+      'Estudos': 'studies',
+      'Lazer': 'travel'
+    };
 
-      await onAddTask({
-        title: t.title.trim(),
-        description: finalDesc,
-        category: categoryId,
-        priority: t.priority || 'Média',
-        dueDate: null
-      });
-    }
+    const color = categoryColors[category] || '#4A654E';
+    const icon = categoryIcons[category] || 'target';
+
+    await onAddGoal({
+      title: goalTitle,
+      description: customizingTemplate.description || '',
+      color,
+      icon,
+      actions,
+      category
+    });
 
     setCustomizingTemplate(null);
     setIsTemplatesOpen(false);
@@ -1759,6 +1771,65 @@ export default function MyDayView() {
                       {/* Accordion Body */}
                       {isExpanded && (
                         <div style={{ padding: '16px', backgroundColor: 'var(--bg-card-hover)' }}>
+                          {/* Goal Details: description and attachments */}
+                          {(goal.description || (goal.attachments && goal.attachments.length > 0)) && (
+                            <div style={{
+                              marginBottom: '16px',
+                              padding: '12px 14px',
+                              borderRadius: '8px',
+                              backgroundColor: 'rgba(255, 255, 255, 0.03)',
+                              border: '1px solid var(--border-light)'
+                            }}>
+                              {goal.description && (
+                                <p style={{ fontSize: '13px', color: 'var(--text-main)', margin: '0 0 8px 0', whiteSpace: 'pre-wrap', lineHeight: '1.45' }}>
+                                  {goal.description}
+                                </p>
+                              )}
+                              {goal.attachments && goal.attachments.length > 0 && (
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: goal.description ? '10px' : '0' }}>
+                                  {goal.attachments.map((file, idx) => {
+                                    const isImg = file.type?.startsWith('image/') || /\.(jpg|jpeg|png|gif|webp)$/i.test(file.name || file.url);
+                                    return (
+                                      <a
+                                        key={idx}
+                                        href={file.url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        style={{
+                                          display: 'inline-flex',
+                                          alignItems: 'center',
+                                          gap: '6px',
+                                          padding: '5px 10px',
+                                          fontSize: '11px',
+                                          fontWeight: '600',
+                                          color: 'var(--text-main)',
+                                          backgroundColor: 'var(--bg-card)',
+                                          border: '1px solid var(--border-light)',
+                                          borderRadius: '20px',
+                                          textDecoration: 'none',
+                                          transition: 'all 0.2s',
+                                        }}
+                                        onMouseEnter={e => {
+                                          e.currentTarget.style.borderColor = 'var(--primary)';
+                                          e.currentTarget.style.backgroundColor = 'var(--bg-card-hover)';
+                                        }}
+                                        onMouseLeave={e => {
+                                          e.currentTarget.style.borderColor = 'var(--border-light)';
+                                          e.currentTarget.style.backgroundColor = 'var(--bg-card)';
+                                        }}
+                                      >
+                                        {isImg ? <Image size={12} style={{ color: 'var(--primary)' }} /> : <Paperclip size={12} />}
+                                        <span style={{ maxWidth: '140px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                          {file.name || 'Anexo'}
+                                        </span>
+                                      </a>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                            </div>
+                          )}
+
                           {linkedTasks.length > 0 ? (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                               {sortByTime(linkedTasks).map(task => (
@@ -2555,8 +2626,28 @@ export default function MyDayView() {
           <div className="templates-drawer-header">
             <h3 className="templates-drawer-title">
               <Sparkles size={18} style={{ color: 'var(--primary)' }} />
-              Modelos de Tarefa
+              Modelos de Objetivos
             </h3>
+            <button
+              onClick={() => {
+                setIsTemplatesOpen(false);
+                openNewGoalModal();
+              }}
+              style={{
+                marginLeft: 'auto',
+                marginRight: '8px',
+                padding: '6px 12px',
+                fontSize: '12px',
+                fontWeight: '600',
+                color: 'white',
+                background: 'var(--primary)',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: 'pointer'
+              }}
+            >
+              + Novo Objetivo
+            </button>
             <button
               className="templates-drawer-close"
               onClick={() => setIsTemplatesOpen(false)}
@@ -2702,7 +2793,7 @@ export default function MyDayView() {
                         disabled={isAlreadyActive}
                       >
                         <Plus size={14} />
-                        {isAlreadyActive ? 'Modelo Ativo' : 'Carregar Tarefas'}
+                        {isAlreadyActive ? 'Objetivo Ativo' : 'Importar Objetivo'}
                       </button>
                     </div>
                   );

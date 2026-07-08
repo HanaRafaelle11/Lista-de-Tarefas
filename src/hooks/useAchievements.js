@@ -119,7 +119,7 @@ export const ACHIEVEMENTS = [
 
 // ─── Cálculo de Streak ───────────────────────────────────────────────────────
 export function calcStreak(tasks) {
-  const activeTasks = (tasks || []).filter(t => !t.deletedAt);
+  const activeTasks = (tasks || []).filter(t => !t.deletedAt && !t.deleted_at);
   const completedDates = [
     ...new Set(
       activeTasks
@@ -159,7 +159,7 @@ export function calcStreak(tasks) {
 
 // ─── Cálculo de dias ativos ──────────────────────────────────────────────────
 export function calcActiveDays(tasks) {
-  const activeTasks = (tasks || []).filter(t => !t.deletedAt);
+  const activeTasks = (tasks || []).filter(t => !t.deletedAt && !t.deleted_at);
   return new Set(
     activeTasks
       .filter(t => t.completed)
@@ -174,8 +174,8 @@ export function calcActiveDays(tasks) {
 
 // ─── Calcular todas as stats ─────────────────────────────────────────────────
 export function calcStats(tasks, goals, habits = [], habitLogs = []) {
-  const activeTasks = (tasks || []).filter(t => !t.deletedAt);
-  const activeGoals = (goals || []).filter(g => !g.deletedAt);
+  const activeTasks = (tasks || []).filter(t => !t.deletedAt && !t.deleted_at);
+  const activeGoals = (goals || []).filter(g => !g.deletedAt && !g.deleted_at);
   let petTasksCompleted = 0;
   let financeTasksCompleted = 0;
   let careerTasksCompleted = 0;

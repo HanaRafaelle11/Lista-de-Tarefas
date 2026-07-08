@@ -393,7 +393,8 @@ export default function EvolutionView() {
     currentUser,
     setActiveTab,
     consistencyScore,
-    isAccessChecked
+    isAccessChecked,
+    userState
   } = useAppContext();
 
   if (!tasks || !goals) {
@@ -431,8 +432,8 @@ export default function EvolutionView() {
   };
 
   // Filtra itens deletados antes de calcular stats
-  const activeTasks = useMemo(() => tasks.filter(t => !t.deletedAt), [tasks]);
-  const activeGoals = useMemo(() => goals.filter(g => !g.deletedAt), [goals]);
+  const activeTasks = useMemo(() => tasks.filter(t => !t.deletedAt && !t.deleted_at), [tasks]);
+  const activeGoals = useMemo(() => goals.filter(g => !g.deletedAt && !g.deleted_at), [goals]);
   const hasAnyData = activeTasks.length > 0 || activeGoals.length > 0;
 
   const stats = useMemo(() => calcStats(activeTasks, activeGoals), [activeTasks, activeGoals]);
@@ -458,9 +459,10 @@ export default function EvolutionView() {
       habitsManager,
       consistencyScore,
       currentUser,
-      isPro
+      isPro,
+      userState
     });
-  }, [activeTasks, activeGoals, goalTasks, habitsManager, consistencyScore, currentUser, isPro]);
+  }, [activeTasks, activeGoals, goalTasks, habitsManager, consistencyScore, currentUser, isPro, userState]);
 
   // Próximo marco de streak
   const streakMilestones = [3, 7, 14, 30, 60, 90];

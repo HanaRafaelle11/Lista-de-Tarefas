@@ -88,7 +88,7 @@ export const stateEngine = {
           tasksCompleted:    projection.tasks.completedCount,
           habitsCreated:     projection.habits.createdCount,
           goalsCreated:      projection.goals.createdCount,
-          sessions:          projection.sessions.count
+          sessions:          projection.focusSessions.count
         }
       };
 

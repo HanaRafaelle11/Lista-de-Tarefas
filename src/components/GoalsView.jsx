@@ -521,6 +521,26 @@ export default function GoalsView() {
               <Sparkles size={18} style={{ color: 'var(--primary)' }} />
               Modelos de Objetivos
             </h3>
+            <button
+              onClick={() => {
+                setIsTemplatesDrawerOpen(false);
+                openNewGoalModal();
+              }}
+              style={{
+                marginLeft: 'auto',
+                marginRight: '8px',
+                padding: '6px 12px',
+                fontSize: '12px',
+                fontWeight: '600',
+                color: 'white',
+                background: 'var(--primary)',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: 'pointer'
+              }}
+            >
+              + Novo Objetivo
+            </button>
             <button 
               className="templates-drawer-close"
               onClick={() => setIsTemplatesDrawerOpen(false)}

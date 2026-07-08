@@ -205,10 +205,8 @@ const ICONS = {
 
   habits: (
     <>
-      <polyline points="17 1 21 5 17 9" />
-      <path d="M3 11V9a4 4 0 0 1 4-4h14" />
-      <polyline points="7 23 3 19 7 15" />
-      <path d="M21 13v2a4 4 0 0 1-4 4H3" />
+      <path d="M2 12h3l2.5-7.5L11 17.5l2-6 1.5 4H22" strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx="12" cy="12" r="9.5" strokeDasharray="3 3" />
     </>
   ),
 

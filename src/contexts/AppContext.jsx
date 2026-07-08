@@ -326,7 +326,7 @@ export function AppProvider({ children }) {
       return;
     }
     // 1. Recalcula insights comportamentais
-    const activeTasks = tasks.filter(t => !t.deletedAt);
+    const activeTasks = tasks.filter(t => !t.deletedAt && !t.deleted_at);
     const newInsights = generateInsights(activeTasks);
     setInsights(newInsights);
 
@@ -863,8 +863,8 @@ export function AppProvider({ children }) {
   const consistencyScore = useMemo(() => {
     if (!currentUser) return 0;
 
-    const activeTasks = tasks.filter(t => !t.deletedAt);
-    const activeGoals = goals.filter(g => !g.deletedAt);
+    const activeTasks = tasks.filter(t => !t.deletedAt && !t.deleted_at);
+    const activeGoals = goals.filter(g => !g.deletedAt && !g.deleted_at);
 
     // Se a conta está limpa (sem dados base), score é absoluto 0.
     if (activeTasks.length === 0 && habits.length === 0 && activeGoals.length === 0) {
@@ -1598,13 +1598,13 @@ export function AppProvider({ children }) {
     // 2. Executa a deleção lógica imediatamente no banco/cache
     if (currentUser.isDemo) {
       setTasks(prev => {
-        const updatedTasks = prev.map(t => t.id === id ? { ...t, deletedAt: nowIso } : t);
+        const updatedTasks = prev.map(t => t.id === id ? { ...t, deletedAt: nowIso, deleted_at: nowIso } : t);
         localStorage.setItem(`flowday_demo_tasks_${currentUser.id}`, JSON.stringify(updatedTasks));
         return updatedTasks;
       });
       logEvent('task_deleted', { task_id: id });
     } else {
-      setTasks(prev => prev.map(t => t.id === id ? { ...t, deletedAt: nowIso } : t));
+      setTasks(prev => prev.map(t => t.id === id ? { ...t, deletedAt: nowIso, deleted_at: nowIso } : t));
       tasksService.delete(currentUser.id, id).then(({ error, degraded }) => {
         if (!error || degraded) {
           logEvent('task_deleted', { task_id: id });
@@ -2388,7 +2388,7 @@ export function AppProvider({ children }) {
       });
       logEvent('goal_deleted', { goal_id: id });
     } else {
-      setGoals(prev => prev.map(g => g.id === id ? { ...g, deletedAt: nowIso } : g));
+      setGoals(prev => prev.map(g => g.id === id ? { ...g, deletedAt: nowIso, deleted_at: nowIso } : g));
       goalsService.delete(currentUser.id, id).then(({ error }) => {
         if (!error) {
           logEvent('goal_deleted', { goal_id: id });
@@ -2890,11 +2890,10 @@ export function AppProvider({ children }) {
   }, [currentUser, tasks, goalTasks, goals, addNotification, openCustomConfirm, resetAchievementsIfEmpty]);
 
   const handleRestoreGoal = useCallback(async (id) => {
-    if (!currentUser?.id) return;
-    setGoals(prev => prev.map(g => g.id === id ? { ...g, deletedAt: null } : g));
+    setGoals(prev => prev.map(g => g.id === id ? { ...g, deletedAt: null, deleted_at: null } : g));
 
     if (currentUser.isDemo) {
-      const mockGoals = goals.map(g => g.id === id ? { ...g, deletedAt: null } : g);
+      const mockGoals = goals.map(g => g.id === id ? { ...g, deletedAt: null, deleted_at: null } : g);
       localStorage.setItem(`flowday_demo_goals_${currentUser.id}`, JSON.stringify({ goals: mockGoals, goalTasks }));
       return;
     }
@@ -2943,9 +2942,9 @@ export function AppProvider({ children }) {
 
     // 1. Get task IDs functionally and update state
     setTasks(prev => {
-      const deletedTasks = prev.filter(t => t.deletedAt);
+      const deletedTasks = prev.filter(t => t.deletedAt || t.deleted_at);
       deletedTaskIds = deletedTasks.map(t => t.id);
-      finalTasksList = prev.filter(t => !t.deletedAt);
+      finalTasksList = prev.filter(t => !t.deletedAt && !t.deleted_at);
       if (currentUser.isDemo) {
         localStorage.setItem(`flowday_demo_tasks_${currentUser.id}`, JSON.stringify(finalTasksList));
       }
@@ -2954,9 +2953,9 @@ export function AppProvider({ children }) {
 
     // 2. Get goal IDs functionally and update state
     setGoals(prev => {
-      const deletedGoals = prev.filter(g => g.deletedAt);
+      const deletedGoals = prev.filter(g => g.deletedAt || g.deleted_at);
       deletedGoalIds = deletedGoals.map(g => g.id);
-      finalGoalsList = prev.filter(g => !g.deletedAt);
+      finalGoalsList = prev.filter(g => !g.deletedAt && !g.deleted_at);
       return finalGoalsList;
     });
 
@@ -3160,7 +3159,7 @@ export function AppProvider({ children }) {
   // VISIBLE DATA & HIDDEN COUNTS (SaaS History Limits)
   // ═══════════════════════════════════════════════════════════════════════════
   const visibleTasks = useMemo(() => {
-    const activeTasks = tasks.filter(t => !t.deletedAt);
+    const activeTasks = tasks.filter(t => !t.deletedAt && !t.deleted_at);
     if (isPro) return activeTasks;
     const limit = APP_MOUNT_TIME - 30 * 24 * 60 * 60 * 1000;
     return activeTasks.filter(task => {
@@ -3172,7 +3171,7 @@ export function AppProvider({ children }) {
   }, [tasks, isPro]);
 
   const visibleGoals = useMemo(() => {
-    const activeGoals = goals.filter(g => !g.deletedAt);
+    const activeGoals = goals.filter(g => !g.deletedAt && !g.deleted_at);
     if (isPro) return activeGoals;
     const limit = APP_MOUNT_TIME - 30 * 24 * 60 * 60 * 1000;
     return activeGoals.filter(goal => {
@@ -3185,13 +3184,13 @@ export function AppProvider({ children }) {
 
   const hiddenTasksCount = useMemo(() => {
     if (isPro) return 0;
-    const activeTasks = tasks.filter(t => !t.deletedAt);
+    const activeTasks = tasks.filter(t => !t.deletedAt && !t.deleted_at);
     return activeTasks.length - visibleTasks.length;
   }, [tasks, visibleTasks, isPro]);
 
   const hiddenGoalsCount = useMemo(() => {
     if (isPro) return 0;
-    const activeGoals = goals.filter(g => !g.deletedAt);
+    const activeGoals = goals.filter(g => !g.deletedAt && !g.deleted_at);
     return activeGoals.length - visibleGoals.length;
   }, [goals, visibleGoals, isPro]);
 
@@ -3226,8 +3225,8 @@ export function AppProvider({ children }) {
     goals: visibleGoals,
     allTasks: tasks,
     allGoals: goals,
-    deletedTasks: tasks.filter(t => t.deletedAt),
-    deletedGoals: goals.filter(g => g.deletedAt),
+    deletedTasks: tasks.filter(t => t.deletedAt || t.deleted_at),
+    deletedGoals: goals.filter(g => g.deletedAt || g.deleted_at),
     goalTasks,
     unlockedAchievements,
     toastQueue,

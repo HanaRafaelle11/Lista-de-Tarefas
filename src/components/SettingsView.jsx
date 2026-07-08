@@ -892,7 +892,7 @@ export default function SettingsView() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                   {deletedGoals.map(goal => (
                     <div key={goal.id} className="trash-item-row">
-                      <span style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '6px', flex: '1 1 200px', minWidth: 0, wordBreak: 'break-word' }}>
+                      <span style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '6px', flex: 1, minWidth: 0, wordBreak: 'break-word' }}>
                         <span>{goal.title}</span>
                       </span>
                       <div className="trash-item-actions">
@@ -921,7 +921,7 @@ export default function SettingsView() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                   {deletedTasks.map(task => (
                     <div key={task.id} className="trash-item-row">
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', alignItems: 'flex-start', flex: '1 1 200px', minWidth: 0 }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', alignItems: 'flex-start', flex: 1, minWidth: 0 }}>
                         <span style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-main)', wordBreak: 'break-word' }}>{task.title}</span>
                         <span style={{ fontSize: '10px', color: 'var(--text-light)' }}>Categoria: {task.category}</span>
                       </div>

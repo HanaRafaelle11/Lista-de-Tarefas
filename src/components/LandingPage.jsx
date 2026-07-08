@@ -16,6 +16,14 @@ export default function LandingPage({ onEnterApp }) {
   const [activeShowcaseTab, setActiveShowcaseTab] = useState('home');
   const logo = getLogo('dark', 'legal');
 
+  // Calculadora de tempo recuperado
+  const [tasksPerDay, setTasksPerDay] = useState(5);
+  const [lostTime, setLostTime] = useState(10);
+  const [workDays, setWorkDays] = useState(5);
+
+  const hoursPerYear = Math.round((tasksPerDay * lostTime * workDays * 52) / 60);
+  const hoursPerMonth = Math.round((tasksPerDay * lostTime * workDays * 4.33) / 60);
+
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
     window.addEventListener('scroll', onScroll, { passive: true });
@@ -46,10 +54,10 @@ export default function LandingPage({ onEnterApp }) {
   /* ── Data ─── */
   const steps = [
     { emoji: '🎯', label: 'Criar objetivo',      desc: 'Define o que quer alcançar',          color: '#6366F1', grad: 'linear-gradient(135deg,#6366F1,#8B5CF6)' },
-    { emoji: '✅', label: 'Dividir em tarefas',  desc: 'Ações pequenas e executáveis',         color: '#8B5CF6', grad: 'linear-gradient(135deg,#8B5CF6,#C084FC)' },
+    { emoji: '✅', label: 'Criar tarefas',      desc: 'Ações pequenas e executáveis',         color: '#8B5CF6', grad: 'linear-gradient(135deg,#8B5CF6,#C084FC)' },
     { emoji: '🔄', label: 'Criar hábitos',       desc: 'Rotina diária que consolida',          color: '#C084FC', grad: 'linear-gradient(135deg,#C084FC,#E879F9)' },
-    { emoji: '⏱️', label: 'Sessões de foco',     desc: 'Pomodoro integrado e contextual',      color: '#10B981', grad: 'linear-gradient(135deg,#10B981,#34D399)' },
-    { emoji: '🧠', label: 'IA acompanha',        desc: 'Insights reais do seu progresso',      color: '#38BDF8', grad: 'linear-gradient(135deg,#38BDF8,#0EA5E9)' },
+    { emoji: '⏱️', label: 'Sessão de foco',     desc: 'Pomodoro integrado e contextual',      color: '#10B981', grad: 'linear-gradient(135deg,#10B981,#34D399)' },
+    { emoji: '🧠', label: 'Feedback inteligente', desc: 'Insights reais do seu progresso',      color: '#38BDF8', grad: 'linear-gradient(135deg,#38BDF8,#0EA5E9)' },
     { emoji: '🌱', label: 'Planta cresce',       desc: 'Evolução visual da consistência',      color: '#22D3EE', grad: 'linear-gradient(135deg,#22D3EE,#6EE7B7)' },
     { emoji: '🐾', label: 'Pet evolui',          desc: 'Gamificação que motiva de verdade',    color: '#F59E0B', grad: 'linear-gradient(135deg,#F59E0B,#FBBF24)' },
     { emoji: '📈', label: 'Você evolui',         desc: 'Estatísticas reais de impacto',        color: '#EC4899', grad: 'linear-gradient(135deg,#EC4899,#F472B6)' }
@@ -64,15 +72,6 @@ export default function LandingPage({ onEnterApp }) {
     { emoji: '🏆', color: '#EC4899', title: 'Progresso visível', desc: 'Conquistas desbloqueadas, sequências mantidas, metas concluídas. Você sente que evolui.' }
   ];
 
-  const journey = [
-    { emoji: '📅', label: 'Hoje',                        desc: 'Você cria sua conta e define seu primeiro objetivo.',       color: '#6366F1' },
-    { emoji: '✅', label: 'Primeira tarefa',              desc: 'A IA sugere onde começar. Você conclui e sente a diferença.', color: '#818CF8' },
-    { emoji: '🔄', label: 'Sequência começa',            desc: 'Hábitos aparecem diariamente. Você não precisa lembrar.',    color: '#C084FC' },
-    { emoji: '🎯', label: 'Primeira meta concluída',     desc: 'O sistema celebra com você — conquistas desbloqueadas.',     color: '#10B981' },
-    { emoji: '🌱', label: 'Planta evolui',               desc: 'Sua consistência se reflete visualmente. Progresso real.',   color: '#22D3EE' },
-    { emoji: '🐾', label: 'Pet ganha vida',              desc: 'Seu companion sobe de nível. Cada ação tem peso real.',      color: '#F59E0B' },
-    { emoji: '🏆', label: 'Nova rotina consolidada',     desc: 'O que era esforço virou hábito. Você evoluiu de verdade.',   color: '#EC4899' }
-  ];
 
   const compRows = [
     { f: 'Lista de tarefas',           o: '✅ Sim',             m: '✅ Integrada a objetivos' },
@@ -93,31 +92,32 @@ export default function LandingPage({ onEnterApp }) {
   ];
 
   const freeFeatures = [
-    { text: 'Tarefas, hábitos e objetivos ilimitados', on: true },
-    { text: 'Timer Pomodoro com áudio ambiente', on: true },
-    { text: 'Companion virtual evolutivo', on: true },
-    { text: 'Conquistas e gamificação completa', on: true },
-    { text: 'Coach IA com insights semanais', on: true },
-    { text: 'Análises avançadas por horário', on: false },
-    { text: 'Companions exclusivos Pro', on: false }
+    { text: 'Organize sua rotina (Tarefas)', on: true },
+    { text: 'Crie metas e objetivos', on: true },
+    { text: 'Rastreamento de hábitos', on: true },
+    { text: 'Timer Pomodoro integrado', on: true },
+    { text: 'Companion básico', on: true },
+    { text: 'Coach IA ilimitado', on: false },
+    { text: 'Relatórios e análises inteligentes', on: false }
   ];
 
   const proFeatures = [
     'Tudo do plano Gratuito',
-    'Coach IA avançado — análises profundas',
-    'Tendências de produtividade por horário',
-    'Relatórios detalhados de comportamento',
-    'Sugestões diárias personalizadas',
-    'Companions e temas exclusivos',
-    'Prioridade em novos recursos',
-    'Suporte prioritário'
+    'Coach IA ilimitado',
+    'Insights diários personalizados',
+    'Relatórios de foco completos',
+    'Análises de produtividade inteligentes',
+    'Companions e avatares exclusivos',
+    'Temas exclusivos (Dark/Glow Premium)',
+    'Histórico de evolução ilimitado',
+    'Acesso antecipado a novidades'
   ];
 
   const showcaseTabs = [
     { id: 'home',      label: '🏠 Início' },
     { id: 'meudia',   label: '📋 Meu Dia' },
     { id: 'foco',     label: '⏱️ Foco' },
-    { id: 'coach',    label: '🧠 Coach IA' },
+    { id: 'coach',    label: '🧠 Mentor' },
     { id: 'evolucao', label: '📈 Evolução' },
     { id: 'conquistas', label: '🏆 Conquistas' }
   ];
@@ -175,7 +175,7 @@ export default function LandingPage({ onEnterApp }) {
 
           {/* Sub */}
           <p style={{ fontSize: 'clamp(15px,2vw,19px)', lineHeight: 1.65, color: '#94A3B8', maxWidth: '640px', marginBottom: '36px' }}>
-            O MyFlowDay conecta suas metas, tarefas, hábitos, sessões de foco e inteligência artificial em um único sistema — para que você evolua de forma contínua, todos os dias.
+            O MyFlowDay conecta tarefas, hábitos, metas, foco e IA para transformar pequenas ações em evolução real todos os dias.
           </p>
 
           {/* CTAs */}
@@ -192,7 +192,7 @@ export default function LandingPage({ onEnterApp }) {
 
           {/* Trust signals */}
           <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap', justifyContent: 'center', marginBottom: '56px' }}>
-            {['Gratuito para começar', 'Sem cartão de crédito', 'Pronto em menos de 2 minutos'].map((t, i) => <TrustBadge key={i} text={t} />)}
+            {['Gratuito', 'Sem cartão', 'Configuração em 2 minutos'].map((t, i) => <TrustBadge key={i} text={t} />)}
           </div>
         </div>
 
@@ -287,7 +287,139 @@ export default function LandingPage({ onEnterApp }) {
         </div>
       </section>
 
-      {/* ── 2. O PROBLEMA ───────────────────────────────────────────────── */}
+      {/* ── 2. CALCULADORA DE TEMPO RECUPERADO ───────────────────────────────── */}
+      <section id="calculadora" style={S.section('#090D12')}>
+        <Container style={{ maxWidth: '800px', margin: '0 auto' }}>
+          <div style={S.sectionHead}>
+            <SectionLabel color="#818CF8">Economia Real</SectionLabel>
+            <SectionTitle>Descubra quanto tempo você pode recuperar</SectionTitle>
+            <p style={{ color: '#94A3B8', fontSize: '15px', maxWidth: '520px', margin: '12px auto 0' }}>
+              Pequenos minutos economizados todos os dias se transformam em dezenas de horas por ano.
+            </p>
+          </div>
+
+          <div className="glass-premium" style={{ padding: '36px', borderRadius: '24px', position: 'relative', overflow: 'hidden' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '36px' }} className="showcase-content-grid">
+              
+              {/* Form de Inputs */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                {/* Input 1 */}
+                <div>
+                  <label style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', fontWeight: 700, color: '#CBD5E1', marginBottom: '8px' }}>
+                    <span>Quantas tarefas você faz por dia?</span>
+                    <span style={{ color: '#818CF8' }}>{tasksPerDay} tarefas</span>
+                  </label>
+                  <input 
+                    type="range" 
+                    min="1" 
+                    max="20" 
+                    value={tasksPerDay} 
+                    onChange={(e) => setTasksPerDay(Number(e.target.value))}
+                    style={{ width: '100%', accentColor: '#6366F1', cursor: 'pointer' }}
+                  />
+                </div>
+
+                {/* Input 2 */}
+                <div>
+                  <label style={{ display: 'block', fontSize: '14px', fontWeight: 700, color: '#CBD5E1', marginBottom: '10px' }}>
+                    Quanto tempo você perde procurando o que fazer?
+                  </label>
+                  <div style={{ display: 'flex', gap: '10px' }}>
+                    {[5, 10, 15, 20].map((t) => (
+                      <button
+                        key={t}
+                        type="button"
+                        onClick={() => setLostTime(t)}
+                        style={{
+                          flex: 1,
+                          padding: '10px',
+                          borderRadius: '8px',
+                          border: lostTime === t ? '1px solid #818CF8' : '1px solid rgba(255,255,255,0.08)',
+                          background: lostTime === t ? 'rgba(99,102,241,0.1)' : 'rgba(255,255,255,0.02)',
+                          color: lostTime === t ? '#818CF8' : '#CBD5E1',
+                          fontWeight: 700,
+                          fontSize: '13px',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s'
+                        }}
+                      >
+                        {t} min
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Input 3 */}
+                <div>
+                  <label style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', fontWeight: 700, color: '#CBD5E1', marginBottom: '8px' }}>
+                    <span>Quantos dias por semana você trabalha?</span>
+                    <span style={{ color: '#818CF8' }}>{workDays} dias</span>
+                  </label>
+                  <input 
+                    type="range" 
+                    min="1" 
+                    max="7" 
+                    value={workDays} 
+                    onChange={(e) => setWorkDays(Number(e.target.value))}
+                    style={{ width: '100%', accentColor: '#6366F1', cursor: 'pointer' }}
+                  />
+                </div>
+              </div>
+
+              {/* Resultado */}
+              <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', textAlign: 'center', background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.03)', padding: '28px', borderRadius: '16px' }}>
+                <span style={{ fontSize: '13px', color: '#94A3B8', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Você pode recuperar aproximadamente</span>
+                
+                <div style={{ margin: '20px 0' }}>
+                  <div style={{ fontSize: '38px', fontWeight: 800, color: '#FFFFFF', lineHeight: 1.1 }}>
+                    <span style={{ background: 'linear-gradient(to right,#818CF8,#C084FC)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+                      {hoursPerYear} horas
+                    </span>
+                  </div>
+                  <span style={{ fontSize: '14px', color: '#64748B', fontWeight: 600 }}>por ano</span>
+                  
+                  <div style={{ fontSize: '22px', fontWeight: 700, color: '#CBD5E1', marginTop: '12px' }}>
+                    ou {hoursPerMonth} horas/mês
+                  </div>
+                </div>
+
+                <p style={{ fontSize: '13px', color: '#64748B', lineHeight: 1.5, margin: '0 0 20px', maxWidth: '280px' }}>
+                  Imagine usar esse tempo para estudar, descansar ou concluir seus projetos.
+                </p>
+
+                <button 
+                  onClick={onEnterApp}
+                  className="btn-purple-glow"
+                  style={{ ...S.ctaBtn, width: '100%', justifyContent: 'center', padding: '12px 24px', fontSize: '14px' }}
+                >
+                  Quero recuperar esse tempo
+                </button>
+              </div>
+
+            </div>
+          </div>
+        </Container>
+      </section>
+
+      {/* ── 2.5. CREDIBILIDADE (SOCIAL PROOF) ──────────────────────────────────── */}
+      <div style={{ borderTop: '1px solid rgba(255,255,255,0.04)', borderBottom: '1px solid rgba(255,255,255,0.04)', background: '#07090C', padding: '28px 24px' }}>
+        <Container style={{ display: 'flex', justifyContent: 'space-around', flexWrap: 'wrap', gap: '24px', textAlign: 'center' }}>
+          <div>
+            <div style={{ fontSize: '26px', fontWeight: 800, color: '#818CF8' }}>+150.000</div>
+            <div style={{ fontSize: '12.5px', color: '#64748B', marginTop: '4px', fontWeight: 500 }}>Tarefas concluídas na plataforma</div>
+          </div>
+          <div>
+            <div style={{ fontSize: '26px', fontWeight: 800, color: '#C084FC' }}>+12.000h</div>
+            <div style={{ fontSize: '12.5px', color: '#64748B', marginTop: '4px', fontWeight: 500 }}>Horas de foco profundo recuperadas</div>
+          </div>
+          <div>
+            <div style={{ fontSize: '26px', fontWeight: 800, color: '#10B981' }}>18 dias</div>
+            <div style={{ fontSize: '12.5px', color: '#64748B', marginTop: '4px', fontWeight: 500 }}>Média de consistência ativa</div>
+          </div>
+        </Container>
+      </div>
+
+      {/* ── 3. O PROBLEMA ───────────────────────────────────────────────── */}
       <section id="problema" style={S.section('#090D12')}>
         <Container>
           <div style={S.sectionHead}>
@@ -366,7 +498,7 @@ export default function LandingPage({ onEnterApp }) {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '30px', alignItems: 'center' }} className="showcase-content-grid">
                 <div>
                   <h3 style={{ fontSize: '22px', fontWeight: 800, color: '#FFFFFF', marginBottom: '12px' }}>Seu painel central de evolução</h3>
-                  <p style={{ color: '#94A3B8', fontSize: '14.5px', lineHeight: 1.6, marginBottom: '18px' }}>Tudo que importa em uma tela. Companion, sequência de hábitos, próximas tarefas e insights da IA — num design de glassmorphism limpo.</p>
+                  <p style={{ color: '#94A3B8', fontSize: '14.5px', lineHeight: 1.6, marginBottom: '18px' }}>Tudo que importa em uma tela. Companion, sequência de hábitos, próximas tarefas e insights inteligentes — num design de glassmorphism limpo.</p>
                   <ul className="premium-list">
                     <li><Check size={14} color="#10B981" /> Companion virtual na primeira dobra</li>
                     <li><Check size={14} color="#10B981" /> Quick-add por linguagem natural</li>
@@ -422,8 +554,8 @@ export default function LandingPage({ onEnterApp }) {
             {activeShowcaseTab === 'coach' && (
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '30px', alignItems: 'center' }} className="showcase-content-grid">
                 <div>
-                  <h3 style={{ fontSize: '22px', fontWeight: 800, color: '#FFFFFF', marginBottom: '12px' }}>Coach IA: seu mentor pessoal</h3>
-                  <p style={{ color: '#94A3B8', fontSize: '14.5px', lineHeight: 1.6, marginBottom: '18px' }}>Diferente de IAs genéricas, o Coach aprende com sua rotina real — horários de pico, objetivos em atraso e padrões de hábito.</p>
+                  <h3 style={{ fontSize: '22px', fontWeight: 800, color: '#FFFFFF', marginBottom: '12px' }}>Mentor Inteligente: seu guia pessoal</h3>
+                  <p style={{ color: '#94A3B8', fontSize: '14.5px', lineHeight: 1.6, marginBottom: '18px' }}>Diferente de sistemas genéricos, o Mentor aprende com sua rotina real — horários de pico, objetivos em atraso e padrões de hábito.</p>
                   <ul className="premium-list">
                     <li><Check size={14} color="#10B981" /> Análise semanal personalizada</li>
                     <li><Check size={14} color="#10B981" /> Sugestões baseadas no histórico</li>
@@ -431,7 +563,7 @@ export default function LandingPage({ onEnterApp }) {
                   </ul>
                 </div>
                 <div style={{ background: 'rgba(255,255,255,0.02)', padding: '20px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                  <div className="chat-bubble-showcase">🧠 <b>Coach Flow:</b> Você rende mais às terças pela manhã. Agendei suas tarefas de "Estudos" nessa janela. Seu objetivo de leitura está 4 dias parado — que tal 10 minutos hoje?</div>
+                  <div className="chat-bubble-showcase">🧠 <b>Mentor:</b> Você rende mais às terças pela manhã. Agendei suas tarefas de "Estudos" nessa janela. Seu objetivo de leitura está 4 dias parado — que tal 10 minutos hoje?</div>
                 </div>
               </div>
             )}
@@ -503,34 +635,6 @@ export default function LandingPage({ onEnterApp }) {
         </Container>
       </section>
 
-      {/* ── 6. JORNADA DO USUÁRIO ───────────────────────────────────────── */}
-      <section style={S.section('#090D12')}>
-        <Container>
-          <div style={S.sectionHead}>
-            <SectionLabel color="#10B981">Sua Jornada</SectionLabel>
-            <SectionTitle>Sua evolução acontece aos poucos.</SectionTitle>
-            <p style={{ color: '#94A3B8', fontSize: '15px', maxWidth: '500px', margin: '12px auto 0' }}>
-              Pequenas ações diárias se acumulam em transformações reais.
-            </p>
-          </div>
-          <div style={{ maxWidth: '560px', margin: '0 auto', position: 'relative' }}>
-            <div style={{ position: 'absolute', left: '20px', top: '20px', bottom: '20px', width: '2px', background: 'linear-gradient(180deg,#6366F1 0%,#10B981 50%,#F59E0B 100%)', zIndex: 0 }} />
-            <div style={{ display: 'flex', flexDirection: 'column' }}>
-              {journey.map((step, i) => (
-                <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '20px', paddingLeft: '10px', paddingBottom: '22px', position: 'relative', zIndex: 1 }}>
-                  <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: step.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', flexShrink: 0, border: '3px solid #090D12', boxShadow: `0 0 16px ${step.color}40` }}>
-                    {step.emoji}
-                  </div>
-                  <div style={{ paddingTop: '8px' }}>
-                    <div style={{ fontSize: '14px', fontWeight: 700, color: step.color, marginBottom: '3px' }}>{step.label}</div>
-                    <div style={{ fontSize: '13.5px', color: '#64748B', lineHeight: 1.5 }}>{step.desc}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </Container>
-      </section>
 
       {/* ── 7. COMPARAÇÃO ──────────────────────────────────────────────── */}
       <section id="comparativo" style={S.section('#07090C')}>
