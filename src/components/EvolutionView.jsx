@@ -1,4 +1,4 @@
-import React, { useMemo, useState, lazy, Suspense, useRef } from 'react';
+import React, { useMemo, useState, lazy, Suspense, useRef, useEffect } from 'react';
 import { CheckCircle, Clock, AlertTriangle, BarChart3, PieChart, Target, Star, Award, ShieldAlert, Zap, Calendar, X, Brain, RefreshCw } from 'lucide-react';
 import { ACHIEVEMENTS, calcStats, calcStreak } from '../hooks/useAchievements';
 import { useAppContext } from '../contexts/AppContext';
