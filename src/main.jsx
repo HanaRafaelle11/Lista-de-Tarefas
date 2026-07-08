@@ -49,6 +49,24 @@ if (import.meta.env.DEV) {
       navigator.serviceWorker.register(swUrl)
         .then((reg) => {
           console.log('[PWA] Service Worker registered with scope:', reg.scope);
+          
+          // Força verificação imediata de atualizações no carregamento da página
+          reg.update();
+
+          // Monitora atualizações e recarrega a página ao concluir o update
+          reg.onupdatefound = () => {
+            const installingWorker = reg.installing;
+            if (installingWorker) {
+              installingWorker.onstatechange = () => {
+                if (installingWorker.state === 'installed') {
+                  if (navigator.serviceWorker.controller) {
+                    console.log('[PWA] Novo conteúdo disponível. Atualizando aplicação...');
+                    window.location.reload();
+                  }
+                }
+              };
+            }
+          };
         })
         .catch((err) => {
           console.error('[PWA] Service Worker registration failed:', err);
