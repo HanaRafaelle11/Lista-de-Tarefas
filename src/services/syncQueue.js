@@ -538,8 +538,9 @@ async function trySend(item) {
     if (type === 'event') {
       const { userId, eventType, metadata } = payload;
 
-      if (!userId) {
-        console.warn("[EVENT SKIPPED] missing user");
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!userId || userId === 'demo-user' || !uuidRegex.test(userId)) {
+        console.warn("[EVENT SKIPPED] missing or invalid user UUID:", userId);
         return true;
       }
 

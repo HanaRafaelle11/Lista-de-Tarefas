@@ -63,6 +63,12 @@ function setupTimer() {
 export async function trackEvent(userId, eventType, metadata = {}) {
   if (!userId) return;
 
+  // Evita registrar eventos analíticos para usuários demo ou ids inválidos (não-UUID)
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (userId === 'demo-user' || !uuidRegex.test(userId)) {
+    return;
+  }
+
   // Map legacy event types to new snake_case format (Objeto + Ação no passado)
   let normalizedType = eventType;
   const eventMappings = {
@@ -142,15 +148,34 @@ export async function flushBatch() {
   const batchToSend = [...memoryBuffer];
   memoryBuffer = []; // Limpa o buffer ativo imediatamente para evitar concorrência
 
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  
+  // Separa eventos válidos dos inválidos (não-UUID ou demo-user)
+  const validEvents = batchToSend.filter(e => e.user_id && e.user_id !== 'demo-user' && uuidRegex.test(e.user_id));
+  const invalidEvents = batchToSend.filter(e => !e.user_id || e.user_id === 'demo-user' || !uuidRegex.test(e.user_id));
+
+  // Purga imediatamente os eventos inválidos do IndexedDB para evitar loops infinitos
+  if (invalidEvents.length > 0) {
+    console.log('[eventBatcher] Purgando', invalidEvents.length, 'eventos demo ou inválidos do cache local');
+    for (const item of invalidEvents) {
+      localDB.delete('events', item.id).catch(() => {});
+    }
+  }
+
+  if (validEvents.length === 0) {
+    isFlushing = false;
+    return;
+  }
+
   if (typeof navigator !== 'undefined' && !navigator.onLine) {
-    console.log('[eventBatcher] Offline: mantendo', batchToSend.length, 'eventos no buffer/IndexedDB');
-    memoryBuffer = [...batchToSend, ...memoryBuffer];
+    console.log('[eventBatcher] Offline: mantendo', validEvents.length, 'eventos no buffer/IndexedDB');
+    memoryBuffer = [...validEvents, ...memoryBuffer];
     isFlushing = false;
     return;
   }
 
   try {
-    let payload = batchToSend.map(e => ({
+    let payload = validEvents.map(e => ({
       id: e.id,
       user_id: e.user_id,
       event_type: e.event_type,
@@ -195,14 +220,14 @@ export async function flushBatch() {
     }
     
     // Deleta do IndexedDB apenas após confirmação de sucesso
-    for (const item of batchToSend) {
+    for (const item of validEvents) {
       localDB.delete('events', item.id).catch(() => {});
     }
-    console.log('[eventBatcher] Batch enviado com sucesso:', batchToSend.length, 'eventos');
+    console.log('[eventBatcher] Batch enviado com sucesso:', validEvents.length, 'eventos');
   } catch (err) {
     console.warn('[eventBatcher] Erro ao enviar batch pro Supabase. Retornando ao buffer:', err.message);
     // Retorna os eventos falhos para a fila
-    memoryBuffer = [...batchToSend, ...memoryBuffer];
+    memoryBuffer = [...validEvents, ...memoryBuffer];
   } finally {
     isFlushing = false;
   }
