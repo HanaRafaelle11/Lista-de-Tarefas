@@ -3,7 +3,7 @@ import {
   Target, Award, Clock, TrendingUp, Sparkles, ArrowRight,
   Zap, Check, Activity, Calendar, HelpCircle, ChevronDown,
   Flame, Brain, Play, CheckCircle2, Compass, Heart, Shield,
-  MessageSquare, Users, Leaf, Star, ChevronRight
+  MessageSquare, Users, Leaf, Star, ChevronRight, RefreshCw
 } from 'lucide-react';
 import { useAppContext } from '../contexts/AppContext';
 import { getLogo } from '../design-system/branding/logo';
