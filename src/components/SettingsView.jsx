@@ -1441,7 +1441,7 @@ export default function SettingsView() {
               ))}
             </div>
 
-            {effectiveTheme === 'light' && (
+            {isPro && effectiveTheme === 'light' && (
               <div style={{ marginTop: '20px', paddingTop: '16px', borderTop: '1px solid var(--border-light)' }}>
                 <span style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-main)', display: 'block', marginBottom: '10px' }}>
                   Cor de Fundo Personalizada (Modo Claro)

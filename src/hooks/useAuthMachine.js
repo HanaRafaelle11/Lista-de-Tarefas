@@ -305,31 +305,44 @@ export function useAuthMachine() {
     // Lê sessão do localStorage/cookie (não faz request de rede se disponível).
     // Em PKCE, pode já ter sido resolvido via INITIAL_SESSION acima — o reducer
     // ignora SESSION_RESOLVED idempotentemente (estado já AUTHENTICATED).
-    supabase.auth.getSession()
-      .then(({ data: { session }, error }) => {
-        if (!effectActive) return;
-        clearFallback();
+    const isDemoActive = typeof window !== 'undefined' && localStorage.getItem('flowday_demo_active') === 'true';
+    if (isDemoActive) {
+      clearFallback();
+      const demoUser = {
+        id: 'demo-user',
+        email: 'demo@flowday.app',
+        name: 'Explorador Demo',
+        isDemo: true,
+        user_metadata: { name: 'Explorador Demo', onboarding_completed: true }
+      };
+      dispatch({ type: 'SIGNED_IN', rawUser: demoUser, session: null });
+    } else {
+      supabase.auth.getSession()
+        .then(({ data: { session }, error }) => {
+          if (!effectActive) return;
+          clearFallback();
 
-        if (error) {
-          console.error('[AuthMachine] getSession error:', error);
-          dispatch({ type: 'ERROR', error: error.message });
-          return;
-        }
+          if (error) {
+            console.error('[AuthMachine] getSession error:', error);
+            dispatch({ type: 'ERROR', error: error.message });
+            return;
+          }
 
-        if (session?.user) {
-          eventsService
-            .logEvent(session.user.id, 'login', { method: 'session_restore' })
-            .catch(() => {});
-        }
+          if (session?.user) {
+            eventsService
+              .logEvent(session.user.id, 'login', { method: 'session_restore' })
+              .catch(() => {});
+          }
 
-        dispatch({ type: 'SESSION_RESOLVED', session: session || null });
-      })
-      .catch((err) => {
-        if (!effectActive) return;
-        clearFallback();
-        console.error('[AuthMachine] getSession threw:', err);
-        dispatch({ type: 'ERROR', error: err.message });
-      });
+          dispatch({ type: 'SESSION_RESOLVED', session: session || null });
+        })
+        .catch((err) => {
+          if (!effectActive) return;
+          clearFallback();
+          console.error('[AuthMachine] getSession threw:', err);
+          dispatch({ type: 'ERROR', error: err.message });
+        });
+    }
 
     return () => {
       effectActive = false;

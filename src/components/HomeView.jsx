@@ -490,8 +490,8 @@ export default function HomeView() {
     }
 
     if (stageIndex < currentPetData.stages.length - 1) {
-      const tasksNeeded = Math.max(1, 3 - (weeklyTotal % 3));
-      return `Você está a apenas ${tasksNeeded} tarefa${tasksNeeded > 1 ? 's' : ''} do meu próximo nível! Vamos concluir juntas?`;
+      const goalsNeeded = (stageIndex + 1) * 30 - completedGoalsCount;
+      return `Você está a apenas ${goalsNeeded} objetivo${goalsNeeded > 1 ? 's' : ''} concluído${goalsNeeded > 1 ? 's' : ''} do meu próximo nível! Vamos concluir juntos?`;
     }
 
     const activeGoals = goals.filter(g => g.status === 'active' && !g.deletedAt && !g.deleted_at);

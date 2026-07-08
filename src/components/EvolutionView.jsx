@@ -1120,6 +1120,7 @@ export default function EvolutionView() {
           </div>
 
           {/* ── Estatísticas Avançadas Accordion ── */}
+          {isPro && (
           <details className="evo-details-accordion" style={{
             backgroundColor: 'var(--bg-card)',
             border: '1px solid var(--border-light)',
@@ -1303,6 +1304,7 @@ export default function EvolutionView() {
 
             </div>
           </details>
+          )}
 
         </>
       )}

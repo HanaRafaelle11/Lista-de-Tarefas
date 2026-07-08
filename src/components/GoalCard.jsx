@@ -113,6 +113,8 @@ export default function GoalCard({
   onManageTasks,
   onDuplicate,
 }) {
+  const [activeLightboxFile, setActiveLightboxFile] = useState(null);
+
   const totalTasks = linkedTasks.length;
   const completedTasks = linkedTasks.filter(t => t.completed).length;
   const progress = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
@@ -149,13 +151,13 @@ export default function GoalCard({
                 {goal.attachments.map((file, idx) => {
                   const isImage = file.type && file.type.startsWith('image/');
                   return (
-                    <a
+                    <button
                       key={idx}
-                      href={file.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setActiveLightboxFile(file);
+                      }}
                       className="goal-attachment-chip"
-                      onClick={(e) => e.stopPropagation()}
                       style={{
                         display: 'inline-flex',
                         alignItems: 'center',
@@ -168,6 +170,7 @@ export default function GoalCard({
                         border: '1px solid var(--border-light)',
                         textDecoration: 'none',
                         transition: 'all 0.2s ease',
+                        cursor: 'pointer'
                       }}
                       title={`${file.name} (${(file.size / 1024).toFixed(1)} KB)`}
                     >
@@ -179,7 +182,7 @@ export default function GoalCard({
                         <FileText size={12} />
                       )}
                       <span style={{ maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{file.name}</span>
-                    </a>
+                    </button>
                   );
                 })}
               </div>
@@ -264,6 +267,131 @@ export default function GoalCard({
           </button>
         )}
       </div>
+
+      {activeLightboxFile && (
+        <div 
+          className="goal-lightbox-overlay animate-fade-in"
+          onClick={() => setActiveLightboxFile(null)}
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.85)',
+            backdropFilter: 'blur(8px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 99999,
+            padding: '24px'
+          }}
+        >
+          <div 
+            className="goal-lightbox-content animate-scale-up"
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              backgroundColor: 'var(--bg-card, #1e1e26)',
+              border: '1px solid var(--border-medium, rgba(255, 255, 255, 0.1))',
+              borderRadius: 'var(--radius-lg, 16px)',
+              padding: '24px',
+              maxWidth: '640px',
+              width: '100%',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '16px',
+              position: 'relative',
+              boxShadow: '0 24px 48px rgba(0, 0, 0, 0.5)'
+            }}
+          >
+            {/* Botão Fechar */}
+            <button 
+              onClick={() => setActiveLightboxFile(null)}
+              style={{
+                position: 'absolute',
+                top: '16px',
+                right: '16px',
+                background: 'none',
+                border: 'none',
+                color: 'var(--text-light, #94a3b8)',
+                cursor: 'pointer',
+                padding: '6px',
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: 'rgba(255, 255, 255, 0.03)'
+              }}
+            >
+              <LucideIcons.X size={18} />
+            </button>
+
+            {/* Nome do arquivo */}
+            <div>
+              <h4 style={{ margin: '0 0 4px 0', fontSize: '16px', fontWeight: '800', color: 'var(--text-main, #ffffff)', paddingRight: '32px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {activeLightboxFile.name}
+              </h4>
+              <span style={{ fontSize: '12px', color: 'var(--text-light, #94a3b8)' }}>
+                {(activeLightboxFile.size / 1024).toFixed(1)} KB • {activeLightboxFile.type || 'Tipo desconhecido'}
+              </span>
+            </div>
+
+            {/* Visualização de Mídia */}
+            <div style={{ 
+              backgroundColor: 'rgba(0, 0, 0, 0.2)', 
+              borderRadius: '8px', 
+              border: '1px solid var(--border-light, rgba(255, 255, 255, 0.05))',
+              minHeight: '200px', 
+              maxHeight: '380px', 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center',
+              overflow: 'hidden'
+            }}>
+              {activeLightboxFile.type && activeLightboxFile.type.startsWith('image/') ? (
+                <img 
+                  src={activeLightboxFile.url} 
+                  alt={activeLightboxFile.name} 
+                  style={{ maxWidth: '100%', maxHeight: '380px', objectFit: 'contain' }} 
+                />
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', color: 'var(--text-light, #94a3b8)' }}>
+                  <FileText size={48} color="var(--primary)" />
+                  <span style={{ fontSize: '13.5px' }}>Sem visualização disponível para este arquivo</span>
+                </div>
+              )}
+            </div>
+
+            {/* Ações */}
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '8px' }}>
+              <button 
+                onClick={() => setActiveLightboxFile(null)}
+                className="btn-secondary"
+                style={{ padding: '8px 16px', fontSize: '13px', cursor: 'pointer' }}
+              >
+                Fechar
+              </button>
+              <a 
+                href={activeLightboxFile.url} 
+                download={activeLightboxFile.name}
+                className="btn-primary-glow"
+                style={{ 
+                  padding: '8px 16px', 
+                  fontSize: '13px', 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '6px',
+                  textDecoration: 'none',
+                  cursor: 'pointer'
+                }}
+              >
+                <LucideIcons.Download size={14} />
+                Baixar arquivo
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
     </article>
   );
 }

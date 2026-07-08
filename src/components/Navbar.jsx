@@ -8,6 +8,23 @@ import { useTheme } from '../design-system/theme/useTheme';
 import { getLogo } from '../design-system/branding/logo';
 
 export default function Navbar() {
+  const [showHeader, setShowHeader] = React.useState(true);
+  const [lastScrollY, setLastScrollY] = React.useState(0);
+
+  React.useEffect(() => {
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+      if (currentScrollY > lastScrollY && currentScrollY > 80) {
+        setShowHeader(false);
+      } else {
+        setShowHeader(true);
+      }
+      setLastScrollY(currentScrollY);
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [lastScrollY]);
+
   const { activeTab, setActiveTab, currentUser, handleLogout, userProfile, isAdmin, theme, setTheme } = useAppContext();
   const { mode } = useTheme();
   const logo = getLogo(mode);
@@ -37,7 +54,13 @@ export default function Navbar() {
   return (
     <>
       {/* ── Cabeçalho Superior ──────────────────────────── */}
-      <header className="app-top-header">
+      <header 
+        className="app-top-header"
+        style={{
+          transition: 'transform 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+          transform: showHeader ? 'translateY(0)' : 'translateY(-100%)'
+        }}
+      >
         <div className="app-top-header-container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', maxWidth: '1200px', margin: '0 auto', padding: '0 16px', height: '64px' }}>
           
           {/* Logo — símbolo SVG oficial com marca integrada */}

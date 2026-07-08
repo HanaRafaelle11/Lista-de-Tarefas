@@ -413,6 +413,7 @@ export function AppProvider({ children }) {
 
   const handleLogout = useCallback(async () => {
     try {
+      localStorage.removeItem('flowday_demo_active'); // Limpa a flag de modo demo ativo
       if (currentUser?.id) {
         if (!currentUser.isDemo) {
           await eventsService.logEvent(currentUser.id, 'logout').catch(() => { });
@@ -774,6 +775,7 @@ export function AppProvider({ children }) {
       isDemo: true,
       user_metadata: { name: 'Explorador Demo', onboarding_completed: true }
     };
+    localStorage.setItem('flowday_demo_active', 'true'); // Persistir modo demo ativo no recarregamento
     setCurrentUser(demoUser);
     logEvent('demo_started');
     setActiveTab('home');

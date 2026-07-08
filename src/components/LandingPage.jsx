@@ -3,18 +3,23 @@ import {
   Target, Award, Clock, TrendingUp, Sparkles, ArrowRight,
   Zap, Check, Activity, Calendar, HelpCircle, ChevronDown,
   Flame, Brain, Play, CheckCircle2, Compass, Heart, Shield,
-  MessageSquare, Users, Leaf, Star, ChevronRight, RefreshCw
+  MessageSquare, Users, Leaf, Star, ChevronRight, RefreshCw,
+  Sun, Moon
 } from 'lucide-react';
 import { useAppContext } from '../contexts/AppContext';
 import { getLogo } from '../design-system/branding/logo';
 import { Container } from '../design-system/layout/Container';
 
 export default function LandingPage({ onEnterApp }) {
-  const { handleStartDemoMode } = useAppContext();
+  const { handleStartDemoMode, theme, setTheme } = useAppContext();
+  const isDark = theme === 'dark' || (theme === 'system' && typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+  const logo = getLogo(isDark ? 'dark' : 'light');
+
   const [scrolled, setScrolled] = useState(false);
+  const [showHeader, setShowHeader] = useState(true);
+  const [lastScrollY, setLastScrollY] = useState(0);
   const [openFaq, setOpenFaq] = useState(null);
   const [activeShowcaseTab, setActiveShowcaseTab] = useState('home');
-  const logo = getLogo('dark', 'legal');
 
   // Calculadora de tempo recuperado
   const [tasksPerDay, setTasksPerDay] = useState(5);
@@ -25,10 +30,21 @@ export default function LandingPage({ onEnterApp }) {
   const hoursPerMonth = Math.round((tasksPerDay * lostTime * workDays * 4.33) / 60);
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 20);
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
-  }, []);
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+      setScrolled(currentScrollY > 20);
+
+      if (currentScrollY > lastScrollY && currentScrollY > 80) {
+        setShowHeader(false);
+      } else {
+        setShowHeader(true);
+      }
+      setLastScrollY(currentScrollY);
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [lastScrollY]);
 
   const toggleFaq = (index) => setOpenFaq(openFaq === index ? null : index);
 
@@ -58,8 +74,7 @@ export default function LandingPage({ onEnterApp }) {
     { icon: RefreshCw, label: 'Criar hábitos',       desc: 'Rotina diária que consolida',          color: '#C084FC', grad: 'linear-gradient(135deg,#C084FC,#E879F9)' },
     { icon: Clock, label: 'Sessão de foco',     desc: 'Pomodoro integrado e contextual',      color: '#10B981', grad: 'linear-gradient(135deg,#10B981,#34D399)' },
     { icon: Brain, label: 'Coach IA acompanha',        desc: 'Insights reais do seu progresso',      color: '#38BDF8', grad: 'linear-gradient(135deg,#38BDF8,#0EA5E9)' },
-    { icon: Leaf, label: 'Planta cresce',       desc: 'Evolução visual da consistência',      color: '#22D3EE', grad: 'linear-gradient(135deg,#22D3EE,#6EE7B7)' },
-    { icon: Award, label: 'Pet evolui',          desc: 'Gamificação que motiva de verdade',    color: '#F59E0B', grad: 'linear-gradient(135deg,#F59E0B,#FBBF24)' },
+    { icon: Leaf, label: 'Companheiro evolui',   desc: 'Escolha planta ou pet para evoluir com sua consistência', color: '#22D3EE', grad: 'linear-gradient(135deg,#22D3EE,#F59E0B)' },
     { icon: TrendingUp, label: 'Você evolui',         desc: 'Estatísticas reais de impacto',        color: '#EC4899', grad: 'linear-gradient(135deg,#EC4899,#F472B6)' }
   ];
 
@@ -67,7 +82,7 @@ export default function LandingPage({ onEnterApp }) {
     { icon: Heart, color: '#818CF8', title: 'Menos ansiedade', desc: 'Tudo organizado em um lugar. Você sabe o que precisa fazer, sem a sensação de estar perdendo algo.' },
     { icon: Target, color: '#10B981', title: 'Clareza total',   desc: 'Cada manhã você sabe exatamente o próximo passo. Sem paralisia por excesso de listas.' },
     { icon: RefreshCw, color: '#38BDF8', title: 'Consistência diária', desc: 'Hábitos e tarefas conectados ao sistema criam ritmo automático. A rotina se consolida sozinha.' },
-    { icon: Award, color: '#F59E0B', title: 'Motivação real',  desc: 'Ver sua planta crescer e seu companion evoluir gera motivação genuína, indo além dos simples checkboxes.' },
+    { icon: Award, color: '#F59E0B', title: 'Motivação real',  desc: 'Ver sua planta crescer e seu companheiro evoluir gera motivação genuína, indo além dos simples checkboxes.' },
     { icon: Zap, color: '#C084FC', title: 'Menos procrastinação', desc: 'Com o Coach IA sugerindo o próximo passo e o timer integrado, começar ficou simples.' },
     { icon: TrendingUp, color: '#EC4899', title: 'Progresso visível', desc: 'Conquistas desbloqueadas, sequências mantidas, metas concluídas. Você sente que evolui.' }
   ];
@@ -84,15 +99,15 @@ export default function LandingPage({ onEnterApp }) {
     { q: 'O que é o MyFlowDay?', a: 'É um sistema integrado de evolução pessoal que conecta objetivos, tarefas, hábitos, timer Pomodoro, gamificação e IA, reunindo tudo em um único ecossistema para gerar progresso consistente.' },
     { q: 'Como o Coach IA funciona?', a: 'Ele analisa sua rotina real: horários de maior foco, hábitos cumpridos e objetivos em atraso, gerando sugestões acionáveis e insights semanais personalizados.' },
     { q: 'O que é o companheiro virtual?', a: 'É um avatar dinâmico (planta, pet ou bebê) que cresce de nível à medida que você conclui tarefas e mantém hábitos. É o espelho visual do seu progresso.' },
-    { q: 'O app funciona offline?', a: 'Sim. O MyFlowDay usa IndexedDB local para salvar dados. Quando a conexão é restaurada, tudo sincroniza automaticamente com a nuvem via Supabase.' },
-    { q: 'Qual a diferença entre Gratuito e Pro?', a: 'O Gratuito já inclui todos os módulos essenciais. O Pro desbloqueia análises avançadas do Coach IA, tendências por horário, companions exclusivos e suporte prioritário.' }
+    { q: 'O app funciona offline?', a: 'Sim. Pode ficar tranquilo que assim que a conexão for restaurada tudo sincroniza automaticamente.' },
+    { q: 'Qual a diferença entre Gratuito e Pro?', a: 'O Gratuito já inclui todos os módulos essenciais. O Pro desbloqueia análises avançadas do Coach IA, tendências por horário, companheiros exclusivos e suporte prioritário.' }
   ];
 
   const freeFeatures = [
     { text: 'Tarefas e objetivos ilimitados', on: true },
     { text: 'Rastreamento de hábitos diários', on: true },
     { text: 'Timer Pomodoro integrado', on: true },
-    { text: 'Companion virtual básico', on: true },
+    { text: 'Companheiro virtual básico', on: true },
     { text: 'Coach IA básico (insights semanais)', on: true },
     { text: 'Relatórios de progresso essenciais', on: true },
     { text: 'Coach IA ilimitado', on: false },
@@ -106,7 +121,7 @@ export default function LandingPage({ onEnterApp }) {
     'Relatórios de foco avançados',
     'Análises preditivas de produtividade',
     'Histórico de evolução completo',
-    'Companions e avatares exclusivos',
+    'Companheiros e avatares exclusivos',
     'Temas exclusivos (Dark/Glow Premium)',
     'Acesso antecipado a novos recursos'
   ];
@@ -122,7 +137,7 @@ export default function LandingPage({ onEnterApp }) {
 
   /* ── Shared inline styles ─── */
   const S = {
-    section: (bg) => ({ padding: '48px 24px', background: bg, borderTop: '1px solid rgba(255,255,255,0.03)' }),
+    section: (bg) => ({ padding: '48px 24px', background: isDark ? bg : (bg === '#07090C' ? '#F8FAFC' : '#F1F5F9'), borderTop: `1px solid ${isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.05)'}` }),
     sectionHead: { textAlign: 'center', marginBottom: '36px' },
     ctaBtn: {
       background: 'linear-gradient(135deg,#6366F1 0%,#8B5CF6 100%)',
@@ -135,10 +150,22 @@ export default function LandingPage({ onEnterApp }) {
   };
 
   return (
-    <div className="landing-root" style={{ minHeight: '100vh', background: '#07090C', color: '#F8FAFC', fontFamily: 'var(--font-body,"Plus Jakarta Sans",sans-serif)', overflowX: 'hidden', width: '100%', boxSizing: 'border-box' }}>
+    <div className="landing-root" style={{ minHeight: '100vh', background: isDark ? '#07090C' : '#F8FAFC', color: isDark ? '#F8FAFC' : '#0F172A', fontFamily: 'var(--font-body,"Plus Jakarta Sans",sans-serif)', overflowX: 'hidden', width: '100%', boxSizing: 'border-box' }}>
 
       {/* ── NAVBAR ─────────────────────────────────────────────────────── */}
-      <header className="landing-header" style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100, background: scrolled ? 'rgba(7,9,12,0.9)' : 'transparent', backdropFilter: scrolled ? 'blur(16px)' : 'none', borderBottom: scrolled ? '1px solid rgba(255,255,255,0.05)' : 'none', transition: 'all 0.3s cubic-bezier(0.16,1,0.3,1)', padding: scrolled ? '12px 24px' : '20px 24px' }}>
+      <header className="landing-header" style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        zIndex: 100,
+        background: scrolled ? (isDark ? 'rgba(7,9,12,0.9)' : 'rgba(248,250,252,0.95)') : 'transparent',
+        backdropFilter: scrolled ? 'blur(16px)' : 'none',
+        borderBottom: scrolled ? `1px solid ${isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.06)'}` : 'none',
+        transition: 'all 0.3s cubic-bezier(0.16,1,0.3,1)',
+        padding: scrolled ? '12px 24px' : '20px 24px',
+        transform: showHeader ? 'translateY(0)' : 'translateY(-100%)'
+      }}>
         <Container className="landing-header-container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div className="landing-logo-container" style={{ display: 'flex', alignItems: 'center', height: '56px', cursor: 'pointer' }} onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
             <img src={logo.src} alt={logo.alt} style={{ height: '56px', width: 'auto', objectFit: 'contain', marginTop: '-4px' }} onError={e => { e.target.style.display = 'none'; }} />
@@ -150,6 +177,25 @@ export default function LandingPage({ onEnterApp }) {
             <a href="#planos" className="nav-link">Planos</a>
           </div>
           <div className="landing-nav-buttons" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <button 
+              onClick={() => setTheme(isDark ? 'light' : 'dark')}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                color: isDark ? '#94A3B8' : '#475569',
+                cursor: 'pointer',
+                padding: '6px',
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                transition: 'all 0.2s',
+                backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)'
+              }}
+              title={isDark ? "Mudar para modo claro" : "Mudar para modo escuro"}
+            >
+              {isDark ? <Sun size={18} /> : <Moon size={18} />}
+            </button>
             <button onClick={onEnterApp} className="nav-btn-secondary">Entrar</button>
             <button onClick={onEnterApp} className="nav-btn-primary">Criar Conta</button>
           </div>
@@ -412,14 +458,7 @@ export default function LandingPage({ onEnterApp }) {
         </Container>
       </section>
 
-      {/* ── 2.5. CREDIBILIDADE (SOCIAL PROOF) ──────────────────────────────────── */}
-      <div style={{ borderTop: '1px solid rgba(255,255,255,0.04)', borderBottom: '1px solid rgba(255,255,255,0.04)', background: '#07090C', padding: '24px 24px', textAlign: 'center' }}>
-        <Container>
-          <p style={{ fontSize: '14px', color: '#94A3B8', fontWeight: 600, margin: 0, letterSpacing: '0.02em', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', flexWrap: 'wrap' }}>
-            <Sparkles size={16} color="#818CF8" /> Desenvolvido com base em anos de experiência em Customer Success e produtividade.
-          </p>
-        </Container>
-      </div>
+
 
       {/* ── 3. O PROBLEMA ───────────────────────────────────────────────── */}
       <section id="problema" style={S.section('#090D12')}>
@@ -486,40 +525,7 @@ export default function LandingPage({ onEnterApp }) {
       {/* ── 4. DEMONSTRAÇÃO ─────────────────────────────────────────────── */}
       <section id="conheca" style={S.section('#090D12')}>
         <Container>
-          <div style={S.sectionHead}>
-            <SectionLabel color="#C084FC">Tour Visual</SectionLabel>
-            <SectionTitle>
-              Veja sua evolução acontecendo<br />
-              <span style={{ color: '#818CF8' }}>em tempo real.</span>
-            </SectionTitle>
-          </div>
 
-          {/* Mini Fluxo Conectado (Live Demo Visual Flow) */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '14px', marginBottom: '32px', flexWrap: 'wrap', background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.03)', padding: '16px 24px', borderRadius: '16px', maxWidth: '780px', margin: '0 auto 28px' }}>
-            <span style={{ fontSize: '12px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase', marginRight: '6px' }}>Ecossistema Conectado:</span>
-            
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: 600, color: '#FFFFFF', padding: '6px 12px', background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: '8px' }}>
-              <CheckCircle2 size={14} color="#10B981" /> Tarefa concluída
-            </div>
-            
-            <ChevronRight size={14} color="#475569" />
-            
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: 600, color: '#FFFFFF', padding: '6px 12px', background: 'rgba(34,211,238,0.08)', border: '1px solid rgba(34,211,238,0.2)', borderRadius: '8px' }}>
-              <Leaf size={14} color="#22D3EE" /> Planta cresce
-            </div>
-            
-            <ChevronRight size={14} color="#475569" />
-            
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: 600, color: '#FFFFFF', padding: '6px 12px', background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.2)', borderRadius: '8px' }}>
-              <Award size={14} color="#F59E0B" /> Conquista desbloqueada
-            </div>
-            
-            <ChevronRight size={14} color="#475569" />
-            
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: 600, color: '#FFFFFF', padding: '6px 12px', background: 'rgba(236,72,153,0.08)', border: '1px solid rgba(236,72,153,0.2)', borderRadius: '8px' }}>
-              <TrendingUp size={14} color="#EC4899" /> Evolução aumenta
-            </div>
-          </div>
 
           <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '28px' }}>
             {showcaseTabs.map(tab => {
@@ -542,9 +548,9 @@ export default function LandingPage({ onEnterApp }) {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '30px', alignItems: 'center' }} className="showcase-content-grid">
                 <div>
                   <h3 style={{ fontSize: '22px', fontWeight: 800, color: '#FFFFFF', marginBottom: '12px' }}>Seu painel central de evolução</h3>
-                  <p style={{ color: '#94A3B8', fontSize: '14.5px', lineHeight: 1.6, marginBottom: '18px' }}>Tudo conectado. Uma tarefa concluída atualiza sua evolução, fortalece seus hábitos, faz seu companion evoluir e gera novos insights do Coach IA.</p>
+                  <p style={{ color: '#94A3B8', fontSize: '14.5px', lineHeight: 1.6, marginBottom: '18px' }}>Tudo conectado. Uma tarefa concluída atualiza sua evolução, fortalece seus hábitos, faz seu companheiro evoluir e gera novos insights do Coach IA.</p>
                   <ul className="premium-list">
-                    <li><Check size={14} color="#10B981" /> Companion virtual na primeira dobra</li>
+                    <li><Check size={14} color="#10B981" /> Companheiro virtual na primeira dobra</li>
                     <li><Check size={14} color="#10B981" /> Quick-add por linguagem natural</li>
                     <li><Check size={14} color="#10B981" /> Indicador de consistência semanal</li>
                   </ul>
@@ -615,11 +621,11 @@ export default function LandingPage({ onEnterApp }) {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '30px', alignItems: 'center' }} className="showcase-content-grid">
                 <div>
                   <h3 style={{ fontSize: '22px', fontWeight: 800, color: '#FFFFFF', marginBottom: '12px' }}>Métricas reais de progresso</h3>
-                  <p style={{ color: '#94A3B8', fontSize: '14.5px', lineHeight: 1.6, marginBottom: '18px' }}>Consistência diária, sequências de hábitos, objetivos completados e crescimento do companion, tudo em um painel visual.</p>
+                  <p style={{ color: '#94A3B8', fontSize: '14.5px', lineHeight: 1.6, marginBottom: '18px' }}>Consistência diária, sequências de hábitos, objetivos completados e crescimento do companheiro, tudo em um painel visual.</p>
                   <ul className="premium-list">
                     <li><Check size={14} color="#10B981" /> Consistência e ritmo semanal</li>
                     <li><Check size={14} color="#10B981" /> Progresso de cada objetivo ativo</li>
-                    <li><Check size={14} color="#10B981" /> Conquistas e nível do companion</li>
+                    <li><Check size={14} color="#10B981" /> Conquistas e nível do companheiro</li>
                   </ul>
                 </div>
                 <div style={{ background: 'rgba(255,255,255,0.02)', padding: '30px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '200px' }}>
@@ -858,6 +864,41 @@ export default function LandingPage({ onEnterApp }) {
             <strong>Transformando pequenas ações em grandes evoluções.</strong><br />
             Organize sua rotina. Construa consistência. Evolua todos os dias.
           </p>
+          <div style={{ display: 'flex', gap: '18px', margin: '8px 0', flexWrap: 'wrap', justifyContent: 'center' }}>
+            <button
+              onClick={() => {
+                window.history.pushState(null, '', '/faq');
+                window.dispatchEvent(new Event('popstate'));
+              }}
+              style={{ background: 'none', border: 'none', color: '#94A3B8', fontSize: '13.5px', fontWeight: '600', cursor: 'pointer', transition: 'color 0.2s' }}
+              onMouseEnter={e => e.currentTarget.style.color = '#818CF8'}
+              onMouseLeave={e => e.currentTarget.style.color = '#94A3B8'}
+            >
+              FAQ
+            </button>
+            <button
+              onClick={() => {
+                window.history.pushState(null, '', '/termos');
+                window.dispatchEvent(new Event('popstate'));
+              }}
+              style={{ background: 'none', border: 'none', color: '#94A3B8', fontSize: '13.5px', fontWeight: '600', cursor: 'pointer', transition: 'color 0.2s' }}
+              onMouseEnter={e => e.currentTarget.style.color = '#818CF8'}
+              onMouseLeave={e => e.currentTarget.style.color = '#94A3B8'}
+            >
+              Termos de Uso
+            </button>
+            <button
+              onClick={() => {
+                window.history.pushState(null, '', '/privacidade');
+                window.dispatchEvent(new Event('popstate'));
+              }}
+              style={{ background: 'none', border: 'none', color: '#94A3B8', fontSize: '13.5px', fontWeight: '600', cursor: 'pointer', transition: 'color 0.2s' }}
+              onMouseEnter={e => e.currentTarget.style.color = '#818CF8'}
+              onMouseLeave={e => e.currentTarget.style.color = '#94A3B8'}
+            >
+              Política de Privacidade
+            </button>
+          </div>
           <p style={{ fontSize: '12px', color: '#374151', margin: 0 }}>© 2026 MyFlowDay. Todos os direitos reservados.</p>
         </Container>
       </footer>
@@ -866,7 +907,7 @@ export default function LandingPage({ onEnterApp }) {
       <style>{`
         html { scroll-behavior: smooth; }
 
-        .nav-link { font-size:13.5px; font-weight:600; color:#94A3B8; text-decoration:none; transition:color 0.2s; }
+        .nav-link { font-size:13.5px; font-weight:600; color:${isDark ? '#94A3B8' : '#475569'}; text-decoration:none; transition:color 0.2s; }
         .nav-link:hover { color:#818CF8 !important; }
 
         .mini-flow-step {
@@ -877,8 +918,8 @@ export default function LandingPage({ onEnterApp }) {
           filter: brightness(1.15);
         }
 
-        .nav-btn-secondary { padding:8px 16px; border-radius:20px; background:transparent; color:#F8FAFC; font-weight:600; font-size:13.5px; cursor:pointer; border:1px solid rgba(255,255,255,0.1); transition:all 0.2s; }
-        .nav-btn-secondary:hover { background:rgba(255,255,255,0.05); border-color:rgba(255,255,255,0.2); }
+        .nav-btn-secondary { padding:8px 16px; border-radius:20px; background:transparent; color:${isDark ? '#F8FAFC' : '#0F172A'}; font-weight:600; font-size:13.5px; cursor:pointer; border:1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.15)'}; transition:all 0.2s; }
+        .nav-btn-secondary:hover { background:${isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'}; border-color:${isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.25)'}; }
 
         .nav-btn-primary { padding:8px 20px; border-radius:20px; background:#6366F1; color:white; font-weight:700; font-size:13.5px; cursor:pointer; border:none; transition:all 0.2s; box-shadow:0 4px 12px rgba(99,102,241,0.25); }
         .nav-btn-primary:hover { background:#4F46E5; box-shadow:0 4px 20px rgba(99,102,241,0.4); }
@@ -896,8 +937,8 @@ export default function LandingPage({ onEnterApp }) {
           .flow-lines-container { display:none !important; }
         }
 
-        .glass-premium { background:rgba(15,19,26,0.8); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); border:1px solid rgba(255,255,255,0.05); border-radius:14px; box-shadow:0 8px 32px 0 rgba(0,0,0,0.3); transition:all 0.3s ease; }
-        .glass-premium:hover { transform:translateY(-4px); border-color:rgba(255,255,255,0.1); box-shadow:0 12px 40px 0 rgba(99,102,241,0.1); }
+        .glass-premium { background:${isDark ? 'rgba(15,19,26,0.8)' : 'rgba(255,255,255,0.85)'}; backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); border:1px solid ${isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.08)'}; border-radius:14px; box-shadow:0 8px 32px 0 ${isDark ? 'rgba(0,0,0,0.3)' : 'rgba(0,0,0,0.05)'}; transition:all 0.3s ease; color:${isDark ? '#F8FAFC' : '#0F172A'}; }
+        .glass-premium:hover { transform:translateY(-4px); border-color:${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.15)'}; box-shadow:0 12px 40px 0 ${isDark ? 'rgba(99,102,241,0.1)' : 'rgba(99,102,241,0.12)'}; }
         .mockup-card { padding:16px 20px; }
 
         .glowing-pulse { stroke-dasharray:20 80; animation:draw-pulse 3s linear infinite; }
@@ -908,28 +949,28 @@ export default function LandingPage({ onEnterApp }) {
         .steps-flow-container::before { content:''; position:absolute; left:45px; right:45px; top:45px; height:2px; background:linear-gradient(90deg,#6366F1 0%,#C084FC 33%,#10B981 66%,#F59E0B 100%); z-index:1; }
         .step-row { display:flex; flex-direction:column; align-items:center; gap:12px; position:relative; z-index:2; min-width:200px; flex:1 0 200px; }
         .step-num-col { display:flex; justify-content:center; align-items:center; z-index:3; }
-        .step-number { width:50px; height:50px; border-radius:50%; display:flex; align-items:center; justify-content:center; color:white; box-shadow:0 0 20px rgba(99,102,241,0.2); flex-shrink:0; border:3px solid #07090C; }
-        .step-content-card { background:#0F1318; border:1px solid rgba(255,255,255,0.04); padding:14px 16px; border-radius:12px; text-align:center; width:100%; box-sizing:border-box; flex:1; }
+        .step-number { width:50px; height:50px; border-radius:50%; display:flex; align-items:center; justify-content:center; color:white; box-shadow:0 0 20px rgba(99,102,241,0.2); flex-shrink:0; border:3px solid ${isDark ? '#07090C' : '#F8FAFC'}; }
+        .step-content-card { background:${isDark ? '#0F1318' : '#FFFFFF'}; border:1px solid ${isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.06)'}; padding:14px 16px; border-radius:12px; text-align:center; width:100%; box-sizing:border-box; flex:1; }
 
-        .showcase-tab { padding:9px 16px; border-radius:30px; background:rgba(255,255,255,0.02); color:#94A3B8; border:1px solid rgba(255,255,255,0.05); font-size:13px; font-weight:600; cursor:pointer; transition:all 0.2s; }
-        .showcase-tab:hover { color:white; background:rgba(255,255,255,0.05); }
+        .showcase-tab { padding:9px 16px; border-radius:30px; background:${isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)'}; color:${isDark ? '#94A3B8' : '#475569'}; border:1px solid ${isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.08)'}; font-size:13px; font-weight:600; cursor:pointer; transition:all 0.2s; }
+        .showcase-tab:hover { color:${isDark ? 'white' : '#0F172A'}; background:${isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'}; }
         .showcase-tab.active { background:#6366F1; color:white; border-color:#6366F1; box-shadow:0 4px 15px rgba(99,102,241,0.25); }
 
         .premium-list { list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:9px; }
-        .premium-list li { display:flex; align-items:center; gap:8px; font-size:13.5px; color:#CBD5E1; }
+        .premium-list li { display:flex; align-items:center; gap:8px; font-size:13.5px; color:${isDark ? '#CBD5E1' : '#334155'}; }
 
-        .mini-task-item { background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.05); padding:11px 14px; border-radius:8px; display:flex; align-items:center; gap:12px; font-size:13px; font-weight:600; color:#E2E8F0; }
+        .mini-task-item { background:${isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)'}; border:1px solid ${isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.08)'}; padding:11px 14px; border-radius:8px; display:flex; align-items:center; gap:12px; font-size:13px; font-weight:600; color:${isDark ? '#E2E8F0' : '#0F172A'}; }
         .mini-badge-blue { background:rgba(99,102,241,0.1); color:#818CF8; padding:3px 8px; border-radius:6px; font-size:10px; font-weight:700; }
         .mini-badge-red { background:rgba(239,68,68,0.1); color:#F87171; padding:3px 8px; border-radius:6px; font-size:10px; font-weight:700; }
         .mini-badge-orange { background:rgba(245,158,11,0.1); color:#FBBF24; padding:3px 8px; border-radius:6px; font-size:10px; font-weight:700; }
 
         .foco-briefing-glow { background:rgba(16,185,129,0.02); border:1px solid rgba(16,185,129,0.15); border-radius:50%; width:140px; height:140px; display:flex; flex-direction:column; align-items:center; justify-content:center; box-shadow:0 0 30px rgba(16,185,129,0.08); }
-        .chat-bubble-showcase { background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.05); padding:14px 16px; border-radius:12px; font-size:12.5px; line-height:1.5; color:#CBD5E1; text-align:left; }
+        .chat-bubble-showcase { background:${isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)'}; border:1px solid ${isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.08)'}; padding:14px 16px; border-radius:12px; font-size:12.5px; line-height:1.5; color:${isDark ? '#CBD5E1' : '#334155'}; text-align:left; }
 
-        .benefit-card:hover { border-color:rgba(255,255,255,0.08) !important; transform:translateY(-3px); box-shadow:0 8px 24px rgba(0,0,0,0.3); }
+        .benefit-card:hover { border-color:${isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.1)'} !important; transform:translateY(-3px); box-shadow:0 8px 24px ${isDark ? 'rgba(0,0,0,0.3)' : 'rgba(0,0,0,0.05)'}; }
 
-        .pricing-card { background:#0F1318; border:1px solid rgba(255,255,255,0.06); padding:30px; border-radius:20px; position:relative; display:flex; flex-direction:column; }
-        .pricing-card-pro { border-color:rgba(99,102,241,0.3); background:linear-gradient(170deg,rgba(99,102,241,0.06) 0%,#0F1318 40%); box-shadow:0 8px 40px rgba(99,102,241,0.1); }
+        .pricing-card { background:${isDark ? '#0F1318' : '#FFFFFF'}; border:1px solid ${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.08)'}; padding:30px; border-radius:20px; position:relative; display:flex; flex-direction:column; color:${isDark ? '#F8FAFC' : '#0F172A'}; }
+        .pricing-card-pro { border-color:rgba(99,102,241,0.3); background:${isDark ? 'linear-gradient(170deg,rgba(99,102,241,0.06) 0%,#0F1318 40%)' : 'linear-gradient(170deg,rgba(99,102,241,0.04) 0%,#FFFFFF 40%)'}; box-shadow:0 8px 40px ${isDark ? 'rgba(99,102,241,0.1)' : 'rgba(99,102,241,0.06)'}; }
 
         @media (max-width: 991px) {
           .showcase-content-grid { grid-template-columns:1fr !important; gap:24px; }

@@ -208,7 +208,7 @@ export default function FocusView() {
       return;
     }
 
-    if (focusVal > 25 && !isPro) {
+    if ((focusVal !== 25 || breakVal !== 5) && !isPro) {
       openPaywall('focus_timer_limit');
       return;
     }

@@ -93,10 +93,37 @@ export default function GoalModal({ isOpen, onClose, onSave, onDelete, editingGo
 
     setUploading(true);
     try {
+      const fileToBase64 = (f) => new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(f);
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = error => reject(error);
+      });
+
+      if (currentUser?.isDemo) {
+        const base64Data = await fileToBase64(file);
+        setAttachments(prev => [...prev, {
+          name: file.name,
+          url: base64Data,
+          type: file.type,
+          size: file.size,
+          path: null
+        }]);
+        return;
+      }
+
       const { goalsService } = await import('../services/goalsService');
       const result = await goalsService.uploadAttachment(currentUser.id, file);
       if (result.error) {
-        openCustomAlert('Erro ao fazer upload do arquivo: ' + result.error.message);
+        console.warn('Erro no upload para Supabase, usando base64 local como fallback:', result.error);
+        const base64Data = await fileToBase64(file);
+        setAttachments(prev => [...prev, {
+          name: file.name,
+          url: base64Data,
+          type: file.type,
+          size: file.size,
+          path: null
+        }]);
       } else {
         setAttachments(prev => [...prev, {
           name: result.name,
@@ -107,7 +134,25 @@ export default function GoalModal({ isOpen, onClose, onSave, onDelete, editingGo
         }]);
       }
     } catch (err) {
-      openCustomAlert('Erro inesperado: ' + err.message);
+      console.warn('Erro inesperado no upload, usando base64 local como fallback:', err);
+      try {
+        const fileToBase64 = (f) => new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.readAsDataURL(f);
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = error => reject(error);
+        });
+        const base64Data = await fileToBase64(file);
+        setAttachments(prev => [...prev, {
+          name: file.name,
+          url: base64Data,
+          type: file.type,
+          size: file.size,
+          path: null
+        }]);
+      } catch (innerErr) {
+        openCustomAlert('Erro ao processar arquivo local: ' + innerErr.message);
+      }
     } finally {
       setUploading(false);
       e.target.value = '';
