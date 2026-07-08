@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import ReactDOM from 'react-dom';
 import { Calendar, Trash2, Edit2, AlertCircle, CalendarPlus, Check, Repeat, Unlink, Copy, Clock, Play, MoreVertical, Sparkles, Flame, Archive } from 'lucide-react';
 import { parseTaskMetadata, formatDescriptionWithoutMetadata, buildDescriptionWithMetadata, useAppContext } from '../contexts/AppContext';
-import { formatTaskDateDisplay, formatTaskTimeDisplay } from '../utils/dateUtils';
+import { formatTaskDateDisplay, formatTaskTimeDisplay, extractDateAndTimeParts } from '../utils/dateUtils';
 import CategoryIcon from './CategoryIcon';
 
 // ─── Redireciona para o Google Calendar web pré-preenchido ───────────────────
@@ -40,10 +40,21 @@ export default function TodoItem({ item, onToggleComplete, onDelete, onEdit, goa
     if (item.completed || !item.dueDate) return false;
     
     const now = new Date();
-    const dateStr = item.dueDate.includes('T') ? item.dueDate : `${item.dueDate}T23:59:59`;
-    const taskDate = new Date(dateStr);
-    
-    return taskDate < now;
+    const meta = parseTaskMetadata(item.description || '');
+    const { datePart } = extractDateAndTimeParts(item.dueDate);
+    if (!datePart) return false;
+
+    const activeTime = meta.due_time || '';
+    if (activeTime) {
+      const [hours, minutes] = activeTime.split(':').map(Number);
+      const [year, month, day] = datePart.split('-').map(Number);
+      const taskDateTime = new Date(year, month - 1, day, hours, minutes, 59, 999);
+      return taskDateTime < now;
+    } else {
+      const [year, month, day] = datePart.split('-').map(Number);
+      const endOfDay = new Date(year, month - 1, day, 23, 59, 59, 999);
+      return endOfDay < now;
+    }
   };
 
   const overdue = isOverdue();

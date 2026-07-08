@@ -200,18 +200,32 @@ function TaskSection({ title, tasks, icon, accent, onEdit, onDelete, onToggle, d
     if (task.completed) return { isRecommended: false, isCritical: false, isStreak: false };
 
     const now = new Date();
-    const taskDateStr = task.dueDate ? (task.dueDate.includes('T') ? task.dueDate : `${task.dueDate}T23:59:59`) : null;
-    const taskDateObj = taskDateStr ? new Date(taskDateStr) : null;
-    const overdue = taskDateObj && taskDateObj < now;
+    const meta = parseTaskMetadata(task.description || '');
+    const { datePart } = extractDateAndTimeParts(task.dueDate);
+    
+    let overdue = false;
+    if (datePart) {
+      const activeTime = meta.due_time || '';
+      if (activeTime) {
+        const [hours, minutes] = activeTime.split(':').map(Number);
+        const [year, month, day] = datePart.split('-').map(Number);
+        const taskDateTime = new Date(year, month - 1, day, hours, minutes, 59, 999);
+        overdue = taskDateTime < now;
+      } else {
+        const [year, month, day] = datePart.split('-').map(Number);
+        const endOfDay = new Date(year, month - 1, day, 23, 59, 59, 999);
+        overdue = endOfDay < now;
+      }
+    }
 
-    const todayStr = new Date().toISOString().split('T')[0];
-    const isToday = task.dueDate && task.dueDate.split('T')[0] === todayStr;
+    const todayStrStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    const isToday = datePart === todayStrStr;
     const isCritical = overdue || (task.priority === 'Alta' && isToday);
 
     const linkedGoalId = (goalTasks || []).find(gt => gt.task_id === task.id)?.goal_id;
     const isRecommended = !!linkedGoalId;
 
-    const completedToday = (allTasks || []).filter(t => t.completed && t.completedAt && t.completedAt.split('T')[0] === todayStr).length;
+    const completedToday = (allTasks || []).filter(t => t.completed && t.completedAt && t.completedAt.split('T')[0] === todayStrStr).length;
     const isStreak = isToday && completedToday === 0;
 
     return { isRecommended, isCritical, isStreak, linkedGoalId };

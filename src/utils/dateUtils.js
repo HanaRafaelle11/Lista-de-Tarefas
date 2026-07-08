@@ -111,25 +111,31 @@ export function formatTaskDateDisplay(dueDateStr) {
  * Extrai e formata a hora no fuso horário local do usuário (ex: "23:30").
  */
 export function formatTaskTimeDisplay(dueDateStr, legacyDueTime) {
-  if (!dueDateStr) return legacyDueTime && legacyDueTime !== '00:00' ? legacyDueTime : '';
-
-  const { timePart } = extractDateAndTimeParts(dueDateStr);
-  if (timePart && timePart !== '00:00') return timePart;
-
+  // O legacyDueTime (meta.due_time) é a única fonte real de horário definida pelo usuário
   return legacyDueTime && legacyDueTime !== '00:00' ? legacyDueTime : '';
 }
 
 /**
  * Verifica se a tarefa está atrasada comparando o timestamp com o horário atual do usuário.
  */
-export function isTaskOverdue(dueDateStr, completed) {
+export function isTaskOverdue(dueDateStr, completed, userDueTime = '') {
   if (completed || !dueDateStr) return false;
 
-  const taskDate = new Date(dueDateStr);
-  if (isNaN(taskDate.getTime())) return false;
+  const { datePart } = extractDateAndTimeParts(dueDateStr);
+  if (!datePart) return false;
 
   const now = new Date();
-  return taskDate < now;
+  const activeTime = userDueTime || '';
+  if (activeTime) {
+    const [hours, minutes] = activeTime.split(':').map(Number);
+    const [year, month, day] = datePart.split('-').map(Number);
+    const taskDateTime = new Date(year, month - 1, day, hours, minutes, 59, 999);
+    return taskDateTime < now;
+  } else {
+    const [year, month, day] = datePart.split('-').map(Number);
+    const endOfDay = new Date(year, month - 1, day, 23, 59, 59, 999);
+    return endOfDay < now;
+  }
 }
 
 /**

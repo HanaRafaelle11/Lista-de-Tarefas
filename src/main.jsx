@@ -19,6 +19,42 @@ window.addEventListener('touchmove', function() {}, {passive: false});
 // Habilita o modo de segurança Beta globalmente
 window.BETA_SAFE_MODE = true;
 
+// Interceptador para limpar cache via URL (bypass de PWA para desenvolvimento/testes rápidos)
+if (typeof window !== 'undefined') {
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.has('clear') || urlParams.has('reload')) {
+    (async () => {
+      try {
+        if ('caches' in window) {
+          const names = await caches.keys();
+          await Promise.all(names.map(name => caches.delete(name)));
+        }
+        if ('serviceWorker' in navigator) {
+          const registrations = await navigator.serviceWorker.getRegistrations();
+          for (let reg of registrations) {
+            await reg.unregister();
+          }
+        }
+        // Limpa localStorage do flowday (preserva tokens Supabase)
+        const keysToRemove = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && !key.startsWith('sb-') && !key.includes('supabase')) {
+            keysToRemove.push(key);
+          }
+        }
+        keysToRemove.forEach(key => localStorage.removeItem(key));
+        console.log('[PWA] Cache limpo via URL parameter.');
+      } catch (e) {
+        console.warn('Erro ao limpar cache:', e);
+      } finally {
+        // Redireciona para URL limpa para evitar loops
+        window.location.href = window.location.pathname;
+      }
+    })();
+  }
+}
+
 // Aplica o tema salvo ANTES do React renderizar (evita flash do tema errado)
 ;(function() {
   const saved = localStorage.getItem('theme');

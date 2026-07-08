@@ -396,7 +396,7 @@ export default function EvolutionView() {
     isAccessChecked
   } = useAppContext();
 
-  if (!isAccessChecked || goalTasks === null) {
+  if (!tasks || !goals) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '300px', color: 'var(--text-light)', gap: '12px' }}>
         <RefreshCw style={{ animation: 'spin 2s linear infinite' }} size={32} />
@@ -478,7 +478,7 @@ export default function EvolutionView() {
     const dateStr = `${sevenDaysAgo.getFullYear()}-${String(sevenDaysAgo.getMonth() + 1).padStart(2, '0')}-${String(sevenDaysAgo.getDate()).padStart(2, '0')}`;
 
     const recentCompletedTasks = activeTasks.filter(t => t.completed && t.dueDate && t.dueDate >= dateStr).length;
-    const recentHabitLogsCount = habitsManager.habitLogs.filter(l => l.completed_date >= dateStr).length;
+    const recentHabitLogsCount = (habitsManager?.habitLogs || []).filter(l => l.completed_date >= dateStr).length;
     
     const weeklyPlan = currentUser?.user_metadata?.weekly_plan || null;
     const hasWeeklyPlan = !!(weeklyPlan && (weeklyPlan.focus?.trim() || weeklyPlan.criticalPriorities?.filter(p => p.trim()).length > 0 || weeklyPlan.linkedGoals?.length > 0));
@@ -496,7 +496,7 @@ export default function EvolutionView() {
       plan: hasWeeklyPlan ? weeklyPlan : null,
       planTasks: planTasks.slice(0, 8),
     };
-  }, [activeTasks, habitsManager.habitLogs, currentUser]);
+  }, [activeTasks, habitsManager?.habitLogs, currentUser]);
 
   const getMotivation = () => {
     if (stats.completedTasks === 0) return { title: 'Seu diário começa agora.', desc: 'Conclua sua primeira tarefa para dar início à sua evolução.' };
