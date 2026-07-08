@@ -53,23 +53,23 @@ export default function LandingPage({ onEnterApp }) {
 
   /* ── Data ─── */
   const steps = [
-    { emoji: '🎯', label: 'Criar objetivo',      desc: 'Define o que quer alcançar',          color: '#6366F1', grad: 'linear-gradient(135deg,#6366F1,#8B5CF6)' },
-    { emoji: '✅', label: 'Criar tarefas',      desc: 'Ações pequenas e executáveis',         color: '#8B5CF6', grad: 'linear-gradient(135deg,#8B5CF6,#C084FC)' },
-    { emoji: '🔄', label: 'Criar hábitos',       desc: 'Rotina diária que consolida',          color: '#C084FC', grad: 'linear-gradient(135deg,#C084FC,#E879F9)' },
-    { emoji: '⏱️', label: 'Sessão de foco',     desc: 'Pomodoro integrado e contextual',      color: '#10B981', grad: 'linear-gradient(135deg,#10B981,#34D399)' },
-    { emoji: '🧠', label: 'Feedback inteligente', desc: 'Insights reais do seu progresso',      color: '#38BDF8', grad: 'linear-gradient(135deg,#38BDF8,#0EA5E9)' },
-    { emoji: '🌱', label: 'Planta cresce',       desc: 'Evolução visual da consistência',      color: '#22D3EE', grad: 'linear-gradient(135deg,#22D3EE,#6EE7B7)' },
-    { emoji: '🐾', label: 'Pet evolui',          desc: 'Gamificação que motiva de verdade',    color: '#F59E0B', grad: 'linear-gradient(135deg,#F59E0B,#FBBF24)' },
-    { emoji: '📈', label: 'Você evolui',         desc: 'Estatísticas reais de impacto',        color: '#EC4899', grad: 'linear-gradient(135deg,#EC4899,#F472B6)' }
+    { icon: Target, label: 'Criar objetivo',      desc: 'Define o que quer alcançar',          color: '#6366F1', grad: 'linear-gradient(135deg,#6366F1,#8B5CF6)' },
+    { icon: CheckCircle2, label: 'Criar tarefas',  desc: 'Ações pequenas e executáveis',         color: '#8B5CF6', grad: 'linear-gradient(135deg,#8B5CF6,#C084FC)' },
+    { icon: RefreshCw, label: 'Criar hábitos',       desc: 'Rotina diária que consolida',          color: '#C084FC', grad: 'linear-gradient(135deg,#C084FC,#E879F9)' },
+    { icon: Clock, label: 'Sessão de foco',     desc: 'Pomodoro integrado e contextual',      color: '#10B981', grad: 'linear-gradient(135deg,#10B981,#34D399)' },
+    { icon: Brain, label: 'Coach IA acompanha',        desc: 'Insights reais do seu progresso',      color: '#38BDF8', grad: 'linear-gradient(135deg,#38BDF8,#0EA5E9)' },
+    { icon: Leaf, label: 'Planta cresce',       desc: 'Evolução visual da consistência',      color: '#22D3EE', grad: 'linear-gradient(135deg,#22D3EE,#6EE7B7)' },
+    { icon: Award, label: 'Pet evolui',          desc: 'Gamificação que motiva de verdade',    color: '#F59E0B', grad: 'linear-gradient(135deg,#F59E0B,#FBBF24)' },
+    { icon: TrendingUp, label: 'Você evolui',         desc: 'Estatísticas reais de impacto',        color: '#EC4899', grad: 'linear-gradient(135deg,#EC4899,#F472B6)' }
   ];
 
   const benefits = [
-    { emoji: '😌', color: '#818CF8', title: 'Menos ansiedade', desc: 'Tudo organizado em um lugar. Você sabe o que precisa fazer — sem a sensação de estar perdendo algo.' },
-    { emoji: '🎯', color: '#10B981', title: 'Clareza total',   desc: 'Cada manhã você sabe exatamente o próximo passo. Sem paralisia por excesso de listas.' },
-    { emoji: '🔄', color: '#38BDF8', title: 'Consistência diária', desc: 'Hábitos e tarefas conectados ao sistema criam ritmo automático. A rotina se consolida sozinha.' },
-    { emoji: '📈', color: '#F59E0B', title: 'Motivação real',  desc: 'Ver sua planta crescer e seu companion evoluir gera motivação genuína — não só checkboxes.' },
-    { emoji: '⚡', color: '#C084FC', title: 'Menos procrastinação', desc: 'Com o Coach IA sugerindo o próximo passo e o timer integrado, começar ficou simples.' },
-    { emoji: '🏆', color: '#EC4899', title: 'Progresso visível', desc: 'Conquistas desbloqueadas, sequências mantidas, metas concluídas. Você sente que evolui.' }
+    { icon: Heart, color: '#818CF8', title: 'Menos ansiedade', desc: 'Tudo organizado em um lugar. Você sabe o que precisa fazer — sem a sensação de estar perdendo algo.' },
+    { icon: Target, color: '#10B981', title: 'Clareza total',   desc: 'Cada manhã você sabe exatamente o próximo passo. Sem paralisia por excesso de listas.' },
+    { icon: RefreshCw, color: '#38BDF8', title: 'Consistência diária', desc: 'Hábitos e tarefas conectados ao sistema criam ritmo automático. A rotina se consolida sozinha.' },
+    { icon: Award, color: '#F59E0B', title: 'Motivação real',  desc: 'Ver sua planta crescer e seu companion evoluir gera motivação genuína — não só checkboxes.' },
+    { icon: Zap, color: '#C084FC', title: 'Menos procrastinação', desc: 'Com o Coach IA sugerindo o próximo passo e o timer integrado, começar ficou simples.' },
+    { icon: TrendingUp, color: '#EC4899', title: 'Progresso visível', desc: 'Conquistas desbloqueadas, sequências mantidas, metas concluídas. Você sente que evolui.' }
   ];
 
 
@@ -368,7 +368,7 @@ export default function LandingPage({ onEnterApp }) {
 
               {/* Resultado */}
               <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', textAlign: 'center', background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.03)', padding: '28px', borderRadius: '16px' }}>
-                <span style={{ fontSize: '13px', color: '#94A3B8', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Você pode recuperar aproximadamente</span>
+                <span style={{ fontSize: '13px', color: '#94A3B8', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Você pode economizar aproximadamente</span>
                 
                 <div style={{ margin: '20px 0' }}>
                   <div style={{ fontSize: '38px', fontWeight: 800, color: '#FFFFFF', lineHeight: 1.1 }}>
@@ -381,6 +381,10 @@ export default function LandingPage({ onEnterApp }) {
                   <div style={{ fontSize: '22px', fontWeight: 700, color: '#CBD5E1', marginTop: '12px' }}>
                     ou {hoursPerMonth} horas/mês
                   </div>
+
+                  <div style={{ fontSize: '11px', color: '#64748B', fontFamily: 'monospace', marginTop: '12px', background: 'rgba(255,255,255,0.02)', padding: '6px 10px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.03)' }}>
+                    Cálculo: {tasksPerDay} tarefas/dia × {lostTime} min × {workDays} dias/sem × 52 sem = {hoursPerYear}h/ano
+                  </div>
                 </div>
 
                 <p style={{ fontSize: '13px', color: '#64748B', lineHeight: 1.5, margin: '0 0 20px', maxWidth: '280px' }}>
@@ -392,7 +396,7 @@ export default function LandingPage({ onEnterApp }) {
                   className="btn-purple-glow"
                   style={{ ...S.ctaBtn, width: '100%', justifyContent: 'center', padding: '12px 24px', fontSize: '14px' }}
                 >
-                  Quero recuperar esse tempo
+                  Começar a recuperar meu tempo
                 </button>
               </div>
 
@@ -402,20 +406,11 @@ export default function LandingPage({ onEnterApp }) {
       </section>
 
       {/* ── 2.5. CREDIBILIDADE (SOCIAL PROOF) ──────────────────────────────────── */}
-      <div style={{ borderTop: '1px solid rgba(255,255,255,0.04)', borderBottom: '1px solid rgba(255,255,255,0.04)', background: '#07090C', padding: '28px 24px' }}>
-        <Container style={{ display: 'flex', justifyContent: 'space-around', flexWrap: 'wrap', gap: '24px', textAlign: 'center' }}>
-          <div>
-            <div style={{ fontSize: '26px', fontWeight: 800, color: '#818CF8' }}>+150.000</div>
-            <div style={{ fontSize: '12.5px', color: '#64748B', marginTop: '4px', fontWeight: 500 }}>Tarefas concluídas na plataforma</div>
-          </div>
-          <div>
-            <div style={{ fontSize: '26px', fontWeight: 800, color: '#C084FC' }}>+12.000h</div>
-            <div style={{ fontSize: '12.5px', color: '#64748B', marginTop: '4px', fontWeight: 500 }}>Horas de foco profundo recuperadas</div>
-          </div>
-          <div>
-            <div style={{ fontSize: '26px', fontWeight: 800, color: '#10B981' }}>18 dias</div>
-            <div style={{ fontSize: '12.5px', color: '#64748B', marginTop: '4px', fontWeight: 500 }}>Média de consistência ativa</div>
-          </div>
+      <div style={{ borderTop: '1px solid rgba(255,255,255,0.04)', borderBottom: '1px solid rgba(255,255,255,0.04)', background: '#07090C', padding: '24px 24px', textAlign: 'center' }}>
+        <Container>
+          <p style={{ fontSize: '14px', color: '#94A3B8', fontWeight: 600, margin: 0, letterSpacing: '0.02em', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', flexWrap: 'wrap' }}>
+            <Sparkles size={16} color="#818CF8" /> Desenvolvido com base em anos de experiência em Customer Success e produtividade.
+          </p>
         </Container>
       </div>
 
@@ -461,19 +456,22 @@ export default function LandingPage({ onEnterApp }) {
             <SectionTitle>Um sistema que te guia do começo ao fim.</SectionTitle>
           </div>
           <div className="steps-flow-container">
-            {steps.map((step, i) => (
-              <div key={i} className="step-row">
-                <div className="step-num-col">
-                  <div className="step-number" style={{ background: step.grad }}>
-                    <span style={{ fontSize: '18px' }}>{step.emoji}</span>
+            {steps.map((step, i) => {
+              const StepIcon = step.icon;
+              return (
+                <div key={i} className="step-row">
+                  <div className="step-num-col">
+                    <div className="step-number" style={{ background: step.grad }}>
+                      <StepIcon size={20} color="#FFFFFF" />
+                    </div>
+                  </div>
+                  <div className="step-content-card">
+                    <h3 style={{ fontSize: '13.5px', fontWeight: 700, color: step.color, marginBottom: '4px' }}>{step.label}</h3>
+                    <p style={{ color: '#64748B', fontSize: '12px', margin: 0, lineHeight: 1.4 }}>{step.desc}</p>
                   </div>
                 </div>
-                <div className="step-content-card">
-                  <h3 style={{ fontSize: '13.5px', fontWeight: 700, color: step.color, marginBottom: '4px' }}>{step.label}</h3>
-                  <p style={{ color: '#64748B', fontSize: '12px', margin: 0, lineHeight: 1.4 }}>{step.desc}</p>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </Container>
       </section>
@@ -488,6 +486,34 @@ export default function LandingPage({ onEnterApp }) {
               <span style={{ color: '#818CF8' }}>em tempo real.</span>
             </SectionTitle>
           </div>
+
+          {/* Mini Fluxo Conectado (Live Demo Visual Flow) */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '14px', marginBottom: '32px', flexWrap: 'wrap', background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.03)', padding: '16px 24px', borderRadius: '16px', maxWidth: '780px', margin: '0 auto 28px' }}>
+            <span style={{ fontSize: '12px', fontWeight: 700, color: '#64748B', textTransform: 'uppercase', marginRight: '6px' }}>Ecossistema Conectado:</span>
+            
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: 600, color: '#FFFFFF', padding: '6px 12px', background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: '8px' }}>
+              <CheckCircle2 size={14} color="#10B981" /> Tarefa concluída
+            </div>
+            
+            <ChevronRight size={14} color="#475569" />
+            
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: 600, color: '#FFFFFF', padding: '6px 12px', background: 'rgba(34,211,238,0.08)', border: '1px solid rgba(34,211,238,0.2)', borderRadius: '8px' }}>
+              <Leaf size={14} color="#22D3EE" /> Planta cresce
+            </div>
+            
+            <ChevronRight size={14} color="#475569" />
+            
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: 600, color: '#FFFFFF', padding: '6px 12px', background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.2)', borderRadius: '8px' }}>
+              <Award size={14} color="#F59E0B" /> Conquista desbloqueada
+            </div>
+            
+            <ChevronRight size={14} color="#475569" />
+            
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: 600, color: '#FFFFFF', padding: '6px 12px', background: 'rgba(236,72,153,0.08)', border: '1px solid rgba(236,72,153,0.2)', borderRadius: '8px' }}>
+              <TrendingUp size={14} color="#EC4899" /> Evolução aumenta
+            </div>
+          </div>
+
           <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '28px' }}>
             {showcaseTabs.map(tab => (
               <button key={tab.id} onClick={() => setActiveShowcaseTab(tab.id)} className={`showcase-tab ${activeShowcaseTab === tab.id ? 'active' : ''}`}>{tab.label}</button>
@@ -624,13 +650,18 @@ export default function LandingPage({ onEnterApp }) {
             </h2>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(250px,1fr))', gap: '14px' }}>
-            {benefits.map((b, i) => (
-              <div key={i} style={{ background: '#0F1318', border: '1px solid rgba(255,255,255,0.04)', padding: '22px', borderRadius: '16px', transition: 'all 0.3s' }} className="benefit-card">
-                <div style={{ fontSize: '26px', marginBottom: '10px' }}>{b.emoji}</div>
-                <h3 style={{ fontSize: '15px', fontWeight: 700, color: b.color, marginBottom: '6px' }}>{b.title}</h3>
-                <p style={{ fontSize: '13.5px', color: '#64748B', lineHeight: 1.6, margin: 0 }}>{b.desc}</p>
-              </div>
-            ))}
+            {benefits.map((b, i) => {
+              const BenefitIcon = b.icon;
+              return (
+                <div key={i} style={{ background: '#0F1318', border: '1px solid rgba(255,255,255,0.04)', padding: '22px', borderRadius: '16px', transition: 'all 0.3s' }} className="benefit-card">
+                  <div style={{ marginBottom: '14px', background: `${b.color}15`, width: '42px', height: '42px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <BenefitIcon size={20} color={b.color} />
+                  </div>
+                  <h3 style={{ fontSize: '15px', fontWeight: 700, color: b.color, marginBottom: '6px' }}>{b.title}</h3>
+                  <p style={{ fontSize: '13.5px', color: '#64748B', lineHeight: 1.6, margin: 0 }}>{b.desc}</p>
+                </div>
+              );
+            })}
           </div>
         </Container>
       </section>
@@ -666,6 +697,27 @@ export default function LandingPage({ onEnterApp }) {
               </tbody>
             </table>
           </div>
+        </Container>
+      </section>
+
+      {/* ── 7.5. MANIFESTO / EMOCIONAL ─────────────────────────────────── */}
+      <section style={{ ...S.section('#07090C'), textAlign: 'center', padding: '80px 24px' }}>
+        <Container style={{ maxWidth: '680px', margin: '0 auto' }}>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '6px 14px', borderRadius: '99px', background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.25)', fontSize: '12px', fontWeight: 700, color: '#818CF8', marginBottom: '24px', textTransform: 'uppercase' }}>
+            Nossa Filosofia
+          </div>
+          
+          <h2 style={{ fontSize: 'clamp(24px, 4vw, 36px)', fontWeight: 800, color: '#FFFFFF', marginBottom: '20px', letterSpacing: '-0.02em', lineHeight: 1.2 }}>
+            Pequenas ações mudam grandes histórias
+          </h2>
+          
+          <p style={{ fontSize: 'clamp(15px, 2vw, 17px)', color: '#94A3B8', lineHeight: 1.7, marginBottom: '18px' }}>
+            A maioria das pessoas não deixa seus objetivos de lado por falta de capacidade. Elas desistem porque perdem consistência.
+          </p>
+          
+          <p style={{ fontSize: 'clamp(15px, 2vw, 17px)', color: '#CBD5E1', lineHeight: 1.7, fontWeight: 500 }}>
+            O MyFlowDay foi criado para transformar pequenas ações diárias em progresso visível, ajudando você a construir uma rotina sustentável sem depender apenas de força de vontade.
+          </p>
         </Container>
       </section>
 
@@ -781,8 +833,9 @@ export default function LandingPage({ onEnterApp }) {
       <footer style={{ borderTop: '1px solid rgba(255,255,255,0.04)', background: '#07090C', padding: '36px 24px', textAlign: 'center' }}>
         <Container style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '14px' }}>
           <img src={logo.src} alt={logo.alt} style={{ height: '36px', width: 'auto' }} />
-          <p style={{ fontSize: '13px', color: '#475569', maxWidth: '520px', margin: 0, lineHeight: 1.6 }}>
-            MyFlowDay é o sistema integrado de evolução pessoal que une tarefas, metas, hábitos, foco e IA em um único ecossistema.
+          <p style={{ fontSize: '13px', color: '#64748B', maxWidth: '520px', margin: 0, lineHeight: 1.6, fontWeight: 500 }}>
+            <strong>Transformando pequenas ações em grandes evoluções.</strong><br />
+            Organize sua rotina. Construa consistência. Evolua todos os dias.
           </p>
           <p style={{ fontSize: '12px', color: '#374151', margin: 0 }}>© 2026 MyFlowDay. Todos os direitos reservados.</p>
         </Container>
@@ -794,6 +847,14 @@ export default function LandingPage({ onEnterApp }) {
 
         .nav-link { font-size:13.5px; font-weight:600; color:#94A3B8; text-decoration:none; transition:color 0.2s; }
         .nav-link:hover { color:#818CF8 !important; }
+
+        .mini-flow-step {
+          transition: all 0.3s ease;
+        }
+        .mini-flow-step:hover {
+          transform: translateY(-2px);
+          filter: brightness(1.15);
+        }
 
         .nav-btn-secondary { padding:8px 16px; border-radius:20px; background:transparent; color:#F8FAFC; font-weight:600; font-size:13.5px; cursor:pointer; border:1px solid rgba(255,255,255,0.1); transition:all 0.2s; }
         .nav-btn-secondary:hover { background:rgba(255,255,255,0.05); border-color:rgba(255,255,255,0.2); }
