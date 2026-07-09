@@ -158,6 +158,7 @@ export default function HomeView() {
   const [isGoalModalOpen, setIsGoalModalOpen] = useState(false);
   const [prefilledGoalTitle, setPrefilledGoalTitle] = useState('');
   const [localNotification, setLocalNotification] = useState(null);
+  const [showGoalsSection, setShowGoalsSection] = useState(true);
   
   // Persistent dismiss for "Resumo de Hoje" card (resets daily)
   const todaySummaryKey = `flowday_today_summary_dismissed_${currentUser?.id || 'guest'}_${new Date().toISOString().split('T')[0]}`;
@@ -462,10 +463,7 @@ export default function HomeView() {
 
   const petCompletedGoals = useMemo(() => {
     if (!currentUser?.id) return 0;
-    const isPlant = growthPet === 'plant';
-    const storageKey = isPlant
-      ? `flowday_plant_completed_goals_${currentUser.id}`
-      : `flowday_pet_completed_goals_${currentUser.id}`;
+    const storageKey = `flowday_${growthPet}_completed_goals_${currentUser.id}`;
     return Number(localStorage.getItem(storageKey)) || 0;
   }, [currentUser?.id, growthPet]);
 
@@ -940,16 +938,31 @@ export default function HomeView() {
       {/* ── SEÇÃO INFERIOR: Objetivos em Andamento ── */}
       <section className="home-goals-dashboard-section" style={{ marginTop: '24px' }}>
         
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+        <div
+          onClick={() => setShowGoalsSection(v => !v)}
+          style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: showGoalsSection ? '16px' : '0', cursor: 'pointer', userSelect: 'none' }}
+        >
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Target size={18} style={{ color: 'var(--primary)' }} />
             <h3 style={{ fontSize: '16px', fontWeight: '800', color: 'var(--text-main)', margin: 0 }}>Objetivos em Andamento</h3>
+            {topGoals.length > 0 && (
+              <span style={{ fontSize: '11px', color: 'var(--text-light)', fontWeight: '600', backgroundColor: 'var(--bg-card-hover)', borderRadius: '10px', padding: '1px 7px' }}>
+                {topGoals.length}
+              </span>
+            )}
           </div>
-          <button onClick={() => setActiveTab('myday')} className="home-section-link" style={{ fontSize: '12px', color: 'var(--primary)', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '2px', fontWeight: '600' }}>
-            Ver todos no Meu Dia <ChevronRight size={14} />
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <button onClick={e => { e.stopPropagation(); setActiveTab('myday'); }} className="home-section-link" style={{ fontSize: '12px', color: 'var(--primary)', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '2px', fontWeight: '600' }}>
+              Ver todos no Meu Dia <ChevronRight size={14} />
+            </button>
+            <span style={{ fontSize: '12px', color: 'var(--text-light)', fontWeight: '600' }}>
+              {showGoalsSection ? '▲' : '▼'}
+            </span>
+          </div>
         </div>
 
+        {showGoalsSection && (
+          <>
         {topGoals.length > 0 ? (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
             {topGoals.map(({ goal, linkedTasks, pct }) => (
@@ -1029,6 +1042,9 @@ export default function HomeView() {
               Criar Objetivo
             </button>
           </div>
+        )}
+
+          </>
         )}
 
       </section>

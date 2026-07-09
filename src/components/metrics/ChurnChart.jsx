@@ -11,20 +11,20 @@ export default function ChurnChart({ churn }) {
   };
 
   const cardStyle = {
-    backgroundColor: 'rgba(30, 30, 38, 0.95)',
+    backgroundColor: 'var(--bg-card)',
     borderRadius: '12px',
-    border: '1px solid rgba(255, 255, 255, 0.08)',
+    border: '1px solid var(--border-light)',
     padding: '24px',
-    boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.37)',
-    color: '#ffffff',
+    boxShadow: 'var(--shadow-md)',
+    color: 'var(--text-main)',
     overflowX: 'auto',
     WebkitOverflowScrolling: 'touch',
     overscrollBehaviorX: 'contain'
   };
 
   const cohortCardStyle = {
-    backgroundColor: 'rgba(20, 20, 25, 0.8)',
-    border: '1px solid rgba(255, 255, 255, 0.05)',
+    backgroundColor: 'var(--bg-card-hover)',
+    border: '1px solid var(--border-light)',
     borderRadius: '8px',
     padding: '12px 8px',
     textAlign: 'center',
@@ -58,7 +58,7 @@ export default function ChurnChart({ churn }) {
               <span style={{ color: '#ef4444', fontWeight: '600' }}>Alto Risco (Score 71–100)</span>
               <span>{high} usuários ({getPercent(high)}%)</span>
             </div>
-            <div style={{ height: '8px', backgroundColor: 'rgba(255, 255, 255, 0.05)', borderRadius: '4px', overflow: 'hidden' }}>
+            <div style={{ height: '8px', backgroundColor: 'var(--border-light)', borderRadius: '4px', overflow: 'hidden' }}>
               <div style={{ width: `${getPercent(high)}%`, height: '100%', backgroundColor: '#ef4444', borderRadius: '4px' }}></div>
             </div>
           </div>
@@ -69,7 +69,7 @@ export default function ChurnChart({ churn }) {
               <span style={{ color: '#f59e0b', fontWeight: '600' }}>Médio Risco (Score 31–70)</span>
               <span>{medium} usuários ({getPercent(medium)}%)</span>
             </div>
-            <div style={{ height: '8px', backgroundColor: 'rgba(255, 255, 255, 0.05)', borderRadius: '4px', overflow: 'hidden' }}>
+            <div style={{ height: '8px', backgroundColor: 'var(--border-light)', borderRadius: '4px', overflow: 'hidden' }}>
               <div style={{ width: `${getPercent(medium)}%`, height: '100%', backgroundColor: '#f59e0b', borderRadius: '4px' }}></div>
             </div>
           </div>
@@ -80,7 +80,7 @@ export default function ChurnChart({ churn }) {
               <span style={{ color: '#10b981', fontWeight: '600' }}>Saudável (Score 0–30)</span>
               <span>{low} usuários ({getPercent(low)}%)</span>
             </div>
-            <div style={{ height: '8px', backgroundColor: 'rgba(255, 255, 255, 0.05)', borderRadius: '4px', overflow: 'hidden' }}>
+            <div style={{ height: '8px', backgroundColor: 'var(--border-light)', borderRadius: '4px', overflow: 'hidden' }}>
               <div style={{ width: `${getPercent(low)}%`, height: '100%', backgroundColor: '#10b981', borderRadius: '4px' }}></div>
             </div>
           </div>
@@ -101,36 +101,36 @@ export default function ChurnChart({ churn }) {
           <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#3b82f6' }}></span>
           Churn por Cohort
         </h3>
-        <p style={{ fontSize: '13px', color: 'rgba(255, 255, 255, 0.4)', marginBottom: '20px', lineHeight: '1.4' }}>
-          Mede a porcentagem de usuários premium que cancelaram o serviço com base no tempo decorrido desde o upgrade.
+        <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '20px', lineHeight: '1.4' }}>
+          Meder a porcentagem de usuários premium que cancelaram o serviço com base no tempo decorrido desde o upgrade.
         </p>
 
         <div style={{ display: 'flex', gap: '8px', justifyContent: 'space-between', flexWrap: 'wrap' }}>
           {/* 7d Cohort */}
           <div style={cohortCardStyle}>
-            <div style={{ fontSize: '11px', color: 'rgba(255, 255, 255, 0.4)', textTransform: 'uppercase', marginBottom: '8px' }}>7 Dias</div>
-            <div style={{ fontSize: '24px', fontWeight: '700', color: (cohorts?.['7d'] > 15 ? '#ef4444' : '#ffffff'), marginBottom: '4px' }}>
+            <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '8px' }}>7 Dias</div>
+            <div style={{ fontSize: '24px', fontWeight: '700', color: (cohorts?.['7d'] > 15 ? '#ef4444' : 'var(--text-main)'), marginBottom: '4px' }}>
               {cohorts?.['7d']?.toFixed(1)}%
             </div>
-            <div style={{ fontSize: '11px', color: 'rgba(255, 255, 255, 0.3)' }}>de Churn</div>
+            <div style={{ fontSize: '11px', color: 'var(--text-light)' }}>de Churn</div>
           </div>
 
           {/* 30d Cohort */}
           <div style={cohortCardStyle}>
-            <div style={{ fontSize: '11px', color: 'rgba(255, 255, 255, 0.4)', textTransform: 'uppercase', marginBottom: '8px' }}>30 Dias</div>
-            <div style={{ fontSize: '24px', fontWeight: '700', color: (cohorts?.['30d'] > 20 ? '#ef4444' : '#ffffff'), marginBottom: '4px' }}>
+            <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '8px' }}>30 Dias</div>
+            <div style={{ fontSize: '24px', fontWeight: '700', color: (cohorts?.['30d'] > 20 ? '#ef4444' : 'var(--text-main)'), marginBottom: '4px' }}>
               {cohorts?.['30d']?.toFixed(1)}%
             </div>
-            <div style={{ fontSize: '11px', color: 'rgba(255, 255, 255, 0.3)' }}>de Churn</div>
+            <div style={{ fontSize: '11px', color: 'var(--text-light)' }}>de Churn</div>
           </div>
 
           {/* 90d Cohort */}
           <div style={cohortCardStyle}>
-            <div style={{ fontSize: '11px', color: 'rgba(255, 255, 255, 0.4)', textTransform: 'uppercase', marginBottom: '8px' }}>90 Dias</div>
-            <div style={{ fontSize: '24px', fontWeight: '700', color: (cohorts?.['90d'] > 25 ? '#ef4444' : '#ffffff'), marginBottom: '4px' }}>
+            <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '8px' }}>90 Dias</div>
+            <div style={{ fontSize: '24px', fontWeight: '700', color: (cohorts?.['90d'] > 25 ? '#ef4444' : 'var(--text-main)'), marginBottom: '4px' }}>
               {cohorts?.['90d']?.toFixed(1)}%
             </div>
-            <div style={{ fontSize: '11px', color: 'rgba(255, 255, 255, 0.3)' }}>de Churn</div>
+            <div style={{ fontSize: '11px', color: 'var(--text-light)' }}>de Churn</div>
           </div>
         </div>
       </div>

@@ -404,7 +404,7 @@ function AppLayout() {
           <span>Você está no Modo de Demonstração. Crie uma conta gratuita para salvar e sincronizar seus dados.</span>
           <div style={{ display: 'flex', gap: '8px' }}>
             <button className="demo-banner-btn" onClick={() => handleLogout()}>Sair do modo teste</button>
-            <button className="demo-banner-btn" style={{ backgroundColor: '#10b981' }} onClick={() => { handleLogout(); }}>Criar Conta</button>
+            <button className="demo-banner-btn" style={{ backgroundColor: '#10b981' }} onClick={() => { setAuthMode('register'); setShowLanding(false); handleLogout(); }}>Criar Conta</button>
           </div>
         </div>
       )}

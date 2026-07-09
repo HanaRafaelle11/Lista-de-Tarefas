@@ -413,21 +413,6 @@ export default function Sidebar() {
         </div>
       </aside>
 
-      {/* ── Mobile Bottom Navigation (4 Itens Fixos) ── */}
-      <nav className="mobile-bottom-nav hide-on-desktop" role="navigation" aria-label="Navegação principal mobile">
-        {mainNavItems.map(({ key, icon, label }) => (
-          <button
-            key={key}
-            id={`tour-nav-mobile-${key}`}
-            onClick={() => setActiveTab(key)}
-            className={`mobile-bottom-nav-btn ${activeTab === key ? 'active' : ''}`}
-            aria-current={activeTab === key ? 'page' : undefined}
-          >
-            <MFIcon name={icon} size={22} className="nav-icon" />
-            <span className="nav-text">{label}</span>
-          </button>
-        ))}
-      </nav>
     </>
   );
 }

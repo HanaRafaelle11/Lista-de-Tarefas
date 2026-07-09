@@ -219,7 +219,7 @@ export default function EvolutionCelebrationModal() {
 
         {/* Companion Graphic Display */}
         <div style={{ position: 'relative', height: '180px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '20px', borderRadius: '16px', backgroundColor: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', overflow: 'hidden' }}>
-          <div style={{ position: 'absolute', width: '220px', height: '220px', borderRadius: '50%', background: `radial-gradient(circle, \${newStage.color || '#ec4899'} 0%, transparent 65%)`, opacity: 0.15, filter: 'blur(20px)', pointerEvents: 'none' }} />
+          <div style={{ position: 'absolute', width: '220px', height: '220px', borderRadius: '50%', background: `radial-gradient(circle, ${newStage.color || '#ec4899'} 0%, transparent 65%)`, opacity: 0.15, filter: 'blur(20px)', pointerEvents: 'none' }} />
           {newStage.asset ? (
             <img 
               src={newStage.asset} 
@@ -252,7 +252,7 @@ export default function EvolutionCelebrationModal() {
               marginBottom: '10px'
             }}
           >
-            {newStage.badge || `Nível \${level}`}
+            {newStage.badge || `Nível ${level}`}
           </span>
           <h3 style={{ fontSize: '18px', fontWeight: '750', color: '#fff', margin: '0 0 8px' }}>
             {newStage.title}

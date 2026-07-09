@@ -76,18 +76,18 @@ export default function RevenueChart({ timeline }) {
 
   return (
     <div style={{
-      backgroundColor: 'rgba(30, 30, 38, 0.95)',
+      backgroundColor: 'var(--bg-card)',
       borderRadius: '12px',
-      border: '1px solid rgba(255, 255, 255, 0.08)',
+      border: '1px solid var(--border-light)',
       padding: '24px',
-      boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.37)',
+      boxShadow: 'var(--shadow-md)',
       position: 'relative',
       marginBottom: '30px'
     }}>
       <h3 style={{
         fontSize: '16px',
         fontWeight: '600',
-        color: '#ffffff',
+        color: 'var(--text-main)',
         marginBottom: '20px',
         fontFamily: 'var(--font-display, sans-serif)',
         display: 'flex',
@@ -116,8 +116,9 @@ export default function RevenueChart({ timeline }) {
               y1={tick.y}
               x2={width - paddingRight}
               y2={tick.y}
-              stroke="rgba(255, 255, 255, 0.05)"
+              stroke="var(--border-light)"
               strokeWidth="1"
+              strokeOpacity="0.4"
             />
           ))}
 
@@ -128,7 +129,7 @@ export default function RevenueChart({ timeline }) {
               x={paddingLeft - 10}
               y={tick.y + 4}
               textAnchor="end"
-              fill="rgba(255, 255, 255, 0.4)"
+              fill="var(--text-muted)"
               fontSize="11"
               fontFamily="sans-serif"
             >
@@ -147,7 +148,7 @@ export default function RevenueChart({ timeline }) {
                 x={tick.x}
                 y={height - paddingBottom + 20}
                 textAnchor="middle"
-                fill="rgba(255, 255, 255, 0.4)"
+                fill="var(--text-muted)"
                 fontSize="11"
                 fontFamily="sans-serif"
               >
@@ -183,7 +184,7 @@ export default function RevenueChart({ timeline }) {
               y1={paddingTop}
               x2={points[hoveredPoint].x}
               y2={paddingTop + chartHeight}
-              stroke="rgba(255, 255, 255, 0.2)"
+              stroke="var(--text-muted)"
               strokeDasharray="4 4"
               strokeWidth="1"
             />
@@ -197,7 +198,7 @@ export default function RevenueChart({ timeline }) {
               cy={p.y}
               r={hoveredPoint === index ? 6 : 4}
               fill={hoveredPoint === index ? 'var(--primary, #10b981)' : 'rgba(16, 185, 129, 0.3)'}
-              stroke="#1e1e26"
+              stroke="var(--bg-card)"
               strokeWidth={hoveredPoint === index ? 2 : 1}
               style={{ cursor: 'pointer', transition: 'r 0.1s ease, fill 0.1s ease' }}
               onMouseEnter={() => setHoveredPoint(index)}
@@ -213,34 +214,34 @@ export default function RevenueChart({ timeline }) {
           position: 'absolute',
           top: '24px',
           right: '24px',
-          backgroundColor: 'rgba(20, 20, 25, 0.95)',
-          border: '1px solid rgba(255, 255, 255, 0.15)',
+          backgroundColor: 'var(--bg-card-hover)',
+          border: '1px solid var(--border-medium)',
           borderRadius: '8px',
           padding: '12px',
           fontSize: '12px',
           minWidth: '180px',
-          boxShadow: '0 10px 25px rgba(0, 0, 0, 0.5)',
+          boxShadow: 'var(--shadow-md)',
           zIndex: 10,
-          color: '#ffffff',
+          color: 'var(--text-main)',
           pointerEvents: 'none'
         }}>
-          <div style={{ fontWeight: '700', borderBottom: '1px solid rgba(255, 255, 255, 0.1)', paddingBottom: '6px', marginBottom: '6px' }}>
+          <div style={{ fontWeight: '700', borderBottom: '1px solid var(--border-light)', paddingBottom: '6px', marginBottom: '6px' }}>
             Dia {points[hoveredPoint].date.split('-').reverse().join('/')}
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-            <span style={{ color: 'rgba(255, 255, 255, 0.5)' }}>MRR:</span>
+            <span style={{ color: 'var(--text-muted)' }}>MRR:</span>
             <span style={{ fontWeight: '600', color: '#10b981' }}>R$ {points[hoveredPoint].mrr.toFixed(2)}</span>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-            <span style={{ color: 'rgba(255, 255, 255, 0.5)' }}>Novos Upgrades:</span>
+            <span style={{ color: 'var(--text-muted)' }}>Novos Upgrades:</span>
             <span style={{ fontWeight: '600', color: '#3b82f6' }}>+{points[hoveredPoint].upgrades}</span>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-            <span style={{ color: 'rgba(255, 255, 255, 0.5)' }}>Reativações:</span>
+            <span style={{ color: 'var(--text-muted)' }}>Reativações:</span>
             <span style={{ fontWeight: '600', color: '#10b981' }}>+{points[hoveredPoint].reactivations}</span>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-            <span style={{ color: 'rgba(255, 255, 255, 0.5)' }}>Churns/Cancelamentos:</span>
+            <span style={{ color: 'var(--text-muted)' }}>Churns/Cancelamentos:</span>
             <span style={{ fontWeight: '600', color: '#ef4444' }}>-{points[hoveredPoint].churns}</span>
           </div>
         </div>

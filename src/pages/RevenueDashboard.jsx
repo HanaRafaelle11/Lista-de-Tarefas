@@ -167,13 +167,13 @@ export default function RevenueDashboard() {
   const customerHealthData = Array.isArray(data?.customerHealth) ? data.customerHealth : [];
 
   return (
-    <div style={{ color: '#ffffff', minHeight: '100vh', padding: '20px 0' }}>
+    <div style={{ color: 'var(--text-main)', minHeight: '100vh', padding: '20px 0' }}>
       {/* Cabeçalho */}
       <div style={{ marginBottom: '32px' }}>
         <h2 style={{ fontSize: '28px', fontWeight: '800', margin: '0 0 6px', fontFamily: 'var(--font-display, sans-serif)', letterSpacing: '-0.5px', display: 'flex', alignItems: 'center', gap: '10px' }}>
           Painel Financeiro & Retenção <TrendingUp size={24} style={{ color: 'var(--primary)' }} />
         </h2>
-        <p style={{ fontSize: '14px', color: 'rgba(255, 255, 255, 0.4)', margin: 0 }}>
+        <p style={{ fontSize: '14px', color: 'var(--text-muted)', margin: 0 }}>
           Métricas de MRR, Churn Rate e saúde dos usuários do MyFlowDay em tempo real.
         </p>
       </div>
@@ -216,7 +216,7 @@ export default function RevenueDashboard() {
       <div style={{ width: '100%', overflow: 'visible', paddingBottom: '12px' }}>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '20px', width: '100%' }}>
           {/* Gráfico Principal de MRR */}
-          <div id="mrr-chart-section">
+          <div id="mrr-chart-section" style={{ minWidth: 0, maxWidth: '100%', overflow: 'hidden' }}>
             <RevenueChart timeline={timelineList} />
           </div>
 
@@ -231,12 +231,12 @@ export default function RevenueDashboard() {
           </div>
 
           {/* Heatmap de Cohort */}
-          <div id="cohort-heatmap-section">
+          <div id="cohort-heatmap-section" style={{ minWidth: 0, maxWidth: '100%', overflow: 'hidden' }}>
             <CohortHeatmap cohortsData={cohortsHeatmapData} />
           </div>
 
           {/* Tabela de Saúde de Clientes */}
-          <div id="customer-health-section">
+          <div id="customer-health-section" style={{ minWidth: 0, maxWidth: '100%', overflow: 'hidden' }}>
             <CustomerHealthTable customers={customerHealthData} onUserClick={handleUserClick} />
           </div>
         </div>
@@ -263,9 +263,9 @@ export default function RevenueDashboard() {
             width: '100%',
             maxWidth: '500px',
             height: '100%',
-            backgroundColor: 'rgba(25, 25, 30, 0.98)',
-            borderLeft: '1px solid rgba(255, 255, 255, 0.08)',
-            boxShadow: '-10px 0 35px rgba(0, 0, 0, 0.5)',
+            backgroundColor: 'var(--bg-card)',
+            borderLeft: '1px solid var(--border-light)',
+            boxShadow: '-10px 0 35px rgba(0, 0, 0, 0.2)',
             display: 'flex',
             flexDirection: 'column',
             animation: 'slideIn 0.25s cubic-bezier(0.16, 1, 0.3, 1)'
@@ -275,16 +275,16 @@ export default function RevenueDashboard() {
             {/* Modal Header */}
             <div style={{
               padding: '24px',
-              borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+              borderBottom: '1px solid var(--border-light)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between'
             }}>
               <div>
-                <h3 style={{ fontSize: '18px', fontWeight: '700', margin: '0 0 4px', fontFamily: 'var(--font-display, sans-serif)' }}>
+                <h3 style={{ fontSize: '18px', fontWeight: '700', margin: '0 0 4px', fontFamily: 'var(--font-display, sans-serif)', color: 'var(--text-main)' }}>
                   Histórico do Cliente
                 </h3>
-                <span style={{ fontSize: '12px', color: 'rgba(255, 255, 255, 0.4)' }}>
+                <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
                   ID: {selectedUserId}
                 </span>
               </div>
@@ -293,7 +293,7 @@ export default function RevenueDashboard() {
                 style={{
                   background: 'none',
                   border: 'none',
-                  color: 'rgba(255, 255, 255, 0.4)',
+                  color: 'var(--text-muted)',
                   fontSize: '20px',
                   cursor: 'pointer',
                   padding: '8px'
@@ -308,7 +308,7 @@ export default function RevenueDashboard() {
               {timelineLoading && (
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
                   <div className="app-loading-spinner" />
-                  <span style={{ marginTop: '12px', fontSize: '13px', color: 'rgba(255, 255, 255, 0.4)' }}>Buscando timeline detalhada...</span>
+                  <span style={{ marginTop: '12px', fontSize: '13px', color: 'var(--text-muted)' }}>Buscando timeline detalhada...</span>
                 </div>
               )}
 
@@ -322,25 +322,25 @@ export default function RevenueDashboard() {
                 <div>
                   {/* Informações Resumidas do Perfil */}
                   <div style={{
-                    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+                    backgroundColor: 'var(--bg-card-hover)',
                     borderRadius: '8px',
                     padding: '16px',
                     marginBottom: '24px',
-                    border: '1px solid rgba(255, 255, 255, 0.05)'
+                    border: '1px solid var(--border-light)'
                   }}>
-                    <h4 style={{ margin: '0 0 12px 0', fontSize: '15px', fontWeight: '600' }}>{timelineData.name}</h4>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', fontSize: '13px' }}>
+                    <h4 style={{ margin: '0 0 12px 0', fontSize: '15px', fontWeight: '600', color: 'var(--text-main)' }}>{timelineData.name}</h4>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', fontSize: '13px', color: 'var(--text-main)' }}>
                       <div>
-                        <span style={{ color: 'rgba(255, 255, 255, 0.4)' }}>Plano: </span>
+                        <span style={{ color: 'var(--text-muted)' }}>Plano: </span>
                         <span style={{ fontWeight: '600', textTransform: 'capitalize' }}>{timelineData.plano}</span>
                       </div>
                       <div>
-                        <span style={{ color: 'rgba(255, 255, 255, 0.4)' }}>Status: </span>
+                        <span style={{ color: 'var(--text-muted)' }}>Status: </span>
                         <span style={{ fontWeight: '600' }}>{timelineData.status || 'FREE'}</span>
                       </div>
                       {timelineData.expiresAt && (
                         <div style={{ width: '100%' }}>
-                          <span style={{ color: 'rgba(255, 255, 255, 0.4)' }}>Expira em: </span>
+                          <span style={{ color: 'var(--text-muted)' }}>Expira em: </span>
                           <span style={{ fontWeight: '600' }}>
                             {new Date(timelineData.expiresAt).toLocaleDateString('pt-BR')}
                           </span>
@@ -350,9 +350,9 @@ export default function RevenueDashboard() {
                   </div>
 
                   {/* Lista de Timeline */}
-                  <h4 style={{ margin: '0 0 16px 0', fontSize: '14px', fontWeight: '600', color: 'rgba(255, 255, 255, 0.5)' }}>Timeline de Atividades</h4>
+                  <h4 style={{ margin: '0 0 16px 0', fontSize: '14px', fontWeight: '600', color: 'var(--text-muted)' }}>Timeline de Atividades</h4>
                   
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', borderLeft: '2px solid rgba(255, 255, 255, 0.05)', marginLeft: '12px', paddingLeft: '20px', position: 'relative' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', borderLeft: '2px solid var(--border-light)', marginLeft: '12px', paddingLeft: '20px', position: 'relative' }}>
                     {timelineData.timeline && timelineData.timeline.length > 0 ? (
                       timelineData.timeline.map((item) => (
                         <div key={item.id} style={{ position: 'relative' }}>
@@ -364,19 +364,19 @@ export default function RevenueDashboard() {
                             width: '10px',
                             height: '10px',
                             borderRadius: '50%',
-                            backgroundColor: item.type === 'user_upgraded' || item.type === 'user_reactivated' ? '#10b981' : item.type === 'user_downgraded' ? '#ef4444' : 'rgba(255, 255, 255, 0.25)',
-                            border: '2px solid rgba(25, 25, 30, 0.98)'
+                            backgroundColor: item.type === 'user_upgraded' || item.type === 'user_reactivated' ? '#10b981' : item.type === 'user_downgraded' ? '#ef4444' : 'var(--text-light)',
+                            border: '2px solid var(--bg-card)'
                           }}></span>
 
-                          <div style={{ fontSize: '13px', fontWeight: '600', color: '#ffffff' }}>
+                          <div style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-main)' }}>
                             {item.title}
                           </div>
                           
-                          <div style={{ fontSize: '12px', color: 'rgba(255, 255, 255, 0.5)', marginTop: '4px' }}>
+                          <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>
                             {item.description}
                           </div>
 
-                          <div style={{ fontSize: '11px', color: 'rgba(255, 255, 255, 0.3)', marginTop: '4px' }}>
+                          <div style={{ fontSize: '11px', color: 'var(--text-light)', marginTop: '4px' }}>
                             {new Date(item.timestamp).toLocaleString('pt-BR', {
                               day: '2-digit',
                               month: '2-digit',
@@ -389,7 +389,7 @@ export default function RevenueDashboard() {
                         </div>
                       ))
                     ) : (
-                      <div style={{ fontSize: '13px', color: 'rgba(255, 255, 255, 0.4)' }}>
+                      <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
                         Nenhuma atividade registrada para este usuário.
                       </div>
                     )}

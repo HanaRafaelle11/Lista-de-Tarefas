@@ -492,9 +492,12 @@ export default function EvolutionView() {
       planTasks = activeTasks.filter(t => !t.completed).slice(0, 5);
     }
     
+    const habitDays = new Set((habitsManager?.habitLogs || []).filter(l => l.completed_date >= dateStr).map(l => l.completed_date)).size;
+
     return {
       completedTasks: recentCompletedTasks,
       completedHabits: recentHabitLogsCount,
+      habitDays,
       plan: hasWeeklyPlan ? weeklyPlan : null,
       planTasks: planTasks.slice(0, 8),
     };
@@ -1025,6 +1028,9 @@ export default function EvolutionView() {
                   <div style={{ padding: '8px 12px', backgroundColor: 'var(--bg-card)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-light)' }}>
                     <span style={{ fontSize: '9px', color: 'var(--text-light)', display: 'block' }}>Hábitos (7 dias)</span>
                     <span style={{ fontSize: '18px', fontWeight: '800', color: '#C89658' }}>{weeklyReportData.completedHabits}</span>
+                    <span style={{ fontSize: '10px', color: 'var(--text-light)', display: 'block', marginTop: '2px' }}>
+                      Você manteve seus hábitos por {weeklyReportData.habitDays} dia{weeklyReportData.habitDays !== 1 ? 's' : ''}
+                    </span>
                   </div>
                 </div>
               </div>

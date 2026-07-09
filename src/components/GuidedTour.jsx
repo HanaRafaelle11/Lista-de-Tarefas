@@ -29,40 +29,39 @@ export default function GuidedTour() {
   }, []);
 
   const isMobile = window.innerWidth <= 768;
-  const targetPrefix = isMobile ? '#tour-nav-mobile-' : '#tour-nav-sidebar-';
 
   const steps = [
     {
-      target: `${targetPrefix}home`,
+      target: isMobile ? '#tour-nav-mobile-home' : '#tour-nav-sidebar-home',
       title: 'Tudo começa aqui',
       content: 'Seu painel principal (Dashboard). Tarefas e objetivos em um só lugar, organizados pelo que mais importa agora.',
       disableBeacon: true,
-      placement: isMobile ? 'top' : 'bottom',
+      placement: isMobile ? 'top' : 'right',
     },
     {
-      target: `${targetPrefix}myday`,
+      target: isMobile ? '#tour-nav-mobile-tasks' : '#tour-nav-sidebar-tasks',
       title: 'Seu Planejamento Diário',
       content: 'Gerencie suas tarefas e objetivos organizados por prazos ou visualize-os em um painel Kanban altamente produtivo.',
-      placement: isMobile ? 'top' : 'bottom',
+      placement: isMobile ? 'top' : 'right',
     },
     {
-      target: `${targetPrefix}focus`,
+      target: isMobile ? '#tour-nav-mobile-focus' : '#tour-nav-sidebar-focus',
       title: 'Aumente seu Foco',
       content: 'Utilize o timer Pomodoro integrado e as sessões de foco profundo para maximizar seu rendimento diário.',
-      placement: isMobile ? 'top' : 'bottom',
+      placement: isMobile ? 'top' : 'right',
     },
     {
-      target: `${targetPrefix}evolution`,
+      target: isMobile ? '#tour-nav-mobile-analytics' : '#tour-nav-sidebar-evolution',
       title: 'Gamificação e Evolução',
       content: 'Acompanhe a evolução do seu pet virtual, consulte suas conquistas e receba análises do Coach de Produtividade.',
-      placement: isMobile ? 'top' : 'bottom',
+      placement: isMobile ? 'top' : 'right',
     },
-    {
+    ...(!isMobile ? [{
       target: '#tour-nav-settings',
       title: 'Ajuste Fino',
       content: 'Acesse as configurações para gerenciar seus dados, trocar o tema visual, exportar relatórios ou enviar feedbacks.',
-      placement: isMobile ? 'bottom' : 'left',
-    }
+      placement: 'left',
+    }] : [])
   ];
 
   const handleJoyrideCallback = (data) => {

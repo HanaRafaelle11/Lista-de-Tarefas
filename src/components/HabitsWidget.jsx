@@ -22,6 +22,51 @@ const getLast7Days = () => {
   return days;
 };
 
+function HabitRow({ habit, goal, consistency, last7Days, habitLogs, toggleHabitLog, deleteHabit, openCustomConfirm }) {
+  return (
+    <div className="habit-row-card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: 'var(--bg-card)', padding: '12px 16px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-light)', boxShadow: 'var(--shadow-sm)', gap: '16px', flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1, minWidth: '160px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', color: 'var(--primary)' }}><MFIcon name="habits" size={16} /></span>
+          <span style={{ fontWeight: '600', fontSize: '14px', color: 'var(--text-main)' }}>{habit.title}</span>
+        </div>
+        {goal && (
+          <span style={{ fontSize: '11px', color: goal.color }}>↳ Contribui para: {goal.title}</span>
+        )}
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+        <div className="habit-tracker-days" style={{ display: 'flex', gap: '6px' }}>
+          {last7Days.map(day => {
+            const isCompleted = habitLogs.some(l => l.habit_id === habit.id && l.completed_date === day.dateStr);
+            return (
+              <div key={day.dateStr} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+                <span style={{ fontSize: '9px', color: day.isToday ? 'var(--primary)' : 'var(--text-light)', fontWeight: day.isToday ? '600' : '400' }}>{day.label}</span>
+                <button
+                  onClick={() => toggleHabitLog(habit.id, day.dateStr)}
+                  style={{ width: '24px', height: '24px', borderRadius: '6px', backgroundColor: isCompleted ? 'var(--primary)' : 'var(--bg-app)', border: `1px solid ${isCompleted ? 'var(--primary)' : 'var(--border-medium)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', transition: 'all 0.2s', boxShadow: isCompleted ? '0 0 8px var(--primary-glow)' : 'none' }}
+                >
+                  {isCompleted && <Check size={14} strokeWidth={3} />}
+                </button>
+              </div>
+            );
+          })}
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', width: '52px' }}>
+          <span style={{ fontSize: '10px', color: 'var(--text-light)', textTransform: 'uppercase' }}>7 Dias</span>
+          <span style={{ fontSize: '14px', fontWeight: '700', color: consistency >= 70 ? 'var(--primary)' : 'var(--text-main)' }}>{consistency}%</span>
+        </div>
+        <button
+          onClick={() => openCustomConfirm('Excluir este hábito?', 'Excluir Hábito', () => deleteHabit(habit.id))}
+          style={{ color: 'var(--text-light)', padding: '4px', borderRadius: '4px' }}
+          className="delete-btn"
+        >
+          <Trash2 size={16} />
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function HabitsWidget({ habitsManager, goals }) {
   const { openCustomConfirm } = useAppContext();
   const { habits, habitLogs, toggleHabitLog, addHabit, deleteHabit, loading } = habitsManager;
@@ -29,6 +74,7 @@ export default function HabitsWidget({ habitsManager, goals }) {
   const [newTitle, setNewTitle] = useState('');
   const [newGoalId, setNewGoalId] = useState('');
   const [isExpanded, setIsExpanded] = useState(false);
+  const [showCompletedHabits, setShowCompletedHabits] = useState(false);
 
   const last7Days = useMemo(() => getLast7Days(), []);
 
@@ -62,7 +108,11 @@ export default function HabitsWidget({ habitsManager, goals }) {
 
   if (loading) return null;
 
-  const visibleHabits = isExpanded ? habits : habits.slice(0, 3);
+  const today = new Date().toISOString().split('T')[0];
+  const pendingHabits = habits.filter(h => !habitLogs.some(l => l.habit_id === h.id && l.completed_date === today));
+  const completedTodayHabits = habits.filter(h => habitLogs.some(l => l.habit_id === h.id && l.completed_date === today));
+
+  const visiblePending = isExpanded ? pendingHabits : pendingHabits.slice(0, 3);
 
   return (
     <div className="habits-widget-container animate-fade-in">
@@ -115,106 +165,51 @@ export default function HabitsWidget({ habitsManager, goals }) {
         </div>
       ) : (
         <>
+          {/* ── Hábitos pendentes ── */}
           <div className="habits-list" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            {visibleHabits.map(habit => {
+            {visiblePending.map(habit => {
               const goal = goals.find(g => g.id === habit.goal_id);
               const consistency = calculateConsistency(habit.id);
-              
               return (
-                <div key={habit.id} className="habit-row-card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: 'var(--bg-card)', padding: '12px 16px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-light)', boxShadow: 'var(--shadow-sm)', gap: '16px', flexWrap: 'wrap' }}>
-                  
-                  {/* Info do Hábito */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1, minWidth: '200px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span style={{ display: 'inline-flex', alignItems: 'center', color: 'var(--primary)' }}><MFIcon name="habits" size={16} /></span>
-                      <span style={{ fontWeight: '600', fontSize: '14px', color: 'var(--text-main)' }}>{habit.title}</span>
-                    </div>
-                    {goal && (
-                      <span style={{ fontSize: '11px', color: 'var(--text-light)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        <span style={{ color: goal.color }}>↳ Contribui para: {goal.title}</span>
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Tracker dos 7 dias */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '24px', flexWrap: 'wrap' }}>
-                    
-                    <div className="habit-tracker-days" style={{ display: 'flex', gap: '6px' }}>
-                      {last7Days.map(day => {
-                        const isCompleted = habitLogs.some(l => l.habit_id === habit.id && l.completed_date === day.dateStr);
-                        return (
-                          <div key={day.dateStr} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-                            <span style={{ fontSize: '9px', color: day.isToday ? 'var(--primary)' : 'var(--text-light)', fontWeight: day.isToday ? '600' : '400' }}>
-                              {day.label}
-                            </span>
-                            <button
-                              onClick={() => toggleHabitLog(habit.id, day.dateStr)}
-                              style={{
-                                width: '24px', height: '24px', borderRadius: '6px',
-                                backgroundColor: isCompleted ? 'var(--primary)' : 'var(--bg-app)',
-                                border: `1px solid ${isCompleted ? 'var(--primary)' : 'var(--border-medium)'}`,
-                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                color: 'white', transition: 'all 0.2s',
-                                boxShadow: isCompleted ? '0 0 8px var(--primary-glow)' : 'none'
-                              }}
-                            >
-                              {isCompleted && <Check size={14} strokeWidth={3} />}
-                            </button>
-                          </div>
-                        );
-                      })}
-                    </div>
-
-                    {/* Estatística de Consistência */}
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', width: '60px' }}>
-                      <span style={{ fontSize: '10px', color: 'var(--text-light)', textTransform: 'uppercase' }}>7 Dias</span>
-                      <span style={{ fontSize: '14px', fontWeight: '700', color: consistency >= 70 ? 'var(--primary)' : 'var(--text-main)' }}>
-                        {consistency}%
-                      </span>
-                    </div>
-
-                    <button 
-                      onClick={() => {
-                        openCustomConfirm(
-                          'Excluir este hábito?',
-                          'Excluir Hábito',
-                          () => deleteHabit(habit.id)
-                        );
-                      }}
-                      style={{ color: 'var(--text-light)', padding: '4px', borderRadius: '4px' }}
-                      className="delete-btn"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-
-                  </div>
-                </div>
+                <HabitRow key={habit.id} habit={habit} goal={goal} consistency={consistency} last7Days={last7Days} habitLogs={habitLogs} toggleHabitLog={toggleHabitLog} deleteHabit={deleteHabit} openCustomConfirm={openCustomConfirm} />
               );
             })}
           </div>
 
-          {habits.length > 3 && (
+          {pendingHabits.length > 3 && (
             <div style={{ display: 'flex', justifyContent: 'center', marginTop: '12px' }}>
               <button
                 onClick={() => setIsExpanded(!isExpanded)}
-                style={{
-                  fontSize: '12px',
-                  fontWeight: '700',
-                  color: 'var(--primary)',
-                  background: 'none',
-                  border: 'none',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                  padding: '6px 12px',
-                  borderRadius: '6px',
-                  backgroundColor: 'var(--primary-glow)',
-                  transition: 'all 0.2s'
-                }}
+                style={{ fontSize: '12px', fontWeight: '700', color: 'var(--primary)', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', padding: '6px 12px', borderRadius: '6px', backgroundColor: 'var(--primary-glow)', transition: 'all 0.2s' }}
               >
-                {isExpanded ? 'Recolher Hábitos' : `Mostrar mais (+${habits.length - 3})`}
+                {isExpanded ? 'Recolher' : `Mostrar mais (+${pendingHabits.length - 3})`}
               </button>
+            </div>
+          )}
+
+          {/* ── Hábitos concluídos hoje ── */}
+          {completedTodayHabits.length > 0 && (
+            <div style={{ marginTop: '16px' }}>
+              <button
+                onClick={() => setShowCompletedHabits(!showCompletedHabits)}
+                style={{ fontSize: '11px', fontWeight: '600', color: 'var(--text-light)', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', padding: '4px 0', width: '100%' }}
+              >
+                <span style={{ flex: 1, textAlign: 'left', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  ✅ Concluídos hoje ({completedTodayHabits.length})
+                </span>
+                <span style={{ fontSize: '10px' }}>{showCompletedHabits ? '▲' : '▼'}</span>
+              </button>
+              {showCompletedHabits && (
+                <div className="habits-list" style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '8px', opacity: 0.7 }}>
+                  {completedTodayHabits.map(habit => {
+                    const goal = goals.find(g => g.id === habit.goal_id);
+                    const consistency = calculateConsistency(habit.id);
+                    return (
+                      <HabitRow key={habit.id} habit={habit} goal={goal} consistency={consistency} last7Days={last7Days} habitLogs={habitLogs} toggleHabitLog={toggleHabitLog} deleteHabit={deleteHabit} openCustomConfirm={openCustomConfirm} />
+                    );
+                  })}
+                </div>
+              )}
             </div>
           )}
         </>

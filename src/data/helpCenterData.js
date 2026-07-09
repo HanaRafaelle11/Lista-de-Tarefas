@@ -216,15 +216,17 @@ export const HELP_ARTICLES = [
     howToAccess: 'Na tela de checkout, selecione a opção "Pix".',
     howToUse: 'Copie o código gerado ou escaneie o QRCode no aplicativo do seu banco. A liberação ocorre em menos de 5 segundos após a confirmação bancária!',
     fieldGuide: [
-      { field: 'Pix Copia e Cola', tip: 'Copie a chave alfanumérica longa e cole na opção "Pix Copia e Cola" do seu banco.' }
+      { field: 'Pix Copia e Cola', tip: 'Copie a chave alfanumérica longa e cole na opção "Pix Copia e Cola" do seu banco.' },
+      { field: 'Validade do QR Code', tip: 'O código expira em 30 minutos. Se expirar, gere um novo sem custo na tela de checkout.' },
+      { field: 'Prazo de ativação', tip: 'Sua conta Pro é ativada imediatamente após a confirmação do banco, geralmente em menos de 5 segundos.' }
     ],
     examples: {
       bad: 'Deixar o QRCode expirar (validade de 30 minutos) e tentar pagar depois.',
       good: 'Concluir o pagamento no app do banco imediatamente após gerar o código no MyFlowDay.'
     },
-    bestPractices: 'Aguarde a confirmação na tela; o sistema atualiza automaticamente via webhook.',
+    bestPractices: 'Aguarde a confirmação na tela; o sistema atualiza automaticamente via webhook. Seu acesso Pro dura 30 dias a partir da data do pagamento.',
     commonErrors: 'Agendar o Pix para uma data futura em vez de pagar na hora.',
-    faq: 'E se o Pix expirar? Basta fechar a janela e gerar um novo Pix no aplicativo.'
+    faq: 'E se o Pix expirar? Basta fechar a janela e gerar um novo Pix no aplicativo.\n\nQuando renovo o acesso Pro via Pix? O acesso via Pix não é renovado automaticamente (diferente do cartão de crédito). Você receberá um lembrete por e-mail 7 dias antes do vencimento, para que possa renovar sem perder o acesso. Após 30 dias, se não houver renovação, a conta retorna ao plano gratuito.'
   },
   {
     id: 'billing-card',

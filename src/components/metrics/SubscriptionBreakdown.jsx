@@ -15,12 +15,12 @@ export default function SubscriptionBreakdown({ breakdown }) {
   const freePct = getPercent(free);
 
   const cardStyle = {
-    backgroundColor: 'rgba(30, 30, 38, 0.95)',
+    backgroundColor: 'var(--bg-card)',
     borderRadius: '12px',
-    border: '1px solid rgba(255, 255, 255, 0.08)',
+    border: '1px solid var(--border-light)',
     padding: '24px',
-    boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.37)',
-    color: '#ffffff',
+    boxShadow: 'var(--shadow-md)',
+    color: 'var(--text-main)',
     marginBottom: '30px',
     overflowX: 'auto',
     WebkitOverflowScrolling: 'touch',
@@ -32,7 +32,7 @@ export default function SubscriptionBreakdown({ breakdown }) {
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: '10px 0',
-    borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
+    borderBottom: '1px solid var(--border-light)',
     fontSize: '14px'
   };
 
@@ -58,8 +58,8 @@ export default function SubscriptionBreakdown({ breakdown }) {
         borderRadius: '8px',
         overflow: 'hidden',
         marginBottom: '24px',
-        backgroundColor: 'rgba(255, 255, 255, 0.05)',
-        border: '1px solid rgba(255, 255, 255, 0.08)'
+        backgroundColor: 'var(--bg-card-hover)',
+        border: '1px solid var(--border-light)'
       }}>
         {active > 0 && (
           <div 
@@ -81,7 +81,7 @@ export default function SubscriptionBreakdown({ breakdown }) {
         )}
         {free > 0 && (
           <div 
-            style={{ width: `${freePct}%`, backgroundColor: 'rgba(255, 255, 255, 0.25)', transition: 'width 0.3s ease' }} 
+            style={{ width: `${freePct}%`, backgroundColor: 'var(--text-light)', opacity: 0.5, transition: 'width 0.3s ease' }} 
             title={`Gratuito: ${free} (${freePct.toFixed(1)}%)`}
           />
         )}
@@ -119,7 +119,7 @@ export default function SubscriptionBreakdown({ breakdown }) {
         {/* Free users */}
         <div style={{ ...legendItemStyle, borderBottom: 'none' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <span style={{ width: '12px', height: '12px', borderRadius: '3px', backgroundColor: 'rgba(255, 255, 255, 0.25)' }}></span>
+            <span style={{ width: '12px', height: '12px', borderRadius: '3px', backgroundColor: 'var(--text-light)', opacity: 0.5 }}></span>
             <span style={{ fontWeight: '500' }}>Usuários Gratuitos (FREE / EXPIRED)</span>
           </div>
           <span style={{ fontWeight: '600' }}>{free} ({freePct.toFixed(1)}%)</span>

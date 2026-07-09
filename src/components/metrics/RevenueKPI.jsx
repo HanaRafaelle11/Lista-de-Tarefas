@@ -4,17 +4,18 @@ export default function RevenueKPI({ kpis }) {
   const { mrr, arr, churnRate, nrr, activeSubscribers, reactivatedCount, arpu } = kpis || {};
 
   const cardStyle = {
-    backgroundColor: 'rgba(30, 30, 38, 0.95)',
+    backgroundColor: 'var(--bg-card)',
     borderRadius: '12px',
-    border: '1px solid rgba(255, 255, 255, 0.08)',
+    border: '1px solid var(--border-light)',
     padding: '24px',
-    boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.37)',
+    boxShadow: 'var(--shadow-md)',
     transition: 'transform 0.2s ease, border-color 0.2s ease',
     display: 'flex',
     flexDirection: 'column',
     justifyContent: 'space-between',
     minHeight: '120px',
-    cursor: 'pointer'
+    cursor: 'pointer',
+    color: 'var(--text-main)'
   };
 
   const scrollTo = (id) => {
@@ -25,7 +26,7 @@ export default function RevenueKPI({ kpis }) {
   const labelStyle = {
     fontSize: '13px',
     fontWeight: '500',
-    color: 'rgba(255, 255, 255, 0.5)',
+    color: 'var(--text-muted)',
     textTransform: 'uppercase',
     letterSpacing: '1px',
     marginBottom: '8px'
@@ -34,7 +35,7 @@ export default function RevenueKPI({ kpis }) {
   const valueStyle = {
     fontSize: '32px',
     fontWeight: '700',
-    color: '#ffffff',
+    color: 'var(--text-main)',
     fontFamily: 'var(--font-display, sans-serif)',
     letterSpacing: '-1px'
   };
@@ -59,7 +60,7 @@ export default function RevenueKPI({ kpis }) {
         }}
         onMouseLeave={(e) => {
           e.currentTarget.style.transform = 'none';
-          e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.08)';
+          e.currentTarget.style.borderColor = 'var(--border-light)';
         }}
       >
         <div>
@@ -81,14 +82,14 @@ export default function RevenueKPI({ kpis }) {
         }}
         onMouseLeave={(e) => {
           e.currentTarget.style.transform = 'none';
-          e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.08)';
+          e.currentTarget.style.borderColor = 'var(--border-light)';
         }}
       >
         <div>
           <div style={labelStyle}>ARR</div>
           <div style={valueStyle}>R$ {arr?.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
         </div>
-        <div style={{ ...footerStyle, color: 'rgba(255, 255, 255, 0.4)' }}>
+        <div style={{ ...footerStyle, color: 'var(--text-light)' }}>
           <span>●</span> Taxa de Execução Anual
         </div>
       </div>
@@ -103,12 +104,12 @@ export default function RevenueKPI({ kpis }) {
         }}
         onMouseLeave={(e) => {
           e.currentTarget.style.transform = 'none';
-          e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.08)';
+          e.currentTarget.style.borderColor = 'var(--border-light)';
         }}
       >
         <div>
           <div style={labelStyle}>Churn Rate (30d)</div>
-          <div style={{ ...valueStyle, color: churnRate > 10 ? '#ef4444' : '#ffffff' }}>
+          <div style={{ ...valueStyle, color: churnRate > 10 ? '#ef4444' : 'var(--text-main)' }}>
             {churnRate?.toFixed(1)}%
           </div>
         </div>
@@ -127,12 +128,12 @@ export default function RevenueKPI({ kpis }) {
         }}
         onMouseLeave={(e) => {
           e.currentTarget.style.transform = 'none';
-          e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.08)';
+          e.currentTarget.style.borderColor = 'var(--border-light)';
         }}
       >
         <div>
           <div style={labelStyle}>NRR (30d)</div>
-          <div style={{ ...valueStyle, color: nrr >= 100 ? '#10b981' : '#ffffff' }}>
+          <div style={{ ...valueStyle, color: nrr >= 100 ? '#10b981' : 'var(--text-main)' }}>
             {nrr?.toFixed(1)}%
           </div>
         </div>
@@ -151,7 +152,7 @@ export default function RevenueKPI({ kpis }) {
         }}
         onMouseLeave={(e) => {
           e.currentTarget.style.transform = 'none';
-          e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.08)';
+          e.currentTarget.style.borderColor = 'var(--border-light)';
         }}
       >
         <div>
@@ -173,7 +174,7 @@ export default function RevenueKPI({ kpis }) {
         }}
         onMouseLeave={(e) => {
           e.currentTarget.style.transform = 'none';
-          e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.08)';
+          e.currentTarget.style.borderColor = 'var(--border-light)';
         }}
       >
         <div>

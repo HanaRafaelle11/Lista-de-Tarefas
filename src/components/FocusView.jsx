@@ -39,6 +39,12 @@ export default function FocusView() {
     if (savedTime !== null) {
       const parsed = Number(savedTime);
       const activeState = localStorage.getItem('flowday_pomodoro_is_active') === 'true';
+      if (parsed <= 0 && !activeState) {
+        const savedFocus = Number(localStorage.getItem('flowday_pomodoro_focus')) || 25;
+        const savedBreak = Number(localStorage.getItem('flowday_pomodoro_break')) || 5;
+        const savedMode = localStorage.getItem('flowday_pomodoro_mode') || 'focus';
+        return (savedMode === 'focus' ? savedFocus : savedBreak) * 60;
+      }
       const lastTick = localStorage.getItem('flowday_pomodoro_last_tick');
       if (activeState && lastTick) {
         const elapsed = Math.floor((Date.now() - new Date(lastTick).getTime()) / 1000);

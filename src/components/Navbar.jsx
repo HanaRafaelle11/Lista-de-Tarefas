@@ -9,16 +9,15 @@ import { getLogo } from '../design-system/branding/logo';
 
 export default function Navbar() {
   const [showHeader, setShowHeader] = React.useState(true);
+  const [showBottomNav, setShowBottomNav] = React.useState(true);
   const [lastScrollY, setLastScrollY] = React.useState(0);
 
   React.useEffect(() => {
     const handleScroll = () => {
       const currentScrollY = window.scrollY;
-      if (currentScrollY > lastScrollY && currentScrollY > 80) {
-        setShowHeader(false);
-      } else {
-        setShowHeader(true);
-      }
+      const scrollingDown = currentScrollY > lastScrollY && currentScrollY > 80;
+      setShowHeader(!scrollingDown);
+      setShowBottomNav(!scrollingDown);
       setLastScrollY(currentScrollY);
     };
     window.addEventListener('scroll', handleScroll, { passive: true });
@@ -41,9 +40,8 @@ export default function Navbar() {
     { key: 'home',        icon: 'consistency',  label: 'Início'    },
     { key: 'tasks',       icon: 'tasks',        label: 'Tarefas'   },
     { key: 'focus',       icon: 'focus',        label: 'Foco'      },
-    { key: 'coach',       icon: 'insights',     label: 'Coach'     },
     { key: 'analytics',   icon: 'evolution',    label: 'Evolução'  },
-    { key: 'performance', icon: 'performance',  label: 'Desempenho'},
+    { key: 'coach',       icon: 'insights',     label: 'Coach'     },
   ];
 
   if (isAdmin) {
@@ -128,7 +126,7 @@ export default function Navbar() {
             <button
               id="tour-nav-settings"
               onClick={() => setActiveTab('settings')}
-              className="header-btn"
+              className="header-btn hide-on-mobile"
               title="Configurações"
               style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '38px', height: '38px', padding: 0, margin: 0, flexShrink: 0, color: activeTab === 'settings' ? 'var(--primary)' : 'var(--text-muted)' }}
             >
@@ -136,7 +134,7 @@ export default function Navbar() {
             </button>
             <button
               onClick={handleLogout}
-              className="header-btn"
+              className="header-btn hide-on-mobile"
               title="Sair do App"
               aria-label="Sair do App"
               style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '38px', height: '38px', padding: 0, margin: 0, flexShrink: 0, color: '#ef4444' }}
@@ -162,8 +160,12 @@ export default function Navbar() {
       </header>
 
       {/* ── Menu Flutuante Inferior ──────────────────────── */}
-      <nav className="app-bottom-nav hide-on-desktop" role="navigation" aria-label="Navegação principal">
-        {navItems.map(({ key, icon, label }) => (
+      <nav
+        className={`app-bottom-nav hide-on-desktop${showBottomNav ? '' : ' hidden'}`}
+        role="navigation"
+        aria-label="Navegação principal"
+      >
+        {navItems.slice(0, 5).map(({ key, icon, label }) => (
           <button
             key={key}
             id={`tour-nav-mobile-${key}`}

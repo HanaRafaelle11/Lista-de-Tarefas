@@ -65,50 +65,35 @@ if (typeof window !== 'undefined') {
 })();
 
 // Register custom PWA service worker with scope /
-if (import.meta.env.DEV) {
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.getRegistrations().then((registrations) => {
-      for (let registration of registrations) {
-        registration.unregister().then((unreg) => {
-          if (unreg) {
-            console.log('[PWA] Unregistered stale service worker in development');
-            window.location.reload();
-          }
-        });
-      }
-    });
-  }
-} else {
-  if ('serviceWorker' in navigator && !import.meta.env.SSR) {
-    window.addEventListener('load', () => {
-      const swUrl = '/sw.js';
-      navigator.serviceWorker.register(swUrl)
-        .then((reg) => {
-          console.log('[PWA] Service Worker registered with scope:', reg.scope);
-          
-          // Força verificação imediata de atualizações no carregamento da página
-          reg.update();
+if ('serviceWorker' in navigator && !import.meta.env.SSR) {
+  window.addEventListener('load', () => {
+    const swUrl = '/sw.js';
+    navigator.serviceWorker.register(swUrl, { type: import.meta.env.DEV ? 'module' : 'classic' })
+      .then((reg) => {
+        console.log('[PWA] Service Worker registered with scope:', reg.scope);
+        
+        // Força verificação imediata de atualizações no carregamento da página
+        reg.update();
 
-          // Monitora atualizações e recarrega a página ao concluir o update
-          reg.onupdatefound = () => {
-            const installingWorker = reg.installing;
-            if (installingWorker) {
-              installingWorker.onstatechange = () => {
-                if (installingWorker.state === 'installed') {
-                  if (navigator.serviceWorker.controller) {
-                    console.log('[PWA] Novo conteúdo disponível. Atualizando aplicação...');
-                    window.location.reload();
-                  }
+        // Monitora atualizações e recarrega a página ao concluir o update
+        reg.onupdatefound = () => {
+          const installingWorker = reg.installing;
+          if (installingWorker) {
+            installingWorker.onstatechange = () => {
+              if (installingWorker.state === 'installed') {
+                if (navigator.serviceWorker.controller) {
+                  console.log('[PWA] Novo conteúdo disponível. Atualizando aplicação...');
+                  window.location.reload();
                 }
-              };
-            }
-          };
-        })
-        .catch((err) => {
-          console.error('[PWA] Service Worker registration failed:', err);
-        });
-    });
-  }
+              }
+            };
+          }
+        };
+      })
+      .catch((err) => {
+        console.error('[PWA] Service Worker registration failed:', err);
+      });
+  });
 }
 
 createRoot(document.getElementById('root')).render(

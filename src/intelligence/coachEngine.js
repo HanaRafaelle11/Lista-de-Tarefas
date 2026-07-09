@@ -55,6 +55,13 @@ Crie objetivos ou tarefas e comece a executar para receber conselhos personaliza
     };
   }
 
+  // Helper para evitar deslocamento de fuso horário em strings de data local
+  const parseLocalDate = (dateStr) => {
+    if (!dateStr) return new Date(0);
+    const [y, m, d] = dateStr.split('-').map(Number);
+    return new Date(y, m - 1, d);
+  };
+
   // 2. Identificar intervalo de tempo dos últimos 7 dias
   const sevenDaysAgo = new Date();
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
@@ -63,24 +70,39 @@ Crie objetivos ou tarefas e comece a executar para receber conselhos personaliza
   const completedRecentTasks = tasks.filter(t => 
     t.completed && 
     !t.deletedAt && !t.deleted_at &&
-    (t.completedAt ? new Date(t.completedAt) >= sevenDaysAgo : true)
+    t.completedAt && (new Date(t.completedAt) >= sevenDaysAgo)
   );
 
   const totalRecentTasks = tasks.filter(t => 
     !t.deletedAt && !t.deleted_at &&
-    (t.createdAt ? new Date(t.createdAt) >= sevenDaysAgo : true)
+    t.createdAt && (new Date(t.createdAt) >= sevenDaysAgo)
   ).length;
 
   const activeHabits = habitsManager?.habits || [];
   const activeHabitsCount = activeHabits.length;
   const recentLogs = habitsManager?.habitLogs
-    ? habitsManager.habitLogs.filter(l => activeHabits.map(h => h.id).includes(l.habit_id) && new Date(l.completed_date) >= sevenDaysAgo)
+    ? habitsManager.habitLogs.filter(l => {
+        const isLinked = activeHabits.some(h => h.id === l.habit_id);
+        if (!isLinked) return false;
+        const logDate = parseLocalDate(l.completed_date);
+        return logDate >= sevenDaysAgo;
+      })
     : [];
   
   const completedRecentHabitsCount = recentLogs.length;
   const targetHabitOccurrences = activeHabitsCount * 7;
   const pendingHabitsWeekCount = Math.max(0, targetHabitOccurrences - completedRecentHabitsCount);
   const pendingTasksCount = allActiveTasks.filter(t => !t.completed).length;
+
+  // Hábito pendente hoje
+  const getTodayDateStr = () => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  };
+  const todayStr = getTodayDateStr();
+  const pendingHabitsTodayCount = activeHabits.filter(h => 
+    !habitsManager?.habitLogs?.some(l => l.habit_id === h.id && l.completed_date === todayStr)
+  ).length;
 
   const currentStreak = calcStreak(tasks) || 0;
 
@@ -121,20 +143,41 @@ Crie objetivos ou tarefas e comece a executar para receber conselhos personaliza
   const goalTitle = targetGoal ? targetGoal.title : '';
 
   // 6. Tendências de Consistência
-  let trendIndicator = 'Você está em uma fase de recuperação.';
-  if (currentStreak >= 5) {
-    trendIndicator = `Você manteve consistência por ${currentStreak} dias seguidos.`;
-  } else if (completedRecentTasks.length < 2) {
-    trendIndicator = 'Seu ritmo caiu nas últimas duas semanas.';
+  const totalTasksThisWeek = totalRecentTasks;
+  const completedTasksThisWeek = completedRecentTasks.length;
+  const completionRateThisWeek = totalTasksThisWeek > 0 
+    ? Math.round((completedTasksThisWeek / totalTasksThisWeek) * 100) 
+    : 0;
+
+  const totalHabitTargetThisWeek = activeHabitsCount * 7;
+  const completedHabitsThisWeek = completedRecentHabitsCount;
+  const habitCompletionRateThisWeek = totalHabitTargetThisWeek > 0 
+    ? Math.round((completedHabitsThisWeek / totalHabitTargetThisWeek) * 100) 
+    : 0;
+
+  let trendIndicator = `Esta semana você concluiu ${completedTasksThisWeek} de ${totalTasksThisWeek} tarefas (${completionRateThisWeek}% de taxa de conclusão).`;
+  if (activeHabitsCount > 0) {
+    trendIndicator += ` E realizou ${completedHabitsThisWeek} hábitos de um total planejado de ${totalHabitTargetThisWeek} repetições (${habitCompletionRateThisWeek}% de consistência semanal).`;
+  } else {
+    trendIndicator += ` Nenhum hábito ativo cadastrado para a análise semanal de consistência.`;
   }
 
   // 7. Insights Ocultos baseados nos dados reais do usuário
   const dayCounts = Array(7).fill(0);
   tasks.forEach(t => {
-    const dateStr = t.completedAt || t.dueDate || t.createdAt;
-    if (t.completed && !t.deletedAt && !t.deleted_at && dateStr) {
-      const day = new Date(dateStr).getDay();
-      dayCounts[day]++;
+    if (t.completed && !t.deletedAt && !t.deleted_at) {
+      let dateObj;
+      if (t.completedAt) {
+        dateObj = new Date(t.completedAt);
+      } else if (t.createdAt) {
+        dateObj = new Date(t.createdAt);
+      } else if (t.dueDate) {
+        dateObj = parseLocalDate(t.dueDate);
+      }
+      if (dateObj) {
+        const day = dateObj.getDay();
+        dayCounts[day]++;
+      }
     }
   });
 
@@ -241,10 +284,12 @@ Crie objetivos ou tarefas e comece a executar para receber conselhos personaliza
     : `Atualmente, há ${pendingTasksCount} tarefas pendentes na fila.`;
 
   const habitsCountText = activeHabitsCount === 0
-    ? `Nenhum hábito cadastrado para esta semana.`
-    : pendingHabitsWeekCount === 1
-    ? `Resta apenas um hábito pendente para ser realizado hoje.`
-    : `Restam ${pendingHabitsWeekCount} hábitos pendentes para conclusão no planejamento desta semana.`;
+    ? `Nenhum hábito cadastrado para hoje.`
+    : pendingHabitsTodayCount === 0
+    ? `Todos os seus hábitos de hoje já foram concluídos! Sensacional!`
+    : pendingHabitsTodayCount === 1
+    ? `Resta apenas 1 hábito pendente para ser realizado hoje.`
+    : `Restam ${pendingHabitsTodayCount} hábitos pendentes para você concluir hoje.`;
 
   // Respeitar pontuação de consistência inteligente
   let consistencyText = '';

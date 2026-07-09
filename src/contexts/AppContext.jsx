@@ -203,6 +203,15 @@ export function AppProvider({ children }) {
     } catch (_) { }
     return 'home';
   });
+
+  const handleSetActiveTab = useCallback((tab) => {
+    let target = tab;
+    if (tab === 'tasks') target = 'myday';
+    else if (tab === 'goals' || tab === 'coach') target = 'home';
+    else if (tab === 'analytics' || tab === 'performance' || tab === 'evolution') target = 'evolution';
+    setActiveTab(target);
+  }, []);
+
   const [settingsTab, setSettingsTab] = useState('general'); // 'general' | 'trash'
 
   // ── Som Ambiente Global ──
@@ -402,10 +411,7 @@ export function AppProvider({ children }) {
 
   const incrementCompanionProgress = useCallback((userId) => {
     const petType = localStorage.getItem('flowday_growth_pet') || 'plant';
-    const isPlant = petType === 'plant';
-    const storageKey = isPlant
-      ? `flowday_plant_completed_goals_${userId}`
-      : `flowday_pet_completed_goals_${userId}`;
+    const storageKey = `flowday_${petType}_completed_goals_${userId}`;
       
     const currentCount = Number(localStorage.getItem(storageKey)) || 0;
     const newCount = currentCount + 1;
@@ -425,13 +431,34 @@ export function AppProvider({ children }) {
     const userId = currentUser.id;
     const totalCompleted = goals.filter(g => g.status === 'completed' && !g.deletedAt && !g.deleted_at).length;
     
+    const legacyPetVal = localStorage.getItem(`flowday_pet_completed_goals_${userId}`);
+    const defaultPetVal = legacyPetVal !== null ? legacyPetVal : String(totalCompleted);
+
     if (localStorage.getItem(`flowday_plant_completed_goals_${userId}`) === null) {
       localStorage.setItem(`flowday_plant_completed_goals_${userId}`, String(totalCompleted));
     }
-    if (localStorage.getItem(`flowday_pet_completed_goals_${userId}`) === null) {
-      localStorage.setItem(`flowday_pet_completed_goals_${userId}`, String(totalCompleted));
-    }
+    ['baby', 'dog', 'cat'].forEach(p => {
+      if (localStorage.getItem(`flowday_${p}_completed_goals_${userId}`) === null) {
+        localStorage.setItem(`flowday_${p}_completed_goals_${userId}`, defaultPetVal);
+      }
+    });
   }, [currentUser?.id, goals]);
+
+  // Auto-conclusão de objetivos ao finalizar tarefas vinculadas
+  useEffect(() => {
+    if (!currentUser?.id) return;
+    const activeTasks = tasks.filter(t => !t.deletedAt && !t.deleted_at);
+    const activeGoals = goals.filter(g => g.status === 'active' && !g.deletedAt && !g.deleted_at);
+
+    activeGoals.forEach(goal => {
+      const linkedIds = goalTasks.filter(gt => gt.goal_id === goal.id).map(gt => gt.task_id);
+      const linked = activeTasks.filter(t => linkedIds.includes(t.id));
+      if (linked.length > 0 && linked.every(t => t.completed)) {
+        console.log(`[AppContext] Auto-completing goal "${goal.title}" because all ${linked.length} linked tasks are complete.`);
+        handleUpdateGoal(goal.id, { status: 'completed' });
+      }
+    });
+  }, [tasks, goals, goalTasks, currentUser?.id]);
 
   useEffect(() => {
     if (!currentUser?.id) {
@@ -1959,7 +1986,12 @@ export function AppProvider({ children }) {
     if (!currentUser?.id) return;
     const { data } = await profilesService.updateProfileFields(currentUser.id, fields);
     if (data) {
-      setUserProfile(data);
+      const localAvatar = localStorage.getItem(`flowday_user_avatar_${currentUser.id}`);
+      const updated = { ...data };
+      if (localAvatar && (!updated.avatar_url || updated.avatar_url === '')) {
+        updated.avatar_url = localAvatar;
+      }
+      setUserProfile(updated);
     }
   }, [currentUser?.id]);
 
@@ -1983,8 +2015,9 @@ export function AppProvider({ children }) {
     if (data) {
       setUserProfile(prev => {
         const merged = { ...prev, ...data };
-        if (data.avatar_url === undefined && prev?.avatar_url) {
-          merged.avatar_url = prev.avatar_url;
+        const localAvatar = localStorage.getItem(`flowday_user_avatar_${currentUser.id}`);
+        if (localAvatar && (!merged.avatar_url || merged.avatar_url === '')) {
+          merged.avatar_url = localAvatar;
         }
         return merged;
       });
@@ -2359,6 +2392,10 @@ export function AppProvider({ children }) {
         }
 
         if (tempActions.length > 0) {
+          const createdTasks = [];
+          const createdLinks = [];
+          const failedTempIds = [];
+
           await Promise.all(
             tempActions.map(async (ta) => {
               const taskData = {
@@ -2368,21 +2405,53 @@ export function AppProvider({ children }) {
                 priority: 'Média',
                 dueDate: null,
               };
-              const { data: taskResponse } = await tasksService.create(currentUser.id, taskData);
-              if (taskResponse) {
-                setTasks((prev) => prev.map(t => t.id === ta.tempId ? taskResponse : t));
-                await goalsService.linkTask(data.id, taskResponse.id);
-                setGoalTasks((prev) => prev.map(gt =>
-                  (gt.goal_id === tempGoalId && gt.task_id === ta.tempId)
-                    ? { goal_id: data.id, task_id: taskResponse.id }
-                    : gt
-                ));
-              } else {
-                setTasks((prev) => prev.filter(t => t.id !== ta.tempId));
-                setGoalTasks((prev) => prev.filter(gt => gt.task_id !== ta.tempId));
+              try {
+                const { data: taskResponse } = await tasksService.create(currentUser.id, taskData);
+                if (taskResponse) {
+                  createdTasks.push({ tempId: ta.tempId, task: taskResponse });
+                  await goalsService.linkTask(data.id, taskResponse.id);
+                  createdLinks.push({ tempId: ta.tempId, realId: taskResponse.id });
+                } else {
+                  failedTempIds.push(ta.tempId);
+                }
+              } catch (e) {
+                console.error('[AppContext] Error importing task for predefined goal:', e);
+                failedTempIds.push(ta.tempId);
               }
             })
           );
+
+          // Update tasks state once
+          setTasks((prev) => {
+            let updated = [...prev];
+            createdTasks.forEach(({ tempId, task }) => {
+              updated = updated.map(t => t.id === tempId ? task : t);
+            });
+            if (failedTempIds.length > 0) {
+              updated = updated.filter(t => !failedTempIds.includes(t.id));
+            }
+            return updated;
+          });
+
+          // Update goalTasks state once
+          setGoalTasks((prev) => {
+            let updated = [...prev];
+            createdLinks.forEach(({ tempId, realId }) => {
+              updated = updated.map(gt => 
+                (gt.goal_id === tempGoalId && gt.task_id === tempId)
+                  ? { goal_id: data.id, task_id: realId }
+                  : gt
+              );
+            });
+            if (failedTempIds.length > 0) {
+              updated = updated.filter(gt => gt.goal_id !== tempGoalId || !failedTempIds.includes(gt.task_id));
+            }
+            // Fix remaining references
+            updated = updated.map(gt => 
+              gt.goal_id === tempGoalId ? { ...gt, goal_id: data.id } : gt
+            );
+            return updated;
+          });
         }
       } else {
         // Rollback
@@ -2440,6 +2509,16 @@ export function AppProvider({ children }) {
       }
 
       localStorage.setItem(`flowday_demo_goals_${currentUser.id}`, JSON.stringify({ goals: updatedGoals, goalTasks: currentDemoGT }));
+      
+      if (payloadData.status === 'active' && (existingGoal?.status === 'completed' || existingGoal?.status === 'archived')) {
+        logEvent('goal_reopened', { goal_id: id });
+        const linkedIds = currentDemoGT.filter(gt => gt.goal_id === id).map(gt => gt.task_id);
+        currentDemoTasks = currentDemoTasks.map(t => 
+          (linkedIds.includes(t.id) && t.completed) ? { ...t, completed: false, completedAt: null } : t
+        );
+        setTasks(currentDemoTasks);
+      }
+
       localStorage.setItem(`flowday_demo_tasks_${currentUser.id}`, JSON.stringify(currentDemoTasks));
       logEvent('goal_updated', { goal_id: id });
       if (payloadData.status === 'completed' && existingGoal?.status !== 'completed') {
@@ -2518,6 +2597,18 @@ export function AppProvider({ children }) {
         logEvent('goal_archived', { goal_id: id });
       } else if (existingGoal && (existingGoal.status === 'completed' || existingGoal.status === 'archived') && payloadData.status === 'active') {
         logEvent('goal_reopened', { goal_id: id });
+        const linkedIds = goalTasks.filter(gt => gt.goal_id === id).map(gt => gt.task_id);
+        
+        // Reactivate linked completed tasks in the database and local state
+        for (const taskId of linkedIds) {
+          const task = tasks.find(t => t.id === taskId);
+          if (task && task.completed) {
+            await tasksService.update(currentUser.id, taskId, { completed: false, completedAt: null });
+          }
+        }
+        setTasks(prev => prev.map(t => 
+          (linkedIds.includes(t.id) && t.completed) ? { ...t, completed: false, completedAt: null } : t
+        ));
       }
     }
   }, [currentUser, goals, goalTasks, tasks, logEvent, addNotification, incrementCompanionProgress]);
@@ -3364,7 +3455,7 @@ export function AppProvider({ children }) {
 
     // Navigation
     activeTab,
-    setActiveTab,
+    setActiveTab: handleSetActiveTab,
     shouldOpenGoalModal,
     setShouldOpenGoalModal,
     selectedGoalIdFilter,

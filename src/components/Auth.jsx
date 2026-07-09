@@ -162,7 +162,7 @@ export default function Auth({ onLoginSuccess, initialMode = 'login', onBackToLa
       setError(`Aguarde ${cooldown} segundos para reenviar o e-mail.`);
       return;
     }
-    if (!email) {
+    if (!email || !email.trim()) {
       setError('Informe seu e-mail para receber o link de acesso.');
       return;
     }
@@ -207,7 +207,7 @@ export default function Auth({ onLoginSuccess, initialMode = 'login', onBackToLa
         setError(`Aguarde ${cooldown} segundos para solicitar novamente.`);
         return;
       }
-      if (!email) {
+      if (!email || !email.trim()) {
         setError('Informe seu e-mail para receber o link de acesso.');
         return;
       }

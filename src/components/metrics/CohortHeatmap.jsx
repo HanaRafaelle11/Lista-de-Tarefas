@@ -4,17 +4,17 @@ export default function CohortHeatmap({ cohortsData }) {
   if (!cohortsData || cohortsData.length === 0) {
     return (
       <div style={{
-        backgroundColor: 'rgba(30, 30, 38, 0.95)',
+        backgroundColor: 'var(--bg-card)',
         borderRadius: '12px',
-        border: '1px solid rgba(255, 255, 255, 0.08)',
+        border: '1px solid var(--border-light)',
         padding: '24px',
-        color: 'rgba(255, 255, 255, 0.4)',
+        color: 'var(--text-muted)',
         textAlign: 'center',
         height: '200px',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.37)'
+        boxShadow: 'var(--shadow-md)'
       }}>
         Nenhum dado de cohort disponível para exibição.
       </div>
@@ -58,19 +58,19 @@ export default function CohortHeatmap({ cohortsData }) {
     padding: '10px 14px',
     fontSize: '11px',
     fontWeight: '700',
-    color: 'rgba(255, 255, 255, 0.4)',
+    color: 'var(--text-muted)',
     textTransform: 'uppercase',
-    borderBottom: '2px solid rgba(255, 255, 255, 0.08)',
+    borderBottom: '2px solid var(--border-medium)',
     textAlign: 'center',
     letterSpacing: '0.05em'
   };
 
   const mainContainerStyle = {
-    backgroundColor: 'rgba(30, 30, 38, 0.95)',
+    backgroundColor: 'var(--bg-card)',
     borderRadius: '12px',
-    border: '1px solid rgba(255, 255, 255, 0.08)',
+    border: '1px solid var(--border-light)',
     padding: '24px',
-    boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.37)'
+    boxShadow: 'var(--shadow-md)'
   };
 
   const getCellColor = (rate) => {
@@ -85,7 +85,7 @@ export default function CohortHeatmap({ cohortsData }) {
       <h3 style={{
         fontSize: '16px',
         fontWeight: '600',
-        color: '#ffffff',
+        color: 'var(--text-main)',
         marginBottom: '8px',
         fontFamily: 'var(--font-display, sans-serif)',
         display: 'flex',
@@ -95,7 +95,7 @@ export default function CohortHeatmap({ cohortsData }) {
         <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#10b981' }}></span>
         Heatmap de Retenção de Cohort (Stripe-Style)
       </h3>
-      <p style={{ fontSize: '13px', color: 'rgba(255, 255, 255, 0.4)', marginBottom: '20px', lineHeight: '1.4' }}>
+      <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '20px', lineHeight: '1.4' }}>
         Acompanhe a integridade do seu produto monitorando a retenção de usuários pagantes ao longo dos meses desde o cadastro inicial.
       </p>
 
@@ -112,13 +112,14 @@ export default function CohortHeatmap({ cohortsData }) {
           </thead>
           <tbody>
             {sortedCohorts.map((cohort, idx) => (
-              <tr key={idx} style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.04)' }}>
+              <tr key={idx} style={{ borderBottom: '1px solid var(--border-light)' }}>
                 {/* Nome do Mês da Cohort */}
                 <td style={{
                   padding: '12px 14px',
                   fontSize: '13px',
                   fontWeight: '600',
-                  textTransform: 'capitalize'
+                  textTransform: 'capitalize',
+                  color: 'var(--text-main)'
                 }}>
                   {cohort.formatted}
                 </td>
@@ -128,8 +129,8 @@ export default function CohortHeatmap({ cohortsData }) {
                   padding: '12px 14px',
                   fontSize: '13px',
                   textAlign: 'center',
-                  color: 'rgba(255, 255, 255, 0.7)',
-                  backgroundColor: 'rgba(255, 255, 255, 0.01)'
+                  color: 'var(--text-muted)',
+                  backgroundColor: 'var(--bg-card-hover)'
                 }}>
                   {cohort.totalUsers}
                 </td>
@@ -147,10 +148,10 @@ export default function CohortHeatmap({ cohortsData }) {
                         textAlign: 'center',
                         fontSize: '12px',
                         fontWeight: '700',
-                        color: hasData && rate > 50 ? '#ffffff' : 'rgba(255, 255, 255, 0.6)',
+                        color: hasData && rate > 50 ? '#ffffff' : 'var(--text-main)',
                         backgroundColor: getCellColor(rate),
                         transition: 'background-color 0.2s ease',
-                        border: '1px solid rgba(25, 25, 30, 0.5)'
+                        border: '1px solid var(--border-light)'
                       }}
                     >
                       {hasData ? `${rate.toFixed(0)}%` : '-'}

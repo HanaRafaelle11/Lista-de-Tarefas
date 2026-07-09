@@ -7,13 +7,13 @@ export default function CustomerHealthTable({ customers, onUserClick }) {
     borderCollapse: 'collapse',
     textAlign: 'left',
     fontSize: '14px',
-    color: '#ffffff'
+    color: 'var(--text-main)'
   };
 
   const thStyle = {
     padding: '12px 16px',
-    borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
-    color: 'rgba(255, 255, 255, 0.4)',
+    borderBottom: '1px solid var(--border-light)',
+    color: 'var(--text-muted)',
     fontWeight: '600',
     fontSize: '12px',
     textTransform: 'uppercase',
@@ -22,13 +22,14 @@ export default function CustomerHealthTable({ customers, onUserClick }) {
 
   const tdStyle = {
     padding: '16px',
-    borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
-    verticalAlign: 'middle'
+    borderBottom: '1px solid var(--border-light)',
+    verticalAlign: 'middle',
+    color: 'var(--text-main)'
   };
 
   const getStatusBadge = (status) => {
-    let bg = 'rgba(255, 255, 255, 0.08)';
-    let color = 'rgba(255, 255, 255, 0.6)';
+    let bg = 'var(--bg-card-hover)';
+    let color = 'var(--text-muted)';
 
     switch (status) {
       case 'ACTIVE':
@@ -46,8 +47,8 @@ export default function CustomerHealthTable({ customers, onUserClick }) {
         break;
       case 'EXPIRED':
       case 'FREE':
-        bg = 'rgba(255, 255, 255, 0.05)';
-        color = 'rgba(255, 255, 255, 0.4)';
+        bg = 'var(--bg-card-hover)';
+        color = 'var(--text-light)';
         break;
     }
 
@@ -90,12 +91,12 @@ export default function CustomerHealthTable({ customers, onUserClick }) {
 
   return (
     <div style={{
-      backgroundColor: 'rgba(30, 30, 38, 0.95)',
+      backgroundColor: 'var(--bg-card)',
       borderRadius: '12px',
-      border: '1px solid rgba(255, 255, 255, 0.08)',
+      border: '1px solid var(--border-light)',
       padding: '24px',
-      boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.37)',
-      color: '#ffffff',
+      boxShadow: 'var(--shadow-md)',
+      color: 'var(--text-main)',
       marginBottom: '30px'
     }}>
       <h3 style={{
@@ -129,7 +130,7 @@ export default function CustomerHealthTable({ customers, onUserClick }) {
                 <tr 
                   key={c.id} 
                   style={{ transition: 'background-color 0.2s ease', cursor: 'pointer' }}
-                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.02)'}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-card-hover)'}
                   onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
                   onClick={() => onUserClick(c.id)}
                 >
@@ -149,7 +150,7 @@ export default function CustomerHealthTable({ customers, onUserClick }) {
                       </span>
                     </div>
                   </td>
-                  <td style={{ ...tdStyle, color: 'rgba(255, 255, 255, 0.5)' }}>{formatDate(c.lastActiveAt)}</td>
+                  <td style={{ ...tdStyle, color: 'var(--text-muted)' }}>{formatDate(c.lastActiveAt)}</td>
                   <td style={{ ...tdStyle, textAlign: 'right' }}>
                     <button style={{
                       backgroundColor: 'rgba(59, 130, 246, 0.15)',
