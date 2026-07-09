@@ -38,10 +38,9 @@ export default function Navbar() {
 
   const navItems = [
     { key: 'home',        icon: 'consistency',  label: 'Início'    },
-    { key: 'tasks',       icon: 'tasks',        label: 'Tarefas'   },
+    { key: 'myday',       icon: 'tasks',        label: 'Meu Dia'   },
     { key: 'focus',       icon: 'focus',        label: 'Foco'      },
-    { key: 'analytics',   icon: 'evolution',    label: 'Evolução'  },
-    { key: 'coach',       icon: 'insights',     label: 'Coach'     },
+    { key: 'evolution',   icon: 'evolution',    label: 'Evolução'  },
   ];
 
   if (isAdmin) {
@@ -53,7 +52,7 @@ export default function Navbar() {
     <>
       {/* ── Cabeçalho Superior ──────────────────────────── */}
       <header 
-        className="app-top-header"
+        className="app-top-header hide-on-mobile"
         style={{
           transition: 'transform 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
           transform: showHeader ? 'translateY(0)' : 'translateY(-100%)',
@@ -77,7 +76,7 @@ export default function Navbar() {
             <img 
               src={logo.src}
               alt={logo.alt} 
-              style={{ height: '60px', width: 'auto', objectFit: 'contain', background: 'transparent', border: 'none', boxShadow: 'none', padding: 0, transform: 'translateY(-2px)' }}
+              style={{ height: '64px', width: 'auto', objectFit: 'contain', background: 'transparent', border: 'none', boxShadow: 'none', padding: 0, transform: 'translateY(-2px)' }}
             />
           </div>
  
@@ -112,18 +111,6 @@ export default function Navbar() {
  
           {/* Ações com Alinhamento Perfeito */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '10px', height: '100%', flex: 1 }}>
-            <NotificationCenter />
-            <button
-              onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-              className="header-btn"
-              title={theme === 'dark' ? 'Modo Claro' : 'Modo Escuro'}
-              aria-label={theme === 'dark' ? 'Ativar modo claro' : 'Ativar modo escuro'}
-              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '38px', height: '38px', padding: 0, margin: 0, flexShrink: 0 }}
-            >
-              {theme === 'dark'
-                ? <Sun size={20} aria-hidden="true" />
-                : <Moon size={20} aria-hidden="true" />}
-            </button>
             <button
               id="tour-nav-settings"
               onClick={() => setActiveTab('settings')}
@@ -142,20 +129,6 @@ export default function Navbar() {
             >
               <LogOut size={20} strokeWidth={2} />
             </button>
-            
-            <div 
-              className={`app-top-profile ${activeTab === 'profile' ? 'active' : ''}`}
-              onClick={() => setActiveTab('profile')}
-              style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '48px', height: '48px', margin: 0, flexShrink: 0 }}
-            >
-              <div className="app-top-avatar" title={userProfile?.nickname || userProfile?.name || currentUser?.name} style={{ width: '48px', height: '48px', borderRadius: '50%', overflow: 'hidden', border: activeTab === 'profile' ? '2px solid var(--primary)' : '1px solid var(--border-medium)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, backgroundColor: 'var(--bg-card-hover)' }}>
-                {userProfile?.avatar_url ? (
-                  <img src={userProfile.avatar_url} alt="Avatar" style={{ width: '48px', height: '48px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
-                ) : (
-                  <DefaultAvatar size={48} />
-                )}
-              </div>
-            </div>
           </div>
         </div>
       </header>
@@ -166,7 +139,7 @@ export default function Navbar() {
         role="navigation"
         aria-label="Navegação principal"
       >
-        {navItems.slice(0, 5).map(({ key, icon, label }) => (
+        {navItems.slice(0, 4).map(({ key, icon, label }) => (
           <button
             key={key}
             id={`tour-nav-mobile-${key}`}

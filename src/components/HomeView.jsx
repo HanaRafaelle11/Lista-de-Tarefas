@@ -181,7 +181,7 @@ export default function HomeView() {
       localStorage.setItem('flowday_pomodoro_selected_task_id', task.id);
       setActiveTab('focus');
     } else {
-      setActiveTab('tasks');
+      setActiveTab('myday');
     }
   };
   const activeTasksList = useMemo(() => tasks.filter(t => !t.deletedAt && !t.deleted_at), [tasks]);

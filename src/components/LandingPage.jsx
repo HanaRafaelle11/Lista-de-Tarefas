@@ -277,7 +277,7 @@ export default function LandingPage({ onEnterApp }) {
                 <span style={{ backgroundColor: '#6366F1', width: '7px', height: '7px', borderRadius: '50%', display: 'inline-block' }} />
                 <span style={{ fontSize: '11px', fontWeight: 700, color: '#6366F1', textTransform: 'uppercase' }}>Tarefa Executada</span>
               </div>
-              <p style={{ fontSize: '13px', fontWeight: 600, color: '#FFFFFF', margin: 0, textAlign: 'left', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <p style={{ fontSize: '13px', fontWeight: 600, color: isDark ? '#FFFFFF' : '#0F172A', margin: 0, textAlign: 'left', display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <CheckCircle2 size={16} color="#10B981" /> Ler 10 páginas de psicologia
               </p>
             </div>
@@ -286,8 +286,8 @@ export default function LandingPage({ onEnterApp }) {
                 <span style={{ fontSize: '11px', fontWeight: 700, color: '#C084FC', textTransform: 'uppercase' }}>Objetivo Associado</span>
                 <span style={{ fontSize: '11px', fontWeight: 700, color: '#C084FC' }}>75%</span>
               </div>
-              <p style={{ fontSize: '13px', fontWeight: 700, color: '#FFFFFF', margin: '0 0 6px', textAlign: 'left' }}>📚 Ler 12 Livros no Ano</p>
-              <div style={{ height: '6px', background: 'rgba(255,255,255,0.05)', borderRadius: '3px', overflow: 'hidden' }}>
+              <p style={{ fontSize: '13px', fontWeight: 700, color: isDark ? '#FFFFFF' : '#0F172A', margin: '0 0 6px', textAlign: 'left' }}>📚 Ler 12 Livros no Ano</p>
+              <div style={{ height: '6px', background: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)', borderRadius: '3px', overflow: 'hidden' }}>
                 <div style={{ width: '75%', height: '100%', background: 'linear-gradient(to right,#6366F1,#C084FC)', borderRadius: '3px' }} />
               </div>
             </div>
@@ -296,7 +296,7 @@ export default function LandingPage({ onEnterApp }) {
                 <Brain size={14} color="#10B981" />
                 <span style={{ fontSize: '11px', fontWeight: 700, color: '#10B981', textTransform: 'uppercase' }}>Coach IA</span>
               </div>
-              <p style={{ fontSize: '12px', lineHeight: 1.4, color: '#E2E8F0', margin: 0, textAlign: 'left', fontStyle: 'italic' }}>
+              <p style={{ fontSize: '12px', lineHeight: 1.4, color: isDark ? '#E2E8F0' : '#334155', margin: 0, textAlign: 'left', fontStyle: 'italic' }}>
                 "👉 Você rende melhor à tarde. Bloqueei 20min amanhã às 17h para manter sua sequência de leitura."
               </p>
             </div>
@@ -308,7 +308,7 @@ export default function LandingPage({ onEnterApp }) {
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <span style={{ fontSize: '24px' }}>🌱</span>
                 <div>
-                  <div style={{ fontSize: '12px', fontWeight: 600, color: '#FFFFFF', textAlign: 'left' }}>Sua Planta cresceu!</div>
+                  <div style={{ fontSize: '12px', fontWeight: 600, color: isDark ? '#FFFFFF' : '#0F172A', textAlign: 'left' }}>Sua Planta cresceu!</div>
                   <div style={{ fontSize: '11px', color: '#10B981', fontWeight: 700, textAlign: 'left' }}>+45 XP de Foco</div>
                 </div>
               </div>
@@ -318,17 +318,17 @@ export default function LandingPage({ onEnterApp }) {
                 <Award size={14} color="#38BDF8" />
                 <span style={{ fontSize: '11px', fontWeight: 700, color: '#38BDF8', textTransform: 'uppercase' }}>Conquista</span>
               </div>
-              <p style={{ fontSize: '13px', fontWeight: 700, color: '#FFFFFF', margin: '0 0 2px', textAlign: 'left' }}>🏆 Devorador de Páginas</p>
-              <p style={{ fontSize: '11px', color: '#94A3B8', margin: 0, textAlign: 'left' }}>Concluiu 10 tarefas de leitura.</p>
+              <p style={{ fontSize: '13px', fontWeight: 700, color: isDark ? '#FFFFFF' : '#0F172A', margin: '0 0 2px', textAlign: 'left' }}>🏆 Devorador de Páginas</p>
+              <p style={{ fontSize: '11px', color: isDark ? '#94A3B8' : '#475569', margin: 0, textAlign: 'left' }}>Concluiu 10 tarefas de leitura.</p>
             </div>
             <div className="mockup-card glass-premium" style={{ gridArea: 'insights', borderLeft: '3px solid #E2E8F0' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                <span style={{ fontSize: '11px', fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase' }}>Tendência Semanal</span>
+                <span style={{ fontSize: '11px', fontWeight: 700, color: isDark ? '#94A3B8' : '#475569', textTransform: 'uppercase' }}>Tendência Semanal</span>
                 <span style={{ fontSize: '11px', fontWeight: 700, color: '#10B981' }}>+12% Foco</span>
               </div>
               <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', height: '40px', gap: '6px', padding: '0 10px' }}>
                 {[30,45,60,50,75,85].map((h, i) => (
-                  <div key={i} style={{ height: `${h}%`, width: '100%', background: i === 5 ? 'linear-gradient(to top,#6366F1,#C084FC)' : `rgba(255,255,255,${h/400})`, borderRadius: '2px' }} />
+                  <div key={i} style={{ height: `${h}%`, width: '100%', background: i === 5 ? 'linear-gradient(to top,#6366F1,#C084FC)' : (isDark ? `rgba(255,255,255,${h/400})` : `rgba(99,102,241,${h/200})`), borderRadius: '2px' }} />
                 ))}
               </div>
             </div>
@@ -342,7 +342,7 @@ export default function LandingPage({ onEnterApp }) {
           <div style={S.sectionHead}>
             <SectionLabel color="#818CF8">Economia Real</SectionLabel>
             <SectionTitle>Descubra quanto tempo você pode recuperar</SectionTitle>
-            <p style={{ color: '#94A3B8', fontSize: '15px', maxWidth: '520px', margin: '12px auto 0' }}>
+            <p style={{ color: isDark ? '#94A3B8' : '#475569', fontSize: '15px', maxWidth: '520px', margin: '12px auto 0' }}>
               Pequenos minutos economizados todos os dias se transformam em dezenas de horas por ano.
             </p>
           </div>
@@ -354,7 +354,7 @@ export default function LandingPage({ onEnterApp }) {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                 {/* Input 1 */}
                 <div>
-                  <label style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', fontWeight: 700, color: '#CBD5E1', marginBottom: '8px' }}>
+                  <label style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', fontWeight: 700, color: isDark ? '#CBD5E1' : '#334155', marginBottom: '8px' }}>
                     <span>Quantas tarefas você faz por dia?</span>
                     <span style={{ color: '#818CF8' }}>{tasksPerDay} tarefas</span>
                   </label>
@@ -370,7 +370,7 @@ export default function LandingPage({ onEnterApp }) {
 
                 {/* Input 2 */}
                 <div>
-                  <label style={{ display: 'block', fontSize: '14px', fontWeight: 700, color: '#CBD5E1', marginBottom: '10px' }}>
+                  <label style={{ display: 'block', fontSize: '14px', fontWeight: 700, color: isDark ? '#CBD5E1' : '#334155', marginBottom: '10px' }}>
                     Quanto tempo você perde decidindo o que fazer ou alternando entre aplicativos?
                   </label>
                   <div style={{ display: 'flex', gap: '10px' }}>
@@ -383,9 +383,9 @@ export default function LandingPage({ onEnterApp }) {
                           flex: 1,
                           padding: '10px',
                           borderRadius: '8px',
-                          border: lostTime === t ? '1px solid #818CF8' : '1px solid rgba(255,255,255,0.08)',
-                          background: lostTime === t ? 'rgba(99,102,241,0.1)' : 'rgba(255,255,255,0.02)',
-                          color: lostTime === t ? '#818CF8' : '#CBD5E1',
+                          border: lostTime === t ? '1px solid #818CF8' : (isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.08)'),
+                          background: lostTime === t ? 'rgba(99,102,241,0.1)' : (isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)'),
+                          color: lostTime === t ? '#818CF8' : (isDark ? '#CBD5E1' : '#475569'),
                           fontWeight: 700,
                           fontSize: '13px',
                           cursor: 'pointer',
@@ -400,7 +400,7 @@ export default function LandingPage({ onEnterApp }) {
 
                 {/* Input 3 */}
                 <div>
-                  <label style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', fontWeight: 700, color: '#CBD5E1', marginBottom: '8px' }}>
+                  <label style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', fontWeight: 700, color: isDark ? '#CBD5E1' : '#334155', marginBottom: '8px' }}>
                     <span>Quantos dias por semana você trabalha?</span>
                     <span style={{ color: '#818CF8' }}>{workDays} dias</span>
                   </label>
@@ -416,22 +416,22 @@ export default function LandingPage({ onEnterApp }) {
               </div>
 
               {/* Resultado */}
-              <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', textAlign: 'center', background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.03)', padding: '28px', borderRadius: '16px' }}>
-                <span style={{ fontSize: '13px', color: '#94A3B8', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Você pode economizar aproximadamente</span>
+              <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', textAlign: 'center', background: isDark ? 'rgba(255,255,255,0.01)' : 'rgba(0,0,0,0.02)', border: isDark ? '1px solid rgba(255,255,255,0.03)' : '1px solid rgba(0,0,0,0.06)', padding: '28px', borderRadius: '16px' }}>
+                <span style={{ fontSize: '13px', color: isDark ? '#94A3B8' : '#64748B', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Você pode economizar aproximadamente</span>
                 
                 <div style={{ margin: '20px 0' }}>
-                  <div style={{ fontSize: '38px', fontWeight: 800, color: '#FFFFFF', lineHeight: 1.1 }}>
+                  <div style={{ fontSize: '38px', fontWeight: 800, color: isDark ? '#FFFFFF' : '#0F172A', lineHeight: 1.1 }}>
                     <span style={{ background: 'linear-gradient(to right,#818CF8,#C084FC)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
                       {hoursPerYear} horas
                     </span>
                   </div>
                   <span style={{ fontSize: '14px', color: '#64748B', fontWeight: 600 }}>por ano</span>
                   
-                  <div style={{ fontSize: '22px', fontWeight: 700, color: '#CBD5E1', marginTop: '12px' }}>
+                  <div style={{ fontSize: '22px', fontWeight: 700, color: isDark ? '#CBD5E1' : '#1E293B', marginTop: '12px' }}>
                     ou {hoursPerMonth} horas/mês
                   </div>
 
-                  <div style={{ fontSize: '11px', color: '#64748B', fontFamily: 'monospace', marginTop: '12px', background: 'rgba(255,255,255,0.02)', padding: '6px 10px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.03)' }}>
+                  <div style={{ fontSize: '11px', color: '#64748B', fontFamily: 'monospace', marginTop: '12px', background: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.03)', padding: '6px 10px', borderRadius: '6px', border: isDark ? '1px solid rgba(255,255,255,0.03)' : '1px solid rgba(0,0,0,0.06)' }}>
                     Cálculo: {tasksPerDay} tarefas/dia × {lostTime} min × {workDays} dias/sem × 52 sem = {hoursPerYear}h/ano
                   </div>
                 </div>
@@ -469,7 +469,7 @@ export default function LandingPage({ onEnterApp }) {
               A maioria dos apps organiza.<br />
               O MyFlowDay <span style={{ color: '#818CF8' }}>evolui</span>.
             </SectionTitle>
-            <p style={{ color: '#94A3B8', fontSize: '15px', maxWidth: '520px', margin: '12px auto 0' }}>
+            <p style={{ color: isDark ? '#94A3B8' : '#475569', fontSize: '15px', maxWidth: '520px', margin: '12px auto 0' }}>
               Você perde tempo e foco pulando entre ferramentas que não se comunicam e não geram progresso real.
             </p>
           </div>
@@ -477,7 +477,7 @@ export default function LandingPage({ onEnterApp }) {
             <div style={{ background: 'rgba(239,68,68,0.02)', border: '1px solid rgba(239,68,68,0.1)', padding: '28px', borderRadius: '16px' }}>
               <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#FCA5A5', marginBottom: '18px' }}>❌ Sem o MyFlowDay</h3>
               {['Apps separados que não se conversam','Metas esquecidas depois de 2 semanas','Hábitos sem acompanhamento real','IA genérica sem contexto seu','Sem motivação visual de progresso'].map((t, i) => (
-                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '14px', color: '#94A3B8', marginBottom: '9px' }}>
+                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '14px', color: isDark ? '#94A3B8' : '#475569', marginBottom: '9px' }}>
                   <span style={{ color: '#EF4444', fontWeight: 700, flexShrink: 0 }}>✕</span> {t}
                 </div>
               ))}
@@ -485,7 +485,7 @@ export default function LandingPage({ onEnterApp }) {
             <div style={{ background: 'rgba(99,102,241,0.03)', border: '1px solid rgba(99,102,241,0.15)', padding: '28px', borderRadius: '16px', boxShadow: '0 0 40px rgba(99,102,241,0.05)' }}>
               <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#818CF8', marginBottom: '18px' }}>✨ Com o MyFlowDay</h3>
               {['Metas, tarefas e hábitos 100% conectados','IA que aprende com sua rotina real','Foco com Pomodoro integrado ao sistema','Gamificação que mantém a motivação','Planta e pet que evoluem com você'].map((t, i) => (
-                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '14px', color: '#CBD5E1', fontWeight: 500, marginBottom: '9px' }}>
+                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '14px', color: isDark ? '#CBD5E1' : '#334155', fontWeight: 500, marginBottom: '9px' }}>
                   <span style={{ color: '#10B981', fontWeight: 700, flexShrink: 0 }}>✓</span> {t}
                 </div>
               ))}
@@ -543,19 +543,29 @@ export default function LandingPage({ onEnterApp }) {
               );
             })}
           </div>
-          <div style={{ background: '#0F1318', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '20px', padding: '28px', minHeight: '360px', display: 'flex', flexDirection: 'column', justifyContent: 'center', boxShadow: '0 20px 60px rgba(0,0,0,0.4)' }}>
+          <div style={{ 
+            background: isDark ? '#0F1318' : '#EEF2F6', 
+            border: isDark ? '1px solid rgba(255,255,255,0.06)' : '1px solid rgba(0,0,0,0.08)', 
+            borderRadius: '20px', 
+            padding: '28px', 
+            minHeight: '360px', 
+            display: 'flex', 
+            flexDirection: 'column', 
+            justifyContent: 'center', 
+            boxShadow: isDark ? '0 20px 60px rgba(0,0,0,0.4)' : '0 10px 40px rgba(0,0,0,0.03)' 
+          }}>
             {activeShowcaseTab === 'home' && (
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '30px', alignItems: 'center' }} className="showcase-content-grid">
                 <div>
-                  <h3 style={{ fontSize: '22px', fontWeight: 800, color: '#FFFFFF', marginBottom: '12px' }}>Seu painel central de evolução</h3>
-                  <p style={{ color: '#94A3B8', fontSize: '14.5px', lineHeight: 1.6, marginBottom: '18px' }}>Tudo conectado. Uma tarefa concluída atualiza sua evolução, fortalece seus hábitos, faz seu companheiro evoluir e gera novos insights do Coach IA.</p>
+                  <h3 style={{ fontSize: '22px', fontWeight: 800, color: isDark ? '#FFFFFF' : '#0F172A', marginBottom: '12px' }}>Seu painel central de evolução</h3>
+                  <p style={{ color: isDark ? '#94A3B8' : '#475569', fontSize: '14.5px', lineHeight: 1.6, marginBottom: '18px' }}>Tudo conectado. Uma tarefa concluída atualiza sua evolução, fortalece seus hábitos, faz seu companheiro evoluir e gera novos insights do Coach IA.</p>
                   <ul className="premium-list">
                     <li><Check size={14} color="#10B981" /> Companheiro virtual na primeira dobra</li>
                     <li><Check size={14} color="#10B981" /> Quick-add por linguagem natural</li>
                     <li><Check size={14} color="#10B981" /> Indicador de consistência semanal</li>
                   </ul>
                 </div>
-                <div style={{ background: 'rgba(255,255,255,0.02)', padding: '40px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '220px' }}>
+                <div style={{ background: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.03)', padding: '40px', borderRadius: '12px', border: isDark ? '1px solid rgba(255,255,255,0.05)' : '1px solid rgba(0,0,0,0.08)', display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '220px' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
                     <span style={{ fontSize: '72px', animation: 'float-animation 4s ease-in-out infinite', display: 'block' }}>🌱</span>
                     <span style={{ background: 'rgba(245,158,11,0.1)', color: '#F59E0B', padding: '6px 16px', borderRadius: '20px', fontSize: '13px', fontWeight: 700 }}>Nível 1 — Semente Ativa</span>
@@ -566,15 +576,15 @@ export default function LandingPage({ onEnterApp }) {
             {activeShowcaseTab === 'meudia' && (
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '30px', alignItems: 'center' }} className="showcase-content-grid">
                 <div>
-                  <h3 style={{ fontSize: '22px', fontWeight: 800, color: '#FFFFFF', marginBottom: '12px' }}>Meu Dia: execução sem ruído</h3>
-                  <p style={{ color: '#94A3B8', fontSize: '14.5px', lineHeight: 1.6, marginBottom: '18px' }}>Lista inteligente que destaca o que importa. Sem pop-ups, sem distrações, apenas você e as tarefas que movem seus objetivos.</p>
+                  <h3 style={{ fontSize: '22px', fontWeight: 800, color: isDark ? '#FFFFFF' : '#0F172A', marginBottom: '12px' }}>Meu Dia: execução sem ruído</h3>
+                  <p style={{ color: isDark ? '#94A3B8' : '#475569', fontSize: '14.5px', lineHeight: 1.6, marginBottom: '18px' }}>Lista inteligente que destaca o que importa. Sem pop-ups, sem distrações, apenas você e as tarefas que movem seus objetivos.</p>
                   <ul className="premium-list">
                     <li><Check size={14} color="#10B981" /> Destaques automáticos de prioridade</li>
                     <li><Check size={14} color="#10B981" /> Filtros inteligentes de contexto</li>
                     <li><Check size={14} color="#10B981" /> Interface limpa com ações ocultas</li>
                   </ul>
                 </div>
-                <div style={{ background: 'rgba(255,255,255,0.02)', padding: '20px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <div style={{ background: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.03)', padding: '20px', borderRadius: '12px', border: isDark ? '1px solid rgba(255,255,255,0.05)' : '1px solid rgba(0,0,0,0.08)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
                   <div className="mini-task-item"><span className="mini-badge-blue">✨ Recomendada</span> <span>Revisar protótipo de UX</span></div>
                   <div className="mini-task-item"><span className="mini-badge-red">🔥 Crítica</span> <span>Resolver bug de checkout</span></div>
                   <div className="mini-task-item"><span className="mini-badge-orange">⚡ Mantém Sequência</span> <span>Cadastrar relatório diário</span></div>
@@ -584,19 +594,19 @@ export default function LandingPage({ onEnterApp }) {
             {activeShowcaseTab === 'foco' && (
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '30px', alignItems: 'center' }} className="showcase-content-grid">
                 <div>
-                  <h3 style={{ fontSize: '22px', fontWeight: 800, color: '#FFFFFF', marginBottom: '12px' }}>Foco profundo com Pomodoro</h3>
-                  <p style={{ color: '#94A3B8', fontSize: '14.5px', lineHeight: 1.6, marginBottom: '18px' }}>Selecione a tarefa, ative o timer e mergulhe. Sons ambiente integrados e XP ao concluir cada ciclo.</p>
+                  <h3 style={{ fontSize: '22px', fontWeight: 800, color: isDark ? '#FFFFFF' : '#0F172A', marginBottom: '12px' }}>Foco profundo com Pomodoro</h3>
+                  <p style={{ color: isDark ? '#94A3B8' : '#475569', fontSize: '14.5px', lineHeight: 1.6, marginBottom: '18px' }}>Selecione a tarefa, ative o timer e mergulhe. Sons ambiente integrados e XP ao concluir cada ciclo.</p>
                   <ul className="premium-list">
                     <li><Check size={14} color="#10B981" /> Timer vinculado ao objetivo ativo</li>
                     <li><Check size={14} color="#10B981" /> Mixer de áudio integrado</li>
                     <li><Check size={14} color="#10B981" /> XP e conquistas ao completar</li>
                   </ul>
                 </div>
-                <div style={{ background: 'rgba(255,255,255,0.02)', padding: '30px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '200px' }}>
+                <div style={{ background: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.03)', padding: '30px', borderRadius: '12px', border: isDark ? '1px solid rgba(255,255,255,0.05)' : '1px solid rgba(0,0,0,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '200px' }}>
                   <div className="foco-briefing-glow">
                     <div style={{ fontSize: '12px', fontWeight: 700, color: '#10B981', textTransform: 'uppercase', marginBottom: '4px' }}>Missão de Foco</div>
-                    <div style={{ fontSize: '20px', fontWeight: 800, color: '#FFFFFF', marginBottom: '8px' }}>25:00</div>
-                    <div style={{ fontSize: '11px', color: '#94A3B8' }}>Meta: +15 XP</div>
+                    <div style={{ fontSize: '20px', fontWeight: 800, color: isDark ? '#FFFFFF' : '#0F172A', marginBottom: '8px' }}>25:00</div>
+                    <div style={{ fontSize: '11px', color: isDark ? '#94A3B8' : '#475569' }}>Meta: +15 XP</div>
                   </div>
                 </div>
               </div>
@@ -604,15 +614,15 @@ export default function LandingPage({ onEnterApp }) {
             {activeShowcaseTab === 'coach' && (
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '30px', alignItems: 'center' }} className="showcase-content-grid">
                 <div>
-                  <h3 style={{ fontSize: '22px', fontWeight: 800, color: '#FFFFFF', marginBottom: '12px' }}>Coach IA: seu guia pessoal</h3>
-                  <p style={{ color: '#94A3B8', fontSize: '14.5px', lineHeight: 1.6, marginBottom: '18px' }}>Diferente de sistemas genéricos, o Coach IA aprende com sua rotina real, mapeando seus horários de pico, objetivos em atraso e padrões de hábito.</p>
+                  <h3 style={{ fontSize: '22px', fontWeight: 800, color: isDark ? '#FFFFFF' : '#0F172A', marginBottom: '12px' }}>Coach IA: seu guia pessoal</h3>
+                  <p style={{ color: isDark ? '#94A3B8' : '#475569', fontSize: '14.5px', lineHeight: 1.6, marginBottom: '18px' }}>Diferente de sistemas genéricos, o Coach IA aprende com sua rotina real, mapeando seus horários de pico, objetivos em atraso e padrões de hábito.</p>
                   <ul className="premium-list">
                     <li><Check size={14} color="#10B981" /> Análise semanal personalizada</li>
                     <li><Check size={14} color="#10B981" /> Sugestões baseadas no histórico</li>
                     <li><Check size={14} color="#10B981" /> Criação de tarefas por voz natural</li>
                   </ul>
                 </div>
-                <div style={{ background: 'rgba(255,255,255,0.02)', padding: '20px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                <div style={{ background: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.03)', padding: '20px', borderRadius: '12px', border: isDark ? '1px solid rgba(255,255,255,0.05)' : '1px solid rgba(0,0,0,0.08)' }}>
                   <div className="chat-bubble-showcase">🧠 <b>Coach IA:</b> Você rende mais às terças pela manhã. Agendei suas tarefas de "Estudos" nessa janela. Seu objetivo de leitura está 4 dias parado, que tal 10 minutos hoje?</div>
                 </div>
               </div>
@@ -620,18 +630,18 @@ export default function LandingPage({ onEnterApp }) {
             {activeShowcaseTab === 'evolucao' && (
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '30px', alignItems: 'center' }} className="showcase-content-grid">
                 <div>
-                  <h3 style={{ fontSize: '22px', fontWeight: 800, color: '#FFFFFF', marginBottom: '12px' }}>Métricas reais de progresso</h3>
-                  <p style={{ color: '#94A3B8', fontSize: '14.5px', lineHeight: 1.6, marginBottom: '18px' }}>Consistência diária, sequências de hábitos, objetivos completados e crescimento do companheiro, tudo em um painel visual.</p>
+                  <h3 style={{ fontSize: '22px', fontWeight: 800, color: isDark ? '#FFFFFF' : '#0F172A', marginBottom: '12px' }}>Métricas reais de progresso</h3>
+                  <p style={{ color: isDark ? '#94A3B8' : '#475569', fontSize: '14.5px', lineHeight: 1.6, marginBottom: '18px' }}>Consistência diária, sequências de hábitos, objetivos completados e crescimento do companheiro, tudo em um painel visual.</p>
                   <ul className="premium-list">
                     <li><Check size={14} color="#10B981" /> Consistência e ritmo semanal</li>
                     <li><Check size={14} color="#10B981" /> Progresso de cada objetivo ativo</li>
                     <li><Check size={14} color="#10B981" /> Conquistas e nível do companheiro</li>
                   </ul>
                 </div>
-                <div style={{ background: 'rgba(255,255,255,0.02)', padding: '30px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '200px' }}>
+                <div style={{ background: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.03)', padding: '30px', borderRadius: '12px', border: isDark ? '1px solid rgba(255,255,255,0.05)' : '1px solid rgba(0,0,0,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '200px' }}>
                   <div style={{ textAlign: 'center' }}>
                     <div style={{ fontSize: '42px', fontWeight: 800, color: '#10B981' }}>85%</div>
-                    <div style={{ fontSize: '13px', color: '#94A3B8', marginTop: '6px' }}>Consistência Semanal</div>
+                    <div style={{ fontSize: '13px', color: isDark ? '#94A3B8' : '#475569', marginTop: '6px' }}>Consistência Semanal</div>
                     <div style={{ fontSize: '12px', color: '#6366F1', marginTop: '4px', fontWeight: 600 }}>🔥 12 dias de sequência</div>
                   </div>
                 </div>
@@ -640,19 +650,19 @@ export default function LandingPage({ onEnterApp }) {
             {activeShowcaseTab === 'conquistas' && (
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '30px', alignItems: 'center' }} className="showcase-content-grid">
                 <div>
-                  <h3 style={{ fontSize: '22px', fontWeight: 800, color: '#FFFFFF', marginBottom: '12px' }}>Gamificação que motiva de verdade</h3>
-                  <p style={{ color: '#94A3B8', fontSize: '14.5px', lineHeight: 1.6, marginBottom: '18px' }}>Conquistas desbloqueadas com sons sintetizados, insígnias de raridade e toasts animados. Produtividade ficou divertida.</p>
+                  <h3 style={{ fontSize: '22px', fontWeight: 800, color: isDark ? '#FFFFFF' : '#0F172A', marginBottom: '12px' }}>Gamificação que motiva de verdade</h3>
+                  <p style={{ color: isDark ? '#94A3B8' : '#475569', fontSize: '14.5px', lineHeight: 1.6, marginBottom: '18px' }}>Conquistas desbloqueadas com sons sintetizados, insígnias de raridade e toasts animados. Produtividade ficou divertida.</p>
                   <ul className="premium-list">
                     <li><Check size={14} color="#10B981" /> Medalhas por raridade</li>
                     <li><Check size={14} color="#10B981" /> Áudio via Web Audio API</li>
                     <li><Check size={14} color="#10B981" /> Galeria de conquistas</li>
                   </ul>
                 </div>
-                <div style={{ background: 'rgba(255,255,255,0.02)', padding: '24px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                <div style={{ background: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.03)', padding: '24px', borderRadius: '12px', border: isDark ? '1px solid rgba(255,255,255,0.05)' : '1px solid rgba(0,0,0,0.08)', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
                   <div style={{ padding: '16px', background: 'rgba(56,189,248,0.05)', border: '1px solid rgba(56,189,248,0.2)', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '12px' }}>
                     <span style={{ fontSize: '28px' }}>🏆</span>
                     <div>
-                      <div style={{ fontSize: '14px', fontWeight: 700, color: '#FFFFFF' }}>Mestre do Foco</div>
+                      <div style={{ fontSize: '14px', fontWeight: 700, color: isDark ? '#FFFFFF' : '#0F172A' }}>Mestre do Foco</div>
                       <span style={{ fontSize: '10px', background: '#38BDF8', color: '#07090C', padding: '2px 8px', borderRadius: '10px', fontWeight: 800 }}>ÉPICA</span>
                     </div>
                   </div>
@@ -751,7 +761,7 @@ export default function LandingPage({ onEnterApp }) {
           <div style={S.sectionHead}>
             <SectionLabel color="#10B981">Planos</SectionLabel>
             <SectionTitle>Comece grátis. Evolua quando quiser.</SectionTitle>
-            <p style={{ color: '#94A3B8', fontSize: '15px', maxWidth: '460px', margin: '12px auto 0' }}>
+            <p style={{ color: isDark ? '#94A3B8' : '#475569', fontSize: '15px', maxWidth: '460px', margin: '12px auto 0' }}>
               O plano gratuito já é completo. O Pro existe para quem quer ir mais fundo.
             </p>
           </div>
@@ -759,14 +769,14 @@ export default function LandingPage({ onEnterApp }) {
             {/* Free */}
             <div className="pricing-card">
               <div style={{ marginBottom: '22px' }}>
-                <span style={{ fontSize: '12px', fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Gratuito</span>
-                <div style={{ fontSize: '42px', fontWeight: 800, color: '#FFFFFF', marginTop: '8px', lineHeight: 1 }}>R$0<span style={{ fontSize: '14px', fontWeight: 500, color: '#475569' }}>/mês</span></div>
+                <span style={{ fontSize: '12px', fontWeight: 700, color: isDark ? '#94A3B8' : '#64748B', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Gratuito</span>
+                <div style={{ fontSize: '42px', fontWeight: 800, color: isDark ? '#FFFFFF' : '#0F172A', marginTop: '8px', lineHeight: 1 }}>R$0<span style={{ fontSize: '14px', fontWeight: 500, color: '#475569' }}>/mês</span></div>
                 <p style={{ color: '#64748B', fontSize: '13px', marginTop: '8px', lineHeight: 1.5 }}>Tudo que você precisa para organizar e evoluir.</p>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '24px' }}>
                 {freeFeatures.map((f, i) => (
-                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13.5px', color: f.on ? '#CBD5E1' : 'rgba(100,116,139,0.4)', filter: f.on ? 'none' : 'blur(1px)' }}>
-                    <span style={{ color: f.on ? '#10B981' : '#374151', flexShrink: 0, fontWeight: 700 }}>✓</span>
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13.5px', color: f.on ? (isDark ? '#CBD5E1' : '#334155') : (isDark ? 'rgba(100,116,139,0.4)' : 'rgba(100,116,139,0.5)'), filter: f.on ? 'none' : 'blur(0.5px)' }}>
+                    <span style={{ color: f.on ? '#10B981' : (isDark ? '#374151' : '#CBD5E1'), flexShrink: 0, fontWeight: 700 }}>✓</span>
                     {f.text}
                   </div>
                 ))}
@@ -782,12 +792,12 @@ export default function LandingPage({ onEnterApp }) {
               </div>
               <div style={{ marginBottom: '22px', marginTop: '12px' }}>
                 <span style={{ fontSize: '12px', fontWeight: 700, color: '#8B5CF6', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Pro</span>
-                <div style={{ fontSize: '42px', fontWeight: 800, color: '#FFFFFF', marginTop: '8px', lineHeight: 1 }}>R$14,90<span style={{ fontSize: '14px', fontWeight: 500, color: '#475569' }}>/mês</span></div>
-                <p style={{ color: '#94A3B8', fontSize: '13px', marginTop: '8px', lineHeight: 1.5 }}>Para quem quer o máximo do Coach IA e análises profundas de comportamento.</p>
+                <div style={{ fontSize: '42px', fontWeight: 800, color: isDark ? '#FFFFFF' : '#0F172A', marginTop: '8px', lineHeight: 1 }}>R$14,90<span style={{ fontSize: '14px', fontWeight: 500, color: '#475569' }}>/mês</span></div>
+                <p style={{ color: isDark ? '#94A3B8' : '#475569', fontSize: '13px', marginTop: '8px', lineHeight: 1.5 }}>Para quem quer o máximo do Coach IA e análises profundas de comportamento.</p>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '24px' }}>
                 {proFeatures.map((f, i) => (
-                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13.5px', color: '#CBD5E1' }}>
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13.5px', color: isDark ? '#CBD5E1' : '#334155' }}>
                     <span style={{ color: '#8B5CF6', flexShrink: 0, fontWeight: 700 }}>✓</span>{f}
                   </div>
                 ))}
@@ -857,10 +867,10 @@ export default function LandingPage({ onEnterApp }) {
       </section>
 
       {/* ── FOOTER ──────────────────────────────────────────────────────── */}
-      <footer style={{ borderTop: '1px solid rgba(255,255,255,0.04)', background: '#07090C', padding: '36px 24px', textAlign: 'center' }}>
+      <footer style={{ borderTop: isDark ? '1px solid rgba(255,255,255,0.04)' : '1px solid rgba(0,0,0,0.06)', background: isDark ? '#07090C' : '#F8FAFC', padding: '36px 24px', textAlign: 'center' }}>
         <Container style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '14px' }}>
           <img src={logo.src} alt={logo.alt} style={{ height: '36px', width: 'auto' }} />
-          <p style={{ fontSize: '13px', color: '#64748B', maxWidth: '520px', margin: 0, lineHeight: 1.6, fontWeight: 500 }}>
+          <p style={{ fontSize: '13px', color: isDark ? '#64748B' : '#475569', maxWidth: '520px', margin: 0, lineHeight: 1.6, fontWeight: 500 }}>
             <strong>Transformando pequenas ações em grandes evoluções.</strong><br />
             Organize sua rotina. Construa consistência. Evolua todos os dias.
           </p>
@@ -870,9 +880,9 @@ export default function LandingPage({ onEnterApp }) {
                 window.history.pushState(null, '', '/faq');
                 window.dispatchEvent(new Event('popstate'));
               }}
-              style={{ background: 'none', border: 'none', color: '#94A3B8', fontSize: '13.5px', fontWeight: '600', cursor: 'pointer', transition: 'color 0.2s' }}
+              style={{ background: 'none', border: 'none', color: isDark ? '#94A3B8' : '#475569', fontSize: '13.5px', fontWeight: '600', cursor: 'pointer', transition: 'color 0.2s' }}
               onMouseEnter={e => e.currentTarget.style.color = '#818CF8'}
-              onMouseLeave={e => e.currentTarget.style.color = '#94A3B8'}
+              onMouseLeave={e => e.currentTarget.style.color = isDark ? '#94A3B8' : '#475569'}
             >
               FAQ
             </button>
@@ -881,9 +891,9 @@ export default function LandingPage({ onEnterApp }) {
                 window.history.pushState(null, '', '/termos');
                 window.dispatchEvent(new Event('popstate'));
               }}
-              style={{ background: 'none', border: 'none', color: '#94A3B8', fontSize: '13.5px', fontWeight: '600', cursor: 'pointer', transition: 'color 0.2s' }}
+              style={{ background: 'none', border: 'none', color: isDark ? '#94A3B8' : '#475569', fontSize: '13.5px', fontWeight: '600', cursor: 'pointer', transition: 'color 0.2s' }}
               onMouseEnter={e => e.currentTarget.style.color = '#818CF8'}
-              onMouseLeave={e => e.currentTarget.style.color = '#94A3B8'}
+              onMouseLeave={e => e.currentTarget.style.color = isDark ? '#94A3B8' : '#475569'}
             >
               Termos de Uso
             </button>
@@ -892,14 +902,14 @@ export default function LandingPage({ onEnterApp }) {
                 window.history.pushState(null, '', '/privacidade');
                 window.dispatchEvent(new Event('popstate'));
               }}
-              style={{ background: 'none', border: 'none', color: '#94A3B8', fontSize: '13.5px', fontWeight: '600', cursor: 'pointer', transition: 'color 0.2s' }}
+              style={{ background: 'none', border: 'none', color: isDark ? '#94A3B8' : '#475569', fontSize: '13.5px', fontWeight: '600', cursor: 'pointer', transition: 'color 0.2s' }}
               onMouseEnter={e => e.currentTarget.style.color = '#818CF8'}
-              onMouseLeave={e => e.currentTarget.style.color = '#94A3B8'}
+              onMouseLeave={e => e.currentTarget.style.color = isDark ? '#94A3B8' : '#475569'}
             >
               Política de Privacidade
             </button>
           </div>
-          <p style={{ fontSize: '12px', color: '#374151', margin: 0 }}>© 2026 MyFlowDay. Todos os direitos reservados.</p>
+          <p style={{ fontSize: '12px', color: isDark ? '#374151' : '#94A3B8', margin: 0 }}>© 2026 MyFlowDay. Todos os direitos reservados.</p>
         </Container>
       </footer>
 

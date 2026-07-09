@@ -21,6 +21,7 @@ export default function PerformanceView() {
     openPaywall,
     setSelectedGoalIdFilter,
     setActiveTab,
+    setShouldOpenGoalModal,
     consistencyScore,
     consistencyScoreExplanation,
     isInitializing
@@ -563,11 +564,11 @@ export default function PerformanceView() {
           <div style={{ display: 'flex', gap: '8px', marginTop: '4px', flexWrap: 'wrap', justifyContent: 'center' }}>
             {(tasks.length === 0 
               ? [
-                  { text: 'Criar uma tarefa', action: () => setActiveTab('tasks') },
-                  { text: 'Definir um objetivo', action: () => setActiveTab('goals') }
+                  { text: 'Criar uma tarefa', action: () => setActiveTab('myday') },
+                  { text: 'Definir um objetivo', action: () => { setActiveTab('myday'); setShouldOpenGoalModal(true); } }
                 ]
               : [
-                  { text: 'Visualizar Minhas Tarefas', action: () => setActiveTab('tasks') },
+                  { text: 'Visualizar Minhas Tarefas', action: () => setActiveTab('myday') },
                   { text: 'Concluir atividade na Home', action: () => setActiveTab('home') }
                 ]
             ).map(step => (

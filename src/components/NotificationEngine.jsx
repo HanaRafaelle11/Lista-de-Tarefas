@@ -24,8 +24,8 @@ export default function NotificationEngine() {
       if (event.data.type === 'NAVIGATE_TO_ROUTE') {
         const { url } = event.data.payload || {};
         if (url && setActiveTab) {
-          if (url.includes('/goals')) setActiveTab('goals');
-          else if (url.includes('/tasks')) setActiveTab('tasks');
+          if (url.includes('/goals')) setActiveTab('myday');
+          else if (url.includes('/tasks')) setActiveTab('myday');
           else if (url.includes('/focus')) setActiveTab('focus');
         }
       }

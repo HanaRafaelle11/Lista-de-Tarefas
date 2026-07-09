@@ -315,7 +315,7 @@ export default function CoachView() {
               <button 
                 type="button"
                 onClick={() => {
-                  setActiveTab('goals');
+                  setActiveTab('myday');
                   setShouldOpenGoalModal(true);
                 }}
                 style={{ 
@@ -336,7 +336,7 @@ export default function CoachView() {
               </button>
               <button 
                 type="button"
-                onClick={() => setActiveTab('tasks')}
+                onClick={() => setActiveTab('myday')}
                 style={{ 
                   padding: '10px 20px', 
                   fontSize: '13.5px', 

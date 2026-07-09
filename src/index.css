@@ -7155,7 +7155,7 @@ body,
 }
 
 .sidebar-logo {
-  height: 48px;
+  height: 56px;
   width: auto;
   object-fit: contain;
 }
@@ -7279,8 +7279,8 @@ body,
 }
 
 .sidebar-avatar-container {
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
   overflow: hidden;
   border: 1px solid var(--border-medium);

@@ -66,21 +66,12 @@ export default function Sidebar() {
               src={logo.src}
               alt={logo.alt} 
               className="mobile-logo"
-              style={{ height: '28px', width: 'auto' }}
+              style={{ height: '34px', width: 'auto' }}
             />
           </div>
           
-          <div 
-            className={`mobile-avatar-wrapper ${activeTab === 'profile' ? 'active' : ''}`}
-            onClick={() => setIsMobileMenuOpen(true)}
-            style={{ cursor: 'pointer' }}
-          >
-            {userProfile?.avatar_url ? (
-              <img src={userProfile.avatar_url} alt="Avatar" className="mobile-avatar-img" style={{ width: '32px', height: '32px', borderRadius: '50%' }} />
-            ) : (
-              <DefaultAvatar size={32} />
-            )}
-          </div>
+          {/* Spacer de compensação para manter o logotipo perfeitamente centralizado */}
+          <div style={{ width: '40px' }} />
         </div>
       </header>
 
@@ -122,7 +113,7 @@ export default function Sidebar() {
           >
             {/* Header of Drawer */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-              <img src={logo.src} alt={logo.alt} style={{ height: '32px', width: 'auto' }} />
+              <img src={logo.src} alt={logo.alt} style={{ height: '38px', width: 'auto' }} />
               <button 
                 onClick={() => setIsMobileMenuOpen(false)}
                 style={{ background: 'none', border: 'none', color: 'var(--text-main)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
@@ -218,18 +209,18 @@ export default function Sidebar() {
                   setIsMobileMenuOpen(false);
                 }}
               >
-                <div className="sidebar-avatar-container" style={{ width: '36px', height: '36px' }}>
+                <div className="sidebar-avatar-container" style={{ width: '44px', height: '44px' }}>
                   {userProfile?.avatar_url ? (
                     <img src={userProfile.avatar_url} alt="Avatar" className="sidebar-avatar" />
                   ) : (
-                    <DefaultAvatar size={36} />
+                    <DefaultAvatar size={44} />
                   )}
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-                  <span style={{ fontSize: '13.5px', fontWeight: '750', color: 'var(--text-main)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <span style={{ fontSize: '14px', fontWeight: '750', color: 'var(--text-main)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {userProfile?.nickname || userProfile?.name || currentUser?.name || 'Perfil'}
                   </span>
-                  <span style={{ fontSize: '11px', color: 'var(--text-light)' }}>
+                  <span style={{ fontSize: '11.5px', color: 'var(--text-light)' }}>
                     {isPro ? 'Pro Member' : 'Membro Free'}
                   </span>
                 </div>
@@ -402,7 +393,7 @@ export default function Sidebar() {
               {userProfile?.avatar_url ? (
                 <img src={userProfile.avatar_url} alt="Avatar" className="sidebar-avatar" />
               ) : (
-                <DefaultAvatar size={36} />
+                <DefaultAvatar size={44} />
               )}
             </div>
             <div className="sidebar-profile-info">
