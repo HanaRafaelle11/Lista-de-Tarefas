@@ -13,6 +13,7 @@ import FaqView from './components/FaqView';
 import SyncStatusBanner from './components/SyncStatusBanner';
 import PaywallModal from './components/PaywallModal';
 import MFIcon from './components/MFIcon';
+import Navbar from './components/Navbar';
 
 const LandingPage = lazy(() => import('./components/LandingPage'));
 const HomeView = lazy(() => import('./components/HomeView'));
@@ -398,7 +399,7 @@ function AppLayout() {
   }
 
   return (
-    <div className="app-wrapper">
+    <div className={`app-wrapper ${currentUser?.isDemo ? 'has-demo-banner' : ''}`}>
       {currentUser?.isDemo && (
         <div className="demo-banner">
           <span>Você está no Modo de Demonstração. Crie uma conta gratuita para salvar e sincronizar seus dados.</span>
@@ -446,6 +447,8 @@ function AppLayout() {
         </div>
       )}
       <SyncStatusBanner />
+      
+      <Navbar />
       
       <div className="app-body-container">
         <Sidebar />

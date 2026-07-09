@@ -322,6 +322,7 @@ export function AppProvider({ children }) {
   const [unlockedAchievements, setUnlockedAchievements] = useState(null);
   const [unlockedKeys, setUnlockedKeys] = useState(null);
   const [toastQueue, setToastQueue] = useState([]);
+  const [focusEvents, setFocusEvents] = useState([]);
 
   // ── Hábitos ──────────────────────────────────────────────────────────────────
   const [habits, setHabits] = useState([]);
@@ -383,8 +384,9 @@ export function AppProvider({ children }) {
   }, []);
 
   const getLevelFromCount = useCallback((count) => {
-    if (count >= 90) return 4;
-    if (count >= 60) return 3;
+    if (count >= 245) return 5;
+    if (count >= 145) return 4;
+    if (count >= 75) return 3;
     if (count >= 30) return 2;
     return 1;
   }, []);
@@ -700,6 +702,11 @@ export function AppProvider({ children }) {
       const evs = await eventStore.getEventsForUser(userId);
       const projected = stateEngine.computeUserState(evs);
       setUserState(projected);
+
+      // Atualiza o estado de sessões de foco a partir do log de eventos
+      const fe = evs.filter(e => e.event_type === 'focus_session_completed');
+      setFocusEvents(fe);
+
       return projected;
     } catch (err) {
       console.warn('[AppContext] Erro ao re-hidratar estado:', err.message);
@@ -1377,6 +1384,40 @@ export function AppProvider({ children }) {
       achievementChecking.current = true;
       try {
         const stats = calcStats(tasks, goals, habits, habitLogs);
+
+        // Bloqueia/deleta conquistas cujos requisitos deixaram de ser atendidos (após exclusão)
+        const keysToLock = [];
+        for (const key of Array.from(unlockedKeys || [])) {
+          const ach = ACHIEVEMENTS.find(a => a.key === key);
+          if (ach && !ach.check(stats)) {
+            // Guard: Não revoga conquista inicial se o usuário de fato já concluiu algo antes
+            if (ach.key === 'first_task' && stats.completedTasks >= 1) continue;
+            keysToLock.push(key);
+          }
+        }
+
+        if (keysToLock.length > 0) {
+          console.log('[AppContext] Bloqueando conquistas revogadas devido a exclusão:', keysToLock);
+          if (currentUser.isDemo) {
+            const demoAchievementsKey = `flowday_demo_achievements_${currentUser.id}`;
+            const localAchievements = JSON.parse(localStorage.getItem(demoAchievementsKey) || '[]');
+            const nextLocal = localAchievements.filter(la => !keysToLock.includes(la.achievement_key));
+            localStorage.setItem(demoAchievementsKey, JSON.stringify(nextLocal));
+          } else {
+            await achievementsService.lock(currentUser.id, keysToLock);
+          }
+
+          setUnlockedKeys(prev => {
+            const n = new Set(prev);
+            keysToLock.forEach(k => {
+              n.delete(k);
+              if (unlockedKeysRef.current) unlockedKeysRef.current.delete(k);
+            });
+            return n;
+          });
+
+          setUnlockedAchievements(prev => (prev || []).filter(item => !keysToLock.includes(item.achievement_key)));
+        }
 
         // GUARD SECUNDÁRIO: conquistas que exigem ação real do usuário
         // só disparam se há evidência real de interação (não apenas dados carregados).
@@ -3478,6 +3519,7 @@ export function AppProvider({ children }) {
     unlockedAchievements,
     toastQueue,
     dismissToast,
+    focusEvents,
 
     // Notificações
     notifications,
@@ -3579,6 +3621,7 @@ export function AppProvider({ children }) {
     suggestions,
     growthPet,
     handleSelectGrowthPet,
+    getLevelFromCount,
     celebrationState,
     closeCelebration,
 

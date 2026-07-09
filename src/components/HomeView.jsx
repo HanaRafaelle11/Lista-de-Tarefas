@@ -150,6 +150,7 @@ export default function HomeView() {
     setSelectedGoalIdFilter,
     growthPet,
     handleSelectGrowthPet,
+    getLevelFromCount,
     categories
   } = useAppContext();
   
@@ -387,6 +388,19 @@ export default function HomeView() {
   }, [tasks, goals, goalTasks, habitsManager, consistencyScore, currentUser, isPro]);
 
   // Pet de Crescimento é gerenciado no AppContext globalmente
+  const [viewedPet, setViewedPet] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('flowday_viewed_pet') || growthPet || 'plant';
+    }
+    return growthPet || 'plant';
+  });
+
+  const handleSwitchViewedPet = (petId) => {
+    setViewedPet(petId);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('flowday_viewed_pet', petId);
+    }
+  };
 
   const getTodayDateStr = () => {
     const d = new Date();
@@ -461,19 +475,19 @@ export default function HomeView() {
     });
   }, [tasks, goals, todayDate]);
 
-  const petCompletedGoals = useMemo(() => {
+  const viewedPetCompletedGoals = useMemo(() => {
     if (!currentUser?.id) return 0;
-    const storageKey = `flowday_${growthPet}_completed_goals_${currentUser.id}`;
+    const storageKey = `flowday_${viewedPet}_completed_goals_${currentUser.id}`;
     return Number(localStorage.getItem(storageKey)) || 0;
-  }, [currentUser?.id, growthPet]);
+  }, [currentUser?.id, viewedPet]);
 
   const weeklyTotal = ritmoSemanal.reduce((acc, d) => acc + d.count, 0);
-  const currentPetData = EVOLUTION_CATEGORIES[growthPet] || EVOLUTION_CATEGORIES.plant;
+  const currentPetData = EVOLUTION_CATEGORIES[viewedPet] || EVOLUTION_CATEGORIES.plant;
   const hasNoItems = activeTasksList.length === 0 && activeGoalsList.length === 0 && habits.length === 0;
   const stageIndex = hasNoItems ? 0 : getEvolutionStage({
     weeklyTotal,
     currentStreak,
-    completedGoalsCount: petCompletedGoals,
+    completedGoalsCount: viewedPetCompletedGoals,
     consistencyScore
   }, currentPetData.stages.length);
   const currentStage = currentPetData.stages[stageIndex];
@@ -505,7 +519,9 @@ export default function HomeView() {
     }
 
     if (stageIndex < currentPetData.stages.length - 1) {
-      const goalsNeeded = (stageIndex + 1) * 30 - completedGoalsCount;
+      const thresholds = [30, 75, 145, 245];
+      const nextThreshold = thresholds[stageIndex] || 245;
+      const goalsNeeded = Math.max(1, nextThreshold - viewedPetCompletedGoals);
       return `Você está a apenas ${goalsNeeded} objetivo${goalsNeeded > 1 ? 's' : ''} concluído${goalsNeeded > 1 ? 's' : ''} do meu próximo nível! Vamos concluir juntos?`;
     }
 
@@ -516,7 +532,7 @@ export default function HomeView() {
     }
 
     return "Estou pronto para crescer junto com a sua consistência. Qual o nosso foco de hoje?";
-  }, [tasks, goals, stageIndex, currentPetData, weeklyTotal]);
+  }, [tasks, goals, stageIndex, currentPetData, weeklyTotal, viewedPetCompletedGoals]);
 
   if (isInitializing) {
     return (
@@ -678,6 +694,20 @@ export default function HomeView() {
                 <h3 style={{ fontSize: '16px', fontWeight: '800', color: 'var(--text-main)', margin: '2px 0 0' }}>
                   {currentStage.title}
                 </h3>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
+                  {viewedPet === growthPet ? (
+                    <span style={{ fontSize: '10px', fontWeight: '700', color: '#10B981', backgroundColor: 'rgba(16, 185, 129, 0.1)', padding: '2px 6px', borderRadius: '4px' }}>
+                      ★ Evoluindo
+                    </span>
+                  ) : (
+                    <button
+                      onClick={() => handleSelectGrowthPet(viewedPet)}
+                      style={{ fontSize: '10px', fontWeight: '700', color: 'var(--primary)', backgroundColor: 'var(--primary-light)', border: 'none', padding: '2px 6px', borderRadius: '4px', cursor: 'pointer' }}
+                    >
+                      Focar evolução neste
+                    </button>
+                  )}
+                </div>
               </div>
 
               {/* Selector compacto de Pets */}
@@ -685,11 +715,11 @@ export default function HomeView() {
                 {EVOLUTION_CATEGORY_LIST.map(pet => (
                   <button
                     key={pet.id}
-                    onClick={() => handleSelectGrowthPet(pet.id)}
+                    onClick={() => handleSwitchViewedPet(pet.id)}
                     style={{
                       border: 'none',
-                      background: growthPet === pet.id ? 'var(--primary)' : 'transparent',
-                      color: growthPet === pet.id ? '#ffffff' : 'var(--text-light)',
+                      background: viewedPet === pet.id ? 'var(--primary)' : 'transparent',
+                      color: viewedPet === pet.id ? '#ffffff' : 'var(--text-light)',
                       borderRadius: '50%',
                       width: '28px',
                       height: '28px',
@@ -748,13 +778,13 @@ export default function HomeView() {
                 asset={currentStage.asset}
                 alt={currentStage.alt}
                 color={currentStage.color}
-                animationKey={`${growthPet}-${stageIndex}`}
+                animationKey={`${viewedPet}-${stageIndex}`}
               />
             </div>
 
             {/* Informações de Nível */}
             <span style={{ fontSize: '11px', fontWeight: '700', padding: '3px 12px', borderRadius: '20px', backgroundColor: `${currentStage.color}15`, color: currentStage.color, border: `1px solid ${currentStage.color}25`, marginBottom: '16px' }}>
-              {currentStage.badge} • Metas: {petCompletedGoals}
+              Nível {getLevelFromCount(viewedPetCompletedGoals)} • {currentStage.title} • Metas: {viewedPetCompletedGoals}
             </span>
 
             {/* Consistency Score integrado */}

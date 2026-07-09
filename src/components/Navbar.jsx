@@ -56,10 +56,11 @@ export default function Navbar() {
         className="app-top-header"
         style={{
           transition: 'transform 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
-          transform: showHeader ? 'translateY(0)' : 'translateY(-100%)'
+          transform: showHeader ? 'translateY(0)' : 'translateY(-100%)',
+          top: currentUser?.isDemo ? '40px' : '0px'
         }}
       >
-        <div className="app-top-header-container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', maxWidth: '1200px', margin: '0 auto', padding: '0 16px', height: '64px' }}>
+        <div className="app-top-header-container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', maxWidth: '1200px', margin: '0 auto', padding: '0 16px', height: '72px' }}>
           
           {/* Logo — símbolo SVG oficial com marca integrada */}
           <div 
@@ -76,10 +77,10 @@ export default function Navbar() {
             <img 
               src={logo.src}
               alt={logo.alt} 
-              style={{ height: '52px', width: 'auto', objectFit: 'contain', background: 'transparent', border: 'none', boxShadow: 'none', padding: 0 }}
+              style={{ height: '60px', width: 'auto', objectFit: 'contain', background: 'transparent', border: 'none', boxShadow: 'none', padding: 0, transform: 'translateY(-2px)' }}
             />
           </div>
-
+ 
           {/* Navegação */}
           <nav className="desktop-nav-links hide-on-mobile" style={{ display: 'flex', gap: '16px', height: '100%', justifyContent: 'center' }}>
             {navItems.map(({ key, icon, label }) => (
@@ -108,7 +109,7 @@ export default function Navbar() {
               </button>
             ))}
           </nav>
-
+ 
           {/* Ações com Alinhamento Perfeito */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '10px', height: '100%', flex: 1 }}>
             <NotificationCenter />
@@ -145,13 +146,13 @@ export default function Navbar() {
             <div 
               className={`app-top-profile ${activeTab === 'profile' ? 'active' : ''}`}
               onClick={() => setActiveTab('profile')}
-              style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '42px', height: '42px', margin: 0, flexShrink: 0 }}
+              style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '48px', height: '48px', margin: 0, flexShrink: 0 }}
             >
-              <div className="app-top-avatar" title={userProfile?.nickname || userProfile?.name || currentUser?.name} style={{ width: '42px', height: '42px', borderRadius: '50%', overflow: 'hidden', border: activeTab === 'profile' ? '2px solid var(--primary)' : '1px solid var(--border-medium)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, backgroundColor: 'var(--bg-card-hover)' }}>
+              <div className="app-top-avatar" title={userProfile?.nickname || userProfile?.name || currentUser?.name} style={{ width: '48px', height: '48px', borderRadius: '50%', overflow: 'hidden', border: activeTab === 'profile' ? '2px solid var(--primary)' : '1px solid var(--border-medium)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, backgroundColor: 'var(--bg-card-hover)' }}>
                 {userProfile?.avatar_url ? (
-                  <img src={userProfile.avatar_url} alt="Avatar" style={{ width: '42px', height: '42px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+                  <img src={userProfile.avatar_url} alt="Avatar" style={{ width: '48px', height: '48px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
                 ) : (
-                  <DefaultAvatar size={42} />
+                  <DefaultAvatar size={48} />
                 )}
               </div>
             </div>

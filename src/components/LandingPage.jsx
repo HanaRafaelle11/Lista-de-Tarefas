@@ -62,7 +62,7 @@ export default function LandingPage({ onEnterApp }) {
   );
 
   const SectionTitle = ({ children, gradient }) => (
-    <h2 style={{ fontSize: 'clamp(26px, 4vw, 40px)', fontWeight: 800, color: '#FFFFFF', marginTop: '10px', letterSpacing: '-0.02em' }}>
+    <h2 style={{ fontSize: 'clamp(26px, 4vw, 40px)', fontWeight: 800, color: isDark ? '#FFFFFF' : '#0F172A', marginTop: '10px', letterSpacing: '-0.02em' }}>
       {children}
     </h2>
   );
@@ -212,13 +212,13 @@ export default function LandingPage({ onEnterApp }) {
           </div>
 
           {/* Headline */}
-          <h1 style={{ fontSize: 'clamp(34px,5.5vw,66px)', fontWeight: 800, lineHeight: 1.08, letterSpacing: '-0.03em', marginBottom: '22px', color: '#FFFFFF', fontFamily: 'var(--font-display,sans-serif)' }}>
+          <h1 style={{ fontSize: 'clamp(34px,5.5vw,66px)', fontWeight: 800, lineHeight: 1.08, letterSpacing: '-0.03em', marginBottom: '22px', color: isDark ? '#FFFFFF' : '#0F172A', fontFamily: 'var(--font-display,sans-serif)' }}>
             Pare de começar tudo<br />
             <span style={{ background: 'linear-gradient(to right,#818CF8,#C084FC)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>e abandonar no meio.</span>
           </h1>
 
           {/* Sub */}
-          <p style={{ fontSize: 'clamp(15px,2vw,19px)', lineHeight: 1.65, color: '#94A3B8', maxWidth: '640px', marginBottom: '36px' }}>
+          <p style={{ fontSize: 'clamp(15px,2vw,19px)', lineHeight: 1.65, color: isDark ? '#94A3B8' : '#475569', maxWidth: '640px', marginBottom: '36px' }}>
             O MyFlowDay conecta tarefas, hábitos, metas, foco e IA para transformar pequenas ações em evolução real todos os dias.
           </p>
 
@@ -227,9 +227,9 @@ export default function LandingPage({ onEnterApp }) {
             <button onClick={onEnterApp} className="btn-purple-glow" style={S.ctaBtn}>
               Começar gratuitamente <ArrowRight size={16} />
             </button>
-            <button onClick={handleStartDemoMode} style={{ background: 'rgba(255,255,255,0.04)', color: '#F8FAFC', fontWeight: 600, fontSize: '15px', padding: '15px 28px', borderRadius: '30px', border: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer', transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: '8px' }}
-              onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
-              onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.04)'}>
+            <button onClick={handleStartDemoMode} style={{ background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)', color: isDark ? '#F8FAFC' : '#0F172A', fontWeight: 600, fontSize: '15px', padding: '15px 28px', borderRadius: '30px', border: isDark ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.1)', cursor: 'pointer', transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: '8px' }}
+              onMouseEnter={e => e.currentTarget.style.background = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)'}
+              onMouseLeave={e => e.currentTarget.style.background = isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)'}>
               <Play size={14} /> Ver demonstração
             </button>
           </div>
@@ -668,7 +668,7 @@ export default function LandingPage({ onEnterApp }) {
         <Container>
           <div style={S.sectionHead}>
             <SectionLabel color="#F59E0B">Transformação Real</SectionLabel>
-            <h2 style={{ fontSize: 'clamp(26px,4vw,40px)', fontWeight: 800, color: '#FFFFFF', marginTop: '10px', letterSpacing: '-0.02em' }}>
+            <h2 style={{ fontSize: 'clamp(26px,4vw,40px)', fontWeight: 800, color: isDark ? '#FFFFFF' : '#0F172A', marginTop: '10px', letterSpacing: '-0.02em' }}>
               O que muda quando você usa{' '}
               <span style={{ background: 'linear-gradient(to right,#818CF8,#C084FC)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>o MyFlowDay</span>
             </h2>
@@ -677,12 +677,12 @@ export default function LandingPage({ onEnterApp }) {
             {benefits.map((b, i) => {
               const BenefitIcon = b.icon;
               return (
-                <div key={i} style={{ background: '#0F1318', border: '1px solid rgba(255,255,255,0.04)', padding: '22px', borderRadius: '16px', transition: 'all 0.3s' }} className="benefit-card">
+                <div key={i} style={{ background: isDark ? '#0F1318' : '#FFFFFF', border: isDark ? '1px solid rgba(255,255,255,0.04)' : '1px solid rgba(0,0,0,0.06)', padding: '22px', borderRadius: '16px', transition: 'all 0.3s', boxShadow: isDark ? 'none' : '0 4px 12px rgba(0,0,0,0.015)' }} className="benefit-card">
                   <div style={{ marginBottom: '14px', background: `${b.color}15`, width: '42px', height: '42px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <BenefitIcon size={20} color={b.color} />
                   </div>
                   <h3 style={{ fontSize: '15px', fontWeight: 700, color: b.color, marginBottom: '6px' }}>{b.title}</h3>
-                  <p style={{ fontSize: '13.5px', color: '#64748B', lineHeight: 1.6, margin: 0 }}>{b.desc}</p>
+                  <p style={{ fontSize: '13.5px', color: isDark ? '#64748B' : '#475569', lineHeight: 1.6, margin: 0 }}>{b.desc}</p>
                 </div>
               );
             })}
@@ -696,25 +696,25 @@ export default function LandingPage({ onEnterApp }) {
         <Container>
           <div style={S.sectionHead}>
             <SectionLabel color="#818CF8">Por que o MyFlowDay</SectionLabel>
-            <h2 style={{ fontSize: 'clamp(26px,4vw,40px)', fontWeight: 800, color: '#FFFFFF', marginTop: '10px', letterSpacing: '-0.02em' }}>
+            <h2 style={{ fontSize: 'clamp(26px,4vw,40px)', fontWeight: 800, color: isDark ? '#FFFFFF' : '#0F172A', marginTop: '10px', letterSpacing: '-0.02em' }}>
               Outros apps organizam.<br />
               <span style={{ color: '#818CF8' }}>Nós integramos tudo.</span>
             </h2>
           </div>
-          <div style={{ overflowX: 'auto', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.07)', background: '#0F1318', maxWidth: '780px', margin: '0 auto' }}>
+          <div style={{ overflowX: 'auto', borderRadius: '16px', border: isDark ? '1px solid rgba(255,255,255,0.07)' : '1px solid rgba(0,0,0,0.08)', background: isDark ? '#0F1318' : '#FFFFFF', maxWidth: '780px', margin: '0 auto', boxShadow: isDark ? 'none' : '0 4px 20px rgba(0,0,0,0.02)' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '480px' }}>
               <thead>
-                <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', background: 'rgba(255,255,255,0.02)' }}>
-                  <th style={{ padding: '16px 22px', fontWeight: 700, color: '#FFFFFF', fontSize: '13px' }}>Critério</th>
+                <tr style={{ borderBottom: isDark ? '1px solid rgba(255,255,255,0.06)' : '1px solid rgba(0,0,0,0.06)', background: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.01)' }}>
+                  <th style={{ padding: '16px 22px', fontWeight: 700, color: isDark ? '#FFFFFF' : '#0F172A', fontSize: '13px' }}>Critério</th>
                   <th style={{ padding: '16px 22px', fontWeight: 700, color: '#64748B', fontSize: '13px' }}>Outros Apps</th>
                   <th style={{ padding: '16px 22px', fontWeight: 700, color: '#818CF8', fontSize: '13px' }}>MyFlowDay</th>
                 </tr>
               </thead>
               <tbody>
                 {compRows.map((row, i) => (
-                  <tr key={i} style={{ borderBottom: i < compRows.length - 1 ? '1px solid rgba(255,255,255,0.03)' : 'none' }}>
-                    <td style={{ padding: '14px 22px', fontWeight: 600, color: '#CBD5E1', fontSize: '13.5px' }}>{row.f}</td>
-                    <td style={{ padding: '14px 22px', color: '#94A3B8', fontSize: '13.5px', fontWeight: 500 }}>{row.o}</td>
+                  <tr key={i} style={{ borderBottom: i < compRows.length - 1 ? (isDark ? '1px solid rgba(255,255,255,0.03)' : '1px solid rgba(0,0,0,0.04)') : 'none' }}>
+                    <td style={{ padding: '14px 22px', fontWeight: 600, color: isDark ? '#CBD5E1' : '#1E293B', fontSize: '13.5px' }}>{row.f}</td>
+                    <td style={{ padding: '14px 22px', color: isDark ? '#94A3B8' : '#64748B', fontSize: '13.5px', fontWeight: 500 }}>{row.o}</td>
                     <td style={{ padding: '14px 22px', color: '#10B981', fontWeight: 700, fontSize: '13.5px' }}>{row.m}</td>
                   </tr>
                 ))}
@@ -731,11 +731,11 @@ export default function LandingPage({ onEnterApp }) {
             Nossa Filosofia
           </div>
           
-          <h2 style={{ fontSize: 'clamp(24px, 4vw, 36px)', fontWeight: 800, color: '#FFFFFF', marginBottom: '20px', letterSpacing: '-0.02em', lineHeight: 1.2 }}>
+          <h2 style={{ fontSize: 'clamp(24px, 4vw, 36px)', fontWeight: 800, color: isDark ? '#FFFFFF' : '#0F172A', marginBottom: '20px', letterSpacing: '-0.02em', lineHeight: 1.2 }}>
             Pequenas ações mudam grandes histórias
           </h2>
           
-          <p style={{ fontSize: 'clamp(15px, 2vw, 17px)', color: '#94A3B8', lineHeight: 1.7, marginBottom: '18px' }}>
+          <p style={{ fontSize: 'clamp(15px, 2vw, 17px)', color: isDark ? '#94A3B8' : '#475569', lineHeight: 1.7, marginBottom: '18px' }}>
             A maioria das pessoas não deixa seus objetivos de lado por falta de capacidade. Elas desistem porque perdem consistência.
           </p>
           
@@ -811,13 +811,13 @@ export default function LandingPage({ onEnterApp }) {
           </div>
           <div style={{ maxWidth: '660px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '10px' }}>
             {faqs.map((item, idx) => (
-              <div key={idx} style={{ background: '#0F1318', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '12px', overflow: 'hidden', cursor: 'pointer' }} onClick={() => toggleFaq(idx)}>
+              <div key={idx} style={{ background: isDark ? '#0F1318' : '#FFFFFF', border: isDark ? '1px solid rgba(255,255,255,0.05)' : '1px solid rgba(0,0,0,0.06)', borderRadius: '12px', overflow: 'hidden', cursor: 'pointer', boxShadow: isDark ? 'none' : '0 2px 8px rgba(0,0,0,0.01)' }} onClick={() => toggleFaq(idx)}>
                 <div style={{ padding: '18px 22px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px' }}>
-                  <span style={{ fontSize: '14.5px', fontWeight: 700, color: '#FFFFFF' }}>{item.q}</span>
+                  <span style={{ fontSize: '14.5px', fontWeight: 700, color: isDark ? '#FFFFFF' : '#0F172A' }}>{item.q}</span>
                   <ChevronDown size={17} style={{ transform: openFaq === idx ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s', color: '#94A3B8', flexShrink: 0 }} />
                 </div>
                 {openFaq === idx && (
-                  <div style={{ padding: '0 22px 18px', paddingTop: '12px', fontSize: '14px', lineHeight: 1.65, color: '#94A3B8', borderTop: '1px solid rgba(255,255,255,0.02)' }}>{item.a}</div>
+                  <div style={{ padding: '0 22px 18px', paddingTop: '12px', fontSize: '14px', lineHeight: 1.65, color: isDark ? '#94A3B8' : '#475569', borderTop: isDark ? '1px solid rgba(255,255,255,0.02)' : '1px solid rgba(0,0,0,0.05)' }}>{item.a}</div>
                 )}
               </div>
             ))}
@@ -828,17 +828,17 @@ export default function LandingPage({ onEnterApp }) {
       {/* ── 10. CTA FINAL ───────────────────────────────────────────────── */}
       <section style={{ padding: '72px 24px', background: 'linear-gradient(to top,rgba(99,102,241,0.1) 0%,transparent 100%)', textAlign: 'center' }}>
         <Container>
-          <div style={{ maxWidth: '660px', margin: '0 auto', background: '#0F1318', border: '1px solid rgba(99,102,241,0.2)', padding: '52px 36px', borderRadius: '24px', boxShadow: '0 24px 60px rgba(0,0,0,0.5)', position: 'relative', overflow: 'hidden' }}>
+          <div style={{ maxWidth: '660px', margin: '0 auto', background: isDark ? '#0F1318' : 'linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 100%)', border: isDark ? '1px solid rgba(99,102,241,0.2)' : '1px solid rgba(99,102,241,0.15)', padding: '52px 36px', borderRadius: '24px', boxShadow: isDark ? '0 24px 60px rgba(0,0,0,0.5)' : '0 20px 40px rgba(99,102,241,0.04)', position: 'relative', overflow: 'hidden' }}>
             <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', background: 'radial-gradient(circle at top right,rgba(99,102,241,0.08),transparent 60%)', pointerEvents: 'none' }} />
             <div style={{ position: 'relative', zIndex: 1 }}>
               <div style={{ fontSize: '26px', marginBottom: '14px' }}>🌱</div>
-              <h2 style={{ fontSize: 'clamp(24px,4vw,34px)', fontWeight: 800, color: '#FFFFFF', marginBottom: '14px', letterSpacing: '-0.02em' }}>
+              <h2 style={{ fontSize: 'clamp(24px,4vw,34px)', fontWeight: 800, color: isDark ? '#FFFFFF' : '#0F172A', marginBottom: '14px', letterSpacing: '-0.02em' }}>
                 Grandes mudanças começam<br />com pequenas ações.
               </h2>
-              <p style={{ color: '#64748B', fontSize: '15px', lineHeight: 1.6, maxWidth: '440px', margin: '0 auto 12px' }}>
+              <p style={{ color: isDark ? '#64748B' : '#475569', fontSize: '15px', lineHeight: 1.6, maxWidth: '440px', margin: '0 auto 12px' }}>
                 Crie sua conta gratuita e comece hoje mesmo. Sem cartão, sem compromisso.
               </p>
-              <p style={{ color: '#94A3B8', fontSize: '14px', fontWeight: 600, marginBottom: '24px' }}>
+              <p style={{ color: isDark ? '#94A3B8' : '#334155', fontSize: '14px', fontWeight: 600, marginBottom: '24px' }}>
                 Você não precisa mudar sua vida hoje. Só precisa dar o primeiro passo.
               </p>
               <button onClick={onEnterApp} className="btn-purple-glow" style={{ ...S.ctaBtn, padding: '16px 40px' }}>

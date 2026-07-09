@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Settings, User, LogOut, Sun, Moon, Check, Database, RefreshCw, X, FileText, ChevronRight, Download, Award, Target, LayoutGrid, Calendar, Inbox, Trash2, Bell, Smartphone, Palette, Globe, Book, Monitor, Shield, MessageSquare, AlertTriangle, AlertCircle, Paperclip, BellOff, CheckCircle, BellRing, RotateCcw } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import { useNotifications } from '../hooks/useNotifications';
@@ -950,8 +950,37 @@ export default function SettingsView() {
     );
   };
 
+  const touchStartX = useRef(0);
+  const touchEndX = useRef(0);
+
+  const handleTouchStart = (e) => {
+    touchStartX.current = e.targetTouches[0].clientX;
+  };
+
+  const handleTouchMove = (e) => {
+    touchEndX.current = e.targetTouches[0].clientX;
+  };
+
+  const handleTouchEnd = () => {
+    const diff = touchStartX.current - touchEndX.current;
+    const minSwipeDistance = 60;
+    if (Math.abs(diff) > minSwipeDistance) {
+      if (diff > 0) {
+        if (settingsTab === 'general') setSettingsTab('trash');
+      } else {
+        if (settingsTab === 'trash') setSettingsTab('general');
+      }
+    }
+  };
+
   return (
-    <div className="settings-view animate-fade-in" style={{ padding: '24px 0' }}>
+    <div 
+      className="settings-view animate-fade-in" 
+      style={{ padding: '24px 0' }}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+    >
       <div className="tasks-page-header" style={{ marginBottom: '32px' }}>
         <h1 className="tasks-page-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <Settings size={24} /> Configurações
@@ -1696,24 +1725,8 @@ export default function SettingsView() {
                 className="danger-btn"
                 onClick={() => {
                   openCustomConfirm(
-                    "Deseja realmente excluir todas as tarefas? Esta ação é permanente e não pode ser desfeita.",
-                    "Excluir Todas as Tarefas",
-                    async () => {
-                      await handleDeleteAllTasks();
-                      openCustomAlert("Todas as tarefas foram concluídas/excluídas com sucesso.");
-                    }
-                  );
-                }}
-                style={{ padding: '12px 24px', backgroundColor: '#FAF0F0', color: '#C06C6C', borderRadius: '8px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '8px' }}
-              >
-                <Trash2 size={16} /> Excluir todas as tarefas
-              </button>
-              <button
-                className="danger-btn"
-                onClick={() => {
-                  openCustomConfirm(
                     "Deseja realmente apagar TODOS os seus dados do Flowday (tarefas, objetivos, hábitos e conquistas)? Esta ação é permanente e não poderá ser revertida.",
-                    "Limpar Todos os Dados",
+                    "Começar do Zero",
                     async () => {
                       await handleResetAllData();
                       openCustomAlert("Todos os seus dados foram apagados com sucesso.");
@@ -1722,7 +1735,7 @@ export default function SettingsView() {
                 }}
                 style={{ padding: '12px 24px', backgroundColor: '#FAF0F0', color: '#C06C6C', borderRadius: '8px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '8px' }}
               >
-                <Trash2 size={16} /> Limpar todos os dados (Começar do Zero)
+                <Trash2 size={16} /> Começar do Zero
               </button>
             </div>
           </div>

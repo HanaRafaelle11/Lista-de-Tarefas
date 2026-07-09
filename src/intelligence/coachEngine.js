@@ -6,7 +6,7 @@
  * para guiar o usuário como um verdadeiro mentor de produtividade.
  */
 
-import { calcStreak } from '../hooks/useAchievements';
+import { metricsService } from '../services/metricsService';
 
 export function generateCoachMessage({
   tasks = [],
@@ -17,27 +17,37 @@ export function generateCoachMessage({
   currentUser = null,
   userProfile = null,
   isPro = false,
-  userState = null
+  userState = null,
+  focusEvents = []
 }) {
   const now = new Date();
   const userName = userProfile?.nickname || userProfile?.name || currentUser?.user_metadata?.name || currentUser?.name || 'Tester';
 
-  const allActiveTasks = tasks.filter(t => !t.deletedAt && !t.deleted_at);
-  const activeGoals = goals.filter(g => g.status === 'active' && !g.deletedAt && !g.deleted_at);
+  const metrics = metricsService.calculateAllMetrics({
+    tasks,
+    goals,
+    habits: habitsManager?.habits || [],
+    habitLogs: habitsManager?.habitLogs || [],
+    focusEvents,
+    currentUser
+  });
+
+  const allActiveTasks = metrics.activeTasks;
+  const activeGoals = metrics.activeGoals.filter(g => g.status === 'active');
 
   // 1. Tratamento de Workspace Vazio
   if (allActiveTasks.length === 0 && activeGoals.length === 0) {
     const formattedMessage = `Nota da semana: --/10
-
+ 
 Você não possui nenhuma tarefa ou objetivo ativo no momento.
-
+ 
 Tendência Atual:
 Sem dados de uso.
-
+ 
 Insights do Mentor:
 - Crie seus primeiros objetivos ou tarefas para começar a organizar sua rotina.
 - Mantenha a consistência diária para ver insights detalhados sobre seu ritmo.
-
+ 
 Recomendação Prática:
 Crie objetivos ou tarefas e comece a executar para receber conselhos personalizados do seu Mentor.`;
 
@@ -56,22 +66,14 @@ Crie objetivos ou tarefas e comece a executar para receber conselhos personaliza
   }
 
   // Helper para evitar deslocamento de fuso horário em strings de data local
-  const parseLocalDate = (dateStr) => {
-    if (!dateStr) return new Date(0);
-    const [y, m, d] = dateStr.split('-').map(Number);
-    return new Date(y, m - 1, d);
-  };
+  const parseLocalDate = metricsService.parseLocalDate;
 
   // 2. Identificar intervalo de tempo dos últimos 7 dias
   const sevenDaysAgo = new Date();
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
   sevenDaysAgo.setHours(0, 0, 0, 0);
 
-  const completedRecentTasks = tasks.filter(t => 
-    t.completed && 
-    !t.deletedAt && !t.deleted_at &&
-    t.completedAt && (new Date(t.completedAt) >= sevenDaysAgo)
-  );
+  const completedRecentTasks = metrics.completedRecentTasks;
 
   const totalRecentTasks = tasks.filter(t => 
     !t.deletedAt && !t.deleted_at &&
@@ -104,7 +106,7 @@ Crie objetivos ou tarefas e comece a executar para receber conselhos personaliza
     !habitsManager?.habitLogs?.some(l => l.habit_id === h.id && l.completed_date === todayStr)
   ).length;
 
-  const currentStreak = calcStreak(tasks) || 0;
+  const currentStreak = metrics.streak || 0;
 
   // 3. Cálculo da Nota da Semana (1.0 a 10.0)
   const completionRatio = totalRecentTasks > 0 ? completedRecentTasks.length / totalRecentTasks : 0;
@@ -263,10 +265,7 @@ Crie objetivos ou tarefas e comece a executar para receber conselhos personaliza
     : `Parabéns! Nenhuma categoria específica está acumulando tarefas pendentes no momento.`;
 
   // 7d. Horas economizadas
-  const completedGoalsCount = goals.filter(g => g.status === 'completed' && !g.deletedAt && !g.deleted_at).length;
-  const focusCount = userState?.stats?.sessions || 0;
-  const finalFocusCount = (currentUser?.isDemo && focusCount === 0) ? 8 : focusCount;
-  const hoursSaved = (finalFocusCount * 0.5) + (completedRecentTasks.length * 0.25) + (completedGoalsCount * 2.0);
+  const hoursSaved = metrics.hoursSaved;
   
   const insightHoursSaved = `Você economizou aproximadamente ${hoursSaved.toFixed(1)} horas esta semana com sessões de foco Pomodoro e conclusão de objetivos e tarefas.`;
 

@@ -115,5 +115,26 @@ export const achievementsService = {
       return { error };
     }
   },
+
+  /**
+   * Bloqueia/deleta conquistas específicas do usuário (deleta as linhas).
+   */
+  lock: async (userId, keys) => {
+    requireUser(userId);
+    if (!keys || keys.length === 0) return { error: null };
+    try {
+      const { error } = await supabase
+        .from('user_achievements')
+        .delete()
+        .eq('user_id', userId)
+        .in('achievement_key', keys);
+
+      if (error) throw error;
+      return { error: null };
+    } catch (error) {
+      console.error('[achievementsService.lock]', error);
+      return { error };
+    }
+  },
 };
 

@@ -11,30 +11,31 @@ import { localDB } from '../db/localDB';
 
 
 export default function PerformanceView() {
-  const { 
-    tasks, 
-    goals, 
+  const {
+    tasks,
+    goals,
     goalTasks,
-    habitsManager, 
+    habitsManager,
+    isPro,
+    currentUser,
+    openPaywall,
+    setSelectedGoalIdFilter,
+    setActiveTab,
     consistencyScore,
     consistencyScoreExplanation,
-    setActiveTab,
-    isInitializing,
-    currentUser,
-    isPro,
-    openPaywall
+    isInitializing
   } = useAppContext();
 
   const [showHealthExplanation, setShowHealthExplanation] = useState(false);
   const [pomodoroStats, setPomodoroStats] = useState({ count: 0, hours: 0 });
   const [activeDays, setActiveDays] = useState(0);
 
-  const activeTasks = useMemo(() => tasks.filter(t => !t.deletedAt), [tasks]);
+  const activeTasks = useMemo(() => tasks.filter(t => !t.deletedAt && !t.deleted_at), [tasks]);
   const completedTasks = useMemo(() => activeTasks.filter(t => t.completed), [activeTasks]);
   const habits = habitsManager.habits;
   const habitLogs = habitsManager.habitLogs;
 
-  const activeGoals = useMemo(() => goals.filter(g => !g.deletedAt), [goals]);
+  const activeGoals = useMemo(() => goals.filter(g => !g.deletedAt && !g.deleted_at), [goals]);
 
   const totalEvents = useMemo(() => {
     return completedTasks.length + activeGoals.filter(g => g.status === 'completed').length;
@@ -52,7 +53,7 @@ export default function PerformanceView() {
   }, [completedTasks, goals]);
 
   const hasEnoughForDayOfWeek = useMemo(() => {
-    return totalEvents >= 10 || hasTwoWeeksHistory;
+    return totalEvents >= 1 || hasTwoWeeksHistory;
   }, [totalEvents, hasTwoWeeksHistory]);
 
   // 1. Classificação do Score Geral
@@ -97,7 +98,7 @@ export default function PerformanceView() {
 
     // Recomendação Automática
     let recommendation = 'Você tem um ritmo de execução equilibrado ao longo do dia.';
-    if (totalEvents < 7) {
+    if (completedTasks.length < 1) {
       recommendation = 'Dados insuficientes para identificar padrões. Ainda estamos aprendendo sobre sua rotina para gerar recomendações personalizadas.';
     } else if (mostProductiveKey === 'matutino') {
       recommendation = 'Você conclui mais tarefas pela manhã. Agende trabalhos profundos antes do almoço e deixe reuniões para a tarde.';
@@ -796,7 +797,7 @@ export default function PerformanceView() {
                 })}
               </div>
               <div style={{ display: 'flex', gap: '12px', fontSize: '11px', color: 'var(--text-light)', marginTop: '8px', flexWrap: 'wrap' }}>
-                {hasEnoughForDayOfWeek && totalEvents >= 7 ? (
+                {hasEnoughForDayOfWeek && totalEvents >= 1 ? (
                   <>
                     <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                       <TrendingUp size={12} color="#22c55e" /> Melhor dia: <strong>{radarSemanal.bestDay}</strong>
@@ -839,7 +840,15 @@ export default function PerformanceView() {
                 else if (goal.health >= 50) healthColor = '#C89658';
 
                 return (
-                  <div key={goal.id} style={{ padding: '16px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-light)', backgroundColor: 'var(--bg-app)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  <div 
+                    key={goal.id} 
+                    onClick={() => {
+                      setSelectedGoalIdFilter(goal.id);
+                      setActiveTab('myday');
+                    }}
+                    style={{ padding: '16px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-light)', backgroundColor: 'var(--bg-app)', display: 'flex', flexDirection: 'column', gap: '10px', cursor: 'pointer', transition: 'all 0.2s', boxShadow: 'var(--shadow-sm)' }}
+                    className="goal-health-card-clickable"
+                  >
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                         <strong style={{ fontSize: '14px', color: 'var(--text-main)' }}>{goal.title}</strong>

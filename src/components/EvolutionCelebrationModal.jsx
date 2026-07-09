@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useAppContext } from '../contexts/AppContext';
 import { EVOLUTION_CATEGORIES } from '../config/evolutionConfig';
 import { Award, X } from 'lucide-react';
@@ -8,12 +8,29 @@ export default function EvolutionCelebrationModal() {
   const canvasRef = useRef(null);
 
   const { isOpen, companionType, level } = celebrationState;
+  const [evoStep, setEvoStep] = useState('shake');
 
-  // Tocar som de vitória sintetizado ao abrir o modal
+  // Tocar som de vitória sintetizado e iniciar a transição ao abrir o modal
   useEffect(() => {
     if (isOpen) {
       playVictorySound();
       setupConfetti();
+
+      if (level > 1) {
+        setEvoStep('shake');
+        const timer1 = setTimeout(() => {
+          setEvoStep('flash');
+        }, 800);
+        const timer2 = setTimeout(() => {
+          setEvoStep('settled');
+        }, 1200);
+        return () => {
+          clearTimeout(timer1);
+          clearTimeout(timer2);
+        };
+      } else {
+        setEvoStep('settled');
+      }
     }
   }, [isOpen, companionType, level]);
 
@@ -21,6 +38,7 @@ export default function EvolutionCelebrationModal() {
 
   const petData = EVOLUTION_CATEGORIES[companionType] || EVOLUTION_CATEGORIES.plant;
   const newStage = petData.stages.find(s => s.level === level) || petData.stages[0];
+  const prevStage = petData.stages.find(s => s.level === level - 1) || petData.stages[0];
 
   function playVictorySound() {
     try {
@@ -182,6 +200,25 @@ export default function EvolutionCelebrationModal() {
             70% { transform: scale(1.05); box-shadow: 0 0 0 10px rgba(236, 72, 153, 0); }
             100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(236, 72, 153, 0); }
           }
+          @keyframes shake {
+            0%, 100% { transform: rotate(0deg) scale(1); }
+            15% { transform: rotate(-6deg) scale(0.95); }
+            30% { transform: rotate(5deg) scale(1.05); }
+            45% { transform: rotate(-4deg) scale(0.97); }
+            60% { transform: rotate(3deg) scale(1.03); }
+            75% { transform: rotate(-2deg) scale(0.99); }
+            90% { transform: rotate(1deg) scale(1.01); }
+          }
+          @keyframes flashGlow {
+            0% { transform: scale(0.5); opacity: 0; filter: blur(5px); }
+            50% { transform: scale(1.5); opacity: 1; filter: blur(0); background: #ffffff; }
+            100% { transform: scale(2.2); opacity: 0; filter: blur(15px); }
+          }
+          @keyframes bounceScale {
+            0% { transform: scale(0.5); opacity: 0; }
+            70% { transform: scale(1.15); }
+            100% { transform: scale(1); opacity: 1; }
+          }
         `}} />
 
         <button 
@@ -220,7 +257,51 @@ export default function EvolutionCelebrationModal() {
         {/* Companion Graphic Display */}
         <div style={{ position: 'relative', height: '180px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '20px', borderRadius: '16px', backgroundColor: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', overflow: 'hidden' }}>
           <div style={{ position: 'absolute', width: '220px', height: '220px', borderRadius: '50%', background: `radial-gradient(circle, ${newStage.color || '#ec4899'} 0%, transparent 65%)`, opacity: 0.15, filter: 'blur(20px)', pointerEvents: 'none' }} />
-          {newStage.asset ? (
+          
+          {evoStep === 'shake' && prevStage.asset && (
+            <img 
+              src={prevStage.asset} 
+              alt={prevStage.alt || prevStage.title} 
+              style={{
+                height: '140px',
+                objectFit: 'contain',
+                zIndex: 2,
+                animation: 'shake 0.8s ease-in-out infinite',
+                filter: 'drop-shadow(0 8px 16px rgba(0,0,0,0.4))'
+              }}
+            />
+          )}
+
+          {evoStep === 'flash' && (
+            <>
+              {prevStage.asset && (
+                <img 
+                  src={prevStage.asset} 
+                  alt={prevStage.alt || prevStage.title} 
+                  style={{
+                    height: '140px',
+                    objectFit: 'contain',
+                    zIndex: 2,
+                    filter: 'brightness(5) drop-shadow(0 8px 16px rgba(0,0,0,0.4))',
+                    transform: 'scale(1.1)',
+                    transition: 'all 0.1s ease'
+                  }}
+                />
+              )}
+              <div style={{
+                position: 'absolute',
+                width: '100px',
+                height: '100px',
+                borderRadius: '50%',
+                backgroundColor: '#ffffff',
+                boxShadow: '0 0 40px 20px #ffffff, 0 0 100px 50px ' + (newStage.color || '#ec4899'),
+                zIndex: 3,
+                animation: 'flashGlow 0.4s ease-out forwards'
+              }} />
+            </>
+          )}
+
+          {evoStep === 'settled' && newStage.asset && (
             <img 
               src={newStage.asset} 
               alt={newStage.alt || newStage.title} 
@@ -228,10 +309,13 @@ export default function EvolutionCelebrationModal() {
                 height: '140px',
                 objectFit: 'contain',
                 zIndex: 2,
+                animation: 'bounceScale 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards',
                 filter: 'drop-shadow(0 8px 16px rgba(0,0,0,0.4))'
               }}
             />
-          ) : (
+          )}
+
+          {!newStage.asset && (
             <span style={{ fontSize: '64px', zIndex: 2 }}>{petData.emoji || '🌱'}</span>
           )}
         </div>

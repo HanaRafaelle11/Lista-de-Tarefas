@@ -1254,8 +1254,8 @@ button[title="Sair do MyFlowDay"]:hover {
 
 
 .app-top-avatar {
-  width: 42px;
-  height: 42px;
+  width: 48px;
+  height: 48px;
   border-radius: 50%;
   background: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%);
   color: white;
@@ -5421,8 +5421,8 @@ body,
     margin: 0 !important;
   }
   .app-top-avatar {
-    width: 42px !important;
-    height: 42px !important;
+    width: 48px !important;
+    height: 48px !important;
     font-size: 12px !important;
     flex-shrink: 0 !important;
   }
@@ -6521,6 +6521,11 @@ body,
 
 /* --- 13. DEMO BANNER --- */
 .demo-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 40px;
   background: linear-gradient(90deg, #f59e0b, #d97706);
   color: white;
   text-align: center;
@@ -6531,8 +6536,31 @@ body,
   align-items: center;
   justify-content: center;
   gap: 12px;
-  width: 100%;
+  z-index: 10001;
   box-shadow: var(--shadow-sm);
+  box-sizing: border-box;
+}
+
+/* --- DEMO BANNER SHIFTING --- */
+.app-wrapper.has-demo-banner {
+  padding-top: 40px !important;
+}
+.app-wrapper.has-demo-banner .app-sidebar {
+  top: 40px !important;
+  height: calc(100vh - 40px) !important;
+}
+.app-wrapper.has-demo-banner .app-top-header {
+  top: 40px !important;
+}
+
+/* --- CLICKABLE GOAL HEALTH CARDS --- */
+.goal-health-card-clickable {
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+.goal-health-card-clickable:hover {
+  transform: translateY(-2px);
+  border-color: var(--primary) !important;
+  box-shadow: var(--shadow-md) !important;
 }
 
 .demo-banner-btn {

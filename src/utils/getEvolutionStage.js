@@ -16,10 +16,13 @@ export function getEvolutionStage(progress, totalStages = 4) {
   
   const { completedGoalsCount = 0 } = progress;
 
-  if (completedGoalsCount >= 90) {
+  if (completedGoalsCount >= 245) {
+    return Math.min(4, totalStages - 1);
+  }
+  if (completedGoalsCount >= 145) {
     return Math.min(3, totalStages - 1);
   }
-  if (completedGoalsCount >= 60) {
+  if (completedGoalsCount >= 75) {
     return Math.min(2, totalStages - 1);
   }
   if (completedGoalsCount >= 30) {

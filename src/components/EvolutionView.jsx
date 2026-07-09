@@ -392,6 +392,7 @@ export default function EvolutionView() {
     handleToggleComplete,
     currentUser,
     setActiveTab,
+    setSelectedGoalIdFilter,
     consistencyScore,
     isAccessChecked,
     userState
@@ -604,7 +605,7 @@ export default function EvolutionView() {
 
     return activeGoals.map(goal => {
       const linkedTaskIds = (goalTasks || []).filter(gt => gt.goal_id === goal.id).map(gt => gt.task_id);
-      const linked = tasks.filter(t => linkedTaskIds.includes(t.id));
+      const linked = tasks.filter(t => linkedTaskIds.includes(t.id) && !t.deletedAt && !t.deleted_at);
       const done = linked.filter(t => t.completed);
       const progressPct = linked.length > 0 ? (done.length / linked.length) * 100 : 0;
 
@@ -763,8 +764,37 @@ export default function EvolutionView() {
     }
   };
 
+  const touchStartX = useRef(0);
+  const touchEndX = useRef(0);
+
+  const handleTouchStart = (e) => {
+    touchStartX.current = e.targetTouches[0].clientX;
+  };
+
+  const handleTouchMove = (e) => {
+    touchEndX.current = e.targetTouches[0].clientX;
+  };
+
+  const handleTouchEnd = () => {
+    const diff = touchStartX.current - touchEndX.current;
+    const minSwipeDistance = 60;
+    if (Math.abs(diff) > minSwipeDistance) {
+      if (diff > 0) {
+        if (activeEvoTab === 'jornada') handleSwitchEvoTab('coach');
+      } else {
+        if (activeEvoTab === 'coach') handleSwitchEvoTab('jornada');
+      }
+    }
+  };
+
   return (
-    <div className="evo-view animate-fade-in" style={{ paddingBottom: '90px' }}>
+    <div 
+      className="evo-view animate-fade-in" 
+      style={{ paddingBottom: '90px' }}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+    >
       
       {/* Seletor de abas internas no topo da tela de Evolução */}
       <div style={{ display: 'flex', gap: '8px', borderBottom: '1px solid var(--border-light)', paddingBottom: '8px', marginBottom: '24px' }}>
@@ -1245,7 +1275,15 @@ export default function EvolutionView() {
                       else if (goal.health >= 50) healthColor = '#C89658';
 
                       return (
-                        <div key={goal.id} style={{ padding: '12px', backgroundColor: 'var(--bg-app)', border: '1px solid var(--border-light)', borderRadius: 'var(--radius-sm)' }}>
+                        <div 
+                          key={goal.id} 
+                          onClick={() => {
+                            setSelectedGoalIdFilter(goal.id);
+                            setActiveTab('myday');
+                          }}
+                          style={{ padding: '12px', backgroundColor: 'var(--bg-app)', border: '1px solid var(--border-light)', borderRadius: 'var(--radius-sm)', cursor: 'pointer', transition: 'all 0.2s', boxShadow: 'var(--shadow-sm)' }}
+                          className="goal-health-card-clickable"
+                        >
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
                             <strong style={{ fontSize: '13px', color: 'var(--text-main)' }}>{goal.title}</strong>
                             {isPro ? (
