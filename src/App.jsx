@@ -30,6 +30,7 @@ const Checkout = lazy(() => import('./pages/Checkout'));
 const GuidedTour = lazy(() => import('./components/GuidedTour'));
 const NotificationEngine = lazy(() => import('./components/NotificationEngine'));
 const PwaInstallPrompt = lazy(() => import('./components/PwaInstallPrompt'));
+const EvolutionCelebrationModal = lazy(() => import('./components/EvolutionCelebrationModal'));
 
 // Classe Global Error Boundary para resiliência total e imunidade a telas brancas
 class GlobalErrorBoundary extends React.Component {
@@ -493,6 +494,9 @@ function AppLayout() {
 
 
       <PaywallModal />
+      <Suspense fallback={null}>
+        <EvolutionCelebrationModal />
+      </Suspense>
       {showCreatePasswordModal && (
         <CreatePasswordModal
           onClose={() => setShowCreatePasswordModal(false)}

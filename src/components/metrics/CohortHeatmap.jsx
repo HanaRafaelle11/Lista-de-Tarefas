@@ -100,7 +100,7 @@ export default function CohortHeatmap({ cohortsData }) {
       </p>
 
       <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch', overscrollBehaviorX: 'contain' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '600px' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '850px' }}>
           <thead>
             <tr>
               <th style={{ ...tableHeaderStyle, textAlign: 'left', width: '120px' }}>Mês da Cohort</th>

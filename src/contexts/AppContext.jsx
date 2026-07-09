@@ -49,15 +49,15 @@ export function formatDescriptionWithoutMetadata(description = '') {
   return description.split(marker)[0].trim();
 }
 
-export function buildDescriptionWithMetadata(userDesc = '', due_time = '', recurrence = 'nenhuma', archived = false) {
+export function buildDescriptionWithMetadata(userDesc = '', due_time = '', recurrence = 'nenhuma', archived = false, extraMeta = {}) {
   const cleanDesc = formatDescriptionWithoutMetadata(userDesc);
   const existingMeta = parseTaskMetadata(userDesc);
   const marker = '--flowday-meta--';
-  const meta = { ...existingMeta, due_time, recurrence, archived };
+  const meta = { ...existingMeta, due_time, recurrence, archived, ...extraMeta };
   return `${cleanDesc}\n\n${marker}\n${JSON.stringify(meta)}`;
 }
 
-export function calculateNextOccurrence(dueDateStr, recurrence) {
+export function calculateNextOccurrence(dueDateStr, recurrence, metadata = {}) {
   if (!dueDateStr) {
     const today = new Date();
     today.setDate(today.getDate() + 1);
@@ -73,6 +73,35 @@ export function calculateNextOccurrence(dueDateStr, recurrence) {
     date.setDate(date.getDate() + 7);
   } else if (recurrence === 'mensal') {
     date.setMonth(date.getMonth() + 1);
+  } else if (recurrence === 'personalizada') {
+    const interval = Number(metadata.recurrence_interval) || 1;
+    const unit = metadata.recurrence_unit || 'dias';
+    if (unit === 'dias') {
+      date.setDate(date.getDate() + interval);
+    } else if (unit === 'semanas') {
+      date.setDate(date.getDate() + interval * 7);
+    } else if (unit === 'meses') {
+      date.setMonth(date.getMonth() + interval);
+    }
+  } else if (recurrence === 'dias_semana') {
+    const targetDays = metadata.recurrence_days || []; // ex: [1, 3, 5] (Seg, Qua, Sex)
+    if (targetDays.length > 0) {
+      let found = false;
+      for (let i = 1; i <= 7; i++) {
+        const nextDay = new Date(date);
+        nextDay.setDate(date.getDate() + i);
+        if (targetDays.includes(nextDay.getDay())) {
+          date.setDate(date.getDate() + i);
+          found = true;
+          break;
+        }
+      }
+      if (!found) {
+        date.setDate(date.getDate() + 1);
+      }
+    } else {
+      date.setDate(date.getDate() + 1);
+    }
   }
 
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
@@ -318,6 +347,91 @@ export function AppProvider({ children }) {
   // ── Product Intelligence & Retention (Fase 2.0) ──
   const [insights, setInsights] = useState([]);
   const [suggestions, setSuggestions] = useState([]);
+
+  // ── Companion & Level Celebration State ─────────────────────────────────────
+  const [growthPet, setGrowthPet] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('flowday_growth_pet') || 'plant';
+    }
+    return 'plant';
+  });
+
+  const handleSelectGrowthPet = useCallback((pet) => {
+    setGrowthPet(pet);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('flowday_growth_pet', pet);
+    }
+  }, []);
+
+  const [celebrationState, setCelebrationState] = useState({
+    isOpen: false,
+    companionType: 'plant',
+    level: 1
+  });
+
+  const closeCelebration = useCallback(() => {
+    setCelebrationState(prev => ({ ...prev, isOpen: false }));
+  }, []);
+
+  const getLevelFromCount = useCallback((count) => {
+    if (count >= 90) return 4;
+    if (count >= 60) return 3;
+    if (count >= 30) return 2;
+    return 1;
+  }, []);
+
+  const triggerLevelUpCelebration = useCallback((companionType, newLevel) => {
+    setCelebrationState({
+      isOpen: true,
+      companionType,
+      level: newLevel
+    });
+    // Adiciona notificação do sistema imediatamente
+    setNotifications(prev => [
+      {
+        id: 'lvl_up_' + Date.now(),
+        type: 'achievement',
+        title: 'Companheiro evoluiu! 🎉',
+        description: `Parabéns! Sua consistência levou seu/sua ${companionType === 'plant' ? 'Plantinha' : 'Pet'} ao Nível ${newLevel}!`,
+        read: false,
+        created_at: new Date().toISOString()
+      },
+      ...prev
+    ]);
+  }, []);
+
+  const incrementCompanionProgress = useCallback((userId) => {
+    const petType = localStorage.getItem('flowday_growth_pet') || 'plant';
+    const isPlant = petType === 'plant';
+    const storageKey = isPlant
+      ? `flowday_plant_completed_goals_${userId}`
+      : `flowday_pet_completed_goals_${userId}`;
+      
+    const currentCount = Number(localStorage.getItem(storageKey)) || 0;
+    const newCount = currentCount + 1;
+    localStorage.setItem(storageKey, String(newCount));
+    
+    const levelBefore = getLevelFromCount(currentCount);
+    const levelAfter = getLevelFromCount(newCount);
+    if (levelAfter > levelBefore) {
+      console.log(`[AppContext] Companheiro subiu de nível! ${petType}: Nível ${levelAfter}`);
+      triggerLevelUpCelebration(petType, levelAfter);
+    }
+  }, [getLevelFromCount, triggerLevelUpCelebration]);
+
+  // Inicializa progresso de evolução para Planta/Pet a partir das metas concluídas legadas
+  useEffect(() => {
+    if (!currentUser?.id) return;
+    const userId = currentUser.id;
+    const totalCompleted = goals.filter(g => g.status === 'completed' && !g.deletedAt && !g.deleted_at).length;
+    
+    if (localStorage.getItem(`flowday_plant_completed_goals_${userId}`) === null) {
+      localStorage.setItem(`flowday_plant_completed_goals_${userId}`, String(totalCompleted));
+    }
+    if (localStorage.getItem(`flowday_pet_completed_goals_${userId}`) === null) {
+      localStorage.setItem(`flowday_pet_completed_goals_${userId}`, String(totalCompleted));
+    }
+  }, [currentUser?.id, goals]);
 
   useEffect(() => {
     if (!currentUser?.id) {
@@ -1775,6 +1889,37 @@ export function AppProvider({ children }) {
           ts: new Date().toISOString(),
         });
       }
+
+      // --- Auto-complete Goal Check ---
+      const taskGoalLinks = goalTasks.filter(gt => gt.task_id === id);
+      for (const link of taskGoalLinks) {
+        const goalId = link.goal_id;
+        const goalObj = goals.find(g => g.id === goalId);
+        if (goalObj && goalObj.status === 'active') {
+          const linkedIds = goalTasks.filter(gt => gt.goal_id === goalId).map(gt => gt.task_id);
+          const linkedTasks = tasks.filter(t => linkedIds.includes(t.id));
+          const allCompleted = linkedTasks.every(t => t.id === id ? next : t.completed);
+          if (allCompleted) {
+            console.log('[AppContext] Auto-completing goal:', goalId);
+            setGoals(prev => prev.map(g => g.id === goalId ? { ...g, status: 'completed' } : g));
+            if (!currentUser.isDemo) {
+              goalsService.update(currentUser.id, goalId, { status: 'completed' }).catch(err => {
+                console.error('[AppContext] Error auto-completing goal:', err);
+              });
+            } else {
+              const demoGoalsKey = `flowday_demo_goals_${currentUser.id}`;
+              const storedData = localStorage.getItem(demoGoalsKey);
+              if (storedData) {
+                const parsed = JSON.parse(storedData);
+                parsed.goals = parsed.goals.map(g => g.id === goalId ? { ...g, status: 'completed' } : g);
+                localStorage.setItem(demoGoalsKey, JSON.stringify(parsed));
+              }
+            }
+            logEvent('goal_completed', { goalId, auto: true });
+            incrementCompanionProgress(currentUser.id);
+          }
+        }
+      }
     }
 
     if (currentUser.isDemo) {
@@ -1786,7 +1931,7 @@ export function AppProvider({ children }) {
         if (next) {
           const meta = parseTaskMetadata(task.description);
           if (meta && meta.recurrence && meta.recurrence !== 'nenhuma') {
-            const nextDueDate = calculateNextOccurrence(task.dueDate, meta.recurrence);
+            const nextDueDate = calculateNextOccurrence(task.dueDate, meta.recurrence, meta);
             const nextTask = {
               title: task.title,
               description: task.description,
@@ -1808,7 +1953,7 @@ export function AppProvider({ children }) {
       console.error('[AppContext] Erro ao toggleComplete:', err);
       setTasks((prev) => prev.map((t) => t.id === id ? { ...t, completed: !next, completedAt: task.completedAt } : t));
     });
-  }, [currentUser, tasks, logEvent]);
+  }, [currentUser, tasks, goals, goalTasks, logEvent, incrementCompanionProgress]);
 
   const handleUpdateProfileFields = useCallback(async (fields) => {
     if (!currentUser?.id) return;
@@ -1836,7 +1981,13 @@ export function AppProvider({ children }) {
     if (!currentUser?.id) return;
     const { data } = await profilesService.updateProfile(currentUser.id, profileData);
     if (data) {
-      setUserProfile(data);
+      setUserProfile(prev => {
+        const merged = { ...prev, ...data };
+        if (data.avatar_url === undefined && prev?.avatar_url) {
+          merged.avatar_url = prev.avatar_url;
+        }
+        return merged;
+      });
       logEvent('profile_updated');
     }
   }, [currentUser?.id, logEvent]);
@@ -2208,29 +2359,30 @@ export function AppProvider({ children }) {
         }
 
         if (tempActions.length > 0) {
-          for (let i = 0; i < tempActions.length; i++) {
-            const ta = tempActions[i];
-            const taskData = {
-              title: ta.task.title,
-              description: '',
-              category: category || 'Trabalho',
-              priority: 'Média',
-              dueDate: null,
-            };
-            const { data: taskResponse } = await tasksService.create(currentUser.id, taskData);
-            if (taskResponse) {
-              setTasks((prev) => prev.map(t => t.id === ta.tempId ? taskResponse : t));
-              await goalsService.linkTask(data.id, taskResponse.id);
-              setGoalTasks((prev) => prev.map(gt =>
-                (gt.goal_id === tempGoalId && gt.task_id === ta.tempId)
-                  ? { goal_id: data.id, task_id: taskResponse.id }
-                  : gt
-              ));
-            } else {
-              setTasks((prev) => prev.filter(t => t.id !== ta.tempId));
-              setGoalTasks((prev) => prev.filter(gt => gt.task_id !== ta.tempId));
-            }
-          }
+          await Promise.all(
+            tempActions.map(async (ta) => {
+              const taskData = {
+                title: ta.task.title,
+                description: '',
+                category: category || 'Trabalho',
+                priority: 'Média',
+                dueDate: null,
+              };
+              const { data: taskResponse } = await tasksService.create(currentUser.id, taskData);
+              if (taskResponse) {
+                setTasks((prev) => prev.map(t => t.id === ta.tempId ? taskResponse : t));
+                await goalsService.linkTask(data.id, taskResponse.id);
+                setGoalTasks((prev) => prev.map(gt =>
+                  (gt.goal_id === tempGoalId && gt.task_id === ta.tempId)
+                    ? { goal_id: data.id, task_id: taskResponse.id }
+                    : gt
+                ));
+              } else {
+                setTasks((prev) => prev.filter(t => t.id !== ta.tempId));
+                setGoalTasks((prev) => prev.filter(gt => gt.task_id !== ta.tempId));
+              }
+            })
+          );
         }
       } else {
         // Rollback
@@ -2293,6 +2445,7 @@ export function AppProvider({ children }) {
       if (payloadData.status === 'completed' && existingGoal?.status !== 'completed') {
         logEvent('goal_completed', { goal_id: id });
         addNotification('goal', 'Objetivo Concluído!', existingGoal.title);
+        incrementCompanionProgress(currentUser.id);
       }
       return;
     }
@@ -2360,13 +2513,14 @@ export function AppProvider({ children }) {
         if (existingGoal.start_time) {
           logEvent('goal_completed_with_schedule', { goal_id: id });
         }
+        incrementCompanionProgress(currentUser.id);
       } else if (payloadData.status === 'archived') {
         logEvent('goal_archived', { goal_id: id });
       } else if (existingGoal && (existingGoal.status === 'completed' || existingGoal.status === 'archived') && payloadData.status === 'active') {
         logEvent('goal_reopened', { goal_id: id });
       }
     }
-  }, [currentUser, goals, goalTasks, tasks, logEvent, addNotification]);
+  }, [currentUser, goals, goalTasks, tasks, logEvent, addNotification, incrementCompanionProgress]);
 
   const handleDeleteGoal = useCallback(async (id) => {
     if (!currentUser?.id) return;
@@ -3332,6 +3486,10 @@ export function AppProvider({ children }) {
     userState,
     insights,
     suggestions,
+    growthPet,
+    handleSelectGrowthPet,
+    celebrationState,
+    closeCelebration,
 
     // Custom Dialogs & Reactivation
     openCustomAlert,

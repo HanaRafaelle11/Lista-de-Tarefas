@@ -44,7 +44,7 @@ const priorityColors = { Alta: '#ef4444', Média: '#f59e0b', Baixa: '#10b981' };
 
 export default function GoalTasksModal({ isOpen, onClose, goal, tasks, linkedTaskIds, onLink, onUnlink, onDeleteTask }) {
   console.log('[GoalTasksModal] isOpen:', isOpen, 'goal:', goal?.title, 'tasksCount:', tasks?.length, 'linkedTaskIds:', linkedTaskIds);
-  const { handleAddTask, openCustomConfirm } = useAppContext();
+  const { handleAddTask, openCustomConfirm, handleUpdateTask } = useAppContext();
   const [search, setSearch] = useState('');
   const [quickTaskTitle, setQuickTaskTitle] = useState('');
   const [isCreatingQuickTask, setIsCreatingQuickTask] = useState(false);
@@ -97,6 +97,10 @@ export default function GoalTasksModal({ isOpen, onClose, goal, tasks, linkedTas
       t.category.toLowerCase().includes(q)
     );
   }, [pendingTasks, search]);
+
+  const completedLinkedTasks = useMemo(() => {
+    return tasks.filter(t => linkedTaskIds.includes(t.id) && t.completed && !t.deletedAt && !t.deleted_at);
+  }, [tasks, linkedTaskIds]);
 
   const linkedCount = linkedTaskIds.length;
 
@@ -259,6 +263,53 @@ export default function GoalTasksModal({ isOpen, onClose, goal, tasks, linkedTas
               })
             )}
           </div>
+
+          {completedLinkedTasks.length > 0 && (
+            <div style={{ marginTop: '20px', borderTop: '1px solid var(--border-light)', paddingTop: '16px' }}>
+              <h3 style={{ fontSize: '12px', fontWeight: '750', color: 'var(--text-light)', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <Check size={14} style={{ color: '#10b981' }} />
+                <span>Tarefas Concluídas Vinculadas ({completedLinkedTasks.length})</span>
+              </h3>
+              <div className="goal-tasks-list">
+                {completedLinkedTasks.map(task => {
+                  return (
+                    <div key={task.id} className="goal-task-row goal-task-row--linked" style={{ opacity: 0.8, cursor: 'default' }}>
+                      <div className="goal-task-check checked" style={{ backgroundColor: 'rgba(16, 185, 129, 0.2)', borderColor: '#10b981' }}>
+                        <Check size={12} strokeWidth={3} style={{ color: '#10b981' }} />
+                      </div>
+                      <div className="goal-task-content" style={{ textDecoration: 'line-through', opacity: 0.6 }}>
+                        <span className="goal-task-title">{task.title}</span>
+                      </div>
+                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                        <button
+                          className="goal-task-reactivate-btn"
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            await handleUpdateTask(task.id, { completed: false, completedAt: null });
+                          }}
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            fontSize: '11px',
+                            padding: '4px 8px',
+                            borderRadius: '4px',
+                            color: 'var(--primary)',
+                            backgroundColor: 'var(--primary-glow)',
+                            border: '1px solid var(--primary-light)',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          <LucideIcons.RotateCcw size={10} />
+                          Reativar
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Footer */}

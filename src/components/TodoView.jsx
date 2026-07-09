@@ -394,6 +394,9 @@ export default function TodoView() {
   const [dueDate, setDueDate] = useState('');
   const [dueTime, setDueTime] = useState('');
   const [recurrence, setRecurrence] = useState('nenhuma');
+  const [recurrenceInterval, setRecurrenceInterval] = useState(1);
+  const [recurrenceUnit, setRecurrenceUnit] = useState('dias');
+  const [recurrenceDays, setRecurrenceDays] = useState([]);
   const [linkedGoal, setLinkedGoal] = useState('');
 
   // Salva modo de visualização e rastreia analytics
@@ -419,6 +422,9 @@ export default function TodoView() {
     setDueDate('');
     setDueTime('');
     setRecurrence('nenhuma');
+    setRecurrenceInterval(1);
+    setRecurrenceUnit('dias');
+    setRecurrenceDays([]);
     setLinkedGoal('');
     setIsModalOpen(true);
   };
@@ -437,6 +443,9 @@ export default function TodoView() {
     setDueDate(datePart || '');
     setDueTime(meta.due_time || '');
     setRecurrence(meta.recurrence || 'nenhuma');
+    setRecurrenceInterval(meta.recurrence_interval || 1);
+    setRecurrenceUnit(meta.recurrence_unit || 'dias');
+    setRecurrenceDays(meta.recurrence_days || []);
     
     setIsModalOpen(true);
   };
@@ -451,6 +460,9 @@ export default function TodoView() {
     setCategory(categories[0]?.id || 'Trabalho');
     setPriority('Média');
     setRecurrence('nenhuma');
+    setRecurrenceInterval(1);
+    setRecurrenceUnit('dias');
+    setRecurrenceDays([]);
   };
 
   useEffect(() => {
@@ -468,7 +480,16 @@ export default function TodoView() {
     if (!title.trim()) return;
 
     const combinedDueDate = combineDateAndTime(dueDate, dueTime);
-    const metaDescription = buildDescriptionWithMetadata(description, dueTime, recurrence);
+    
+    const extraMeta = {};
+    if (recurrence === 'personalizada') {
+      extraMeta.recurrence_interval = recurrenceInterval;
+      extraMeta.recurrence_unit = recurrenceUnit;
+    } else if (recurrence === 'dias_semana') {
+      extraMeta.recurrence_days = recurrenceDays;
+    }
+
+    const metaDescription = buildDescriptionWithMetadata(description, dueTime, recurrence, false, extraMeta);
 
     const taskData = {
       title: title.trim(),
@@ -1814,8 +1835,82 @@ export default function TodoView() {
                   <option value="diaria">Diária</option>
                   <option value="semanal">Semanal</option>
                   <option value="mensal">Mensal</option>
+                  <option value="dias_semana">Dias específicos da semana</option>
+                  <option value="personalizada">Personalizada</option>
                 </select>
               </div>
+
+              {recurrence === 'personalizada' && (
+                <div className="todo-form-row animate-scale-up" style={{ marginTop: '12px', gap: '12px' }}>
+                  <div className="todo-form-group" style={{ flex: 1 }}>
+                    <label className="todo-form-label">Repetir a cada</label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={recurrenceInterval}
+                      onChange={e => setRecurrenceInterval(Math.max(1, parseInt(e.target.value) || 1))}
+                      className="todo-modal-input"
+                    />
+                  </div>
+                  <div className="todo-form-group" style={{ flex: 1 }}>
+                    <label className="todo-form-label">Unidade de tempo</label>
+                    <select
+                      value={recurrenceUnit}
+                      onChange={e => setRecurrenceUnit(e.target.value)}
+                      className="todo-modal-select"
+                    >
+                      <option value="dias">Dia(s)</option>
+                      <option value="semanas">Semana(s)</option>
+                      <option value="meses">Mês(es)</option>
+                    </select>
+                  </div>
+                </div>
+              )}
+
+              {recurrence === 'dias_semana' && (
+                <div className="todo-form-group animate-scale-up" style={{ marginTop: '12px' }}>
+                  <label className="todo-form-label">Escolha os dias da semana</label>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '6px' }}>
+                    {[
+                      { label: 'Dom', val: 0 },
+                      { label: 'Seg', val: 1 },
+                      { label: 'Ter', val: 2 },
+                      { label: 'Qua', val: 3 },
+                      { label: 'Qui', val: 4 },
+                      { label: 'Sex', val: 5 },
+                      { label: 'Sáb', val: 6 },
+                    ].map(d => {
+                      const isChecked = recurrenceDays.includes(d.val);
+                      return (
+                        <button
+                          key={d.val}
+                          type="button"
+                          onClick={() => {
+                            if (isChecked) {
+                              setRecurrenceDays(prev => prev.filter(v => v !== d.val));
+                            } else {
+                              setRecurrenceDays(prev => [...prev, d.val].sort());
+                            }
+                          }}
+                          style={{
+                            padding: '6px 12px',
+                            borderRadius: '20px',
+                            fontSize: '12.5px',
+                            fontWeight: '600',
+                            border: isChecked ? '1px solid var(--primary)' : '1px solid var(--border-light)',
+                            backgroundColor: isChecked ? 'var(--primary-glow)' : 'var(--bg-card-hover)',
+                            color: isChecked ? 'var(--primary)' : 'var(--text-muted)',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s ease',
+                          }}
+                        >
+                          {d.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
 
               <div className="todo-modal-actions">
                 <button

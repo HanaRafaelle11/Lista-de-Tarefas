@@ -114,6 +114,11 @@ export default function GoalCard({
   onDuplicate,
 }) {
   const [activeLightboxFile, setActiveLightboxFile] = useState(null);
+  const [zoomLevel, setZoomLevel] = useState(1);
+
+  useEffect(() => {
+    setZoomLevel(1);
+  }, [activeLightboxFile]);
 
   const totalTasks = linkedTasks.length;
   const completedTasks = linkedTasks.filter(t => t.completed).length;
@@ -192,7 +197,33 @@ export default function GoalCard({
 
         <div className="goal-card-header-right">
           {/* Badges de status */}
-          {isCompleted && <span className="goal-status-badge goal-status-badge--completed" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><CheckCircle size={12} /> Concluído</span>}
+          {isCompleted && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span className="goal-status-badge goal-status-badge--completed" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><CheckCircle size={12} /> Concluído</span>
+              <button
+                className="goal-card-reactivate-btn"
+                onClick={() => onRestore(goal.id)}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  padding: '3px 8px',
+                  fontSize: '11px',
+                  fontWeight: '600',
+                  color: 'var(--primary)',
+                  backgroundColor: 'var(--primary-glow)',
+                  border: '1px solid var(--primary-light)',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s'
+                }}
+                title="Reativar objetivo"
+              >
+                <RotateCcw size={10} />
+                Reativar
+              </button>
+            </div>
+          )}
           {isArchived && <span className="goal-status-badge goal-status-badge--archived" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><Archive size={12} /> Arquivado</span>}
           {progress === 100 && !isCompleted && !isArchived && (
             <span className="goal-status-badge goal-status-badge--ready" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><Award size={12} /> Pronto!</span>
@@ -326,14 +357,47 @@ export default function GoalCard({
               <LucideIcons.X size={18} />
             </button>
 
-            {/* Nome do arquivo */}
-            <div>
-              <h4 style={{ margin: '0 0 4px 0', fontSize: '16px', fontWeight: '800', color: 'var(--text-main, #ffffff)', paddingRight: '32px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {activeLightboxFile.name}
-              </h4>
-              <span style={{ fontSize: '12px', color: 'var(--text-light, #94a3b8)' }}>
-                {(activeLightboxFile.size / 1024).toFixed(1)} KB • {activeLightboxFile.type || 'Tipo desconhecido'}
-              </span>
+            {/* Nome do arquivo e Controles de Zoom */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+              <div>
+                <h4 style={{ margin: '0 0 4px 0', fontSize: '16px', fontWeight: '800', color: 'var(--text-main, #ffffff)', paddingRight: '32px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {activeLightboxFile.name}
+                </h4>
+                <span style={{ fontSize: '12px', color: 'var(--text-light, #94a3b8)' }}>
+                  {(activeLightboxFile.size / 1024).toFixed(1)} KB • {activeLightboxFile.type || 'Tipo desconhecido'}
+                </span>
+              </div>
+              {activeLightboxFile.type && (activeLightboxFile.type.startsWith('image/') || /\.(jpg|jpeg|png|gif|webp)$/i.test(activeLightboxFile.name || '')) && (
+                <div style={{ display: 'flex', gap: '4px', backgroundColor: 'rgba(255,255,255,0.03)', padding: '2px', borderRadius: '8px', border: '1px solid var(--border-light, rgba(255,255,255,0.1))' }}>
+                  <button
+                    type="button"
+                    onClick={() => setZoomLevel(z => Math.max(0.5, z - 0.25))}
+                    style={{ background: 'transparent', border: 'none', color: '#fff', padding: '4px 8px', fontSize: '14px', fontWeight: 'bold', cursor: 'pointer' }}
+                    title="Zoom Out"
+                  >
+                    -
+                  </button>
+                  <span style={{ color: '#fff', fontSize: '12px', alignSelf: 'center', minWidth: '40px', textAlign: 'center' }}>
+                    {Math.round(zoomLevel * 100)}%
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setZoomLevel(z => Math.min(3, z + 0.25))}
+                    style={{ background: 'transparent', border: 'none', color: '#fff', padding: '4px 8px', fontSize: '14px', fontWeight: 'bold', cursor: 'pointer' }}
+                    title="Zoom In"
+                  >
+                    +
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setZoomLevel(1)}
+                    style={{ background: 'transparent', border: 'none', color: 'var(--text-light, #94a3b8)', padding: '4px 8px', fontSize: '11px', cursor: 'pointer' }}
+                    title="Reset"
+                  >
+                    Reset
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Visualização de Mídia */}
@@ -346,16 +410,24 @@ export default function GoalCard({
               display: 'flex', 
               alignItems: 'center', 
               justifyContent: 'center',
-              overflow: 'hidden'
+              overflow: 'auto',
+              position: 'relative'
             }}>
-              {activeLightboxFile.type && activeLightboxFile.type.startsWith('image/') ? (
+              {activeLightboxFile.type && (activeLightboxFile.type.startsWith('image/') || /\.(jpg|jpeg|png|gif|webp)$/i.test(activeLightboxFile.name || '')) ? (
                 <img 
                   src={activeLightboxFile.url} 
                   alt={activeLightboxFile.name} 
-                  style={{ maxWidth: '100%', maxHeight: '380px', objectFit: 'contain' }} 
+                  style={{ 
+                    maxWidth: '100%', 
+                    maxHeight: '380px', 
+                    transform: `scale(${zoomLevel})`, 
+                    transition: 'transform 0.2s ease',
+                    transformOrigin: 'center center',
+                    display: 'block'
+                  }} 
                 />
               ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', color: 'var(--text-light, #94a3b8)' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', color: 'var(--text-light, #94a3b8)', padding: '20px' }}>
                   <FileText size={48} color="var(--primary)" />
                   <span style={{ fontSize: '13.5px' }}>Sem visualização disponível para este arquivo</span>
                 </div>

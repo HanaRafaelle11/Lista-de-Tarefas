@@ -99,7 +99,7 @@ export default function RevenueChart({ timeline }) {
       </h3>
 
       <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch', overscrollBehaviorX: 'contain' }}>
-        <svg viewBox={`0 0 ${width} ${height}`} width="100%" height="100%" style={{ minWidth: '600px' }}>
+        <svg viewBox={`0 0 ${width} ${height}`} width="100%" height="100%" style={{ minWidth: '800px' }}>
           {/* Definições de Gradientes */}
           <defs>
             <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">

@@ -58,22 +58,30 @@ export default function NotificationCenter({ placement }) {
   const handleNotificationClick = (n) => {
     let targetTab = n.metadata?.tab || n.metadata?.actionTab;
     
-    if (!targetTab || targetTab === 'evolution') {
+    if (!targetTab) {
       if (n.type === 'achievement') {
-        targetTab = 'analytics';
+        targetTab = 'evolution';
       } else if (n.type === 'goal') {
-        targetTab = 'goals';
-      } else if (n.type === 'task') {
-        targetTab = 'tasks';
+        targetTab = 'home';
+      } else if (n.type === 'task' || n.type === 'habit') {
+        targetTab = 'myday';
       } else if (n.type === 'focus' || n.type === 'pomodoro') {
         targetTab = 'focus';
-      } else if (n.type === 'system') {
+      } else if (n.type === 'system' || n.type === 'billing') {
         targetTab = 'home';
       }
     }
     
+    // Normalizar abas legadas/inválidas para as rotas ativas do app
+    if (targetTab === 'tasks') {
+      targetTab = 'myday';
+    } else if (targetTab === 'goals') {
+      targetTab = 'home';
+    } else if (targetTab === 'analytics' || targetTab === 'evolution') {
+      targetTab = 'evolution';
+    }
+    
     if (targetTab) {
-      if (targetTab === 'evolution') targetTab = 'analytics';
       setActiveTab(targetTab);
       setIsOpen(false);
     }

@@ -157,6 +157,8 @@ export default defineConfig({
         background_color: '#0B0E11',
         display: 'standalone',
         orientation: 'portrait',
+        start_url: '/',
+        scope: '/',
         icons: [
           {
             src: '/branding/icon-192.png',

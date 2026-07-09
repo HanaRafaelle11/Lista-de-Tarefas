@@ -147,7 +147,10 @@ export default function HomeView() {
     handleAddGoal,
     userProfile,
     handleUpdateGoal: onUpdateGoal,
-    setSelectedGoalIdFilter
+    setSelectedGoalIdFilter,
+    growthPet,
+    handleSelectGrowthPet,
+    categories
   } = useAppContext();
   
   const [showHealthExplanation, setShowHealthExplanation] = useState(false);
@@ -270,17 +273,38 @@ export default function HomeView() {
   };
 
   const detectCategory = (text) => {
-    const t = text.toLowerCase();
+    const t = text.toLowerCase().trim();
+
+    // Priorizar categorias customizadas criadas pelo usuário por comparação direta do nome
+    if (categories && categories.length > 0) {
+      const matchedCat = categories.find(cat => {
+        const catName = (cat.name || '').toLowerCase().trim();
+        if (!catName) return false;
+        const regex = new RegExp('\\b' + catName + '\\b', 'i');
+        return regex.test(t);
+      });
+      if (matchedCat) {
+        return matchedCat.id || matchedCat.name;
+      }
+    }
+
+    // Regras de mapeamento padrão (Lazer, Estudos, Pessoal)
     if (t.includes('cantar') || t.includes('tocar') || t.includes('jogar') || t.includes('assistir') || t.includes('filme') || t.includes('série') || t.includes('lazer') || t.includes('passear') || t.includes('amigos') || t.includes('festa') || t.includes('divertir') || t.includes('música') || t.includes('hobby')) {
-      return 'Lazer';
+      const cat = categories?.find(c => (c.name || '').toLowerCase() === 'lazer');
+      return cat ? (cat.id || cat.name) : 'Lazer';
     }
     if (t.includes('estudar') || t.includes('ler') || t.includes('curso') || t.includes('aula') || t.includes('faculdade') || t.includes('estudos') || t.includes('livro') || t.includes('aprender') || t.includes('pesquisar')) {
-      return 'Estudos';
+      const cat = categories?.find(c => (c.name || '').toLowerCase() === 'estudos');
+      return cat ? (cat.id || cat.name) : 'Estudos';
     }
     if (t.includes('comprar') || t.includes('mercado') || t.includes('casa') || t.includes('limpar') || t.includes('arrumar') || t.includes('pessoal') || t.includes('família') || t.includes('médico') || t.includes('dentista') || t.includes('pagar') || t.includes('boleto') || t.includes('água') || t.includes('beber') || t.includes('academia') || t.includes('treino') || t.includes('treinar') || t.includes('exercício') || t.includes('exercitar') || t.includes('dormir') || t.includes('descanso') || t.includes('saúde') || t.includes('dieta') || t.includes('correr') || t.includes('caminhar') || t.includes('vitamina') || t.includes('remédio') || t.includes('meditação') || t.includes('meditar') || t.includes('acordar') || t.includes('levantar') || t.includes('rotina') || t.includes('café') || t.includes('almoço') || t.includes('jantar') || t.includes('comer') || t.includes('comida') || t.includes('banho') || t.includes('dentes') || t.includes('escovar') || t.includes('sono')) {
-      return 'Pessoal';
+      const cat = categories?.find(c => (c.name || '').toLowerCase() === 'pessoal');
+      return cat ? (cat.id || cat.name) : 'Pessoal';
     }
-    return 'Trabalho';
+    
+    // Trabalho como padrão
+    const workCat = categories?.find(c => (c.name || '').toLowerCase() === 'trabalho');
+    return workCat ? (workCat.id || workCat.name) : 'Trabalho';
   };
 
   const handleQuickSubmit = async (e) => {
@@ -361,20 +385,7 @@ export default function HomeView() {
     });
   }, [tasks, goals, goalTasks, habitsManager, consistencyScore, currentUser, isPro]);
 
-  // Pet de Crescimento
-  const [growthPet, setGrowthPet] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('flowday_growth_pet') || 'plant';
-    }
-    return 'plant';
-  });
-
-  const handleSelectGrowthPet = (pet) => {
-    setGrowthPet(pet);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('flowday_growth_pet', pet);
-    }
-  };
+  // Pet de Crescimento é gerenciado no AppContext globalmente
 
   const getTodayDateStr = () => {
     const d = new Date();
@@ -449,25 +460,31 @@ export default function HomeView() {
     });
   }, [tasks, goals, todayDate]);
 
+  const petCompletedGoals = useMemo(() => {
+    if (!currentUser?.id) return 0;
+    const isPlant = growthPet === 'plant';
+    const storageKey = isPlant
+      ? `flowday_plant_completed_goals_${currentUser.id}`
+      : `flowday_pet_completed_goals_${currentUser.id}`;
+    return Number(localStorage.getItem(storageKey)) || 0;
+  }, [currentUser?.id, growthPet]);
+
   const weeklyTotal = ritmoSemanal.reduce((acc, d) => acc + d.count, 0);
   const currentPetData = EVOLUTION_CATEGORIES[growthPet] || EVOLUTION_CATEGORIES.plant;
   const hasNoItems = activeTasksList.length === 0 && activeGoalsList.length === 0 && habits.length === 0;
   const stageIndex = hasNoItems ? 0 : getEvolutionStage({
     weeklyTotal,
     currentStreak,
-    completedGoalsCount,
+    completedGoalsCount: petCompletedGoals,
     consistencyScore
   }, currentPetData.stages.length);
   const currentStage = currentPetData.stages[stageIndex];
 
   useEffect(() => {
     if (hasNoItems && growthPet !== 'plant') {
-      setGrowthPet('plant');
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('flowday_growth_pet', 'plant');
-      }
+      handleSelectGrowthPet('plant');
     }
-  }, [hasNoItems, growthPet]);
+  }, [hasNoItems, growthPet, handleSelectGrowthPet]);
 
   const petSpeechText = useMemo(() => {
     const completedTasksList = tasks.filter(t => t.completed && !t.deletedAt && !t.deleted_at);
@@ -739,7 +756,7 @@ export default function HomeView() {
 
             {/* Informações de Nível */}
             <span style={{ fontSize: '11px', fontWeight: '700', padding: '3px 12px', borderRadius: '20px', backgroundColor: `${currentStage.color}15`, color: currentStage.color, border: `1px solid ${currentStage.color}25`, marginBottom: '16px' }}>
-              {currentStage.badge}
+              {currentStage.badge} • Metas: {petCompletedGoals}
             </span>
 
             {/* Consistency Score integrado */}

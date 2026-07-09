@@ -27,19 +27,19 @@ export function generateCoachMessage({
 
   // 1. Tratamento de Workspace Vazio
   if (allActiveTasks.length === 0 && activeGoals.length === 0) {
-    const formattedMessage = `### Nota da semana: --/10
+    const formattedMessage = `Nota da semana: --/10
 
 Você não possui nenhuma tarefa ou objetivo ativo no momento.
 
-**Tendência Atual:**
-📉 Sem dados de uso.
+Tendência Atual:
+Sem dados de uso.
 
-**Insights do Mentor:**
-* 💡 Crie seus primeiros objetivos ou tarefas para começar a organizar sua rotina.
-* 💡 Mantenha a consistência diária para ver insights detalhados sobre seu ritmo.
+Insights do Mentor:
+- Crie seus primeiros objetivos ou tarefas para começar a organizar sua rotina.
+- Mantenha a consistência diária para ver insights detalhados sobre seu ritmo.
 
-**Recomendação Prática:**
-👉 Crie objetivos ou tarefas e comece a executar para receber conselhos personalizados do seu Mentor.`;
+Recomendação Prática:
+Crie objetivos ou tarefas e comece a executar para receber conselhos personalizados do seu Mentor.`;
 
     return {
       isPro,
@@ -71,10 +71,16 @@ Você não possui nenhuma tarefa ou objetivo ativo no momento.
     (t.createdAt ? new Date(t.createdAt) >= sevenDaysAgo : true)
   ).length;
 
-  const activeHabitIds = (habitsManager?.habits || []).map(h => h.id);
-  const recentHabitsCount = habitsManager?.habitLogs
-    ? habitsManager.habitLogs.filter(l => activeHabitIds.includes(l.habit_id) && new Date(l.completed_date) >= sevenDaysAgo).length
-    : 0;
+  const activeHabits = habitsManager?.habits || [];
+  const activeHabitsCount = activeHabits.length;
+  const recentLogs = habitsManager?.habitLogs
+    ? habitsManager.habitLogs.filter(l => activeHabits.map(h => h.id).includes(l.habit_id) && new Date(l.completed_date) >= sevenDaysAgo)
+    : [];
+  
+  const completedRecentHabitsCount = recentLogs.length;
+  const targetHabitOccurrences = activeHabitsCount * 7;
+  const pendingHabitsWeekCount = Math.max(0, targetHabitOccurrences - completedRecentHabitsCount);
+  const pendingTasksCount = allActiveTasks.filter(t => !t.completed).length;
 
   const currentStreak = calcStreak(tasks) || 0;
 
@@ -85,15 +91,13 @@ Você não possui nenhuma tarefa ou objetivo ativo no momento.
   if (totalRecentTasks > 0) {
     baseScore = completionRatio * 8.0 + 1.0;
   } else if (allActiveTasks.length > 0) {
-    // Se tem tarefas mas nenhuma criada nos últimos 7 dias
     baseScore = 3.0;
   }
   
   const streakBonus = Math.min(1.0, currentStreak * 0.15);
-  const habitsBonus = Math.min(1.0, recentHabitsCount * 0.20);
+  const habitsBonus = Math.min(1.0, completedRecentHabitsCount * 0.20);
   
   let finalScore = baseScore + streakBonus + habitsBonus;
-  // Penalidade se houver objetivos pendentes sem nenhuma tarefa realizada
   if (activeGoals.length > 0 && completedRecentTasks.length === 0) {
     finalScore -= 1.0;
   }
@@ -117,11 +121,11 @@ Você não possui nenhuma tarefa ou objetivo ativo no momento.
   const goalTitle = targetGoal ? targetGoal.title : '';
 
   // 6. Tendências de Consistência
-  let trendIndicator = '📈 Você está em uma fase de recuperação.';
+  let trendIndicator = 'Você está em uma fase de recuperação.';
   if (currentStreak >= 5) {
-    trendIndicator = `🔥 Você manteve consistência por ${currentStreak} dias seguidos.`;
+    trendIndicator = `Você manteve consistência por ${currentStreak} dias seguidos.`;
   } else if (completedRecentTasks.length < 2) {
-    trendIndicator = '📉 Seu ritmo caiu nas últimas duas semanas.';
+    trendIndicator = 'Seu ritmo caiu nas últimas duas semanas.';
   }
 
   // 7. Insights Ocultos baseados nos dados reais do usuário
@@ -192,7 +196,7 @@ Você não possui nenhuma tarefa ou objetivo ativo no momento.
   });
 
   const insightCompletedCategory = maxCompletedCatCount > 0
-    ? `Sua categoria mais concluída é **${mostCompletedCategory}** (${maxCompletedCatCount} tarefas finalizadas). Bom trabalho!`
+    ? `Sua categoria mais concluída é ${mostCompletedCategory} (${maxCompletedCatCount} tarefas finalizadas). Bom trabalho!`
     : `Comece a concluir tarefas em categorias variadas para ver qual área da sua vida se move mais rápido.`;
 
   // 7c. Categoria mais procrastinada
@@ -212,7 +216,7 @@ Você não possui nenhuma tarefa ou objetivo ativo no momento.
   });
 
   const insightProcrastinatedCategory = maxActiveCatCount > 0
-    ? `A categoria **${mostProcrastinatedCategory}** é a mais procrastinada no momento (${maxActiveCatCount} pendências). Dedique seu próximo foco a ela.`
+    ? `A categoria ${mostProcrastinatedCategory} é a mais procrastinada no momento (${maxActiveCatCount} pendências). Dedique seu próximo foco a ela.`
     : `Parabéns! Nenhuma categoria específica está acumulando tarefas pendentes no momento.`;
 
   // 7d. Horas economizadas
@@ -221,69 +225,87 @@ Você não possui nenhuma tarefa ou objetivo ativo no momento.
   const finalFocusCount = (currentUser?.isDemo && focusCount === 0) ? 8 : focusCount;
   const hoursSaved = (finalFocusCount * 0.5) + (completedRecentTasks.length * 0.25) + (completedGoalsCount * 2.0);
   
-  const insightHoursSaved = `Você economizou aproximadamente **${hoursSaved.toFixed(1)} horas** esta semana com sessões de foco Pomodoro e conclusão de objetivos/tarefas.`;
+  const insightHoursSaved = `Você economizou aproximadamente ${hoursSaved.toFixed(1)} horas esta semana com sessões de foco Pomodoro e conclusão de objetivos e tarefas.`;
 
-  // 8. Geração de Textos com base no Tom de Voz
+  // 8. Geração de Textos com base no Tom de Voz e Concordância Gramatical
   let mainGreeting = `Olá, ${userName}! Sou seu mentor de produtividade.`;
   let feedbackParagraph = '';
   let suggestionText = '';
 
   const taskCountText = completedRecentTasks.length === 1 
-    ? `Você concluiu apenas 1 tarefa esta semana. Que tal escolher uma prioridade para amanhã e criar uma sequência de vitórias?`
-    : `Você concluiu ${completedRecentTasks.length} tarefa${completedRecentTasks.length > 1 || completedRecentTasks.length === 0 ? 's' : ''} esta semana. Cada pequena vitória conta para aproximar você dos seus sonhos!`;
+    ? `Você concluiu apenas uma tarefa esta semana.`
+    : `Você concluiu ${completedRecentTasks.length} tarefas esta semana.`;
 
-  const dynamicDrop = (consistencyScore < 85) 
-    ? Math.max(3, Math.min(15, 100 - consistencyScore)) 
-    : 6;
+  const pendingCountText = pendingTasksCount === 1
+    ? `Atualmente, há uma tarefa pendente na fila.`
+    : `Atualmente, há ${pendingTasksCount} tarefas pendentes na fila.`;
 
-  const consistencyDropText = `Sua consistência caiu ${dynamicDrop}% em relação à semana passada. Retomar sua rotina hoje pode evitar que esse hábito seja perdido.`;
+  const habitsCountText = activeHabitsCount === 0
+    ? `Nenhum hábito cadastrado para esta semana.`
+    : pendingHabitsWeekCount === 1
+    ? `Resta apenas um hábito pendente para ser realizado hoje.`
+    : `Restam ${pendingHabitsWeekCount} hábitos pendentes para conclusão no planejamento desta semana.`;
+
+  // Respeitar pontuação de consistência inteligente
+  let consistencyText = '';
+  if (consistencyScore >= 90) {
+    consistencyText = `Sua consistência está excelente, em ${consistencyScore}%.`;
+  } else if (consistencyScore >= 70) {
+    consistencyText = `Sua consistência está boa, em ${consistencyScore}%.`;
+  } else {
+    consistencyText = `Sua consistência está em ${consistencyScore}%. Retomar seus hábitos hoje impedirá que perca o ritmo acumulado.`;
+  }
+
+  feedbackParagraph = `${taskCountText} ${pendingCountText} ${habitsCountText} ${consistencyText}`;
 
   if (activeTone === 'motivator') {
-    mainGreeting = `Olá, ${userName}! ✨ Que alegria acompanhar sua jornada esta semana.`;
-    feedbackParagraph = `${taskCountText}\n\n${consistencyDropText}`;
+    mainGreeting = `Olá, ${userName}! Que alegria acompanhar sua jornada esta semana.`;
     suggestionText = goalTitle 
-      ? `Abra o objetivo "${goalTitle}" e conclua apenas uma pequena tarefa hoje. Mesmo 15 minutos já ajudam a recuperar o ritmo e impulsionar sua confiança!`
+      ? `Abra o objetivo ${goalTitle} e conclua apenas uma pequena tarefa hoje. Mesmo 15 minutos já ajudam a recuperar o ritmo e impulsionar sua confiança!`
       : `Escolha uma tarefa importante na sua lista e conclua hoje. Mesmo 15 minutos já ajudam a recuperar o ritmo e impulsionar sua confiança!`;
   } else if (activeTone === 'analytical') {
     mainGreeting = `Olá, ${userName}. Vamos analisar seus padrões de produtividade desta semana:`;
-    feedbackParagraph = `${taskCountText}\n\n${consistencyDropText}\n\nIdentifiquei que manter uma rotina consistente evita o acúmulo de tarefas e ajuda a manter a mente tranquila.`;
+    feedbackParagraph = `${feedbackParagraph} Identifiquei que manter uma rotina consistente evita o acúmulo de tarefas e ajuda a manter a mente tranquila.`;
     suggestionText = goalTitle
-      ? `Análise acionável: Dedique um bloco de tempo exclusivo para o objetivo "${goalTitle}". Resolver uma pendência simples dele hoje melhorará sua tendência da próxima semana em até 40%.`
-      : `Análise acionável: Dedique um bloco de tempo exclusivo para as tarefas gerais pendentes hoje. Concluir um item simples evitará acúmulo e melhorará sua tendência da próxima semana em até 40%.`;
+      ? `Análise acionável: Dedique um bloco de tempo exclusivo para o objetivo ${goalTitle}. Resolver uma pendência simples dele hoje melhorará sua tendência da próxima semana.`
+      : `Análise acionável: Dedique um bloco de tempo exclusivo para as tarefas gerais pendentes hoje. Concluir um item simples evitará acúmulo de pendências.`;
   } else { // challenging
     mainGreeting = `Olá, ${userName}. Pronto para elevar seu nível de foco hoje?`;
-    feedbackParagraph = `${taskCountText}\n\n${consistencyDropText}\n\nO progresso não acontece por acaso, ele exige atitude diária.`;
+    feedbackParagraph = `${feedbackParagraph} O progresso não acontece por acaso, ele exige atitude diária.`;
     suggestionText = goalTitle
-      ? `Desafio do dia: Acesse o objetivo "${goalTitle}" agora e conclua apenas uma tarefa de 15 minutos. Quebre a inércia imediatamente!`
+      ? `Desafio do dia: Acesse o objetivo ${goalTitle} agora e conclua apenas uma tarefa de 15 minutos. Quebre a inércia imediatamente!`
       : `Desafio do dia: Acesse sua lista de tarefas agora e conclua apenas um item de 15 minutos. Quebre a inércia imediatamente!`;
   }
 
-  // 9. Formatação final da mensagem em markdown
-  const formattedMessage = `### Nota da semana: ${weeklyScore}/10
+  // 9. Formatação final da mensagem em markdown (Limpando asteriscos)
+  const rawMessage = `### Nota da semana: ${weeklyScore}/10
 
 ${feedbackParagraph}
 
-**Tendência Atual:**
+Tendência Atual:
 ${trendIndicator}
 
-**Insights do Mentor:**
-* 💡 ${insightDayAndTime}
-* 💡 ${insightCompletedCategory}
-* 💡 ${insightProcrastinatedCategory}
-* 💡 ${insightHoursSaved}
+Insights do Mentor:
+- ${insightDayAndTime}
+- ${insightCompletedCategory}
+- ${insightProcrastinatedCategory}
+- ${insightHoursSaved}
 
-**Recomendação Prática:**
-👉 ${suggestionText}`;
+Recomendação Prática:
+${suggestionText}`;
+
+  // Remoção absoluta de quaisquer asteriscos (simples ou duplos)
+  const cleanMessage = rawMessage.replace(/\*/g, '');
 
   return {
     isPro,
-    greeting: mainGreeting,
-    message: formattedMessage,
+    greeting: mainGreeting.replace(/\*/g, ''),
+    message: cleanMessage,
     stats: {
       weeklyScore,
       completedTasks: completedRecentTasks.length,
-      trend: trendIndicator,
-      suggestion: suggestionText,
+      trend: trendIndicator.replace(/\*/g, ''),
+      suggestion: suggestionText.replace(/\*/g, ''),
       tone: activeTone
     }
   };

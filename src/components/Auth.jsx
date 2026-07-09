@@ -163,7 +163,7 @@ export default function Auth({ onLoginSuccess, initialMode = 'login', onBackToLa
       return;
     }
     if (!email) {
-      setError('Por favor, informe seu e-mail.');
+      setError('Informe seu e-mail para receber o link de acesso.');
       return;
     }
     if (!isValidEmail(email)) {
@@ -208,7 +208,7 @@ export default function Auth({ onLoginSuccess, initialMode = 'login', onBackToLa
         return;
       }
       if (!email) {
-        setError('Por favor, informe seu e-mail.');
+        setError('Informe seu e-mail para receber o link de acesso.');
         return;
       }
       if (!isValidEmail(email)) {

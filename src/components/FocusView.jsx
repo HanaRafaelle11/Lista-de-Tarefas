@@ -89,6 +89,18 @@ export default function FocusView() {
     }
   }, []);
 
+  // Migração para garantir que o tempo padrão de foco seja resetado para 25 minutos no primeiro acesso
+  useEffect(() => {
+    if (!localStorage.getItem('flowday_pomodoro_default_fixed_25')) {
+      localStorage.setItem('flowday_pomodoro_focus', '25');
+      localStorage.setItem('flowday_pomodoro_break', '5');
+      localStorage.setItem('flowday_pomodoro_default_fixed_25', 'true');
+      setFocusTime(25);
+      setBreakTime(5);
+      setTimeLeft(25 * 60);
+    }
+  }, []);
+
   // Persiste estado do timer a cada tick/mudança
   useEffect(() => {
     localStorage.setItem('flowday_pomodoro_time_left', String(timeLeft));
