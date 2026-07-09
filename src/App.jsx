@@ -381,9 +381,9 @@ function AppLayout() {
     );
   }
 
-  if (!currentUser) {
+  if (!currentUser || authMode === 'updatePassword') {
     // Exibe landing page pública antes da tela de autenticação
-    if (showLanding) {
+    if (showLanding && authMode !== 'updatePassword') {
       return (
         <Suspense fallback={
           <div className="app-loading-container">
@@ -410,36 +410,12 @@ function AppLayout() {
         </div>
       )}
       {!isInitializing && isAccessChecked && !isPro && (
-        <div className="pro-upgrade-banner" style={{
-          backgroundColor: 'rgba(16, 185, 129, 0.15)',
-          borderBottom: '1px solid rgba(16, 185, 129, 0.25)',
-          padding: '10px 16px',
-          textAlign: 'center',
-          fontSize: '13px',
-          color: '#10b981',
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          gap: '10px',
-          flexWrap: 'wrap',
-          boxSizing: 'border-box',
-          width: '100%'
-        }}>
+        <div className="pro-upgrade-banner">
           <span>Desbloqueie o MyFlowDay Pro para ter acesso a relatórios e análises completas!</span>
           <button 
             onClick={() => {
               window.history.pushState(null, '', '/checkout');
               window.dispatchEvent(new Event('popstate'));
-            }}
-            style={{
-              backgroundColor: '#10b981',
-              color: '#ffffff',
-              border: 'none',
-              borderRadius: '4px',
-              padding: '4px 12px',
-              fontWeight: '600',
-              cursor: 'pointer',
-              whiteSpace: 'nowrap'
             }}
           >
             Quero ser Pro

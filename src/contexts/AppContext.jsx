@@ -166,7 +166,7 @@ export function AppProvider({ children }) {
   const [userProfile, setUserProfile] = useState(null);
 
   // ── Navegação ────────────────────────────────────────────────────────────────
-  const VALID_TABS = new Set(['home', 'myday', 'focus', 'evolution', 'profile', 'admin', 'revenue', 'settings', 'goals', 'tasks', 'coach', 'analytics', 'performance']);
+  const VALID_TABS = new Set(['home', 'myday', 'focus', 'evolution', 'profile', 'admin', 'revenue', 'settings', 'goals', 'tasks', 'coach', 'analytics', 'performance', 'semanal', 'quinzenal', 'mensal']);
   const [activeTab, setActiveTab] = useState(() => {
     try {
       if (typeof window !== 'undefined') {
@@ -176,7 +176,7 @@ export function AppProvider({ children }) {
         if (pathname.includes('/goals') || pathname.includes('/objetivos')) return 'myday';
         if (pathname.includes('/myday') || pathname.includes('/meudia')) return 'myday';
         if (pathname.includes('/focus') || pathname.includes('/foco')) return 'focus';
-        if (pathname.includes('/coach')) return 'home';
+        if (pathname.includes('/coach') || pathname.includes('/semanal') || pathname.includes('/quinzenal') || pathname.includes('/mensal')) return 'evolution';
         if (pathname.includes('/analytics') || pathname.includes('/evolucao')) return 'evolution';
         if (pathname.includes('/performance') || pathname.includes('/desempenho')) return 'evolution';
         if (pathname.includes('/evolution')) return 'evolution';
@@ -188,15 +188,13 @@ export function AppProvider({ children }) {
         const tabParam = params.get('tab');
         if (tabParam && VALID_TABS.has(tabParam)) {
           if (tabParam === 'tasks' || tabParam === 'goals') return 'myday';
-          if (tabParam === 'analytics' || tabParam === 'performance') return 'evolution';
-          if (tabParam === 'coach') return 'home';
+          if (tabParam === 'analytics' || tabParam === 'performance' || tabParam === 'coach' || tabParam === 'semanal' || tabParam === 'quinzenal' || tabParam === 'mensal') return 'evolution';
           return tabParam;
         }
         const rawHash = window.location.hash.replace(/^#\/?/, '');
         if (rawHash && VALID_TABS.has(rawHash)) {
           if (rawHash === 'tasks' || rawHash === 'goals') return 'myday';
-          if (rawHash === 'analytics' || rawHash === 'performance') return 'evolution';
-          if (rawHash === 'coach') return 'home';
+          if (rawHash === 'analytics' || rawHash === 'performance' || rawHash === 'coach' || rawHash === 'semanal' || rawHash === 'quinzenal' || rawHash === 'mensal') return 'evolution';
           return rawHash;
         }
       }
@@ -204,11 +202,70 @@ export function AppProvider({ children }) {
     return 'home';
   });
 
-  const handleSetActiveTab = useCallback((tab) => {
+  const [activeEvoTab, setActiveEvoTab] = useState(() => {
+    try {
+      if (typeof window !== 'undefined') {
+        const pathname = window.location.pathname.toLowerCase();
+        const search = window.location.search.toLowerCase();
+        const hash = window.location.hash.toLowerCase();
+        if (pathname.includes('/coach') || pathname.includes('/semanal') || pathname.includes('/quinzenal') || pathname.includes('/mensal') || search.includes('tab=coach') || hash.includes('coach')) {
+          return 'coach';
+        }
+        return localStorage.getItem('flowday_active_evo_tab') || 'jornada';
+      }
+    } catch (_) {}
+    return 'jornada';
+  });
+
+  const [coachPeriodicity, setCoachPeriodicity] = useState(() => {
+    try {
+      if (typeof window !== 'undefined') {
+        const pathname = window.location.pathname.toLowerCase();
+        const search = window.location.search.toLowerCase();
+        const hash = window.location.hash.toLowerCase();
+        if (pathname.includes('/semanal') || search.includes('semanal') || hash.includes('semanal')) return 'Semanal';
+        if (pathname.includes('/quinzenal') || search.includes('quinzenal') || hash.includes('quinzenal')) return 'Quinzenal';
+        if (pathname.includes('/mensal') || search.includes('mensal') || hash.includes('mensal')) return 'Mensal';
+      }
+    } catch (_) {}
+    return 'Semanal';
+  });
+
+  const handleSetActiveTab = useCallback((tab, subTab = null, periodicity = null) => {
     let target = tab;
-    if (tab === 'tasks') target = 'myday';
-    else if (tab === 'goals' || tab === 'coach') target = 'home';
-    else if (tab === 'analytics' || tab === 'performance' || tab === 'evolution') target = 'evolution';
+    
+    // Normalize tab mapping
+    if (tab === 'tasks' || tab === 'diario' || tab === 'myday' || tab === 'meudia') {
+      target = 'myday';
+    } else if (tab === 'goals') {
+      target = 'home';
+    } else if (tab === 'coach' || tab === 'semanal' || tab === 'quinzenal' || tab === 'mensal') {
+      target = 'evolution';
+      setActiveEvoTab('coach');
+      if (typeof window !== 'undefined') localStorage.setItem('flowday_active_evo_tab', 'coach');
+      
+      let pVal = null;
+      if (tab === 'semanal') pVal = 'Semanal';
+      else if (tab === 'quinzenal') pVal = 'Quinzenal';
+      else if (tab === 'mensal') pVal = 'Mensal';
+      
+      if (pVal) {
+        setCoachPeriodicity(pVal);
+      }
+    } else if (tab === 'analytics' || tab === 'performance' || tab === 'evolution' || tab === 'jornada') {
+      target = 'evolution';
+      setActiveEvoTab('jornada');
+      if (typeof window !== 'undefined') localStorage.setItem('flowday_active_evo_tab', 'jornada');
+    }
+    
+    if (subTab) {
+      setActiveEvoTab(subTab);
+      if (typeof window !== 'undefined') localStorage.setItem('flowday_active_evo_tab', subTab);
+    }
+    if (periodicity) {
+      setCoachPeriodicity(periodicity);
+    }
+    
     setActiveTab(target);
   }, []);
 
@@ -338,11 +395,12 @@ export function AppProvider({ children }) {
   const unlockedKeysRef = useRef(new Set());
   // Garante que first_success_action é emitido apenas uma vez por sessão
   const firstSuccessLogged = useRef(false);
-  // Garante que conquistas só são verificadas APÓS o primeiro carregamento completo dos dados
-  // Isso impede o popup falso na inicialização antes dos dados carregarem do Supabase
   const dataLoadedOnce = useRef(false);
   const initialGoalsCount = useRef(-1);
   const initialCompletedTasksCount = useRef(-1);
+  const initialLoadFinished = useRef(false);
+
+  const [shouldOpenTaskModal, setShouldOpenTaskModal] = useState(false);
 
   // ── User State Intelligence (Growth) ─────────────────────────────────────────────
   const [userState, setUserState] = useState({
@@ -1095,8 +1153,8 @@ export function AppProvider({ children }) {
     }
   }, []);
 
-  const loadProfile = useCallback(async (userId) => {
-    const { data } = await profilesService.getProfile(userId);
+  const loadProfile = useCallback(async (userId, email = '') => {
+    const { data } = await profilesService.getProfile(userId, email);
     let profileData = data || { id: userId, avatar_url: '' };
 
     const localAvatar = localStorage.getItem(`flowday_user_avatar_${userId}`);
@@ -1105,7 +1163,22 @@ export function AppProvider({ children }) {
     }
 
     setUserProfile(profileData);
-  }, []);
+
+    // Sync name with currentUser metadata to avoid generic name in auth machine
+    if (profileData && profileData.nickname && !['user', 'usuario', 'null', 'undefined', ''].includes(profileData.nickname.toLowerCase().trim())) {
+      setCurrentUser(prev => {
+        if (!prev) return prev;
+        if (prev.user_metadata?.name === profileData.nickname) return prev;
+        return {
+          ...prev,
+          user_metadata: {
+            ...prev.user_metadata,
+            name: profileData.nickname
+          }
+        };
+      });
+    }
+  }, [setCurrentUser]);
 
   // ── Health Check SILENCIOSO (não-bloqueante) ──────────────────────────────────
   // Diagnostica o Supabase mas NUNCA impede o app de carregar.
@@ -1184,6 +1257,7 @@ export function AppProvider({ children }) {
     setIsAmbientPlaying(false);
 
     if (!currentUser?.id) {
+      initialLoadFinished.current = false;
       setUserProfile(null);
       setTasks([]);
       setGoals([]);
@@ -1205,6 +1279,7 @@ export function AppProvider({ children }) {
     }
 
     const userId = currentUser.id;
+    initialLoadFinished.current = false;
     setIsAccessChecked(false);
     if (typeof window !== 'undefined') {
       localStorage.removeItem('flowday_access_checked');
@@ -1214,6 +1289,7 @@ export function AppProvider({ children }) {
     if (currentUser.isDemo) {
       initDemoData();
       loadNotifications(userId);
+      initialLoadFinished.current = true;
       setIsAccessChecked(true);
       if (typeof window !== 'undefined') localStorage.setItem('flowday_access_checked', 'true');
       return;
@@ -1228,7 +1304,7 @@ export function AppProvider({ children }) {
           loadGoals(userId),
           loadAchievements(userId),
           loadHabits(userId),
-          loadProfile(userId),
+          loadProfile(userId, currentUser?.email),
           loadSubscription(userId),
           loadNotifications(userId),
           rehydrateUserState(userId),
@@ -1238,8 +1314,11 @@ export function AppProvider({ children }) {
       } catch (err) {
         console.error('[AppContext] Erro ao carregar dados do usuário:', err);
       } finally {
-        setIsAccessChecked(true);
-        if (typeof window !== 'undefined') localStorage.setItem('flowday_access_checked', 'true');
+        if (active) {
+          initialLoadFinished.current = true;
+          setIsAccessChecked(true);
+          if (typeof window !== 'undefined') localStorage.setItem('flowday_access_checked', 'true');
+        }
       }
     };
 
@@ -1365,15 +1444,11 @@ export function AppProvider({ children }) {
   // ═══════════════════════════════════════════════════════════════════════════
   useEffect(() => {
     const checkAchievements = async () => {
-      if (!currentUser?.id || achievementChecking.current || unlockedKeys === null) return;
+      if (!currentUser?.id || achievementChecking.current || unlockedKeys === null || !initialLoadFinished.current) return;
 
       // GUARD CRÍTICO: Só verifica conquistas após os dados terem sido carregados ao menos uma vez.
       // Isso evita o popup falso que acontecia quando tasks=[] e goals=[] logo após o login.
       if (!dataLoadedOnce.current) {
-        // Considera dados carregados quando tasks OU goals foram populados, ou quando unlockedAchievements foi hidratado.
-        // unlockedAchievements === null significa que o fetch ainda não completou.
-        // unlockedAchievements é Array (mesmo vazio) significa que já carregou.
-        if (unlockedAchievements === null) return;
         dataLoadedOnce.current = true;
         initialGoalsCount.current = goals.length;
         initialCompletedTasksCount.current = tasks.filter(t => t.completed).length;
@@ -3499,6 +3574,12 @@ export function AppProvider({ children }) {
     setActiveTab: handleSetActiveTab,
     shouldOpenGoalModal,
     setShouldOpenGoalModal,
+    shouldOpenTaskModal,
+    setShouldOpenTaskModal,
+    activeEvoTab,
+    setActiveEvoTab,
+    coachPeriodicity,
+    setCoachPeriodicity,
     selectedGoalIdFilter,
     setSelectedGoalIdFilter,
 

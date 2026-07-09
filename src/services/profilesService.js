@@ -13,11 +13,12 @@ const requireUser = (userId) => {
 };
 
 /** Gera um perfil local temporário a partir do userId */
-function localFallbackProfile(userId, name = '') {
+function localFallbackProfile(userId, name = '', email = '') {
+  const fallbackNick = email ? email.split('@')[0] : 'user';
   return {
     id: userId,
-    name: name || 'Usuário MyFlowDay',
-    nickname: 'user',
+    name: name || fallbackNick || 'Usuário MyFlowDay',
+    nickname: fallbackNick || 'user',
     profession: '',
     bio: '',
     avatar_url: null,
@@ -31,7 +32,7 @@ export const profilesService = {
    * Obtém o perfil do usuário.
    * Fallback: perfil local temporário se banco indisponível.
    */
-  getProfile: async (userId) => {
+  getProfile: async (userId, email = '') => {
     requireUser(userId);
     try {
       const { data, error } = await supabase
@@ -43,10 +44,11 @@ export const profilesService = {
       if (error) {
         if (error.code === 'PGRST116') {
           // Perfil não existe ainda — tenta criar
+          const fallbackNick = email ? email.split('@')[0] : 'user';
           const defaultData = {
             id: userId,
-            name: 'Usuário MyFlowDay',
-            nickname: 'user',
+            name: fallbackNick || 'Usuário MyFlowDay',
+            nickname: fallbackNick || 'user',
             profession: '',
             bio: '',
             avatar_url: '',
@@ -62,21 +64,21 @@ export const profilesService = {
           if (createError) {
             // Criação também falhou — retorna fallback local
             console.warn('[profilesService.getProfile] Não foi possível criar perfil — usando local temporário');
-            return { data: localFallbackProfile(userId), error: null, degraded: true };
+            return { data: localFallbackProfile(userId, '', email), error: null, degraded: true };
           }
           return { data: newProfile, error: null };
         }
 
         // Outro erro (tabela não existe, rede, etc.) — retorna fallback local
         console.warn('[profilesService.getProfile] Erro ao carregar perfil — usando local temporário:', error.message);
-        return { data: localFallbackProfile(userId), error: null, degraded: true };
+        return { data: localFallbackProfile(userId, '', email), error: null, degraded: true };
       }
 
       return { data, error: null };
     } catch (error) {
       // Falha de rede — retorna fallback local
       console.warn('[profilesService.getProfile] Falha de rede — usando local temporário:', error.message);
-      return { data: localFallbackProfile(userId), error: null, degraded: true };
+      return { data: localFallbackProfile(userId, '', email), error: null, degraded: true };
     }
   },
 

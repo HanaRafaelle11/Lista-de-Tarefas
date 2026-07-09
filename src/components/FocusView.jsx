@@ -144,16 +144,10 @@ export default function FocusView() {
     }
   }, [timeLeft, isActive]);
 
-  // Limpeza de áudio ao sair da tela de foco
-  useEffect(() => {
-    return () => {
-      setIsAmbientPlaying(false);
-    };
-  }, [setIsAmbientPlaying]);
-
   const handleTimerComplete = () => {
     setIsActive(false);
     playNotificationSound();
+    setIsAmbientPlaying(false);
     
     if (mode === 'focus') {
       setShowSuccessAnimation(true);

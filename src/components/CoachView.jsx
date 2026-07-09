@@ -160,18 +160,16 @@ export default function CoachView() {
     logEvent,
     setActiveTab,
     setShouldOpenGoalModal,
-    userState
+    setShouldOpenTaskModal,
+    userState,
+    coachPeriodicity: periodicity,
+    setCoachPeriodicity: setPeriodicity
   } = useAppContext();
 
   const activeTasks = useMemo(() => tasks.filter(t => !t.deletedAt && !t.deleted_at), [tasks]);
   const activeGoals = useMemo(() => goals.filter(g => !g.deletedAt && !g.deleted_at), [goals]);
 
   const hasData = activeGoals.length > 0 || activeTasks.length > 0;
-
-  // Carregar periodicidade preferida das configurações do usuário (user_metadata)
-  const [periodicity, setPeriodicity] = useState(() => {
-    return currentUser?.user_metadata?.coach_periodicity || 'Semanal';
-  });
 
   const [saving, setSaving] = useState(false);
 
@@ -336,7 +334,10 @@ export default function CoachView() {
               </button>
               <button 
                 type="button"
-                onClick={() => setActiveTab('myday')}
+                onClick={() => {
+                  setActiveTab('myday');
+                  setShouldOpenTaskModal(true);
+                }}
                 style={{ 
                   padding: '10px 20px', 
                   fontSize: '13.5px', 

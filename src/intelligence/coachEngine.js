@@ -108,6 +108,63 @@ Crie objetivos ou tarefas e comece a executar para receber conselhos personaliza
 
   const currentStreak = metrics.streak || 0;
 
+  // 2b. Verificação de Histórico Suficiente
+  const completedRecentTasksCount = completedRecentTasks.length;
+  const hasHistory = completedRecentTasksCount > 0 || completedRecentHabitsCount > 0 || currentStreak > 0;
+
+  if (!hasHistory) {
+    const formattedMessage = `Nota da semana: --/10
+ 
+Sem dados suficientes para avaliar sua evolução.
+ 
+Tendência Atual:
+Sem histórico de atividades recente.
+ 
+Insights do Mentor:
+- Conclua suas tarefas e marque seus hábitos diariamente para gerar pontuações.
+- Objetivos de longo prazo são alcançados com pequenos hábitos diários consistentes.
+ 
+Recomendação Prática:
+Tente realizar e concluir pelo menos uma tarefa ou hábito hoje para iniciar sua análise de evolução comportamental.`;
+
+    return {
+      isPro,
+      greeting: `Olá, ${userName}! Vamos dar o primeiro passo?`,
+      message: formattedMessage.replace(/\*/g, ''),
+      stats: {
+        weeklyScore: '--',
+        completedTasks: 0,
+        trend: 'Sem histórico de atividades recente.',
+        suggestion: 'Conclua pelo menos uma tarefa ou hábito.',
+        tone: 'motivator'
+      }
+    };
+  }
+
+  // Helper para obter tarefa mais urgente (overdue > today > future)
+  const getMostUrgentTask = () => {
+    const pending = tasks.filter(t => !t.completed && !t.deletedAt && !t.deleted_at);
+    
+    const overdue = pending.filter(t => t.dueDate && t.dueDate < todayStr).sort((a, b) => a.dueDate.localeCompare(b.dueDate));
+    const todayTasks = pending.filter(t => t.dueDate === todayStr);
+    const futureTasks = pending.filter(t => t.dueDate && t.dueDate > todayStr).sort((a, b) => a.dueDate.localeCompare(b.dueDate));
+    const noDateTasks = pending.filter(t => !t.dueDate);
+
+    if (overdue.length > 0) {
+      return { task: overdue[0], type: 'overdue', count: overdue.length };
+    }
+    if (todayTasks.length > 0) {
+      return { task: todayTasks[0], type: 'today', count: todayTasks.length };
+    }
+    if (futureTasks.length > 0) {
+      return { task: futureTasks[0], type: 'future', count: futureTasks.length };
+    }
+    if (noDateTasks.length > 0) {
+      return { task: noDateTasks[0], type: 'no_date', count: noDateTasks.length };
+    }
+    return null;
+  };
+
   // 3. Cálculo da Nota da Semana (1.0 a 10.0)
   const completionRatio = totalRecentTasks > 0 ? completedRecentTasks.length / totalRecentTasks : 0;
   let baseScore = 5.0; // Pontuação inicial padrão por uso da plataforma
@@ -241,7 +298,7 @@ Crie objetivos ou tarefas e comece a executar para receber conselhos personaliza
   });
 
   const insightCompletedCategory = maxCompletedCatCount > 0
-    ? `Sua categoria mais concluída é ${mostCompletedCategory} (${maxCompletedCatCount} tarefas finalizadas). Bom trabalho!`
+    ? `Sua categoria mais concluída é ${mostCompletedCategory} (${maxCompletedCatCount} tarefas finalizadas). Ótimo progresso nessa área.`
     : `Comece a concluir tarefas em categorias variadas para ver qual área da sua vida se move mais rápido.`;
 
   // 7c. Categoria mais procrastinada
@@ -302,39 +359,71 @@ Crie objetivos ou tarefas e comece a executar para receber conselhos personaliza
 
   feedbackParagraph = `${taskCountText} ${pendingCountText} ${habitsCountText} ${consistencyText}`;
 
+  const urgentInfo = getMostUrgentTask();
+
   if (activeTone === 'motivator') {
     mainGreeting = `Olá, ${userName}! Que alegria acompanhar sua jornada esta semana.`;
-    suggestionText = goalTitle 
-      ? `Abra o objetivo ${goalTitle} e conclua apenas uma pequena tarefa hoje. Mesmo 15 minutos já ajudam a recuperar o ritmo e impulsionar sua confiança!`
-      : `Escolha uma tarefa importante na sua lista e conclua hoje. Mesmo 15 minutos já ajudam a recuperar o ritmo e impulsionar sua confiança!`;
+    if (urgentInfo) {
+      if (urgentInfo.type === 'overdue') {
+        suggestionText = `Atenção: Você tem a tarefa atrasada "${urgentInfo.task.title}". Que tal começar por ela hoje? Dedicar apenas 15 minutos ajudará a recuperar seu ritmo e aliviar a pressão!`;
+      } else if (urgentInfo.type === 'today') {
+        suggestionText = `Foque na tarefa planejada para hoje: "${urgentInfo.task.title}". Dar esse passo agora manterá seu planejamento semanal no trilho!`;
+      } else {
+        suggestionText = `Que tal adiantar a tarefa "${urgentInfo.task.title}"? Dar o primeiro passo hoje aumentará sua confiança para a semana!`;
+      }
+    } else {
+      suggestionText = goalTitle 
+        ? `Abra o objetivo ${goalTitle} e conclua apenas uma pequena tarefa hoje. Mesmo 15 minutos já ajudam a recuperar o ritmo e impulsionar sua confiança!`
+        : `Escolha uma tarefa importante na sua lista e conclua hoje. Mesmo 15 minutos já ajudam a recuperar o ritmo e impulsionar sua confiança!`;
+    }
   } else if (activeTone === 'analytical') {
     mainGreeting = `Olá, ${userName}. Vamos analisar seus padrões de produtividade desta semana:`;
     feedbackParagraph = `${feedbackParagraph} Identifiquei que manter uma rotina consistente evita o acúmulo de tarefas e ajuda a manter a mente tranquila.`;
-    suggestionText = goalTitle
-      ? `Análise acionável: Dedique um bloco de tempo exclusivo para o objetivo ${goalTitle}. Resolver uma pendência simples dele hoje melhorará sua tendência da próxima semana.`
-      : `Análise acionável: Dedique um bloco de tempo exclusivo para as tarefas gerais pendentes hoje. Concluir um item simples evitará acúmulo de pendências.`;
+    if (urgentInfo) {
+      if (urgentInfo.type === 'overdue') {
+        suggestionText = `Análise acionável: Identifiquei ${urgentInfo.count} tarefa(s) atrasada(s), sendo "${urgentInfo.task.title}" a principal pendência. Dedique seu próximo bloco de foco a ela para evitar estresse acumulado.`;
+      } else if (urgentInfo.type === 'today') {
+        suggestionText = `Análise acionável: A tarefa "${urgentInfo.task.title}" está agendada para hoje. Executá-la no seu melhor período produtivo otimizará seu rendimento diário.`;
+      } else {
+        suggestionText = `Análise acionável: Sua lista diária está livre. Dedique tempo para planejar ou adiantar "${urgentInfo.task.title}" para manter seu ritmo de evolução constante.`;
+      }
+    } else {
+      suggestionText = goalTitle
+        ? `Análise acionável: Dedique um bloco de tempo exclusivo para o objetivo ${goalTitle}. Resolver uma pendência simples dele hoje melhorará sua tendência da próxima semana.`
+        : `Análise acionável: Dedique um bloco de tempo exclusivo para as tarefas gerais pendentes hoje. Concluir um item simples evitará acúmulo de pendências.`;
+    }
   } else { // challenging
     mainGreeting = `Olá, ${userName}. Pronto para elevar seu nível de foco hoje?`;
     feedbackParagraph = `${feedbackParagraph} O progresso não acontece por acaso, ele exige atitude diária.`;
-    suggestionText = goalTitle
-      ? `Desafio do dia: Acesse o objetivo ${goalTitle} agora e conclua apenas uma tarefa de 15 minutos. Quebre a inércia imediatamente!`
-      : `Desafio do dia: Acesse sua lista de tarefas agora e conclua apenas um item de 15 minutos. Quebre a inércia imediatamente!`;
+    if (urgentInfo) {
+      if (urgentInfo.type === 'overdue') {
+        suggestionText = `Desafio do dia: Você permitiu que a tarefa "${urgentInfo.task.title}" ficasse atrasada. Quebre a inércia agora e conclua esse item nos próximos 25 minutos!`;
+      } else if (urgentInfo.type === 'today') {
+        suggestionText = `Desafio do dia: Acesse sua lista e conclua a tarefa de hoje "${urgentInfo.task.title}" imediatamente. Sem desculpas para procrastinar!`;
+      } else {
+        suggestionText = `Desafio do dia: Vá além do planejado e adiante a tarefa "${urgentInfo.task.title}". Eleve sua barra de produtividade hoje!`;
+      }
+    } else {
+      suggestionText = goalTitle
+        ? `Desafio do dia: Acesse o objetivo ${goalTitle} agora e conclua apenas uma tarefa de 15 minutos. Quebre a inércia imediatamente!`
+        : `Desafio do dia: Acesse sua lista de tarefas agora e conclua apenas um item de 15 minutos. Quebre a inércia imediatamente!`;
+    }
   }
 
   // 9. Formatação final da mensagem em markdown (Limpando asteriscos)
   const rawMessage = `### Nota da semana: ${weeklyScore}/10
-
+ 
 ${feedbackParagraph}
-
+ 
 Tendência Atual:
 ${trendIndicator}
-
+ 
 Insights do Mentor:
 - ${insightDayAndTime}
 - ${insightCompletedCategory}
 - ${insightProcrastinatedCategory}
 - ${insightHoursSaved}
-
+ 
 Recomendação Prática:
 ${suggestionText}`;
 

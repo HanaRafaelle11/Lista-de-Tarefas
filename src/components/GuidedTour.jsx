@@ -14,7 +14,7 @@ export default function GuidedTour() {
     if (!hasSeenTour) {
       const timer = setTimeout(() => {
         setRun(true);
-      }, 1000);
+      }, 300);
       return () => clearTimeout(timer);
     }
   }, [currentUser]);
@@ -98,6 +98,10 @@ export default function GuidedTour() {
         showProgress
         showSkipButton
         steps={steps}
+        disableScrolling={false}
+        disableScrollParentFix={true}
+        spotlightClicks={true}
+        disableOverlayClose={true}
         styles={{
           options: {
             zIndex: 99999,

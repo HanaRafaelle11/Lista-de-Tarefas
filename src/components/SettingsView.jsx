@@ -90,6 +90,7 @@ export default function SettingsView() {
   const [feedbackAttachments, setFeedbackAttachments] = useState([]);
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
   const [isSyncModalOpen, setIsSyncModalOpen] = useState(false);
+  const [expandedSection, setExpandedSection] = useState(null);
 
   const notifications = useNotifications();
 
@@ -1022,11 +1023,62 @@ export default function SettingsView() {
       {settingsTab === 'general' ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
 
+          {/* Accordion Helper */}
+          {(() => {
+            if (!window._renderAccordionSection) {
+              window._renderAccordionSection = (id, icon, title, content, isDanger = false) => {
+                const isExpanded = expandedSection === id;
+                return (
+                  <div 
+                    style={{ 
+                      backgroundColor: 'var(--bg-card)', 
+                      borderRadius: 'var(--radius-lg)', 
+                      border: `1px solid ${isDanger ? '#ef4444' : 'var(--border-light)'}`,
+                      overflow: 'hidden',
+                      boxShadow: 'var(--shadow-sm)',
+                      transition: 'all 0.2s ease'
+                    }}
+                  >
+                    <div 
+                      onClick={() => setExpandedSection(isExpanded ? null : id)}
+                      style={{ 
+                        padding: '16px 24px', 
+                        cursor: 'pointer', 
+                        display: 'flex', 
+                        justifyContent: 'space-between', 
+                        alignItems: 'center',
+                        backgroundColor: isExpanded ? 'var(--bg-card-hover)' : 'transparent',
+                        userSelect: 'none',
+                        borderBottom: isExpanded ? '1px solid var(--border-light)' : 'none'
+                      }}
+                    >
+                      <h2 style={{ fontSize: '15px', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '8px', margin: 0, color: isDanger ? '#ef4444' : 'var(--text-main)' }}>
+                        {icon} {title}
+                      </h2>
+                      <ChevronRight 
+                        size={18} 
+                        style={{ 
+                          transform: isExpanded ? 'rotate(90deg)' : 'none', 
+                          transition: 'transform 0.2s',
+                          color: 'var(--text-light)' 
+                        }} 
+                      />
+                    </div>
+                    
+                    {isExpanded && (
+                      <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px', borderTop: '1px solid var(--border-light)' }}>
+                        {content}
+                      </div>
+                    )}
+                  </div>
+                );
+              };
+            }
+            return null;
+          })()}
+
           {/* Perfil */}
-          <Card>
-            <h2 style={{ fontSize: '16px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-              <User size={18} /> Sua Conta
-            </h2>
+          {window._renderAccordionSection('account', <User size={18} />, 'Sua Conta', (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <div>
                 <span style={{ fontSize: '12px', color: 'var(--text-light)', textTransform: 'uppercase' }}>Nome</span>
@@ -1036,16 +1088,12 @@ export default function SettingsView() {
                 <span style={{ fontSize: '12px', color: 'var(--text-light)', textTransform: 'uppercase' }}>Email</span>
                 <p style={{ fontSize: '15px', color: 'var(--text-main)', fontWeight: '500' }}>{currentUser.email}</p>
               </div>
-
             </div>
-          </Card>
+          ))}
 
           {/* Segurança e Autenticação MFA */}
-          <Card>
-            <h2 style={{ fontSize: '16px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-              <Shield size={18} /> Segurança da Conta
-            </h2>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          {window._renderAccordionSection('security', <Shield size={18} />, 'Segurança da Conta', (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '100%' }}>
 
               {/* Seção de Senha de Acesso */}
               <div style={{ paddingBottom: '20px', borderBottom: '1px solid var(--border-light)', marginBottom: '12px' }}>
@@ -1221,14 +1269,11 @@ export default function SettingsView() {
                 </div>
               )}
             </div>
-          </Card>
+          ))}
 
           {/* Assinatura SaaS (Simulador Pro) - Bloco 6 */}
-          <div style={{ backgroundColor: 'var(--bg-card)', padding: '24px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-light)' }}>
-            <h2 style={{ fontSize: '16px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-              <Award size={18} /> Assinatura Flowday
-            </h2>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          {window._renderAccordionSection('subscription', <Award size={18} />, 'Assinatura Flowday', (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', width: '100%' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                 <div style={{ padding: '8px', borderRadius: '50%', backgroundColor: isPro ? 'var(--primary-light)' : 'var(--border-medium)', color: isPro ? 'var(--primary)' : 'var(--text-light)' }}>
                   <Award size={24} />
@@ -1270,73 +1315,72 @@ export default function SettingsView() {
                 {isPro ? 'Cancelar Assinatura Pro' : 'Assinar Flowday Pro'}
               </button>
             </div>
-          </div>
+          ))}
 
           {/* Exportação de Dados */}
-          <div style={{ backgroundColor: 'var(--bg-card)', padding: '24px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-light)' }}>
-            <h2 style={{ fontSize: '16px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-              <Download size={18} /> Exportar Dados
-            </h2>
-            <p style={{ fontSize: '12px', color: 'var(--text-light)', lineHeight: '1.5', margin: '0 0 16px' }}>
-              Faça download dos seus objetivos, tarefas e rotinas em múltiplos formatos. Recursos exclusivos do plano Pro.
-            </p>
-            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-              <button
-                onClick={handleExportCSVData}
-                style={{
-                  padding: '10px 16px',
-                  borderRadius: '6px',
-                  backgroundColor: 'var(--bg-app)',
-                  border: '1px solid var(--border-medium)',
-                  color: 'var(--text-main)',
-                  fontSize: '13px',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px'
-                }}
-              >
-                CSV
-              </button>
-              <button
-                onClick={handleExportPDFData}
-                style={{
-                  padding: '10px 16px',
-                  borderRadius: '6px',
-                  backgroundColor: 'var(--bg-app)',
-                  border: '1px solid var(--border-medium)',
-                  color: 'var(--text-main)',
-                  fontSize: '13px',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px'
-                }}
-              >
-                PDF (Relatório)
-              </button>
-              <button
-                onClick={handleExportPNGData}
-                style={{
-                  padding: '10px 16px',
-                  borderRadius: '6px',
-                  backgroundColor: 'var(--bg-app)',
-                  border: '1px solid var(--border-medium)',
-                  color: 'var(--text-main)',
-                  fontSize: '13px',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px'
-                }}
-              >
-                PNG (Card de Progresso)
-              </button>
+          {window._renderAccordionSection('backup', <Download size={18} />, 'Exportar Dados', (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', width: '100%' }}>
+              <p style={{ fontSize: '12px', color: 'var(--text-light)', lineHeight: '1.5', margin: '0 0 16px' }}>
+                Faça download dos seus objetivos, tarefas e rotinas em múltiplos formatos. Recursos exclusivos do plano Pro.
+              </p>
+              <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                <button
+                  onClick={handleExportCSVData}
+                  style={{
+                    padding: '10px 16px',
+                    borderRadius: '6px',
+                    backgroundColor: 'var(--bg-app)',
+                    border: '1px solid var(--border-medium)',
+                    color: 'var(--text-main)',
+                    fontSize: '13px',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}
+                >
+                  CSV
+                </button>
+                <button
+                  onClick={handleExportPDFData}
+                  style={{
+                    padding: '10px 16px',
+                    borderRadius: '6px',
+                    backgroundColor: 'var(--bg-app)',
+                    border: '1px solid var(--border-medium)',
+                    color: 'var(--text-main)',
+                    fontSize: '13px',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}
+                >
+                  PDF (Relatório)
+                </button>
+                <button
+                  onClick={handleExportPNGData}
+                  style={{
+                    padding: '10px 16px',
+                    borderRadius: '6px',
+                    backgroundColor: 'var(--bg-app)',
+                    border: '1px solid var(--border-medium)',
+                    color: 'var(--text-main)',
+                    fontSize: '13px',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}
+                >
+                  PNG (Card de Progresso)
+                </button>
+              </div>
             </div>
-          </div>
+          ))}
 
           {/* Modal de Cancelamento Pro */}
           {isCancelModalOpen && (
@@ -1401,11 +1445,8 @@ export default function SettingsView() {
           )}
 
           {/* Configurações de Produtividade */}
-          <div style={{ backgroundColor: 'var(--bg-card)', padding: '24px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-light)' }}>
-            <h2 style={{ fontSize: '16px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-              <Calendar size={18} /> Configurações de Produtividade
-            </h2>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          {window._renderAccordionSection('calendar', <Calendar size={18} />, 'Configurações de Produtividade', (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', width: '100%' }}>
               <p style={{ fontSize: '14px', color: 'var(--text-main)', fontWeight: '500', margin: 0 }}>
                 Sincronização do Calendário de Tarefas
               </p>
@@ -1440,332 +1481,324 @@ export default function SettingsView() {
                 <Calendar size={14} /> Sincronizar Calendário
               </button>
             </div>
-          </div>
+          ))}
 
           {/* Aparência */}
-          <div style={{ backgroundColor: 'var(--bg-card)', padding: '24px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-light)' }}>
-            <h2 style={{ fontSize: '16px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-              <Moon size={18} /> Aparência
-            </h2>
-            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-              {[
-                { id: 'light', label: 'Claro', icon: <Sun size={16} /> },
-                { id: 'dark', label: 'Escuro', icon: <Moon size={16} /> },
-                { id: 'system', label: 'Sistema', icon: <Settings size={16} /> }
-              ].map(t => (
-                <button
-                  key={t.id}
-                  onClick={() => setTheme(t.id)}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 16px', borderRadius: '8px',
-                    border: `1px solid ${theme === t.id ? 'var(--primary)' : 'var(--border-medium)'}`,
-                    backgroundColor: theme === t.id ? 'var(--primary-glow)' : 'var(--bg-app)',
-                    color: theme === t.id ? 'var(--primary)' : 'var(--text-main)',
-                    fontWeight: theme === t.id ? '600' : '500',
-                    transition: 'all 0.2s'
-                  }}
-                >
-                  {t.icon} {t.label}
-                </button>
-              ))}
-            </div>
-
-            {isPro && effectiveTheme === 'light' && (
-              <div style={{ marginTop: '20px', paddingTop: '16px', borderTop: '1px solid var(--border-light)' }}>
-                <span style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-main)', display: 'block', marginBottom: '10px' }}>
-                  Cor de Fundo Personalizada (Modo Claro)
-                </span>
-                <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                  {[
-                    { color: '#F8FAFC', label: 'Padrão' },
-                    { color: '#FAF5FF', label: 'Lilás' },
-                    { color: '#F0F9FF', label: 'Azul' },
-                    { color: '#F0FDF4', label: 'Menta' },
-                    { color: '#FFF7ED', label: 'Pêssego' }
-                  ].map(bg => (
-                    <button
-                      key={bg.color}
-                      onClick={() => setAppBgColor(bg.color)}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                        padding: '8px 12px',
-                        borderRadius: '6px',
-                        border: `1.5px solid ${appBgColor === bg.color ? 'var(--primary)' : 'var(--border-medium)'}`,
-                        backgroundColor: bg.color,
-                        color: 'var(--text-main)',
-                        fontSize: '12.5px',
-                        fontWeight: '600',
-                        cursor: 'pointer',
-                        transition: 'all 0.15s'
-                      }}
-                    >
-                      <span style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: bg.color, border: '1px solid var(--border-medium)', display: 'inline-block' }} />
-                      {bg.label}
-                    </button>
-                  ))}
-                </div>
+          {window._renderAccordionSection('appearance', <Moon size={18} />, 'Aparência', (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '100%' }}>
+              <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                {[
+                  { id: 'light', label: 'Claro', icon: <Sun size={16} /> },
+                  { id: 'dark', label: 'Escuro', icon: <Moon size={16} /> },
+                  { id: 'system', label: 'Sistema', icon: <Settings size={16} /> }
+                ].map(t => (
+                  <button
+                    key={t.id}
+                    onClick={() => setTheme(t.id)}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 16px', borderRadius: '8px',
+                      border: `1px solid ${theme === t.id ? 'var(--primary)' : 'var(--border-medium)'}`,
+                      backgroundColor: theme === t.id ? 'var(--primary-glow)' : 'var(--bg-app)',
+                      color: theme === t.id ? 'var(--primary)' : 'var(--text-main)',
+                      fontWeight: theme === t.id ? '600' : '500',
+                      transition: 'all 0.2s'
+                    }}
+                  >
+                    {t.icon} {t.label}
+                  </button>
+                ))}
               </div>
-            )}
 
-            <p style={{ fontSize: '12px', color: 'var(--text-light)', marginTop: '12px' }}>
-              O Flowday se adapta à sua preferência. O modo escuro reduz o cansaço visual.
-            </p>
-          </div>
+              {isPro && effectiveTheme === 'light' && (
+                <div style={{ marginTop: '20px', paddingTop: '16px', borderTop: '1px solid var(--border-light)' }}>
+                  <span style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-main)', display: 'block', marginBottom: '10px' }}>
+                    Cor de Fundo Personalizada (Modo Claro)
+                  </span>
+                  <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                    {[
+                      { color: '#F8FAFC', label: 'Padrão' },
+                      { color: '#FAF5FF', label: 'Lilás' },
+                      { color: '#F0F9FF', label: 'Azul' },
+                      { color: '#F0FDF4', label: 'Menta' },
+                      { color: '#FFF7ED', label: 'Pêssego' }
+                    ].map(bg => (
+                      <button
+                        key={bg.color}
+                        onClick={() => setAppBgColor(bg.color)}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          padding: '8px 12px',
+                          borderRadius: '6px',
+                          border: `1.5px solid ${appBgColor === bg.color ? 'var(--primary)' : 'var(--border-medium)'}`,
+                          backgroundColor: bg.color,
+                          color: 'var(--text-main)',
+                          fontSize: '12.5px',
+                          fontWeight: '600',
+                          cursor: 'pointer',
+                          transition: 'all 0.15s'
+                        }}
+                      >
+                        <span style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: bg.color, border: '1px solid var(--border-medium)', display: 'inline-block' }} />
+                        {bg.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <p style={{ fontSize: '12px', color: 'var(--text-light)', marginTop: '12px', margin: 0 }}>
+                O Flowday se adapta à sua preferência. O modo escuro reduz o cansaço visual.
+              </p>
+            </div>
+          ))}
 
           {/* Notificações */}
-          <div style={{ backgroundColor: 'var(--bg-card)', padding: '24px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-light)' }}>
-            <h2 style={{ fontSize: '16px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-              <Bell size={18} /> Notificações do Navegador
-            </h2>
-
-            {!notifications.isSupported ? (
-              <p style={{ fontSize: '13px', color: 'var(--text-light)' }}>
-                Seu navegador não suporta notificações.
-              </p>
-            ) : notifications.permission === 'denied' ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--prio-alta-text)' }}>
-                  <BellOff size={16} />
-                  <span style={{ fontSize: '13px', fontWeight: '600' }}>Notificações bloqueadas</span>
-                </div>
-                <p style={{ fontSize: '12px', color: 'var(--text-light)' }}>
-                  Você bloqueou as notificações no navegador. Para reativar, acesse as configurações do seu navegador e permita notificações para este site.
+          {window._renderAccordionSection('notifications', <Bell size={18} />, 'Notificações do Navegador', (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '100%' }}>
+              {!notifications.isSupported ? (
+                <p style={{ fontSize: '13px', color: 'var(--text-light)', margin: 0 }}>
+                  Seu navegador não suporta notificações.
                 </p>
-              </div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                {/* Toggle principal */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px' }}>
-                  <div>
-                    <p style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-main)' }}>
-                      {notifications.isEnabled ? 'Notificações ativas' : 'Notificações desativadas'}
-                    </p>
-                    <p style={{ fontSize: '12px', color: 'var(--text-light)', marginTop: '2px' }}>
-                      {notifications.isEnabled
-                        ? 'Você receberá lembretes e alertas do Flowday. Funciona com o app aberto (foreground).'
-                        : 'Ative para receber lembretes de tarefas e conquistas.'}
-                    </p>
+              ) : notifications.permission === 'denied' ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--prio-alta-text)' }}>
+                    <BellOff size={16} />
+                    <span style={{ fontSize: '13px', fontWeight: '600' }}>Notificações bloqueadas</span>
                   </div>
-                  {/* Botão toggle */}
-                  <button
-                    id="notifications-toggle-btn"
-                    onClick={() => notifications.isEnabled ? notifications.disableNotifications(currentUser?.id) : notifications.requestPermission(currentUser?.id)}
-                    style={{
-                      position: 'relative',
-                      width: '44px',
-                      height: '24px',
-                      borderRadius: '99px',
-                      backgroundColor: notifications.isEnabled ? 'var(--primary)' : 'var(--border-medium)',
-                      border: 'none',
-                      cursor: 'pointer',
-                      transition: 'background-color 0.25s',
-                      flexShrink: 0,
-                    }}
-                    aria-label={notifications.isEnabled ? 'Desativar notificações' : 'Ativar notificações'}
-                  >
-                    <span style={{
-                      position: 'absolute',
-                      top: '3px',
-                      left: notifications.isEnabled ? '23px' : '3px',
-                      width: '18px',
-                      height: '18px',
-                      borderRadius: '50%',
-                      backgroundColor: 'white',
-                      transition: 'left 0.25s',
-                      boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
-                    }} />
-                  </button>
+                  <p style={{ fontSize: '12px', color: 'var(--text-light)', margin: 0 }}>
+                    Você bloqueou as notificações no navegador. Para reativar, acesse as configurações do seu navegador e permita notificações para este site.
+                  </p>
                 </div>
-
-                {/* Status e ações */}
-                {notifications.isEnabled && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--primary)', fontSize: '12px', fontWeight: '600' }}>
-                      <CheckCircle size={14} />
-                      Permissão concedida pelo navegador
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  {/* Toggle principal */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px' }}>
+                    <div>
+                      <p style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-main)', margin: 0 }}>
+                        {notifications.isEnabled ? 'Notificações ativas' : 'Notificações desativadas'}
+                      </p>
+                      <p style={{ fontSize: '12px', color: 'var(--text-light)', marginTop: '2px', margin: '2px 0 0' }}>
+                        {notifications.isEnabled
+                          ? 'Você receberá lembretes e alertas do Flowday. Funciona com o app aberto (foreground).'
+                          : 'Ative para receber lembretes de tarefas e conquistas.'}
+                      </p>
                     </div>
+                    {/* Botão toggle */}
                     <button
-                      id="notifications-test-btn"
-                      onClick={() => notifications.sendNotification('Flowday', {
-                        body: 'Notificações estão funcionando! Você será avisado sobre suas tarefas.',
-                        tag: 'flowday-test',
-                      })}
+                      id="notifications-toggle-btn"
+                      onClick={() => notifications.isEnabled ? notifications.disableNotifications(currentUser?.id) : notifications.requestPermission(currentUser?.id)}
                       style={{
-                        alignSelf: 'flex-start',
-                        padding: '6px 14px',
-                        fontSize: '12px',
-                        fontWeight: '600',
-                        borderRadius: '6px',
-                        backgroundColor: 'var(--primary-light)',
-                        color: 'var(--primary)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '6px',
+                        position: 'relative',
+                        width: '44px',
+                        height: '24px',
+                        borderRadius: '99px',
+                        backgroundColor: notifications.isEnabled ? 'var(--primary)' : 'var(--border-medium)',
+                        border: 'none',
+                        cursor: 'pointer',
+                        transition: 'background-color 0.25s',
+                        flexShrink: 0,
                       }}
+                      aria-label={notifications.isEnabled ? 'Desativar notificações' : 'Ativar notificações'}
                     >
-                      <BellRing size={13} /> Enviar notificação de teste
+                      <span style={{
+                        position: 'absolute',
+                        top: '3px',
+                        left: notifications.isEnabled ? '23px' : '3px',
+                        width: '18px',
+                        height: '18px',
+                        borderRadius: '50%',
+                        backgroundColor: 'white',
+                        transition: 'left 0.25s',
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                      }} />
                     </button>
                   </div>
-                )}
-              </div>
-            )}
-          </div>
 
-          {/* Seção de Feedback */}
-          <div style={{ backgroundColor: 'var(--bg-card)', padding: '24px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-light)' }}>
-            <h2 style={{ fontSize: '16px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-              <MessageSquare size={18} /> Compartilhe com o MyFlowDay
-            </h2>
-            <textarea
-              value={feedbackText}
-              onChange={(e) => setFeedbackText(e.target.value)}
-              placeholder="Compartilhe suas ideias, problemas ou sugestões com o MyFlowDay..."
-              rows="5"
-              style={{ width: '100%', padding: '12px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-medium)', backgroundColor: 'var(--bg-app)', color: 'var(--text-main)', resize: 'vertical', fontSize: '14px' }}
-            />
-
-            <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <input
-                type="file"
-                id="feedback-attachment"
-                accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx,.txt"
-                style={{ display: 'none' }}
-                multiple
-                onChange={(e) => {
-                  if (e.target.files && e.target.files.length > 0) {
-                    const selected = Array.from(e.target.files);
-                    if (feedbackAttachments.length + selected.length > 4) {
-                      openCustomAlert('Você pode anexar no máximo 4 arquivos.');
-                      return;
-                    }
-                    const currentSize = feedbackAttachments.reduce((acc, f) => acc + f.size, 0);
-                    const selectedSize = selected.reduce((acc, f) => acc + f.size, 0);
-                    if (currentSize + selectedSize > 10 * 1024 * 1024) {
-                      openCustomAlert('O tamanho total dos anexos não pode exceder 10 MB.');
-                      return;
-                    }
-                    setFeedbackAttachments(prev => [...prev, ...selected]);
-                  }
-                }}
-              />
-
-              {feedbackAttachments.length > 0 && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  {feedbackAttachments.map((file, idx) => (
-                    <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', backgroundColor: 'var(--bg-app)', border: '1px solid var(--border-medium)', borderRadius: '6px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden' }}>
-                        <Paperclip size={16} color="var(--text-muted)" />
-                        <span style={{ fontSize: '13px', color: 'var(--text-main)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {file.name} ({(file.size / 1024 / 1024).toFixed(2)} MB)
-                        </span>
+                  {/* Status e ações */}
+                  {notifications.isEnabled && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--primary)', fontSize: '12px', fontWeight: '600' }}>
+                        <CheckCircle size={14} />
+                        Permissão concedida pelo navegador
                       </div>
                       <button
-                        type="button"
-                        onClick={() => setFeedbackAttachments(prev => prev.filter((_, i) => i !== idx))}
-                        style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '4px' }}
+                        id="notifications-test-btn"
+                        onClick={() => notifications.sendNotification('Flowday', {
+                          body: 'Notificações estão funcionando! Você será avisado sobre suas tarefas.',
+                          tag: 'flowday-test',
+                        })}
+                        style={{
+                          alignSelf: 'flex-start',
+                          padding: '6px 14px',
+                          fontSize: '12px',
+                          fontWeight: '600',
+                          borderRadius: '6px',
+                          backgroundColor: 'var(--primary-light)',
+                          color: 'var(--primary)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          border: 'none',
+                          cursor: 'pointer'
+                        }}
                       >
-                        <X size={16} />
+                        <BellRing size={13} /> Enviar notificação de teste
                       </button>
                     </div>
-                  ))}
+                  )}
                 </div>
               )}
-
-              {feedbackAttachments.length < 4 && (
-                <button
-                  type="button"
-                  onClick={() => document.getElementById('feedback-attachment').click()}
-                  style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'transparent', border: '1px dashed var(--border-medium)', borderRadius: '6px', padding: '8px 12px', color: 'var(--text-muted)', fontSize: '13px', cursor: 'pointer', alignSelf: 'flex-start' }}
-                >
-                  <Paperclip size={16} /> Anexar arquivo ({feedbackAttachments.length}/4)
-                </button>
-              )}
             </div>
-            <button
-              onClick={handleSendFeedback}
-              disabled={feedbackStatus === 'sending'}
-              style={{
-                marginTop: '12px',
-                padding: '10px 20px',
-                borderRadius: 'var(--radius-sm)',
-                backgroundColor: feedbackStatus === 'sent' ? '#22c55e' : (feedbackStatus === 'error' ? '#ef4444' : 'var(--primary)'),
-                color: 'white',
-                fontWeight: '600',
-                fontSize: '14px',
-                cursor: 'pointer',
-                transition: 'all 0.2s',
-                border: 'none',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                justifyContent: 'center'
-              }}
-            >
-              {feedbackStatus === 'sending' && <><span>Enviando...</span></>}
-              {feedbackStatus === 'sent' && <><span>Enviado!</span></>}
-              {feedbackStatus === 'error' && <><span>Erro!</span></>}
-              {feedbackStatus === 'idle' && <><span>Enviar Feedback</span></>}
-            </button>
-            {feedbackStatus === 'sent' && <p style={{ fontSize: '12px', color: '#22c55e', marginTop: '8px' }}>Obrigado pelo seu feedback!</p>}
-            {feedbackStatus === 'error' && <p style={{ fontSize: '12px', color: '#ef4444', marginTop: '8px' }}>Não foi possível enviar o feedback. Tente novamente.</p>}
-          </div>
+          ))}
+
+          {/* Seção de Feedback */}
+          {window._renderAccordionSection('feedback', <MessageSquare size={18} />, 'Compartilhe com o MyFlowDay', (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', width: '100%' }}>
+              <textarea
+                value={feedbackText}
+                onChange={(e) => setFeedbackText(e.target.value)}
+                placeholder="Compartilhe suas ideias, problemas ou sugestões com o MyFlowDay..."
+                rows="5"
+                style={{ width: '100%', padding: '12px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-medium)', backgroundColor: 'var(--bg-app)', color: 'var(--text-main)', resize: 'vertical', fontSize: '14px' }}
+              />
+
+              <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <input
+                  type="file"
+                  id="feedback-attachment"
+                  accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx,.txt"
+                  style={{ display: 'none' }}
+                  multiple
+                  onChange={(e) => {
+                    if (e.target.files && e.target.files.length > 0) {
+                      const selected = Array.from(e.target.files);
+                      if (feedbackAttachments.length + selected.length > 4) {
+                        openCustomAlert('Você pode anexar no máximo 4 arquivos.');
+                        return;
+                      }
+                      const currentSize = feedbackAttachments.reduce((acc, f) => acc + f.size, 0);
+                      const selectedSize = selected.reduce((acc, f) => acc + f.size, 0);
+                      if (currentSize + selectedSize > 10 * 1024 * 1024) {
+                        openCustomAlert('O tamanho total dos anexos não pode exceder 10 MB.');
+                        return;
+                      }
+                      setFeedbackAttachments(prev => [...prev, ...selected]);
+                    }
+                  }}
+                />
+
+                {feedbackAttachments.length > 0 && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    {feedbackAttachments.map((file, idx) => (
+                      <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', backgroundColor: 'var(--bg-app)', border: '1px solid var(--border-medium)', borderRadius: '6px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden' }}>
+                          <Paperclip size={16} color="var(--text-muted)" />
+                          <span style={{ fontSize: '13px', color: 'var(--text-main)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {file.name} ({(file.size / 1024 / 1024).toFixed(2)} MB)
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setFeedbackAttachments(prev => prev.filter((_, i) => i !== idx))}
+                          style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '4px' }}
+                        >
+                          <X size={16} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {feedbackAttachments.length < 4 && (
+                  <button
+                    type="button"
+                    onClick={() => document.getElementById('feedback-attachment').click()}
+                    style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'transparent', border: '1px dashed var(--border-medium)', borderRadius: '6px', padding: '8px 12px', color: 'var(--text-muted)', fontSize: '13px', cursor: 'pointer', alignSelf: 'flex-start' }}
+                  >
+                    <Paperclip size={16} /> Anexar arquivo ({feedbackAttachments.length}/4)
+                  </button>
+                )}
+              </div>
+              <button
+                onClick={handleSendFeedback}
+                disabled={feedbackStatus === 'sending'}
+                style={{
+                  marginTop: '12px',
+                  padding: '10px 20px',
+                  borderRadius: 'var(--radius-sm)',
+                  backgroundColor: feedbackStatus === 'sent' ? '#22c55e' : (feedbackStatus === 'error' ? '#ef4444' : 'var(--primary)'),
+                  color: 'white',
+                  fontWeight: '600',
+                  fontSize: '14px',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  border: 'none',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  justifyContent: 'center'
+                }}
+              >
+                {feedbackStatus === 'sending' && <><span>Enviando...</span></>}
+                {feedbackStatus === 'sent' && <><span>Enviado!</span></>}
+                {feedbackStatus === 'error' && <><span>Erro!</span></>}
+                {feedbackStatus === 'idle' && <><span>Enviar Feedback</span></>}
+              </button>
+              {feedbackStatus === 'sent' && <p style={{ fontSize: '12px', color: '#22c55e', marginTop: '8px', margin: 0 }}>Obrigado pelo seu feedback!</p>}
+              {feedbackStatus === 'error' && <p style={{ fontSize: '12px', color: '#ef4444', marginTop: '8px', margin: 0 }}>Não foi possível enviar o feedback. Tente novamente.</p>}
+            </div>
+          ))}
 
           {/* Zona de Perigo */}
-          <div style={{ backgroundColor: 'var(--bg-card)', padding: '24px', borderRadius: 'var(--radius-lg)', border: '1px solid #ef4444', marginTop: '32px' }}>
-            <h2 style={{ fontSize: '16px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px', color: '#ef4444' }}>
-              <AlertTriangle size={18} /> Zona de Perigo
-            </h2>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '13px', color: 'var(--text-light)', marginBottom: '24px' }}>
-              <p>Ações destrutivas. Tenha certeza absoluta antes de prosseguir.</p>
+          {window._renderAccordionSection('danger', <AlertTriangle size={18} />, 'Zona de Perigo', (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%' }}>
+              <p style={{ fontSize: '13px', color: 'var(--text-light)', margin: 0 }}>Ações destrutivas. Tenha certeza absoluta antes de prosseguir.</p>
+              <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginTop: '16px' }}>
+                <button
+                  className="danger-btn"
+                  onClick={() => {
+                    openCustomConfirm(
+                      "Deseja realmente apagar TODOS os seus dados do Flowday (tarefas, objetivos, hábitos e conquistas)? Esta ação é permanente e não poderá ser revertida.",
+                      "Começar do Zero",
+                      async () => {
+                        await handleResetAllData();
+                        openCustomAlert("Todos os seus dados foram apagados com sucesso.");
+                      }
+                    );
+                  }}
+                  style={{ padding: '12px 24px', backgroundColor: '#FAF0F0', color: '#C06C6C', borderRadius: '8px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '8px', border: 'none', cursor: 'pointer' }}
+                >
+                  <Trash2 size={16} /> Começar do Zero
+                </button>
+              </div>
             </div>
-            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-              <button
-                className="danger-btn"
-                onClick={() => {
-                  openCustomConfirm(
-                    "Deseja realmente apagar TODOS os seus dados do Flowday (tarefas, objetivos, hábitos e conquistas)? Esta ação é permanente e não poderá ser revertida.",
-                    "Começar do Zero",
-                    async () => {
-                      await handleResetAllData();
-                      openCustomAlert("Todos os seus dados foram apagados com sucesso.");
-                    }
-                  );
-                }}
-                style={{ padding: '12px 24px', backgroundColor: '#FAF0F0', color: '#C06C6C', borderRadius: '8px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '8px' }}
-              >
-                <Trash2 size={16} /> Começar do Zero
-              </button>
-            </div>
-          </div>
+          ), true)}
 
           {/* PWA & Sistema */}
-          <div style={{ backgroundColor: 'var(--bg-card)', padding: '24px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-light)' }}>
-            <h2 style={{ fontSize: '16px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-              <Shield size={18} /> Flowday v1.0
-            </h2>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '13px', color: 'var(--text-light)' }}>
-              <p>Plataforma de Progresso Pessoal</p>
-              <p>Construído para clareza, evolução e consistência.</p>
-            </div>
+          {window._renderAccordionSection('system', <Shield size={18} />, 'Flowday v1.0', (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%' }}>
+              <p style={{ fontSize: '13px', color: 'var(--text-light)', margin: 0 }}>Plataforma de Progresso Pessoal</p>
+              <p style={{ fontSize: '13px', color: 'var(--text-light)', margin: 0 }}>Construído para clareza, evolução e consistência.</p>
 
-            <div style={{ display: 'flex', gap: '12px', marginTop: '24px', flexWrap: 'wrap' }}>
-              <button
-                onClick={handleLogout}
-                style={{ padding: '12px 24px', backgroundColor: '#FAF0F0', color: '#C06C6C', borderRadius: '8px', fontWeight: '600' }}
-              >
-                Sair da minha conta
-              </button>
-              <button
-                onClick={handleDeleteAccount}
-                disabled={loading}
-                style={{ padding: '12px 24px', backgroundColor: 'transparent', border: '1px solid #C06C6C', color: '#C06C6C', borderRadius: '8px', fontWeight: '600' }}
-              >
-                Excluir minha conta
-              </button>
+              <div style={{ display: 'flex', gap: '12px', marginTop: '24px', flexWrap: 'wrap' }}>
+                <button
+                  onClick={handleLogout}
+                  style={{ padding: '12px 24px', backgroundColor: '#FAF0F0', color: '#C06C6C', borderRadius: '8px', fontWeight: '600', border: 'none', cursor: 'pointer' }}
+                >
+                  Sair da minha conta
+                </button>
+                <button
+                  onClick={handleDeleteAccount}
+                  disabled={loading}
+                  style={{ padding: '12px 24px', backgroundColor: 'transparent', border: '1px solid #C06C6C', color: '#C06C6C', borderRadius: '8px', fontWeight: '600', cursor: 'pointer' }}
+                >
+                  Excluir minha conta
+                </button>
+              </div>
             </div>
-          </div>
+          ))}
 
         </div>
       ) : (

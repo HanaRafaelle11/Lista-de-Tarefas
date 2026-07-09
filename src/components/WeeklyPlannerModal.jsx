@@ -293,7 +293,21 @@ export default function WeeklyPlannerModal({ isOpen, onClose, tasks, onUpdateTas
             >
               <Calendar size={14} /> Sincronizar Calendário
             </button>
-            <button onClick={onClose} className="todo-modal-close-btn">
+            <button 
+              onClick={onClose} 
+              className="todo-modal-close-btn"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                margin: 0,
+                padding: '6px',
+                border: 'none',
+                background: 'transparent',
+                cursor: 'pointer',
+                color: 'var(--text-light)'
+              }}
+            >
               <X size={18} />
             </button>
           </div>

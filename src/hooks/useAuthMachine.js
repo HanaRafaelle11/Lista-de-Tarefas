@@ -57,10 +57,15 @@ import { eventsService } from '../services/eventsService';
  * Sempre retorna um objeto limpo — nunca undefined.
  */
 function buildUser(rawUser) {
+  const rawName = rawUser.user_metadata?.name || '';
+  const genericNames = ['user', 'usuario', 'null', 'undefined', ''];
+  const isGeneric = genericNames.includes(rawName.toLowerCase().trim());
+  const emailName = rawUser.email?.split('@')[0] || '';
+  const safeName = isGeneric ? (emailName || 'Usuário') : rawName;
   return {
     id: rawUser.id,
     email: rawUser.email,
-    name: rawUser.user_metadata?.name || rawUser.email?.split('@')[0] || 'User',
+    name: safeName,
     user_metadata: rawUser.user_metadata || {},
     isDemo: rawUser.isDemo || false,
   };

@@ -274,7 +274,7 @@ function TaskSection({ title, tasks, icon, accent, onEdit, onDelete, onToggle, d
   );
 }
 
-function EmptyState({ filter, searchQuery, onAdd }) {
+function EmptyState({ filter, searchQuery, onAdd, onAddGoal }) {
   if (searchQuery) {
     return (
       <div className="tasks-empty-state">
@@ -333,11 +333,17 @@ function EmptyState({ filter, searchQuery, onAdd }) {
         <Sprout size={24} style={{ color: 'var(--text-light)' }} />
       </div>
       <h3 className="tasks-empty-title">Sua lista está em branco</h3>
-      <p className="tasks-empty-desc">Comece criando sua primeira tarefa. Pequenos passos constroem grandes conquistas.</p>
-      <button onClick={onAdd} className="tasks-empty-cta">
-        <Plus size={15} />
-        Criar primeira tarefa
-      </button>
+      <p className="tasks-empty-desc">Sua lista está em branco. Comece criando sua primeira tarefa ou objetivo.</p>
+      <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', marginTop: '16px', flexWrap: 'wrap' }}>
+        <button onClick={onAdd} className="tasks-empty-cta" style={{ margin: 0 }}>
+          <Plus size={15} />
+          Criar tarefa
+        </button>
+        <button onClick={onAddGoal} className="tasks-empty-cta" style={{ margin: 0, backgroundColor: 'var(--primary)', borderColor: 'var(--primary)' }}>
+          <Plus size={15} />
+          Criar objetivo
+        </button>
+      </div>
     </div>
   );
 }
@@ -372,6 +378,8 @@ export default function MyDayView() {
     handleLinkTask: onLinkTask,
     shouldOpenGoalModal,
     setShouldOpenGoalModal,
+    shouldOpenTaskModal,
+    setShouldOpenTaskModal,
     openCustomConfirm,
     selectedGoalIdFilter,
     setSelectedGoalIdFilter,
@@ -522,6 +530,15 @@ export default function MyDayView() {
       setIsGoalModalOpen(true);
     }
   }, [shouldOpenGoalModal, setShouldOpenGoalModal]);
+
+  // Efeito para abrir modal de nova tarefa vindo de outras telas
+  useEffect(() => {
+    if (shouldOpenTaskModal) {
+      setShouldOpenTaskModal(false);
+      setEditingTask(null);
+      setIsModalOpen(true);
+    }
+  }, [shouldOpenTaskModal, setShouldOpenTaskModal]);
 
   const toggleGoalExpand = (goalId) => {
     setExpandedGoals(prev => {
@@ -2052,7 +2069,7 @@ export default function MyDayView() {
             </div>
           ) : (
             activeGoals.length === 0 && (
-              <EmptyState filter={filter} searchQuery={searchQuery} onAdd={openNewTaskModal} />
+              <EmptyState filter={filter} searchQuery={searchQuery} onAdd={openNewTaskModal} onAddGoal={openNewGoalModal} />
             )
           )}
         </>

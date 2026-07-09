@@ -395,6 +395,8 @@ export default function EvolutionView() {
     setSelectedGoalIdFilter,
     consistencyScore,
     isAccessChecked,
+    activeEvoTab,
+    setActiveEvoTab,
     userState
   } = useAppContext();
 
@@ -750,13 +752,6 @@ export default function EvolutionView() {
   };
 
   // Abas internas da Central de Evolução (Jornada vs Coach) com persistência
-  const [activeEvoTab, setActiveEvoTab] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('flowday_active_evo_tab') || 'jornada';
-    }
-    return 'jornada';
-  });
-
   const handleSwitchEvoTab = (tab) => {
     setActiveEvoTab(tab);
     if (typeof window !== 'undefined') {
