@@ -1110,19 +1110,36 @@ export function AppProvider({ children }) {
     const taskRate = taskCount > 0 ? (completedTaskCount / taskCount) : 0;
 
     // 2. Taxa de conclusão de hábitos nos últimos 7 dias (40% de peso)
-    const activeHabitIds = habits.map(h => h.id);
-    const recentLogs = habitLogs.filter(l => activeHabitIds.includes(l.habit_id) && new Date(l.completed_date) >= sevenDaysAgo);
-    
-    let totalPossibleLogs = 0;
     const todayVal = new Date();
     todayVal.setHours(0, 0, 0, 0);
+    const activeHabitIds = habits.map(h => h.id);
+    const recentLogs = habitLogs.filter(l => {
+      const h = habits.find(habit => habit.id === l.habit_id);
+      if (!h) return false;
+      const startDate = h.created_at ? new Date(h.created_at) : new Date(todayVal);
+      startDate.setHours(0, 0, 0, 0);
+      const logDate = new Date(l.completed_date);
+      logDate.setHours(0, 0, 0, 0);
+      return activeHabitIds.includes(l.habit_id) && 
+             logDate >= sevenDaysAgo && 
+             logDate >= startDate;
+    });
+    
+    let totalPossibleLogs = 0;
     habits.forEach(h => {
-      const createdDate = h.created_at ? new Date(h.created_at.split('T')[0]) : new Date(todayVal);
+      const createdDate = h.created_at ? new Date(h.created_at) : new Date(todayVal);
       createdDate.setHours(0, 0, 0, 0);
-      const diffTime = Math.max(0, todayVal - createdDate);
-      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-      const habitDaysCount = Math.min(7, diffDays + 1);
-      totalPossibleLogs += habitDaysCount;
+      
+      let possibleCount = 0;
+      for (let i = 0; i < 7; i++) {
+        const d = new Date(todayVal);
+        d.setDate(todayVal.getDate() - i);
+        d.setHours(0, 0, 0, 0);
+        if (d >= createdDate) {
+          possibleCount++;
+        }
+      }
+      totalPossibleLogs += possibleCount;
     });
     
     const habitRate = totalPossibleLogs > 0 ? (recentLogs.length / totalPossibleLogs) : 0;
@@ -2024,7 +2041,7 @@ export function AppProvider({ children }) {
     if (!currentUser?.id) return false;
 
     // Check if there is actually anything to delete
-    const hasData = tasks.length > 0 || goals.length > 0 || habits.length > 0 || habitLogs.length > 0;
+    const hasData = tasks.length > 0 || goals.length > 0 || habits.length > 0 || habitLogs.length > 0 || focusEvents.length > 0;
     if (!hasData) return false;
 
     // Clean states functionally
@@ -2033,6 +2050,42 @@ export function AppProvider({ children }) {
     setGoalTasks([]);
     setHabits([]);
     setHabitLogs([]);
+    setFocusEvents([]);
+    setGrowthPet('plant');
+    setUserState({
+      stage: 'new',
+      activation_score: 0,
+      last_success_action: null,
+      time_to_value_ms: null,
+      days_since_active: 0,
+      has_first_success: false,
+      sessions_count: 0,
+      onboarding_step: 0,
+      onboarding_completed: false,
+      projected_tasks: [],
+      activationScore: 0,
+      engagementScore: 0,
+      timeToValue: null,
+      onboardingCompleted: false,
+      stats: {
+        tasksCreated: 0,
+        tasksCompleted: 0,
+        habitsCreated: 0,
+        goalsCreated: 0,
+        sessions: 0
+      }
+    });
+
+    // Limpar IndexedDB localDB
+    await Promise.all([
+      localDB.clear('tasks').catch(() => {}),
+      localDB.clear('habits').catch(() => {}),
+      localDB.clear('goals').catch(() => {}),
+      localDB.clear('goal_tasks').catch(() => {}),
+      localDB.clear('events').catch(() => {}),
+      localDB.clear('profile').catch(() => {}),
+      localDB.clear('notifications').catch(() => {})
+    ]);
 
     if (currentUser.isDemo) {
       localStorage.removeItem(`flowday_demo_tasks_${currentUser.id}`);
@@ -2046,21 +2099,33 @@ export function AppProvider({ children }) {
           supabase.from('goals').delete().eq('user_id', currentUser.id),
           supabase.from('habits').delete().eq('user_id', currentUser.id),
           supabase.from('habit_logs').delete().eq('user_id', currentUser.id),
-          supabase.from('user_achievements').delete().eq('user_id', currentUser.id)
+          supabase.from('user_achievements').delete().eq('user_id', currentUser.id),
+          supabase.from('events').delete().eq('user_id', currentUser.id)
         ]);
+
+        await supabase.auth.updateUser({
+          data: { weekly_plan: null }
+        }).catch(() => {});
       } catch (err) {
         console.error('Error clearing all database data:', err);
       }
     }
 
-    // Resetar flags de onboarding para que o tour e guia reiniciem como no primeiro acesso
+    // Resetar chaves de onboarding, pet, e snapshot de estado no localStorage
     localStorage.removeItem(`flowday_tour_v2_${currentUser.id}`);
     localStorage.removeItem('flowday_hide_evo_guide');
+    localStorage.removeItem('flowday_growth_pet');
+    localStorage.removeItem('flowday_userstate_snapshot');
+    localStorage.removeItem(`flowday_pet_completed_goals_${currentUser.id}`);
+    localStorage.removeItem(`flowday_plant_completed_goals_${currentUser.id}`);
+    localStorage.removeItem(`flowday_baby_completed_goals_${currentUser.id}`);
+    localStorage.removeItem(`flowday_dog_completed_goals_${currentUser.id}`);
+    localStorage.removeItem(`flowday_cat_completed_goals_${currentUser.id}`);
 
     addNotification('system', 'Dados limpos', 'Todos os seus dados foram excluídos permanentemente.');
     resetAchievementsIfEmpty(currentUser.id, [], []);
     return true;
-  }, [currentUser, tasks, goals, habits, habitLogs, addNotification, resetAchievementsIfEmpty]);
+  }, [currentUser, tasks, goals, habits, habitLogs, focusEvents, addNotification, resetAchievementsIfEmpty]);
 
   const handleToggleComplete = useCallback(async (id) => {
     if (!currentUser?.id) return;
@@ -3255,67 +3320,71 @@ export function AppProvider({ children }) {
       setTasks(prev => {
         const exists = prev.some(t => t.id === undoAction.id);
         if (exists) {
-          return prev.map(t => t.id === undoAction.id ? { ...t, deletedAt: null } : t);
+          return prev.map(t => t.id === undoAction.id ? { ...t, deletedAt: null, deleted_at: null } : t);
         } else if (undoAction.item) {
-          return [...prev, { ...undoAction.item, deletedAt: null }];
+          return [...prev, { ...undoAction.item, deletedAt: null, deleted_at: null }];
         }
         return prev;
       });
       if (!currentUser.isDemo) {
         await tasksService.restore(currentUser.id, undoAction.id);
       } else {
-        const mockTasks = tasks.map(t => t.id === undoAction.id ? { ...t, deletedAt: null } : t);
+        const mockTasks = tasks.map(t => t.id === undoAction.id ? { ...t, deletedAt: null, deleted_at: null } : t);
         localStorage.setItem(`flowday_demo_tasks_${currentUser.id}`, JSON.stringify(mockTasks));
       }
     } else if (undoAction.type === 'bulk_task') {
       const restoredIds = new Set(undoAction.ids);
       setTasks(prev => {
         const existingIds = new Set(prev.map(t => t.id));
-        const toAdd = (undoAction.items || []).filter(item => !existingIds.has(item.id)).map(item => ({ ...item, deletedAt: null }));
-        const updated = prev.map(t => restoredIds.has(t.id) ? { ...t, deletedAt: null } : t);
+        const toAdd = (undoAction.items || []).filter(item => !existingIds.has(item.id)).map(item => ({ ...item, deletedAt: null, deleted_at: null }));
+        const updated = prev.map(t => restoredIds.has(t.id) ? { ...t, deletedAt: null, deleted_at: null } : t);
         return [...updated, ...toAdd];
       });
       if (!currentUser.isDemo) {
         await Promise.all(undoAction.ids.map(id => tasksService.restore(currentUser.id, id)));
       } else {
-        const updated = tasks.map(t => restoredIds.has(t.id) ? { ...t, deletedAt: null } : t);
+        const updated = tasks.map(t => restoredIds.has(t.id) ? { ...t, deletedAt: null, deleted_at: null } : t);
         localStorage.setItem(`flowday_demo_tasks_${currentUser.id}`, JSON.stringify(updated));
       }
     } else if (undoAction.type === 'goal') {
       setGoals(prev => {
         const exists = prev.some(g => g.id === undoAction.id);
         if (exists) {
-          return prev.map(g => g.id === undoAction.id ? { ...g, deletedAt: null } : g);
+          return prev.map(g => g.id === undoAction.id ? { ...g, deletedAt: null, deleted_at: null } : g);
         } else if (undoAction.item) {
-          return [...prev, { ...undoAction.item, deletedAt: null }];
+          return [...prev, { ...undoAction.item, deletedAt: null, deleted_at: null }];
         }
         return prev;
       });
       if (!currentUser.isDemo) {
         await goalsService.restore(currentUser.id, undoAction.id);
       } else {
-        const mockGoals = goals.map(g => g.id === undoAction.id ? { ...g, deletedAt: null } : g);
+        const mockGoals = goals.map(g => g.id === undoAction.id ? { ...g, deletedAt: null, deleted_at: null } : g);
         localStorage.setItem(`flowday_demo_goals_${currentUser.id}`, JSON.stringify({ goals: mockGoals, goalTasks }));
       }
     } else if (undoAction.type === 'bulk_goal') {
       const restoredIds = new Set(undoAction.ids);
       setGoals(prev => {
         const existingIds = new Set(prev.map(g => g.id));
-        const toAdd = (undoAction.items || []).filter(item => !existingIds.has(item.id)).map(item => ({ ...item, deletedAt: null }));
-        const updated = prev.map(g => restoredIds.has(g.id) ? { ...g, deletedAt: null } : g);
+        const toAdd = (undoAction.items || []).filter(item => !existingIds.has(item.id)).map(item => ({ ...item, deletedAt: null, deleted_at: null }));
+        const updated = prev.map(g => restoredIds.has(g.id) ? { ...g, deletedAt: null, deleted_at: null } : g);
         return [...updated, ...toAdd];
       });
       if (!currentUser.isDemo) {
         await Promise.all(undoAction.ids.map(id => goalsService.restore(currentUser.id, id)));
       } else {
-        const mockGoals = goals.map(g => restoredIds.has(g.id) ? { ...g, deletedAt: null } : g);
+        const mockGoals = goals.map(g => restoredIds.has(g.id) ? { ...g, deletedAt: null, deleted_at: null } : g);
         localStorage.setItem(`flowday_demo_goals_${currentUser.id}`, JSON.stringify({ goals: mockGoals, goalTasks }));
       }
     }
 
+    if (!currentUser.isDemo) {
+      await rehydrateUserState(currentUser.id);
+    }
+
     setUndoAction(null);
     addNotification('system', 'Ação Desfeita', 'Os itens removidos foram restaurados com sucesso.');
-  }, [currentUser, undoAction, tasks, goals, goalTasks, addNotification]);
+  }, [currentUser, undoAction, tasks, goals, goalTasks, addNotification, rehydrateUserState]);
 
 
   const handleRestoreTask = useCallback(async (id) => {
@@ -3502,8 +3571,8 @@ export function AppProvider({ children }) {
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
     const sevenDaysAgoStr = sevenDaysAgo.toISOString().split('T')[0];
 
-    const activeTasks = tasks.filter(t => !t.deletedAt);
-    const activeGoals = goals.filter(g => !g.deletedAt);
+    const activeTasks = tasks.filter(t => !t.deletedAt && !t.deleted_at);
+    const activeGoals = goals.filter(g => !g.deletedAt && !g.deleted_at);
 
     // 1. Conclusão de tarefas nos últimos 7 dias
     const recentTasks = activeTasks.filter(t => {
@@ -3520,17 +3589,36 @@ export function AppProvider({ children }) {
     }
 
     // 2. Conclusão de hábitos nos últimos 7 dias
-    const recentLogs = habitLogs.filter(l => new Date(l.completed_date) >= sevenDaysAgo);
-    let totalPossibleLogs = 0;
     const today = new Date();
     today.setHours(0, 0, 0, 0);
+    const activeHabitIds = habits.map(h => h.id);
+    const recentLogs = habitLogs.filter(l => {
+      const h = habits.find(habit => habit.id === l.habit_id);
+      if (!h) return false;
+      const startDate = h.created_at ? new Date(h.created_at) : new Date(today);
+      startDate.setHours(0, 0, 0, 0);
+      const logDate = new Date(l.completed_date);
+      logDate.setHours(0, 0, 0, 0);
+      return activeHabitIds.includes(l.habit_id) && 
+             logDate >= sevenDaysAgo && 
+             logDate >= startDate;
+    });
+
+    let totalPossibleLogs = 0;
     habits.forEach(h => {
-      const createdDate = h.created_at ? new Date(h.created_at.split('T')[0]) : new Date(today);
+      const createdDate = h.created_at ? new Date(h.created_at) : new Date(today);
       createdDate.setHours(0, 0, 0, 0);
-      const diffTime = Math.max(0, today - createdDate);
-      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-      const habitDaysCount = Math.min(7, diffDays + 1);
-      totalPossibleLogs += habitDaysCount;
+      
+      let possibleCount = 0;
+      for (let i = 0; i < 7; i++) {
+        const d = new Date(today);
+        d.setDate(today.getDate() - i);
+        d.setHours(0, 0, 0, 0);
+        if (d >= createdDate) {
+          possibleCount++;
+        }
+      }
+      totalPossibleLogs += possibleCount;
     });
 
     if (recentLogs.length > 0) {
@@ -3587,7 +3675,7 @@ export function AppProvider({ children }) {
     const diasAtivosOk = activeDaysRecent >= 3;
 
     // B. Sequência atual
-    const streak = calcStreak(tasks);
+    const streak = calcStreak(activeTasks);
     const sequenciaPct = Math.min(100, Math.round((streak / 7) * 100));
     const sequenciaOk = streak >= 1;
 

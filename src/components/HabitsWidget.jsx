@@ -22,6 +22,13 @@ const getLast7Days = () => {
   return days;
 };
 
+const getLocalHabitDateStr = (isoString, fallback) => {
+  if (!isoString) return fallback;
+  const d = new Date(isoString);
+  if (isNaN(d.getTime())) return fallback;
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
+
 function HabitRow({ habit, goal, consistency, last7Days, habitLogs, toggleHabitLog, deleteHabit, openCustomConfirm }) {
   return (
     <div className="habit-row-card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: 'var(--bg-card)', padding: '12px 16px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-light)', boxShadow: 'var(--shadow-sm)', gap: '16px', flexWrap: 'wrap' }}>
@@ -37,7 +44,7 @@ function HabitRow({ habit, goal, consistency, last7Days, habitLogs, toggleHabitL
       <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
         <div className="habit-tracker-days" style={{ display: 'flex', gap: '6px' }}>
           {last7Days.map(day => {
-            const habitStartDate = habit.created_at ? habit.created_at.split('T')[0] : '';
+            const habitStartDate = getLocalHabitDateStr(habit.created_at, '');
             const isBeforeCreation = habitStartDate && day.dateStr < habitStartDate;
             const isCompleted = habitLogs.some(l => l.habit_id === habit.id && l.completed_date === day.dateStr);
             return (
@@ -114,7 +121,7 @@ export default function HabitsWidget({ habitsManager, goals }) {
   };
 
   const calculateConsistency = (habit) => {
-    const habitStartDate = habit.created_at ? habit.created_at.split('T')[0] : '';
+    const habitStartDate = getLocalHabitDateStr(habit.created_at, '');
     const logs = habitLogs.filter(l => l.habit_id === habit.id);
     let completedCount = 0;
     let applicableDaysCount = 0;
@@ -135,8 +142,14 @@ export default function HabitsWidget({ habitsManager, goals }) {
   if (loading) return null;
 
   const today = new Date().toISOString().split('T')[0];
-  const pendingHabits = habits.filter(h => !habitLogs.some(l => l.habit_id === h.id && l.completed_date === today));
-  const completedTodayHabits = habits.filter(h => habitLogs.some(l => l.habit_id === h.id && l.completed_date === today));
+  const pendingHabits = habits.filter(h => {
+    const startDate = getLocalHabitDateStr(h.created_at, today);
+    return startDate <= today && !habitLogs.some(l => l.habit_id === h.id && l.completed_date === today);
+  });
+  const completedTodayHabits = habits.filter(h => {
+    const startDate = getLocalHabitDateStr(h.created_at, today);
+    return startDate <= today && habitLogs.some(l => l.habit_id === h.id && l.completed_date === today);
+  });
 
   const visiblePending = isExpanded ? pendingHabits : pendingHabits.slice(0, 3);
 

@@ -2415,7 +2415,13 @@ export default function MyDayView() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '24px', maxHeight: '180px', overflowY: 'auto' }}>
               {(() => {
                 const visibleHabits = habitsManager.habits.filter(h => {
-                  const startDate = h.created_at ? h.created_at.split('T')[0] : todayStr();
+                  const getLocalHabitDateStr = (isoString, fallback) => {
+                    if (!isoString) return fallback;
+                    const d = new Date(isoString);
+                    if (isNaN(d.getTime())) return fallback;
+                    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                  };
+                  const startDate = getLocalHabitDateStr(h.created_at, todayStr());
                   return selectedCalendarDay >= startDate;
                 });
                 if (visibleHabits.length === 0) {
