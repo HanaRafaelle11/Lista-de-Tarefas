@@ -48,7 +48,7 @@ export default function Sidebar() {
     <>
       {/* ── Mobile/Tablet Top Header (Compacto com Drawer) ── */}
       <header className="mobile-top-header hide-on-desktop">
-        <div className="mobile-header-container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '64px', padding: '0 16px', width: '100%' }}>
+        <div className="mobile-header-container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '100%', width: '100%', padding: 0 }}>
           {/* Logo à esquerda */}
           <div 
             className="navbar-brand"
@@ -57,22 +57,21 @@ export default function Sidebar() {
               cursor: 'pointer', 
               display: 'flex', 
               alignItems: 'center',
-              flexShrink: 1,
-              minWidth: 0
+              flexShrink: 0
             }}
           >
             <img 
               src={logo.src}
               alt={logo.alt} 
               className="mobile-logo"
-              style={{ height: '40px', width: 'auto', maxWidth: '180px', objectFit: 'contain' }}
+              style={{ height: '44px', width: '132px', objectFit: 'contain', display: 'block' }}
             />
           </div>
 
           {/* Hambúrguer à direita */}
           <button 
             onClick={() => setIsMobileMenuOpen(true)}
-            style={{ background: 'none', border: 'none', color: 'var(--text-main)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '8px', flexShrink: 0 }}
+            style={{ background: 'none', border: 'none', color: 'var(--text-main)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '8px', flexShrink: 0, marginLeft: 'auto' }}
             aria-label="Abrir menu"
           >
             <Menu size={24} />

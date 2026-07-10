@@ -7083,8 +7083,8 @@ body,
 }
 
 .mobile-logo {
-  height: 38px;
-  width: auto;
+  height: 44px;
+  width: 132px;
   object-fit: contain;
   cursor: pointer;
 }
