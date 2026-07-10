@@ -10,6 +10,7 @@ import MFIcon from './MFIcon';
 import { EVOLUTION_CATEGORIES, EVOLUTION_CATEGORY_LIST } from '../config/evolutionConfig';
 import { getEvolutionStage } from '../utils/getEvolutionStage';
 import EvolutionStageImage from './EvolutionStageImage';
+import PremiumOverlay from './PremiumOverlay';
 import { generateCoachMessage } from '../intelligence/coachEngine';
 import GoalModal from './GoalModal';
 import { extractDateAndTimeParts } from '../utils/dateUtils';
@@ -497,6 +498,10 @@ export default function HomeView() {
   const nextStageIsBlocked = !isPro && calculatedStageIndex > 1;
   const currentStage = currentPetData.stages[stageIndex];
 
+  // Limit companion displayed level to 2 if Free
+  const calculatedLevel = getLevelFromCount(viewedPetCompletedGoals);
+  const displayedLevel = !isPro ? Math.min(2, calculatedLevel) : calculatedLevel;
+
   useEffect(() => {
     if (hasNoItems && growthPet !== 'plant') {
       handleSelectGrowthPet('plant');
@@ -679,66 +684,13 @@ export default function HomeView() {
           </form>
 
           {!isPro && (
-            <div 
-              onClick={() => openPaywall('ai_classifier')}
-              style={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                backgroundColor: 'rgba(15, 23, 42, 0.45)',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                borderRadius: 'var(--radius-md)',
-                cursor: 'pointer',
-                zIndex: 5
-              }}
-            >
-              <div style={{
-                backgroundColor: 'var(--bg-card)',
-                border: '1px solid var(--border-medium)',
-                padding: '16px 20px',
-                borderRadius: 'var(--radius-md)',
-                boxShadow: 'var(--shadow-lg)',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                gap: '8px',
-                textAlign: 'center',
-                maxWidth: '360px'
-              }}>
-                <Lock size={18} style={{ color: 'var(--primary)' }} />
-                <h5 style={{ fontSize: '13.5px', fontWeight: '800', color: 'var(--text-main)', margin: 0 }}>
-                  Classificação Inteligente disponível no Pro
-                </h5>
-                <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: 0, lineHeight: '1.4' }}>
-                  Receba análises inteligentes e classificação automática utilizando IA.
-                </p>
-                <button 
-                  className="btn-primary-glow"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    openPaywall('ai_classifier');
-                  }}
-                  style={{ 
-                    padding: '8px 16px', 
-                    fontSize: '11.5px', 
-                    fontWeight: 'bold',
-                    marginTop: '4px',
-                    cursor: 'pointer',
-                    borderRadius: '6px',
-                    border: 'none',
-                    backgroundColor: 'var(--primary)',
-                    color: '#ffffff'
-                  }}
-                >
-                  Quero o MyFlowDay Pro
-                </button>
-              </div>
-            </div>
+            <PremiumOverlay 
+              title="Classificação Inteligente disponível no Pro"
+              description="Receba análises inteligentes e classificação automática utilizando IA."
+              buttonText="Quero o MyFlowDay Pro"
+              paywallSource={{ source: 'ai_classifier', trigger: 'quick_plan_input' }}
+              containerStyle={{ borderRadius: 'var(--radius-md)' }}
+            />
           )}
         </div>
       </div>
@@ -873,43 +825,15 @@ export default function HomeView() {
 
             {/* Informações de Nível ou Bloqueio Pro */}
             {nextStageIsBlocked ? (
-              <div style={{
-                marginTop: '4px',
-                marginBottom: '16px',
-                padding: '14px 16px',
-                borderRadius: 'var(--radius-md)',
-                backgroundColor: 'rgba(15, 23, 42, 0.45)',
-                border: '1.5px dashed var(--border-medium)',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                gap: '8px',
-                width: '100%',
-                boxSizing: 'border-box'
-              }}>
-                <span style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <Lock size={13} style={{ color: 'var(--primary)' }} /> Seu companheiro está pronto para evoluir ainda mais.
-                </span>
-                <button 
-                  className="btn-primary-glow"
-                  onClick={() => openPaywall('pet_evolution')}
-                  style={{
-                    padding: '8px 16px',
-                    fontSize: '11.5px',
-                    fontWeight: 'bold',
-                    cursor: 'pointer',
-                    borderRadius: '8px',
-                    border: 'none',
-                    backgroundColor: 'var(--primary)',
-                    color: '#ffffff'
-                  }}
-                >
-                  Desbloquear Evoluções
-                </button>
-              </div>
+              <PremiumOverlay 
+                title="Seu companheiro está pronto para evoluir ainda mais."
+                buttonText="Desbloquear Evoluções"
+                paywallSource={{ source: 'pet_evolution', trigger: 'companion_card' }}
+                inline={true}
+              />
             ) : (
               <span style={{ fontSize: '11px', fontWeight: '700', padding: '3px 12px', borderRadius: '20px', backgroundColor: `${currentStage.color}15`, color: currentStage.color, border: `1px solid ${currentStage.color}25`, marginBottom: '16px' }}>
-                Nível {getLevelFromCount(viewedPetCompletedGoals)} • {currentStage.title} • Metas: {viewedPetCompletedGoals}
+                Nível {displayedLevel} • {currentStage.title} • Metas: {viewedPetCompletedGoals}
               </span>
             )}
 

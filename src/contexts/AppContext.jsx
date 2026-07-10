@@ -3013,10 +3013,19 @@ export function AppProvider({ children }) {
     }
   }, [currentUser, logEvent]);
 
-  const openPaywall = useCallback((source) => {
+  const openPaywall = useCallback((sourceOrOptions) => {
     setIsPaywallOpen(true);
-    setPaywallSource(source || '');
-    logEvent('paywall_viewed', { source: source || 'unknown' });
+    let src = '';
+    let meta = {};
+    if (typeof sourceOrOptions === 'object' && sourceOrOptions !== null) {
+      src = sourceOrOptions.source || '';
+      meta = sourceOrOptions;
+    } else {
+      src = sourceOrOptions || '';
+      meta = { source: src };
+    }
+    setPaywallSource(src);
+    logEvent('paywall_viewed', meta);
   }, [logEvent]);
 
   const closePaywall = useCallback(() => {

@@ -4,6 +4,16 @@ import { useAppContext } from '../contexts/AppContext';
 import { generateCoachMessage } from '../intelligence/coachEngine';
 import { supabase } from '../supabaseClient';
 import MFIcon from './MFIcon';
+import PremiumOverlay from './PremiumOverlay';
+
+const sectionHeaders = [
+  'Tendência Atual:',
+  'Insights do Mentor:',
+  'Recomendação Prática:',
+  '**Tendência Atual:**',
+  '**Insights do Mentor:**',
+  '**Recomendação Prática:**'
+];
 
 // Formata a mensagem do coach em JSX interpretando markdown
 function formatCoachMessage(message = '', isPro = true, openPaywall = () => {}) {
@@ -16,14 +26,7 @@ function formatCoachMessage(message = '', isPro = true, openPaywall = () => {}) 
 
   lines.forEach((line, idx) => {
     const trimmed = line.trim();
-    if (
-      trimmed.startsWith('Tendência Atual:') || 
-      trimmed.startsWith('Insights do Mentor:') || 
-      trimmed.startsWith('Recomendação Prática:') ||
-      trimmed.startsWith('**Tendência Atual:**') || 
-      trimmed.startsWith('**Insights do Mentor:**') || 
-      trimmed.startsWith('**Recomendação Prática:**')
-    ) {
+    if (sectionHeaders.some(header => trimmed.startsWith(header))) {
       currentGroup = 'pro';
     }
 
@@ -112,63 +115,14 @@ function formatCoachMessage(message = '', isPro = true, openPaywall = () => {}) 
         <div style={{ filter: 'blur(5px)', opacity: 0.25, pointerEvents: 'none', userSelect: 'none' }}>
           {proElements}
         </div>
-        {/* Pro Overlay Trigger */}
-        <div 
-          onClick={() => openPaywall('coach_pro_insights')}
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            cursor: 'pointer',
-            backgroundColor: 'rgba(15, 23, 42, 0.65)',
-            borderRadius: '8px',
-            padding: '24px'
-          }}
-        >
-          <div style={{
-            backgroundColor: 'var(--bg-card)',
-            border: '1px solid var(--border-medium)',
-            padding: '24px',
-            borderRadius: 'var(--radius-lg)',
-            boxShadow: 'var(--shadow-lg)',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            gap: '12px',
-            textAlign: 'center',
-            maxWidth: '380px'
-          }}>
-            <Lock size={20} style={{ color: 'var(--primary)' }} />
-            <h4 style={{ fontSize: '15px', fontWeight: '800', color: 'var(--text-main)', margin: 0 }}>
-              Continue sua análise personalizada
-            </h4>
-            <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0, lineHeight: '1.5' }}>
-              Desbloqueie o Coach IA Pro para acessar recomendações completas e personalizadas.
-            </p>
-            <button 
-              className="btn-primary-glow"
-              onClick={(e) => {
-                e.stopPropagation();
-                openPaywall('coach_pro_insights');
-              }}
-              style={{ 
-                padding: '10px 20px', 
-                fontSize: '13px', 
-                fontWeight: 'bold',
-                marginTop: '8px',
-                cursor: 'pointer'
-              }}
-            >
-              Desbloquear Coach Pro
-            </button>
-          </div>
-        </div>
+        {/* Reusable Premium Overlay */}
+        <PremiumOverlay 
+          title="Continue sua análise personalizada"
+          description="Desbloqueie o Coach IA Pro para acessar recomendações completas e personalizadas."
+          buttonText="Desbloquear Coach Pro"
+          paywallSource={{ source: 'coach_pro_insights', trigger: 'blur_overlay' }}
+          containerStyle={{ backgroundColor: 'rgba(15, 23, 42, 0.65)' }}
+        />
       </div>
     </div>
   );
