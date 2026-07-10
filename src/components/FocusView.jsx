@@ -158,6 +158,10 @@ export default function FocusView() {
       logEvent('pomodoro_completed', { duration_minutes: focusTime, task_id: selectedTaskId });
       logEvent('focus_session_completed', { duration_minutes: focusTime, task_id: selectedTaskId });
       
+      if (selectedTaskId) {
+        handleTaskComplete(selectedTaskId);
+      }
+      
       if ('Notification' in window && Notification.permission === 'granted') {
         try {
           new Notification('Flowday - Timer', {
@@ -333,13 +337,13 @@ export default function FocusView() {
   })() : '';
 
   const ambientSounds = [
-    { value: 'none',            label: 'Nenhum', emoji: '🔇' },
-    { value: 'rain.wav',        label: 'Chuva', emoji: '🌧️' },
-    { value: 'forest.wav',      label: 'Floresta', emoji: '🌲' },
-    { value: 'cafe.wav',        label: 'Cafeteria', emoji: '☕' },
-    { value: 'ocean.wav',       label: 'Ondas do Mar', emoji: '🌊' },
-    { value: 'fireplace.wav',   label: 'Lareira', emoji: '🔥' },
-    { value: 'white-noise.wav', label: 'Ruído Branco', emoji: '💤' },
+    { value: 'none',            label: 'Nenhum', icon: 'volume-x' },
+    { value: 'rain.wav',        label: 'Chuva', icon: 'rain-drop' },
+    { value: 'forest.wav',      label: 'Floresta', icon: 'forest' },
+    { value: 'cafe.wav',        label: 'Cafeteria', icon: 'coffee-cup' },
+    { value: 'ocean.wav',       label: 'Ondas do Mar', icon: 'waves' },
+    { value: 'fireplace.wav',   label: 'Lareira', icon: 'campfire' },
+    { value: 'white-noise.wav', label: 'Ruído Branco', icon: 'sleep' },
   ];
 
   return (
@@ -635,7 +639,7 @@ export default function FocusView() {
                           fontWeight: '600'
                         }}
                       >
-                        <MFIcon name={sound.emoji} size={18} color={isSelected ? 'var(--primary)' : 'var(--text-light)'} />
+                        <MFIcon name={sound.icon} size={18} color={isSelected ? 'var(--primary)' : 'var(--text-light)'} />
                         <span style={{ textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', width: '100%', textAlign: 'center' }}>
                           {sound.label}
                         </span>
@@ -770,28 +774,36 @@ export default function FocusView() {
               gap: '12px'
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <span style={{ color: 'var(--primary)', fontSize: '16px' }}>⚡</span>
+                <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '20px', height: '20px', color: 'var(--primary)' }}>
+                  <MFIcon name="bolt" size={16} />
+                </span>
                 <span style={{ fontSize: '13px', color: 'var(--text-main)' }}>
                   <strong>+{focusTime} XP</strong> de Foco Coletado!
                 </span>
               </div>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <span style={{ color: 'var(--accent-orange, #f97316)', fontSize: '16px' }}>🔥</span>
+                <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '20px', height: '20px', color: 'var(--accent-orange, #f97316)' }}>
+                  <MFIcon name="campfire" size={16} />
+                </span>
                 <span style={{ fontSize: '13px', color: 'var(--text-main)' }}>
                   Sua sequência de consistência está <strong>protegida!</strong>
                 </span>
               </div>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <span style={{ color: '#10b981', fontSize: '16px' }}>🌱</span>
+                <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '20px', height: '20px', color: '#10b981' }}>
+                  <MFIcon name="sprout" size={16} />
+                </span>
                 <span style={{ fontSize: '13px', color: 'var(--text-main)' }}>
                   Seu Companheiro recebeu experiência para <strong>evoluir!</strong>
                 </span>
               </div>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <span style={{ color: 'var(--accent-yellow, #eab308)', fontSize: '16px' }}>🏆</span>
+                <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '20px', height: '20px', color: 'var(--accent-yellow, #eab308)' }}>
+                  <MFIcon name="trophy" size={16} />
+                </span>
                 <span style={{ fontSize: '13px', color: 'var(--text-main)' }}>
                   O Coach registrou seu progresso na aba <strong>Evolução!</strong>
                 </span>

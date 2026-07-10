@@ -178,7 +178,7 @@ export default function AdminNotificationDashboard() {
     <div className="admin-notification-dashboard animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
       
       {/* Cabeçalho */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'var(--bg-card)', padding: '20px', borderRadius: '12px', border: '1px solid var(--border-light)' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', backgroundColor: 'var(--bg-card)', padding: '20px', borderRadius: '12px', border: '1px solid var(--border-light)' }}>
         <div>
           <h2 style={{ fontSize: '20px', fontWeight: '800', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '10px', margin: 0 }}>
             <Bell size={24} style={{ color: 'var(--primary)' }} /> Telemetria de Web Push Notifications (EDA)
@@ -324,10 +324,10 @@ export default function AdminNotificationDashboard() {
       </div>
 
       {/* Tabela de Fila Recente */}
-      <div style={{ padding: '20px', backgroundColor: 'var(--bg-card)', borderRadius: '12px', border: '1px solid var(--border-light)' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+      <div style={{ padding: '20px', backgroundColor: 'var(--bg-card)', borderRadius: '12px', border: '1px solid var(--border-light)', width: '100%', overflow: 'hidden', boxSizing: 'border-box' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
           <h3 style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-main)', margin: 0 }}>Fila de Notificações Recentes</h3>
-          <div style={{ display: 'flex', gap: '6px' }}>
+          <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
             {['all', 'pending', 'sent', 'failed'].map(st => (
               <button
                 key={st}
@@ -393,7 +393,7 @@ export default function AdminNotificationDashboard() {
       </div>
 
       {/* Tabela de Eventos de Telemetria Recentes (public.events) */}
-      <div style={{ padding: '20px', backgroundColor: 'var(--bg-card)', borderRadius: '12px', border: '1px solid var(--border-light)' }}>
+      <div style={{ padding: '20px', backgroundColor: 'var(--bg-card)', borderRadius: '12px', border: '1px solid var(--border-light)', width: '100%', overflow: 'hidden', boxSizing: 'border-box' }}>
         <h3 style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-main)', marginBottom: '16px' }}>Últimos Eventos de Telemetria (public.events)</h3>
         <div style={{ overflowX: 'auto', maxHeight: '300px', WebkitOverflowScrolling: 'touch' }}>
           <table style={{ width: '100%', minWidth: '700px', borderCollapse: 'collapse', fontSize: '13px', textAlign: 'left' }}>

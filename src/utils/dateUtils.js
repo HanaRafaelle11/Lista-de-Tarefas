@@ -149,7 +149,12 @@ export function ensureDateTimezoneNoon(dateStr) {
   if (!dateStr) return '';
   const str = String(dateStr).trim();
   if (/^\d{4}-\d{2}-\d{2}$/.test(str)) {
-    return `${str}T12:00:00`;
+    const parts = str.split('-');
+    const year = parseInt(parts[0], 10);
+    const month = parseInt(parts[1], 10) - 1;
+    const day = parseInt(parts[2], 10);
+    const localDate = new Date(year, month, day, 0, 0, 0, 0);
+    return localDate.toISOString();
   }
   return dateStr;
 }

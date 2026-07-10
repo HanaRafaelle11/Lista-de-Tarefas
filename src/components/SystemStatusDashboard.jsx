@@ -62,7 +62,7 @@ export default function SystemStatusDashboard() {
     <div style={{ fontFamily: 'sans-serif', color: '#f8fafc', padding: '1rem 0' }}>
       {/* HEADER DE STATUS GERAL */}
       <div style={{
-        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem',
         padding: '1.5rem', borderRadius: '16px', background: currentStatus.bg,
         border: `1px solid ${currentStatus.border}`, marginBottom: '2rem', backdropFilter: 'blur(10px)'
       }}>
@@ -132,7 +132,7 @@ export default function SystemStatusDashboard() {
           <h3 style={{ margin: 0, color: '#f1f5f9' }}>Event Stream (Últimos Eventos & Erros)</h3>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(280px, 100%), 1fr))', gap: '1.5rem' }}>
           <div>
             <h4 style={{ color: '#94a3b8', marginTop: 0 }}>Top Tipos de Eventos</h4>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>

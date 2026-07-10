@@ -61,6 +61,15 @@ export default function AdminDashboard() {
   const [originFilter, setOriginFilter] = useState('all');
   const [alertStatusFilter, setAlertStatusFilter] = useState('all'); // 'all' | 'open' | 'stale' | 'resolved'
   const [chaosFlags, setChaosFlags] = useState({ simulatedLatencyActive: false, simulatedWebhookFaultActive: false, simulatedWorkerCrashActive: false });
+  const [showFilterSection, setShowFilterSection] = useState(false);
+  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' ? window.innerWidth < 768 : false);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Fetch all latest events to build latestEventsMap (user_id -> latest event metadata)
   const fetchAllLatestEvents = async () => {
@@ -574,7 +583,7 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="admin-dashboard-container animate-fade-in safe-area-inset" style={{ padding: '24px 16px', maxWidth: '1200px', margin: '0 auto' }}>
+    <div className="admin-dashboard-container animate-fade-in safe-area-inset" style={{ padding: '24px 16px 90px 16px', maxWidth: '1200px', margin: '0 auto' }}>
       
       {/* Header */}
       <div style={{ marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
@@ -1390,7 +1399,7 @@ export default function AdminDashboard() {
           {activeAdminTab === 'metrics' && (
             <>
               {/* Painel Executivo Visual (Gráficos & KPIs inspirados na nova identidade visual) */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px', marginBottom: '24px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(280px, 100%), 1fr))', gap: '20px', marginBottom: '24px' }}>
                 
                 {/* Chart Box 1: Donut de Conversão de Usuários */}
                 <div style={{ backgroundColor: 'var(--bg-card)', padding: '24px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-light)', boxShadow: 'var(--shadow-sm)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
@@ -1667,146 +1676,264 @@ export default function AdminDashboard() {
                   <span style={{ fontSize: '12.5px', color: 'var(--text-light)' }}>Mostrando {processedUsers.length} de {adminUsers.length} usuários</span>
                 </div>
               </div>
-
-              {/* Search and Filters Controls */}
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', marginBottom: '20px', backgroundColor: 'var(--bg-app)', padding: '16px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-medium)' }}>
-                {/* Search Bar */}
-                <div style={{ flex: '1 1 300px' }}>
-                  <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: 'var(--text-light)', marginBottom: '6px', textTransform: 'uppercase' }}>Buscar Usuários</label>
-                  <form onSubmit={e => { e.preventDefault(); setCurrentPage(1); }} style={{ display: 'flex', gap: '8px' }}>
-                    <input
-                      type="text"
-                      placeholder="Buscar por email, id, plano, nome..."
-                      value={userSearchQuery}
-                      onChange={e => setUserSearchQuery(e.target.value)}
-                      style={{ flex: 1, padding: '8px 12px', fontSize: '13px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-medium)', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)' }}
-                    />
-                    <button type="submit" style={{ backgroundColor: 'var(--primary)', color: '#fff', border: 'none', borderRadius: 'var(--radius-sm)', padding: '0 14px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <Search size={13} /> Buscar
-                    </button>
-                  </form>
-                </div>
-
-                {/* Plan Filter */}
-                <div style={{ width: '120px' }}>
-                  <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: 'var(--text-light)', marginBottom: '6px', textTransform: 'uppercase' }}>Plano</label>
-                  <select
-                    value={planFilter}
-                    onChange={e => setPlanFilter(e.target.value)}
-                    style={{ width: '100%', padding: '8px', fontSize: '13px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-medium)', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)' }}
-                  >
-                    <option value="all">Todos</option>
-                    <option value="free">Free</option>
-                    <option value="pro">Pro</option>
-                  </select>
-                </div>
-
-                {/* Status Filter */}
-                <div style={{ width: '130px' }}>
-                  <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: 'var(--text-light)', marginBottom: '6px', textTransform: 'uppercase' }}>Status</label>
-                  <select
-                    value={statusFilter}
-                    onChange={e => setStatusFilter(e.target.value)}
-                    style={{ width: '100%', padding: '8px', fontSize: '13px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-medium)', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)' }}
-                  >
-                    <option value="all">Todos</option>
-                    <option value="active">Ativo</option>
-                    <option value="canceled">Cancelado</option>
-                    <option value="inactive">Inativo</option>
-                  </select>
-                </div>
-
-                {/* Sort Key */}
-                <div style={{ width: '160px' }}>
-                  <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: 'var(--text-light)', marginBottom: '6px', textTransform: 'uppercase' }}>Ordenar Por</label>
-                  <select
-                    value={userSortKey}
-                    onChange={e => setUserSortKey(e.target.value)}
-                    style={{ width: '100%', padding: '8px', fontSize: '13px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-medium)', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)' }}
-                  >
-                    <option value="created_at">Data de Cadastro</option>
-                    <option value="email">E-mail</option>
-                    <option value="last_login">Último Acesso</option>
-                    <option value="total_events">Total Eventos</option>
-                  </select>
-                </div>
-
-                {/* Sort Order */}
-                <div style={{ width: '100px' }}>
-                  <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: 'var(--text-light)', marginBottom: '6px', textTransform: 'uppercase' }}>Ordem</label>
-                  <select
-                    value={userSortOrder}
-                    onChange={e => setUserSortOrder(e.target.value)}
-                    style={{ width: '100%', padding: '8px', fontSize: '13px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-medium)', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)' }}
-                  >
-                    <option value="desc">Decrescente</option>
-                    <option value="asc">Crescente</option>
-                  </select>
-                </div>
+              {/* Search Bar (Sempre Visível) */}
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', marginBottom: '16px', alignItems: 'center', width: '100%', boxSizing: 'border-box' }}>
+                <form onSubmit={e => { e.preventDefault(); setCurrentPage(1); }} style={{ display: 'flex', gap: '8px', flex: 1, minWidth: '260px' }}>
+                  <input
+                    type="text"
+                    placeholder="Buscar por email, id, plano, nome..."
+                    value={userSearchQuery}
+                    onChange={e => setUserSearchQuery(e.target.value)}
+                    style={{ flex: 1, minWidth: 0, padding: '8px 12px', fontSize: '13px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-medium)', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)' }}
+                  />
+                  <button type="submit" style={{ backgroundColor: 'var(--primary)', color: '#fff', border: 'none', borderRadius: 'var(--radius-sm)', padding: '0 14px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+                    <Search size={13} /> Buscar
+                  </button>
+                </form>
+                
+                <button
+                  onClick={() => setShowFilterSection(!showFilterSection)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '8px 14px',
+                    borderRadius: 'var(--radius-sm)',
+                    border: '1px solid var(--border-medium)',
+                    backgroundColor: showFilterSection ? 'var(--primary-glow)' : 'var(--bg-card)',
+                    color: showFilterSection ? 'var(--primary)' : 'var(--text-light)',
+                    fontSize: '13px',
+                    fontWeight: '700',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                    height: '38px'
+                  }}
+                >
+                  <Filter size={13} />
+                  <span>Filtros</span>
+                  <span style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    transition: 'transform 0.2s ease',
+                    transform: showFilterSection ? 'rotate(90deg)' : 'rotate(0deg)'
+                  }}>
+                    <ChevronRight size={13} />
+                  </span>
+                </button>
               </div>
+
+              {/* Collapsible Filters Box */}
+              {showFilterSection && (
+                <div className="animate-fade-in" style={{
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  gap: '12px',
+                  marginBottom: '20px',
+                  backgroundColor: 'var(--bg-app)',
+                  padding: '16px',
+                  borderRadius: 'var(--radius-md)',
+                  border: '1px solid var(--border-medium)',
+                  width: '100%',
+                  boxSizing: 'border-box'
+                }}>
+                  {/* Plan Filter */}
+                  <div style={{ flex: '1 1 120px' }}>
+                    <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: 'var(--text-light)', marginBottom: '6px', textTransform: 'uppercase' }}>Plano</label>
+                    <select
+                      value={planFilter}
+                      onChange={e => setPlanFilter(e.target.value)}
+                      style={{ width: '100%', padding: '8px', fontSize: '13px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-medium)', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)' }}
+                    >
+                      <option value="all">Todos</option>
+                      <option value="free">Free</option>
+                      <option value="pro">Pro</option>
+                    </select>
+                  </div>
+
+                  {/* Status Filter */}
+                  <div style={{ flex: '1 1 120px' }}>
+                    <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: 'var(--text-light)', marginBottom: '6px', textTransform: 'uppercase' }}>Status</label>
+                    <select
+                      value={statusFilter}
+                      onChange={e => setStatusFilter(e.target.value)}
+                      style={{ width: '100%', padding: '8px', fontSize: '13px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-medium)', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)' }}
+                    >
+                      <option value="all">Todos</option>
+                      <option value="active">Ativo</option>
+                      <option value="canceled">Cancelado</option>
+                      <option value="inactive">Inativo</option>
+                    </select>
+                  </div>
+
+                  {/* Sort Key */}
+                  <div style={{ flex: '1 1 150px' }}>
+                    <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: 'var(--text-light)', marginBottom: '6px', textTransform: 'uppercase' }}>Ordenar Por</label>
+                    <select
+                      value={userSortKey}
+                      onChange={e => setUserSortKey(e.target.value)}
+                      style={{ width: '100%', padding: '8px', fontSize: '13px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-medium)', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)' }}
+                    >
+                      <option value="created_at">Data de Cadastro</option>
+                      <option value="email">E-mail</option>
+                      <option value="last_login">Último Acesso</option>
+                      <option value="total_events">Total Eventos</option>
+                    </select>
+                  </div>
+
+                  {/* Sort Order */}
+                  <div style={{ flex: '1 1 100px' }}>
+                    <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: 'var(--text-light)', marginBottom: '6px', textTransform: 'uppercase' }}>Ordem</label>
+                    <select
+                      value={userSortOrder}
+                      onChange={e => setUserSortOrder(e.target.value)}
+                      style={{ width: '100%', padding: '8px', fontSize: '13px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-medium)', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)' }}
+                    >
+                      <option value="desc">Decrescente</option>
+                      <option value="asc">Crescente</option>
+                    </select>
+                  </div>
+                </div>
+              )}
               
-              {/* Users Table */}
-              <div style={{ overflowX: 'auto', marginBottom: '20px' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', minWidth: '800px' }}>
-                  <thead>
-                    <tr style={{ borderBottom: '2px solid var(--border-medium)', textAlign: 'left', color: 'var(--text-light)' }}>
-                      <th style={{ padding: '12px' }}>Usuário / E-mail</th>
-                      <th style={{ padding: '12px' }}>Cadastro</th>
-                      <th style={{ padding: '12px' }}>Último Acesso</th>
-                      <th style={{ padding: '12px' }}>Plano</th>
-                      <th style={{ padding: '12px' }}>Status</th>
-                      <th style={{ padding: '12px', textAlign: 'center' }}>Eventos Totais</th>
-                      <th style={{ padding: '12px', textAlign: 'right' }}>Ações</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {paginatedUsers.map(usr => (
-                      <tr key={usr.id} style={{ borderBottom: '1px solid var(--border-light)', hover: { backgroundColor: 'var(--bg-app)' } }}>
-                        <td style={{ padding: '12px' }}>
-                           <div style={{ fontWeight: '700', color: 'var(--text-main)' }}>{usr.email}</div>
-                           <div style={{ fontSize: '10px', color: 'var(--text-muted)', fontFamily: 'monospace' }}>ID: {usr.id}</div>
-                           {usr.nickname && <div style={{ fontSize: '11px', color: 'var(--text-light)', fontStyle: 'italic' }}>Nome: {usr.nickname}</div>}
-                        </td>
-                        <td style={{ padding: '12px', color: 'var(--text-main)' }}>
-                          {usr.created_at ? new Date(usr.created_at).toLocaleDateString('pt-BR') : 'N/A'}
-                        </td>
-                        <td style={{ padding: '12px', color: 'var(--text-main)' }}>
-                          {usr.last_login ? new Date(usr.last_login).toLocaleString('pt-BR') : 'Nunca'}
-                        </td>
-                        <td style={{ padding: '12px' }}>
+              {/* Users List Container (Responsive Switch) */}
+              {isMobile ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '20px', width: '100%' }}>
+                  {paginatedUsers.map(usr => (
+                    <div key={usr.id} className="mobile-user-card" style={{
+                      backgroundColor: 'var(--bg-card-hover)',
+                      border: '1px solid var(--border-light)',
+                      borderRadius: 'var(--radius-md)',
+                      padding: '16px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '10px',
+                      boxShadow: 'var(--shadow-sm)',
+                      width: '100%',
+                      boxSizing: 'border-box'
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px' }}>
+                        <div style={{ minWidth: 0, flex: 1 }}>
+                          <div style={{ fontWeight: '700', color: 'var(--text-main)', wordBreak: 'break-all', fontSize: '14px' }}>
+                            {usr.email}
+                          </div>
+                          {usr.nickname && (
+                            <div style={{ fontSize: '12px', color: 'var(--text-light)', fontStyle: 'italic', marginTop: '2px' }}>
+                              Nome: {usr.nickname}
+                            </div>
+                          )}
+                        </div>
+                        <div style={{ flexShrink: 0 }}>
                           {usr.plan === 'pro' ? (
-                            <span style={{ fontSize: '10px', fontWeight: '800', padding: '2px 8px', borderRadius: '4px', backgroundColor: '#FEF3C7', color: '#D97706', border: '1px solid #FCD34D' }}>PRO</span>
+                            <span style={{ fontSize: '9px', fontWeight: '800', padding: '2px 6px', borderRadius: '4px', backgroundColor: '#FEF3C7', color: '#D97706', border: '1px solid #FCD34D' }}>PRO</span>
                           ) : (
-                            <span style={{ fontSize: '10px', fontWeight: '800', padding: '2px 8px', borderRadius: '4px', backgroundColor: '#E5E7EB', color: '#4B5563' }}>FREE</span>
+                            <span style={{ fontSize: '9px', fontWeight: '800', padding: '2px 6px', borderRadius: '4px', backgroundColor: '#E5E7EB', color: '#4B5563' }}>FREE</span>
                           )}
-                        </td>
-                        <td style={{ padding: '12px' }}>
-                          {usr.status === 'active' ? (
-                            <span style={{ fontSize: '10px', fontWeight: '800', padding: '2px 8px', borderRadius: '4px', backgroundColor: '#DEF7EC', color: '#03543F' }}>ATIVO</span>
-                          ) : usr.status === 'canceled' ? (
-                            <span style={{ fontSize: '10px', fontWeight: '800', padding: '2px 8px', borderRadius: '4px', backgroundColor: '#FDE8E8', color: '#9B1C1C' }}>CANCELADO</span>
-                          ) : (
-                            <span style={{ fontSize: '10px', fontWeight: '800', padding: '2px 8px', borderRadius: '4px', backgroundColor: '#F3F4F6', color: '#9CA3AF' }}>INATIVO</span>
-                          )}
-                        </td>
-                        <td style={{ padding: '12px', textAlign: 'center', fontWeight: '600', color: 'var(--text-main)' }}>
-                          {usr.total_events}
-                        </td>
-                        <td style={{ padding: '12px', textAlign: 'right' }}>
-                          <button onClick={() => handleUserClick(usr.id)} className="btn-secondary" style={{ padding: '6px 12px', fontSize: '12px', borderRadius: 'var(--radius-sm)' }}>
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'monospace', backgroundColor: 'var(--bg-app)', padding: '6px 8px', borderRadius: '4px', wordBreak: 'break-all' }}>
+                        ID: {usr.id}
+                      </div>
+
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px', fontSize: '12px', color: 'var(--text-light)', borderTop: '1px solid var(--border-light)', paddingTop: '10px' }}>
+                        <div>
+                          <span style={{ display: 'block', fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Cadastro</span>
+                          <strong>{usr.created_at ? new Date(usr.created_at).toLocaleDateString('pt-BR') : 'N/A'}</strong>
+                        </div>
+                        <div>
+                          <span style={{ display: 'block', fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Último Acesso</span>
+                          <strong>{usr.last_login ? new Date(usr.last_login).toLocaleDateString('pt-BR') : 'Nunca'}</strong>
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--border-light)', paddingTop: '10px', marginTop: '4px' }}>
+                        <span style={{
+                          padding: '3px 8px', borderRadius: '4px', fontSize: '10px', fontWeight: '800',
+                          backgroundColor: usr.status === 'active' ? '#DEF7EC' : usr.status === 'canceled' ? '#FDE8E8' : '#F3F4F6',
+                          color: usr.status === 'active' ? '#03543F' : usr.status === 'canceled' ? '#9B1C1C' : '#9CA3AF'
+                        }}>
+                          {usr.status?.toUpperCase() || 'INATIVO'}
+                        </span>
+                        
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                          <span style={{ fontSize: '12px', color: 'var(--text-light)' }}>
+                            Eventos: <strong style={{ color: 'var(--text-main)' }}>{usr.total_events}</strong>
+                          </span>
+                          <button onClick={() => handleUserClick(usr.id)} className="btn-secondary" style={{ padding: '4px 10px', fontSize: '11px', borderRadius: 'var(--radius-sm)' }}>
                             Ver Usuário
                           </button>
-                        </td>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  {paginatedUsers.length === 0 && (
+                    <div style={{ padding: '24px', textAlign: 'center', color: 'var(--text-light)', fontSize: '13px' }}>Nenhum usuário localizado para os filtros selecionados.</div>
+                  )}
+                </div>
+              ) : (
+                <div style={{ overflowX: 'auto', marginBottom: '20px' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', minWidth: '800px' }}>
+                    <thead>
+                      <tr style={{ borderBottom: '2px solid var(--border-medium)', textAlign: 'left', color: 'var(--text-light)' }}>
+                        <th style={{ padding: '12px' }}>Usuário / E-mail</th>
+                        <th style={{ padding: '12px' }}>Cadastro</th>
+                        <th style={{ padding: '12px' }}>Último Acesso</th>
+                        <th style={{ padding: '12px' }}>Plano</th>
+                        <th style={{ padding: '12px' }}>Status</th>
+                        <th style={{ padding: '12px', textAlign: 'center' }}>Eventos Totais</th>
+                        <th style={{ padding: '12px', textAlign: 'right' }}>Ações</th>
                       </tr>
-                    ))}
-                    {paginatedUsers.length === 0 && (
-                      <tr>
-                        <td colSpan="7" style={{ padding: '24px', textAlign: 'center', color: 'var(--text-light)' }}>Nenhum usuário localizado para os filtros selecionados.</td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody>
+                      {paginatedUsers.map(usr => (
+                        <tr key={usr.id} style={{ borderBottom: '1px solid var(--border-light)', hover: { backgroundColor: 'var(--bg-app)' } }}>
+                          <td style={{ padding: '12px' }}>
+                             <div style={{ fontWeight: '700', color: 'var(--text-main)' }}>{usr.email}</div>
+                             <div style={{ fontSize: '10px', color: 'var(--text-muted)', fontFamily: 'monospace' }}>ID: {usr.id}</div>
+                             {usr.nickname && <div style={{ fontSize: '11px', color: 'var(--text-light)', fontStyle: 'italic' }}>Nome: {usr.nickname}</div>}
+                          </td>
+                          <td style={{ padding: '12px', color: 'var(--text-main)' }}>
+                            {usr.created_at ? new Date(usr.created_at).toLocaleDateString('pt-BR') : 'N/A'}
+                          </td>
+                          <td style={{ padding: '12px', color: 'var(--text-main)' }}>
+                            {usr.last_login ? new Date(usr.last_login).toLocaleString('pt-BR') : 'Nunca'}
+                          </td>
+                          <td style={{ padding: '12px' }}>
+                            {usr.plan === 'pro' ? (
+                              <span style={{ fontSize: '10px', fontWeight: '800', padding: '2px 8px', borderRadius: '4px', backgroundColor: '#FEF3C7', color: '#D97706', border: '1px solid #FCD34D' }}>PRO</span>
+                            ) : (
+                              <span style={{ fontSize: '10px', fontWeight: '800', padding: '2px 8px', borderRadius: '4px', backgroundColor: '#E5E7EB', color: '#4B5563' }}>FREE</span>
+                            )}
+                          </td>
+                          <td style={{ padding: '12px' }}>
+                            {usr.status === 'active' ? (
+                              <span style={{ fontSize: '10px', fontWeight: '800', padding: '2px 8px', borderRadius: '4px', backgroundColor: '#DEF7EC', color: '#03543F' }}>ATIVO</span>
+                            ) : usr.status === 'canceled' ? (
+                              <span style={{ fontSize: '10px', fontWeight: '800', padding: '2px 8px', borderRadius: '4px', backgroundColor: '#FDE8E8', color: '#9B1C1C' }}>CANCELADO</span>
+                            ) : (
+                              <span style={{ fontSize: '10px', fontWeight: '800', padding: '2px 8px', borderRadius: '4px', backgroundColor: '#F3F4F6', color: '#9CA3AF' }}>INATIVO</span>
+                            )}
+                          </td>
+                          <td style={{ padding: '12px', textAlign: 'center', fontWeight: '600', color: 'var(--text-main)' }}>
+                            {usr.total_events}
+                          </td>
+                          <td style={{ padding: '12px', textAlign: 'right' }}>
+                            <button onClick={() => handleUserClick(usr.id)} className="btn-secondary" style={{ padding: '6px 12px', fontSize: '12px', borderRadius: 'var(--radius-sm)' }}>
+                              Ver Usuário
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                      {paginatedUsers.length === 0 && (
+                        <tr>
+                          <td colSpan="7" style={{ padding: '24px', textAlign: 'center', color: 'var(--text-light)' }}>Nenhum usuário localizado para os filtros selecionados.</td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              )}
 
               {/* Pagination Controls */}
               {totalPages > 1 && (
@@ -1836,7 +1963,7 @@ export default function AdminDashboard() {
           )}
 
           {activeAdminTab === 'funnels' && (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '20px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(280px, 100%), 1fr))', gap: '20px' }}>
               
               {/* Onboarding Funnel Visualizer */}
               <div style={{ backgroundColor: 'var(--bg-card)', padding: '24px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-light)', boxShadow: 'var(--shadow-sm)' }}>

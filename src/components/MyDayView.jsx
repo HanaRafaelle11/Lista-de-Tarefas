@@ -1711,6 +1711,7 @@ export default function MyDayView() {
                                 <button
                                   onClick={() => {
                                     handleDuplicateGoal(goal.id);
+                                    setSelectedGoalIdFilter('all');
                                     setActiveGoalKebabId(null);
                                   }}
                                   style={{

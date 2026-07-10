@@ -153,7 +153,8 @@ export default function HomeView() {
     growthPet,
     handleSelectGrowthPet,
     getLevelFromCount,
-    categories
+    categories,
+    focusEvents
   } = useAppContext();
   
   const [showHealthExplanation, setShowHealthExplanation] = useState(false);
@@ -385,9 +386,10 @@ export default function HomeView() {
       habitsManager,
       consistencyScore,
       currentUser,
-      isPro
+      isPro,
+      focusEvents
     });
-  }, [tasks, goals, goalTasks, habitsManager, consistencyScore, currentUser, isPro]);
+  }, [tasks, goals, goalTasks, habitsManager, consistencyScore, currentUser, isPro, focusEvents]);
 
   // Pet de Crescimento é gerenciado no AppContext globalmente
   const [viewedPet, setViewedPet] = useState(() => {
@@ -880,6 +882,44 @@ export default function HomeView() {
             </div>
           )}
 
+          {/* Coach de Produtividade Card */}
+          {coachData && (
+            <div className="coach-insights-card animate-fade-in" style={{
+              marginTop: '16px',
+              backgroundColor: 'var(--bg-card)',
+              border: '1px solid var(--border-light)',
+              borderRadius: 'var(--radius-lg)',
+              padding: '20px 24px',
+              boxShadow: 'var(--shadow-md)',
+              width: '100%',
+              textAlign: 'left',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '12px',
+              position: 'relative'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', borderBottom: '1px solid var(--border-light)', paddingBottom: '8px' }}>
+                <Brain size={18} style={{ color: 'var(--primary)' }} />
+                <h3 style={{ fontSize: '15px', fontWeight: '800', color: 'var(--text-main)', margin: 0 }}>Mentor de Produtividade</h3>
+                <span style={{
+                  marginLeft: 'auto',
+                  fontSize: '11px',
+                  fontWeight: '700',
+                  color: 'var(--primary)',
+                  backgroundColor: 'var(--primary-glow)',
+                  padding: '2px 8px',
+                  borderRadius: '12px'
+                }}>
+                  Nota: {coachData.stats?.weeklyScore || '--'}/10
+                </span>
+              </div>
+              
+              <div className="coach-message-content" style={{ maxHeight: '320px', overflowY: 'auto', paddingRight: '4px' }}>
+                {formatCoachMessage(coachData.message)}
+              </div>
+            </div>
+          )}
+
         </div>
 
         {/* COLUNA DIREITA: Agenda do Dia / Tarefas Pendentes de Hoje */}
@@ -1020,11 +1060,26 @@ export default function HomeView() {
         
         <div
           onClick={() => setShowGoalsSection(v => !v)}
-          style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: showGoalsSection ? '16px' : '0', cursor: 'pointer', userSelect: 'none' }}
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            padding: '12px 16px',
+            backgroundColor: 'var(--bg-card)',
+            border: '1px solid var(--border-light)',
+            borderRadius: 'var(--radius-md)',
+            marginBottom: showGoalsSection ? '16px' : '0',
+            cursor: 'pointer',
+            userSelect: 'none',
+            transition: 'all 0.2s ease',
+            boxShadow: 'var(--shadow-sm)'
+          }}
+          onMouseEnter={e => e.currentTarget.style.backgroundColor = 'var(--bg-card-hover)'}
+          onMouseLeave={e => e.currentTarget.style.backgroundColor = 'var(--bg-card)'}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Target size={18} style={{ color: 'var(--primary)' }} />
-            <h3 style={{ fontSize: '16px', fontWeight: '800', color: 'var(--text-main)', margin: 0 }}>Objetivos em Andamento</h3>
+            <h3 style={{ fontSize: '15px', fontWeight: '800', color: 'var(--text-main)', margin: 0 }}>Objetivos em Andamento</h3>
             {topGoals.length > 0 && (
               <span style={{ fontSize: '11px', color: 'var(--text-light)', fontWeight: '600', backgroundColor: 'var(--bg-card-hover)', borderRadius: '10px', padding: '1px 7px' }}>
                 {topGoals.length}
@@ -1035,8 +1090,15 @@ export default function HomeView() {
             <button onClick={e => { e.stopPropagation(); setActiveTab('myday'); }} className="home-section-link" style={{ fontSize: '12px', color: 'var(--primary)', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '2px', fontWeight: '600' }}>
               Ver todos no Meu Dia <ChevronRight size={14} />
             </button>
-            <span style={{ fontSize: '12px', color: 'var(--text-light)', fontWeight: '600' }}>
-              {showGoalsSection ? '▲' : '▼'}
+            <span style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: 'var(--text-light)',
+              transition: 'transform 0.2s ease',
+              transform: showGoalsSection ? 'rotate(90deg)' : 'rotate(0deg)'
+            }}>
+              <ChevronRight size={16} />
             </span>
           </div>
         </div>
