@@ -170,7 +170,8 @@ export const AdminDashboardService = {
     userMasterMap.forEach((userObj, uid) => {
       const sub = subMap.get(uid);
       if (sub) {
-        userObj.plan = sub.plan || 'free';
+        const planName = (sub.plan || 'free').toLowerCase();
+        userObj.plan = planName === 'premium' ? 'pro' : planName;
         userObj.status = sub.status || 'free';
       }
     });

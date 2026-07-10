@@ -655,7 +655,7 @@ export default function AdminDashboard() {
           <div style={{ backgroundColor: 'var(--bg-card)', padding: '24px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-light)', boxShadow: 'var(--shadow-sm)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px', marginBottom: '16px', borderBottom: '1px solid var(--border-light)', paddingBottom: '12px' }}>
               <h2 style={{ fontSize: '18px', fontWeight: '800', color: 'var(--text-main)', margin: 0 }}>Perfil do Beta Tester</h2>
-              {adminUsers.find(u => u.id === selectedUser)?.plan === 'pro' ? (
+              {adminUsers.find(u => u.id === selectedUser)?.plan === 'pro' || adminUsers.find(u => u.id === selectedUser)?.plan === 'premium' ? (
                 <span className="badge-category" style={{ fontSize: '11px', fontWeight: '700', padding: '4px 10px', borderRadius: '99px', backgroundColor: '#FEF3C7', color: '#D97706', border: '1px solid #FCD34D' }}>PRO</span>
               ) : (
                 <span className="badge-category" style={{ fontSize: '11px', fontWeight: '700', padding: '4px 10px', borderRadius: '99px', backgroundColor: '#F3F4F6', color: '#4B5563', border: '1px solid #E5E7EB' }}>GRÁTIS</span>
@@ -1824,7 +1824,7 @@ export default function AdminDashboard() {
                           )}
                         </div>
                         <div style={{ flexShrink: 0 }}>
-                          {usr.plan === 'pro' ? (
+                          {usr.plan === 'pro' || usr.plan === 'premium' ? (
                             <span style={{ fontSize: '9px', fontWeight: '800', padding: '2px 6px', borderRadius: '4px', backgroundColor: '#FEF3C7', color: '#D97706', border: '1px solid #FCD34D' }}>PRO</span>
                           ) : (
                             <span style={{ fontSize: '9px', fontWeight: '800', padding: '2px 6px', borderRadius: '4px', backgroundColor: '#E5E7EB', color: '#4B5563' }}>FREE</span>
@@ -1900,7 +1900,7 @@ export default function AdminDashboard() {
                             {usr.last_login ? new Date(usr.last_login).toLocaleString('pt-BR') : 'Nunca'}
                           </td>
                           <td style={{ padding: '12px' }}>
-                            {usr.plan === 'pro' ? (
+                            {usr.plan === 'pro' || usr.plan === 'premium' ? (
                               <span style={{ fontSize: '10px', fontWeight: '800', padding: '2px 8px', borderRadius: '4px', backgroundColor: '#FEF3C7', color: '#D97706', border: '1px solid #FCD34D' }}>PRO</span>
                             ) : (
                               <span style={{ fontSize: '10px', fontWeight: '800', padding: '2px 8px', borderRadius: '4px', backgroundColor: '#E5E7EB', color: '#4B5563' }}>FREE</span>
@@ -2009,7 +2009,7 @@ export default function AdminDashboard() {
                     {[
                       { step: '1. Visualizações da Paywall', val: metrics.paywall_views, pct: 100 },
                       { step: '2. Cliques em Upgrade', val: metrics.upgrade_clicks, pct: metrics.paywall_views > 0 ? Math.round((metrics.upgrade_clicks / metrics.paywall_views) * 100) : 0 },
-                      { step: '3. Assinantes Ativos (PRO)', val: adminUsers.filter(u => u.plan === 'pro').length, pct: metrics.paywall_views > 0 ? Math.round((adminUsers.filter(u => u.plan === 'pro').length / metrics.paywall_views) * 100) : 0 }
+                      { step: '3. Assinantes Ativos (PRO)', val: adminUsers.filter(u => u.plan === 'pro' || u.plan === 'premium').length, pct: metrics.paywall_views > 0 ? Math.round((adminUsers.filter(u => u.plan === 'pro' || u.plan === 'premium').length / metrics.paywall_views) * 100) : 0 }
                     ].map((stepObj, index) => (
                       <div key={index}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', fontWeight: '600', color: 'var(--text-main)', marginBottom: '4px' }}>
@@ -2097,15 +2097,33 @@ export default function AdminDashboard() {
                     flexDirection: 'column',
                     gap: '20px'
                   }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
                       <div>
                         <span style={{ fontSize: '11px', fontWeight: '800', color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>CEO / MOBILE VIEW (BUSINESS HEALTH SCORE)</span>
-                        <h2 style={{ fontSize: '28px', fontWeight: '900', color: (metrics?.health_score?.bhs || 98) >= 90 ? '#10b981' : (metrics?.health_score?.bhs || 98) >= 80 ? '#f59e0b' : '#ef4444', margin: '4px 0 0 0', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                          {metrics?.health_score?.status_badge || 'SAUDÁVEL'} Status: <span style={{ color: (metrics?.health_score?.bhs || 98) >= 90 ? '#10b981' : (metrics?.health_score?.bhs || 98) >= 80 ? '#f59e0b' : '#ef4444' }}>{metrics?.health_score?.bhs || '98.2'} / 100 — {metrics?.health_score?.status_label || 'Sistema Muito Saudável'}</span>
-                        </h2>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '8px', flexWrap: 'wrap' }}>
+                          <span style={{ 
+                            fontSize: '11.5px', 
+                            fontWeight: '800', 
+                            padding: '3px 10px', 
+                            borderRadius: '99px', 
+                            backgroundColor: (metrics?.health_score?.bhs || 98) >= 90 ? 'rgba(16, 185, 129, 0.12)' : 'rgba(239, 68, 68, 0.12)', 
+                            color: (metrics?.health_score?.bhs || 98) >= 90 ? '#10b981' : '#ef4444',
+                            border: '1px solid ' + ((metrics?.health_score?.bhs || 98) >= 90 ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)'),
+                            textTransform: 'uppercase'
+                          }}>
+                            {metrics?.health_score?.status_badge || 'SAUDÁVEL'}
+                          </span>
+                          <h2 style={{ fontSize: '24px', fontWeight: '900', color: (metrics?.health_score?.bhs || 98) >= 90 ? '#10b981' : (metrics?.health_score?.bhs || 98) >= 80 ? '#f59e0b' : '#ef4444', margin: 0, display: 'inline-flex', alignItems: 'baseline', gap: '2px' }}>
+                            {metrics?.health_score?.bhs || '98.2'}
+                            <span style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-muted)' }}>/100</span>
+                          </h2>
+                          <span style={{ fontSize: '13.5px', fontWeight: '600', color: 'var(--text-light)' }}>
+                            — {metrics?.health_score?.status_label || 'Sistema muito saudável'}
+                          </span>
+                        </div>
                       </div>
                       <div style={{ textAlign: 'right' }}>
-                        <span style={{ fontSize: '12px', fontWeight: '700', padding: '6px 14px', borderRadius: '99px', backgroundColor: '#def7ec', color: '#03543f', border: '1px solid #34d399' }}>
+                        <span style={{ fontSize: '12px', fontWeight: '700', padding: '6px 14px', borderRadius: '99px', backgroundColor: 'rgba(16, 185, 129, 0.12)', color: '#10b981', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
                           RESPOSTA EXECUTIVA ANTI-ARBITRÁRIA
                         </span>
                       </div>
@@ -2259,7 +2277,7 @@ export default function AdminDashboard() {
                           >
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                               <span style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text-main)', wordBreak: 'break-all' }}>{u.email}</span>
-                              {u.plan === 'pro' ? (
+                              {u.plan === 'pro' || u.plan === 'premium' ? (
                                 <span style={{ fontSize: '9px', fontWeight: '800', padding: '1px 5px', borderRadius: '3px', backgroundColor: '#FEF3C7', color: '#D97706', border: '1px solid #FCD34D' }}>PRO</span>
                               ) : (
                                 <span style={{ fontSize: '9px', fontWeight: '800', padding: '1px 5px', borderRadius: '3px', backgroundColor: '#E5E7EB', color: '#4B5563' }}>FREE</span>
@@ -2275,6 +2293,11 @@ export default function AdminDashboard() {
                               <div style={{ fontSize: '10px', color: 'var(--text-muted)', borderTop: '1px dashed var(--border-light)', paddingTop: '6px', marginTop: '2px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                 <span>Último Evento:</span>
                                 <span style={{ color: eventColor, fontWeight: '700' }}>{lastEvent.event_type.toUpperCase()}</span>
+                              </div>
+                            ) : (u.plan === 'pro' || u.plan === 'premium') ? (
+                              <div style={{ fontSize: '10px', color: '#10b981', borderTop: '1px dashed var(--border-light)', paddingTop: '6px', marginTop: '2px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <span>Plano Ativo:</span>
+                                <span style={{ fontWeight: '700' }}>{u.status?.toUpperCase() || 'ATIVO'}</span>
                               </div>
                             ) : (
                               <div style={{ fontSize: '10px', color: 'var(--text-muted)', borderTop: '1px dashed var(--border-light)', paddingTop: '6px', marginTop: '2px', fontStyle: 'italic' }}>

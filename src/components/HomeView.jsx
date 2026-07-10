@@ -11,7 +11,7 @@ import { EVOLUTION_CATEGORIES, EVOLUTION_CATEGORY_LIST } from '../config/evoluti
 import { getEvolutionStage } from '../utils/getEvolutionStage';
 import EvolutionStageImage from './EvolutionStageImage';
 import PremiumOverlay from './PremiumOverlay';
-import { generateCoachMessage } from '../intelligence/coachEngine';
+
 import GoalModal from './GoalModal';
 import { extractDateAndTimeParts } from '../utils/dateUtils';
 
@@ -378,18 +378,7 @@ export default function HomeView() {
   const streakDays = currentStreak;
   const auraAnalysis = useAuraAssistant(activeTasksList, activeGoalsList, goalTasks, currentStreak, unlockedCount);
 
-  const coachData = useMemo(() => {
-    return generateCoachMessage({
-      tasks,
-      goals,
-      goalTasks,
-      habitsManager,
-      consistencyScore,
-      currentUser,
-      isPro,
-      focusEvents
-    });
-  }, [tasks, goals, goalTasks, habitsManager, consistencyScore, currentUser, isPro, focusEvents]);
+
 
   // Pet de Crescimento é gerenciado no AppContext globalmente
   const [viewedPet, setViewedPet] = useState(() => {
@@ -882,43 +871,7 @@ export default function HomeView() {
             </div>
           )}
 
-          {/* Coach de Produtividade Card */}
-          {coachData && (
-            <div className="coach-insights-card animate-fade-in" style={{
-              marginTop: '16px',
-              backgroundColor: 'var(--bg-card)',
-              border: '1px solid var(--border-light)',
-              borderRadius: 'var(--radius-lg)',
-              padding: '20px 24px',
-              boxShadow: 'var(--shadow-md)',
-              width: '100%',
-              textAlign: 'left',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '12px',
-              position: 'relative'
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', borderBottom: '1px solid var(--border-light)', paddingBottom: '8px' }}>
-                <Brain size={18} style={{ color: 'var(--primary)' }} />
-                <h3 style={{ fontSize: '15px', fontWeight: '800', color: 'var(--text-main)', margin: 0 }}>Mentor de Produtividade</h3>
-                <span style={{
-                  marginLeft: 'auto',
-                  fontSize: '11px',
-                  fontWeight: '700',
-                  color: 'var(--primary)',
-                  backgroundColor: 'var(--primary-glow)',
-                  padding: '2px 8px',
-                  borderRadius: '12px'
-                }}>
-                  Nota: {coachData.stats?.weeklyScore || '--'}/10
-                </span>
-              </div>
-              
-              <div className="coach-message-content" style={{ maxHeight: '320px', overflowY: 'auto', paddingRight: '4px' }}>
-                {formatCoachMessage(coachData.message)}
-              </div>
-            </div>
-          )}
+
 
         </div>
 

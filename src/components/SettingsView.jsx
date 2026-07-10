@@ -1342,16 +1342,16 @@ export default function SettingsView() {
                     </span>
                   </div>
 
-                  {activeSubDetails.current_period_start && activeSubDetails.current_period_end && (
+                  {activeSubDetails.current_period_start && (
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontSize: '13px', color: 'var(--text-light)' }}>Período ativo:</span>
+                      <span style={{ fontSize: '13px', color: 'var(--text-light)' }}>Data da contratação:</span>
                       <span style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-main)' }}>
-                        {formatDateBR(activeSubDetails.current_period_start)} até {formatDateBR(activeSubDetails.current_period_end)}
+                        {formatDateBR(activeSubDetails.current_period_start)}
                       </span>
                     </div>
                   )}
 
-                  {activeSubDetails.status === 'active' && activeSubDetails.current_period_end && (
+                  {activeSubDetails.auto_renew && activeSubDetails.current_period_end && (
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <span style={{ fontSize: '13px', color: 'var(--text-light)' }}>Data de renovação:</span>
                       <span style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-main)' }}>
@@ -1606,12 +1606,30 @@ export default function SettingsView() {
                 ))}
               </div>
 
-              {isPro && effectiveTheme === 'light' && (
+              {effectiveTheme === 'light' && (
                 <div style={{ marginTop: '20px', paddingTop: '16px', borderTop: '1px solid var(--border-light)' }}>
-                  <span style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-main)', display: 'block', marginBottom: '10px' }}>
-                    Cor de Fundo Personalizada (Modo Claro)
-                  </span>
-                  <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px' }}>
+                    <span style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-main)' }}>
+                      Cor de Fundo Personalizada (Modo Claro)
+                    </span>
+                    {!isPro && (
+                      <span style={{ 
+                        fontSize: '9px', 
+                        fontWeight: '800', 
+                        padding: '1px 5px', 
+                        borderRadius: '3px', 
+                        backgroundColor: '#FEF3C7', 
+                        color: '#D97706', 
+                        border: '1px solid #FCD34D',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '2px'
+                      }}>
+                        🔒 PRO
+                      </span>
+                    )}
+                  </div>
+                  <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', opacity: !isPro ? 0.85 : 1 }}>
                     {[
                       { color: '#F8FAFC', label: 'Padrão' },
                       { color: '#FAF5FF', label: 'Lilás' },
@@ -1621,7 +1639,13 @@ export default function SettingsView() {
                     ].map(bg => (
                       <button
                         key={bg.color}
-                        onClick={() => setAppBgColor(bg.color)}
+                        onClick={() => {
+                          if (!isPro) {
+                            openPaywall('custom_bg_color');
+                            return;
+                          }
+                          setAppBgColor(bg.color);
+                        }}
                         style={{
                           display: 'flex',
                           alignItems: 'center',
@@ -1853,15 +1877,24 @@ export default function SettingsView() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%' }}>
               <p style={{ fontSize: '13px', color: 'var(--text-light)', margin: 0 }}>Ações destrutivas. Tenha certeza absoluta antes de prosseguir.</p>
               <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginTop: '16px' }}>
-                <button
+                 <button
                   className="danger-btn"
                   onClick={() => {
+                    const hasData = (tasks && tasks.length > 0) || (goals && goals.length > 0) || (habitsManager?.habits && habitsManager.habits.length > 0);
+                    if (!hasData) {
+                      openCustomAlert("Não existem mais dados para apagar.");
+                      return;
+                    }
                     openCustomConfirm(
                       "Deseja realmente apagar TODOS os seus dados do Flowday (tarefas, objetivos, hábitos e conquistas)? Esta ação é permanente e não poderá ser revertida.",
                       "Começar do Zero",
                       async () => {
-                        await handleResetAllData();
-                        openCustomAlert("Todos os seus dados foram apagados com sucesso.");
+                        const success = await handleResetAllData();
+                        if (success) {
+                          openCustomAlert("Todos os seus dados foram apagados com sucesso.");
+                        } else {
+                          openCustomAlert("Não existem mais dados para apagar.");
+                        }
                       }
                     );
                   }}

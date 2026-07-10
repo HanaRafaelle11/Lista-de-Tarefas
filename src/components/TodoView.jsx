@@ -309,6 +309,7 @@ export default function TodoView() {
   const [isPlannerOpen, setIsPlannerOpen] = useState(false);
   const [isTemplatesOpen, setIsTemplatesOpen] = useState(false);
   const [customizingTemplate, setCustomizingTemplate] = useState(null);
+  const [isImportingTemplate, setIsImportingTemplate] = useState(false);
   const [isSyncModalOpen, setIsSyncModalOpen] = useState(false);
   const [showCompletedKanban, setShowCompletedKanban] = useState(true);
   const [showBulkConfirm, setShowBulkConfirm] = useState(false);
@@ -582,6 +583,10 @@ export default function TodoView() {
   }, [tasks]);
 
   const handleLoadTemplate = (template) => {
+    if (activeTemplates.size > 0) {
+      openCustomAlert("Você já possui um modelo ativo. Conclua ou exclua as tarefas do modelo atual antes de carregar um novo.");
+      return;
+    }
     if (activeTemplates.has(template.title)) {
       openCustomAlert(`O modelo "${template.title}" já está ativo em sua lista.`);
       return;
@@ -654,32 +659,39 @@ export default function TodoView() {
   };
 
   const handleImportCustomizedTemplate = async () => {
-    if (!customizingTemplate) return;
+    if (!customizingTemplate || isImportingTemplate) return;
     const enabledTasks = customizingTemplate.tasks.filter(t => t.enabled && t.title.trim());
     if (enabledTasks.length === 0) {
       openCustomAlert("Selecione ou preencha pelo menos uma tarefa com título.");
       return;
     }
 
-    for (const t of enabledTasks) {
-      const metaDescription = `\n\n--flowday-meta--\n${JSON.stringify({ due_time: '', recurrence: 'nenhuma', template_name: customizingTemplate.title })}`;
-      const finalDesc = t.description ? `${t.description}${metaDescription}` : metaDescription;
-      
-      const catExists = categories.some(cat => cat.id === t.category || cat.name === t.category);
-      const categoryId = catExists ? t.category : (categories[0]?.id || 'Trabalho');
+    setIsImportingTemplate(true);
+    try {
+      for (const t of enabledTasks) {
+        const metaDescription = `\n\n--flowday-meta--\n${JSON.stringify({ due_time: '', recurrence: 'nenhuma', template_name: customizingTemplate.title })}`;
+        const finalDesc = t.description ? `${t.description}${metaDescription}` : metaDescription;
+        
+        const catExists = categories.some(cat => cat.id === t.category || cat.name === t.category);
+        const categoryId = catExists ? t.category : (categories[0]?.id || 'Trabalho');
 
-      await onAddTask({
-        title: t.title.trim(),
-        description: finalDesc,
-        category: categoryId,
-        priority: t.priority || 'Média',
-        dueDate: null
-      });
+        await onAddTask({
+          title: t.title.trim(),
+          description: finalDesc,
+          category: categoryId,
+          priority: t.priority || 'Média',
+          dueDate: null
+        });
+      }
+
+      setCustomizingTemplate(null);
+      setIsTemplatesOpen(false);
+      logEvent('template_loaded', { template_id: customizingTemplate.id });
+    } catch (e) {
+      console.error('Erro ao importar modelo:', e);
+    } finally {
+      setIsImportingTemplate(false);
     }
-
-    setCustomizingTemplate(null);
-    setIsTemplatesOpen(false);
-    logEvent('template_loaded', { template_id: customizingTemplate.id });
   };
 
   const handleExportGoogleCalendar = () => {
@@ -2140,9 +2152,11 @@ export default function TodoView() {
                   <button
                     type="button"
                     onClick={handleImportCustomizedTemplate}
+                    disabled={isImportingTemplate}
                     className="template-customizer-btn-confirm"
+                    style={{ opacity: isImportingTemplate ? 0.7 : 1, cursor: isImportingTemplate ? 'not-allowed' : 'pointer' }}
                   >
-                    Confirmar e Importar
+                    {isImportingTemplate ? 'Importando...' : 'Confirmar e Importar'}
                   </button>
                 </div>
               </div>
@@ -2191,10 +2205,11 @@ export default function TodoView() {
                       <button
                         className="template-load-btn"
                         onClick={() => handleLoadTemplate(template)}
-                        disabled={isAlreadyActive}
+                        disabled={isAlreadyActive || activeTemplates.size > 0}
+                        style={{ cursor: (isAlreadyActive || activeTemplates.size > 0) ? 'not-allowed' : 'pointer' }}
                       >
                         <Plus size={14} />
-                        {isAlreadyActive ? 'Modelo Ativo' : 'Carregar Tarefas'}
+                        {isAlreadyActive ? 'Modelo Ativo' : activeTemplates.size > 0 ? 'Outro Modelo Ativo' : 'Carregar Tarefas'}
                       </button>
                     </div>
                   );

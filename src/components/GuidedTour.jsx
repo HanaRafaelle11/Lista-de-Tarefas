@@ -3,7 +3,7 @@ import { Joyride, STATUS } from 'react-joyride';
 import { useAppContext } from '../contexts/AppContext';
 
 export default function GuidedTour() {
-  const { currentUser, logEvent } = useAppContext();
+  const { currentUser, logEvent, handleCompleteOnboarding } = useAppContext();
   const [run, setRun] = useState(false);
   const [tourKey, setTourKey] = useState(0);
 
@@ -80,9 +80,7 @@ export default function GuidedTour() {
       if (currentUser?.id) {
         localStorage.setItem(`flowday_tour_v2_${currentUser.id}`, 'true');
       }
-      if (status === STATUS.FINISHED) {
-        logEvent('onboarding_completed');
-      }
+      handleCompleteOnboarding();
     }
   };
 

@@ -1497,7 +1497,9 @@ export function AppProvider({ children }) {
 
       achievementChecking.current = true;
       try {
-        const stats = calcStats(tasks, goals, habits, habitLogs);
+        const activeTasksForStats = tasks.filter(t => !t.deletedAt && !t.deleted_at);
+        const activeGoalsForStats = goals.filter(g => !g.deletedAt && !g.deleted_at);
+        const stats = calcStats(activeTasksForStats, activeGoalsForStats, habits, habitLogs);
 
         // Bloqueia/deleta conquistas cujos requisitos deixaram de ser atendidos (após exclusão)
         const keysToLock = [];
@@ -1722,6 +1724,7 @@ export function AppProvider({ children }) {
         }
       }));
       logEvent('onboarding_completed');
+      eventsService.flushLocalEvents(currentUser.id).catch(() => {});
     } catch (e) {
       console.error('Erro ao marcar onboarding como concluído:', e);
     }
@@ -2018,7 +2021,11 @@ export function AppProvider({ children }) {
   }, [currentUser, undoAction, logEvent, goals, resetAchievementsIfEmpty]);
 
   const handleResetAllData = useCallback(async () => {
-    if (!currentUser?.id) return;
+    if (!currentUser?.id) return false;
+
+    // Check if there is actually anything to delete
+    const hasData = tasks.length > 0 || goals.length > 0 || habits.length > 0 || habitLogs.length > 0;
+    if (!hasData) return false;
 
     // Clean states functionally
     setTasks([]);
@@ -2052,7 +2059,8 @@ export function AppProvider({ children }) {
 
     addNotification('system', 'Dados limpos', 'Todos os seus dados foram excluídos permanentemente.');
     resetAchievementsIfEmpty(currentUser.id, [], []);
-  }, [currentUser, addNotification, resetAchievementsIfEmpty]);
+    return true;
+  }, [currentUser, tasks, goals, habits, habitLogs, addNotification, resetAchievementsIfEmpty]);
 
   const handleToggleComplete = useCallback(async (id) => {
     if (!currentUser?.id) return;

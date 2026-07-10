@@ -1076,13 +1076,7 @@ export default function EvolutionView() {
                   style={{ marginBottom: '16px', cursor: 'pointer' }}
                   onClick={() => setIsGoalsExpanded(!isGoalsExpanded)}
                 >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11.5px', marginBottom: '6px' }}>
-                    <span style={{ color: 'var(--text-muted)' }}>Metas Concluídas</span>
-                    <strong style={{ color: 'var(--primary)' }}>
-                      {completedGoals.length} concluída{completedGoals.length !== 1 ? 's' : ''}
-                    </strong>
-                  </div>
-                  <p style={{ fontSize: '12px', color: 'var(--text-light)', margin: 0, lineHeight: '1.4' }}>
+                  <p style={{ fontSize: '12.5px', color: 'var(--text-light)', margin: 0, lineHeight: '1.5' }}>
                     Acompanhe sua lista de grandes marcos e sonhos concluídos com sucesso.
                   </p>
                 </div>

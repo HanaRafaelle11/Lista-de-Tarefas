@@ -120,7 +120,7 @@ export const AccessDecisionEngine = {
       // Fetch latest subscription details for presentation in Settings / UI
       const { data: subData } = await supabaseAdmin
         .from('subscriptions')
-        .select('plan, status, current_period_start, current_period_end, price, provider')
+        .select('plan, status, current_period_start, current_period_end, price, provider, created_at, auto_renew')
         .eq('user_id', userId)
         .order('updated_at', { ascending: false })
         .limit(1)
@@ -131,10 +131,11 @@ export const AccessDecisionEngine = {
         subscriptionDetails = {
           plan: subData.plan || 'pro',
           status: subData.status || 'free',
-          current_period_start: subData.current_period_start || null,
+          current_period_start: subData.current_period_start || subData.created_at || null,
           current_period_end: subData.current_period_end || null,
           price: subData.price ? Number(subData.price) : 29.90,
-          provider: subData.provider || 'asaas'
+          provider: subData.provider || 'asaas',
+          auto_renew: subData.auto_renew ?? false
         };
       } else if (entitlement) {
         subscriptionDetails = {
@@ -143,7 +144,8 @@ export const AccessDecisionEngine = {
           current_period_start: null,
           current_period_end: entitlement.valid_until || null,
           price: 29.90,
-          provider: 'system'
+          provider: 'system',
+          auto_renew: false
         };
       }
 
