@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import MFIcon from './MFIcon';
 
@@ -28,7 +29,7 @@ export default function AchievementModal({ isOpen, onClose, title, message, icon
 
   if (!isOpen) return null;
 
-  return (
+  return createPortal(
     <div className={`modal-overlay achievement-modal-overlay ${isOpen ? 'open' : ''}`} onClick={onClose}>
       <div 
         ref={modalRef}
@@ -156,6 +157,7 @@ export default function AchievementModal({ isOpen, onClose, title, message, icon
           color: var(--text-main);
         }
       `}</style>
-    </div>
+    </div>,
+    document.body
   );
 }

@@ -1112,7 +1112,19 @@ export function AppProvider({ children }) {
     // 2. Taxa de conclusão de hábitos nos últimos 7 dias (40% de peso)
     const activeHabitIds = habits.map(h => h.id);
     const recentLogs = habitLogs.filter(l => activeHabitIds.includes(l.habit_id) && new Date(l.completed_date) >= sevenDaysAgo);
-    const totalPossibleLogs = habits.length * 7;
+    
+    let totalPossibleLogs = 0;
+    const todayVal = new Date();
+    todayVal.setHours(0, 0, 0, 0);
+    habits.forEach(h => {
+      const createdDate = h.created_at ? new Date(h.created_at.split('T')[0]) : new Date(todayVal);
+      createdDate.setHours(0, 0, 0, 0);
+      const diffTime = Math.max(0, todayVal - createdDate);
+      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+      const habitDaysCount = Math.min(7, diffDays + 1);
+      totalPossibleLogs += habitDaysCount;
+    });
+    
     const habitRate = totalPossibleLogs > 0 ? (recentLogs.length / totalPossibleLogs) : 0;
 
     // 3. Progresso dos objetivos ativos (20% de peso)
@@ -3501,8 +3513,20 @@ export function AppProvider({ children }) {
 
     // 2. Conclusão de hábitos nos últimos 7 dias
     const recentLogs = habitLogs.filter(l => new Date(l.completed_date) >= sevenDaysAgo);
+    let totalPossibleLogs = 0;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    habits.forEach(h => {
+      const createdDate = h.created_at ? new Date(h.created_at.split('T')[0]) : new Date(today);
+      createdDate.setHours(0, 0, 0, 0);
+      const diffTime = Math.max(0, today - createdDate);
+      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+      const habitDaysCount = Math.min(7, diffDays + 1);
+      totalPossibleLogs += habitDaysCount;
+    });
+
     if (recentLogs.length > 0) {
-      positives.push({ text: `${recentLogs.length} execuções de hábitos registradas`, value: `+${Math.round((recentLogs.length / Math.max(1, habits.length * 7)) * 40)}%` });
+      positives.push({ text: `${recentLogs.length} execuções de hábitos registradas`, value: `+${Math.round((recentLogs.length / Math.max(1, totalPossibleLogs)) * 40)}%` });
     } else if (habits.length > 0) {
       negatives.push({ text: 'Nenhum hábito realizado recentemente', value: '-20%' });
     }

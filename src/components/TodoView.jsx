@@ -1658,10 +1658,15 @@ export default function TodoView() {
 
             <h4 style={{ fontSize: '13px', fontWeight: '700', textTransform: 'uppercase', color: 'var(--text-light)', marginBottom: '8px', borderBottom: '1px solid var(--border-light)', paddingBottom: '4px' }}>Hábitos do Dia</h4>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '24px', maxHeight: '180px', overflowY: 'auto' }}>
-              {habitsManager.habits.length === 0 ? (
-                <p style={{ fontSize: '12px', color: 'var(--text-muted)', fontStyle: 'italic' }}>Nenhum hábito ativo.</p>
-              ) : (
-                habitsManager.habits.map(habit => {
+              {(() => {
+                const visibleHabits = habitsManager.habits.filter(h => {
+                  const startDate = h.created_at ? h.created_at.split('T')[0] : todayStr();
+                  return selectedCalendarDay >= startDate;
+                });
+                if (visibleHabits.length === 0) {
+                  return <p style={{ fontSize: '12px', color: 'var(--text-muted)', fontStyle: 'italic' }}>Nenhum hábito ativo.</p>;
+                }
+                return visibleHabits.map(habit => {
                   const isCompleted = habitsManager.habitLogs.some(l => l.habit_id === habit.id && l.completed_date === selectedCalendarDay);
                   return (
                     <div key={habit.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px', border: '1px solid var(--border-light)', borderRadius: 'var(--radius-sm)', backgroundColor: 'var(--bg-app)' }}>
@@ -1688,8 +1693,8 @@ export default function TodoView() {
                       </span>
                     </div>
                   );
-                })
-              )}
+                });
+              })()}
             </div>
 
             <button 

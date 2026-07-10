@@ -625,7 +625,7 @@ export default function HomeView() {
           <span>✓ Planejamento ágil e simplificado</span>
         </div>
 
-        <div style={{ position: 'relative' }}>
+        <div style={{ position: 'relative', minHeight: !isPro ? '195px' : 'auto' }}>
           <form 
             onSubmit={handleQuickSubmit} 
             style={{ 

@@ -37,15 +37,32 @@ function HabitRow({ habit, goal, consistency, last7Days, habitLogs, toggleHabitL
       <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
         <div className="habit-tracker-days" style={{ display: 'flex', gap: '6px' }}>
           {last7Days.map(day => {
+            const habitStartDate = habit.created_at ? habit.created_at.split('T')[0] : '';
+            const isBeforeCreation = habitStartDate && day.dateStr < habitStartDate;
             const isCompleted = habitLogs.some(l => l.habit_id === habit.id && l.completed_date === day.dateStr);
             return (
               <div key={day.dateStr} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
                 <span style={{ fontSize: '9px', color: day.isToday ? 'var(--primary)' : 'var(--text-light)', fontWeight: day.isToday ? '600' : '400' }}>{day.label}</span>
                 <button
-                  onClick={() => toggleHabitLog(habit.id, day.dateStr)}
-                  style={{ width: '24px', height: '24px', borderRadius: '6px', backgroundColor: isCompleted ? 'var(--primary)' : 'var(--bg-app)', border: `1px solid ${isCompleted ? 'var(--primary)' : 'var(--border-medium)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', transition: 'all 0.2s', boxShadow: isCompleted ? '0 0 8px var(--primary-glow)' : 'none' }}
+                  onClick={() => !isBeforeCreation && toggleHabitLog(habit.id, day.dateStr)}
+                  disabled={isBeforeCreation}
+                  style={{
+                    width: '24px',
+                    height: '24px',
+                    borderRadius: '6px',
+                    backgroundColor: isCompleted ? 'var(--primary)' : 'var(--bg-app)',
+                    border: `1px solid ${isCompleted ? 'var(--primary)' : (isBeforeCreation ? 'transparent' : 'var(--border-medium)')}`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: isBeforeCreation ? 'var(--text-light)' : 'white',
+                    transition: 'all 0.2s',
+                    boxShadow: isCompleted ? '0 0 8px var(--primary-glow)' : 'none',
+                    opacity: isBeforeCreation ? 0.3 : 1,
+                    cursor: isBeforeCreation ? 'not-allowed' : 'pointer'
+                  }}
                 >
-                  {isCompleted && <Check size={14} strokeWidth={3} />}
+                  {isCompleted ? <Check size={14} strokeWidth={3} /> : (isBeforeCreation ? '-' : null)}
                 </button>
               </div>
             );
@@ -96,14 +113,23 @@ export default function HabitsWidget({ habitsManager, goals }) {
     setIsAdding(false);
   };
 
-  const calculateConsistency = (habitId) => {
-    // Quantas vezes nos últimos 7 dias?
-    const logs = habitLogs.filter(l => l.habit_id === habitId);
-    let count = 0;
+  const calculateConsistency = (habit) => {
+    const habitStartDate = habit.created_at ? habit.created_at.split('T')[0] : '';
+    const logs = habitLogs.filter(l => l.habit_id === habit.id);
+    let completedCount = 0;
+    let applicableDaysCount = 0;
+    
     last7Days.forEach(day => {
-      if (logs.some(l => l.completed_date === day.dateStr)) count++;
+      if (!habitStartDate || day.dateStr >= habitStartDate) {
+        applicableDaysCount++;
+        if (logs.some(l => l.completed_date === day.dateStr)) {
+          completedCount++;
+        }
+      }
     });
-    return Math.round((count / 7) * 100);
+    
+    if (applicableDaysCount === 0) return 0;
+    return Math.round((completedCount / applicableDaysCount) * 100);
   };
 
   if (loading) return null;
@@ -183,7 +209,7 @@ export default function HabitsWidget({ habitsManager, goals }) {
           <div className="habits-list" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             {visiblePending.map(habit => {
               const goal = goals.find(g => g.id === habit.goal_id);
-              const consistency = calculateConsistency(habit.id);
+              const consistency = calculateConsistency(habit);
               return (
                 <HabitRow key={habit.id} habit={habit} goal={goal} consistency={consistency} last7Days={last7Days} habitLogs={habitLogs} toggleHabitLog={toggleHabitLog} deleteHabit={deleteHabit} openCustomConfirm={openCustomConfirm} />
               );
@@ -217,7 +243,7 @@ export default function HabitsWidget({ habitsManager, goals }) {
                 <div className="habits-list" style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '8px', opacity: 0.7 }}>
                   {completedTodayHabits.map(habit => {
                     const goal = goals.find(g => g.id === habit.goal_id);
-                    const consistency = calculateConsistency(habit.id);
+                    const consistency = calculateConsistency(habit);
                     return (
                       <HabitRow key={habit.id} habit={habit} goal={goal} consistency={consistency} last7Days={last7Days} habitLogs={habitLogs} toggleHabitLog={toggleHabitLog} deleteHabit={deleteHabit} openCustomConfirm={openCustomConfirm} />
                     );

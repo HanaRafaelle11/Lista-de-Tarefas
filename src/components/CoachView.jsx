@@ -110,7 +110,7 @@ function formatCoachMessage(message = '', isPro = true, openPaywall = () => {}) 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
       <div>{freeElements}</div>
-      <div style={{ position: 'relative', marginTop: '16px' }}>
+      <div style={{ position: 'relative', marginTop: '16px', maxHeight: '220px', overflow: 'hidden' }}>
         {/* Blurred Content */}
         <div style={{ filter: 'blur(5px)', opacity: 0.25, pointerEvents: 'none', userSelect: 'none' }}>
           {proElements}
