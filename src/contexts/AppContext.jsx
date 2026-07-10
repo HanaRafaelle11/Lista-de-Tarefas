@@ -132,6 +132,10 @@ export function AppProvider({ children }) {
   // ── Auth State Machine (Single Source of Truth) ───────────────────────────
   // Toda lógica de auth vive em useAuthMachine — AppContext é apenas consumidor.
   const authMachine = useAuthMachine();
+  
+  // Use a ref to avoid dependency changes and loops when dispatching / setting currentUser
+  const authRef = React.useRef(authMachine);
+  authRef.current = authMachine;
 
   // Derivados da machine — usados pelo restante do contexto e componentes.
   const currentUser = authMachine.user;
@@ -141,22 +145,23 @@ export function AppProvider({ children }) {
   // setCurrentUser diretamente (handleLoginSuccess, handleLogout, etc.).
   // Roteia via dispatch da machine para manter SSoT.
   const setCurrentUser = useCallback((userOrUpdaterFn) => {
+    const currentAuth = authRef.current;
     if (typeof userOrUpdaterFn === 'function') {
       // Suporte a updates funcionais (ex: USER_UPDATED com weekly_plan)
       // A machine já trata USER_UPDATED via onAuthStateChange — este path
       // é mantido apenas para retrocompatibilidade com código legado.
-      const next = userOrUpdaterFn(authMachine.user);
+      const next = userOrUpdaterFn(currentAuth.user);
       if (next) {
-        authMachine.dispatch({ type: 'SIGNED_IN', rawUser: { ...next, user_metadata: next.user_metadata || {} }, session: authMachine.session });
+        currentAuth.dispatch({ type: 'SIGNED_IN', rawUser: { ...next, user_metadata: next.user_metadata || {} }, session: currentAuth.session });
       } else {
-        authMachine.dispatch({ type: 'SIGNED_OUT' });
+        currentAuth.dispatch({ type: 'SIGNED_OUT' });
       }
     } else if (userOrUpdaterFn) {
-      authMachine.dispatch({ type: 'SIGNED_IN', rawUser: { ...userOrUpdaterFn, user_metadata: userOrUpdaterFn.user_metadata || {} }, session: authMachine.session });
+      currentAuth.dispatch({ type: 'SIGNED_IN', rawUser: { ...userOrUpdaterFn, user_metadata: userOrUpdaterFn.user_metadata || {} }, session: currentAuth.session });
     } else {
-      authMachine.dispatch({ type: 'SIGNED_OUT' });
+      currentAuth.dispatch({ type: 'SIGNED_OUT' });
     }
-  }, [authMachine]);
+  }, []);
 
   // ── Sync Status (resilience) ─────────────────────────────────────────────────
   const [syncStatus, setSyncStatus] = useState('healthy'); // 'healthy' | 'degraded' | 'offline'
@@ -3299,53 +3304,62 @@ export function AppProvider({ children }) {
   const handleEmptyTrash = useCallback(async () => {
     if (!currentUser?.id) return;
 
-    let deletedTaskIds = [];
-    let deletedGoalIds = [];
-    let finalTasksList = [];
-    let finalGoalsList = [];
+    // Get deleted tasks and goals from current synchronous state
+    const deletedTasks = tasks.filter(t => t.deletedAt || t.deleted_at);
+    const deletedGoals = goals.filter(g => g.deletedAt || g.deleted_at);
+    
+    const deletedTaskIds = deletedTasks.map(t => t.id);
+    const deletedGoalIds = deletedGoals.map(g => g.id);
 
-    // 1. Get task IDs functionally and update state
-    setTasks(prev => {
-      const deletedTasks = prev.filter(t => t.deletedAt || t.deleted_at);
-      deletedTaskIds = deletedTasks.map(t => t.id);
-      finalTasksList = prev.filter(t => !t.deletedAt && !t.deleted_at);
+    if (deletedTaskIds.length === 0 && deletedGoalIds.length === 0) {
+      addNotification('system', 'Lixeira esvaziada', 'Sua lixeira já está vazia.');
+      return;
+    }
+
+    try {
+      // 1. Run background DB deletes if not in demo
+      if (!currentUser.isDemo) {
+        const taskDeletions = deletedTaskIds.map(id => tasksService.deletePermanent(currentUser.id, id));
+        const goalDeletions = deletedGoalIds.map(id => goalsService.deletePermanent(currentUser.id, id));
+        
+        // Wait for all deletions to process
+        const results = await Promise.all([...taskDeletions, ...goalDeletions]);
+        
+        // Check if any deletion failed critically
+        const criticalError = results.find(r => r && r.error && !r.degraded);
+        if (criticalError) {
+          throw criticalError.error;
+        }
+      }
+
+      // 2. Update tasks state
+      const finalTasksList = tasks.filter(t => !t.deletedAt && !t.deleted_at);
+      setTasks(finalTasksList);
       if (currentUser.isDemo) {
         localStorage.setItem(`flowday_demo_tasks_${currentUser.id}`, JSON.stringify(finalTasksList));
       }
-      return finalTasksList;
-    });
 
-    // 2. Get goal IDs functionally and update state
-    setGoals(prev => {
-      const deletedGoals = prev.filter(g => g.deletedAt || g.deleted_at);
-      deletedGoalIds = deletedGoals.map(g => g.id);
-      finalGoalsList = prev.filter(g => !g.deletedAt && !g.deleted_at);
-      return finalGoalsList;
-    });
+      // 3. Update goals state
+      const finalGoalsList = goals.filter(g => !g.deletedAt && !g.deleted_at);
+      setGoals(finalGoalsList);
 
-    // 3. Update goal-tasks link functionally
-    setGoalTasks(prev => {
-      const updatedGT = prev.filter(gt => !deletedTaskIds.includes(gt.task_id) && !deletedGoalIds.includes(gt.goal_id));
-      if (currentUser.isDemo) {
-        localStorage.setItem(`flowday_demo_goals_${currentUser.id}`, JSON.stringify({ goals: finalGoalsList, goalTasks: updatedGT }));
-      }
-      return updatedGT;
-    });
+      // 4. Update goal-tasks link state
+      setGoalTasks(prev => {
+        const updatedGT = prev.filter(gt => !deletedTaskIds.includes(gt.task_id) && !deletedGoalIds.includes(gt.goal_id));
+        if (currentUser.isDemo) {
+          localStorage.setItem(`flowday_demo_goals_${currentUser.id}`, JSON.stringify({ goals: finalGoalsList, goalTasks: updatedGT }));
+        }
+        return updatedGT;
+      });
 
-    // 4. Run background DB deletes if not in demo
-    if (!currentUser.isDemo) {
-      try {
-        const taskDeletions = deletedTaskIds.map(id => tasksService.deletePermanent(currentUser.id, id));
-        const goalDeletions = deletedGoalIds.map(id => goalsService.deletePermanent(currentUser.id, id));
-        await Promise.all([...taskDeletions, ...goalDeletions]);
-      } catch (err) {
-        console.error('Error emptying trash in Supabase:', err);
-      }
+      // 5. Trigger success notification
+      addNotification('system', 'Lixeira esvaziada', 'Todos os itens foram excluídos permanentemente.');
+      resetAchievementsIfEmpty(currentUser.id, finalTasksList, finalGoalsList);
+    } catch (err) {
+      console.error('[handleEmptyTrash] Erro ao esvaziar lixeira:', err);
+      openCustomAlert('Não foi possível esvaziar a lixeira: ' + (err.message || err));
     }
-
-    addNotification('system', 'Lixeira esvaziada', 'Todos os itens foram excluídos permanentemente.');
-    resetAchievementsIfEmpty(currentUser.id, finalTasksList, finalGoalsList);
-  }, [currentUser, addNotification, resetAchievementsIfEmpty]);
+  }, [currentUser, tasks, goals, addNotification, resetAchievementsIfEmpty, openCustomAlert]);
 
   // ── Explicação Detalhada do Health Score (Consistency Score) ──
   const consistencyScoreExplanation = useMemo(() => {
