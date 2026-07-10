@@ -393,6 +393,16 @@ export default function MyDayView() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isArchivedModalOpen, setIsArchivedModalOpen] = useState(false);
   const [archivedTab, setArchivedTab] = useState('goals');
+
+  // Bloqueia scroll do body quando modal de arquivados está aberto
+  useEffect(() => {
+    if (isArchivedModalOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => { document.body.style.overflow = ''; };
+  }, [isArchivedModalOpen]);
   const [activeGoalKebabId, setActiveGoalKebabId] = useState(null);
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [isModalOpen, setIsModalOpen] = useState(false);

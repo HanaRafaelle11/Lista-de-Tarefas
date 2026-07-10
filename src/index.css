@@ -420,18 +420,19 @@ a {
     min-height: 56px !important;
   }
 
-  /* Modal mais largo e com margem inferior para teclado (rolagem no overlay) */
+  /* Modal responsivo mobile — centralizado e confinado na viewport */
   .modal-overlay {
-    align-items: flex-start !important;
-    overflow-y: auto !important;
-    padding: 12px !important;
+    align-items: center !important;
+    justify-content: center !important;
+    overflow: hidden !important;
+    padding: 16px !important;
   }
 
   .modal-content {
     max-width: 95%;
-    margin: 10px auto 30px !important;
-    max-height: none !important;
-    overflow-y: visible !important;
+    max-height: 85vh !important;
+    overflow-y: auto !important;
+    margin: 0 auto !important;
   }
 
   .notification-dropdown {
