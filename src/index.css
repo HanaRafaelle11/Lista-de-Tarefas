@@ -6572,11 +6572,8 @@ body,
 }
 
 @media (max-width: 1023px) {
-  .app-wrapper.has-demo-banner {
-    padding-top: calc(var(--demo-banner-height) + 64px) !important;
-  }
   .app-wrapper.has-demo-banner .mobile-top-header {
-    top: var(--demo-banner-height) !important;
+    top: var(--demo-banner-height, 0px);
   }
 }
 
@@ -7036,7 +7033,7 @@ body,
   }
   .app-main-content {
     padding: 16px;
-    padding-top: 80px; /* Espaço para o cabeçalho superior mobile */
+    padding-top: 16px; /* Header agora é sticky, ocupa espaço no fluxo */
     padding-bottom: 80px; /* Espaço para o bottom nav */
   }
 }
@@ -7060,11 +7057,11 @@ body,
 
 /* ── Cabeçalho Superior Mobile ── */
 .mobile-top-header {
-  position: absolute;
+  position: sticky;
   top: 0;
   left: 0;
   right: 0;
-  height: 64px;
+  min-height: 60px;
   background-color: var(--bg-nav-glass);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
@@ -7072,7 +7069,9 @@ body,
   z-index: 9999;
   display: flex;
   align-items: center;
-  padding: 0 16px;
+  padding: 10px 16px;
+  padding-top: calc(env(safe-area-inset-top, 0px) + 10px);
+  box-sizing: border-box;
 }
 
 .mobile-header-container {
@@ -7080,13 +7079,34 @@ body,
   justify-content: space-between;
   align-items: center;
   width: 100%;
+  gap: 12px;
 }
 
 .mobile-logo {
-  height: 44px;
-  width: 132px;
+  height: 48px;
+  width: 160px;
   object-fit: contain;
+  object-position: left center;
   cursor: pointer;
+}
+
+.mobile-header-menu-btn {
+  background: none;
+  border: none;
+  color: var(--text-main);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  flex-shrink: 0;
+  border-radius: var(--radius-sm);
+  transition: background-color 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.mobile-header-menu-btn:active {
+  background-color: var(--bg-card-hover, rgba(128, 128, 128, 0.1));
 }
 
 .mobile-header-actions {
