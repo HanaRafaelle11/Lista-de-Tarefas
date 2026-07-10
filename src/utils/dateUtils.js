@@ -111,7 +111,10 @@ export function formatTaskDateDisplay(dueDateStr) {
  * Extrai e formata a hora no fuso horário local do usuário (ex: "23:30").
  */
 export function formatTaskTimeDisplay(dueDateStr, legacyDueTime) {
-  // O legacyDueTime (meta.due_time) é a única fonte real de horário definida pelo usuário
+  if (dueDateStr && dueDateStr.includes('T')) {
+    const { timePart } = extractDateAndTimeParts(dueDateStr);
+    if (timePart) return timePart;
+  }
   return legacyDueTime && legacyDueTime !== '00:00' ? legacyDueTime : '';
 }
 

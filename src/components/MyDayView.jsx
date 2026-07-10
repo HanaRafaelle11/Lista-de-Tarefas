@@ -164,10 +164,12 @@ const sortByTime = (tasksList) =>
     if (dateA && dateB) {
       if (dateA !== dateB) return dateA.localeCompare(dateB);
 
+      const { timePart: timePartA } = extractDateAndTimeParts(a.dueDate);
+      const { timePart: timePartB } = extractDateAndTimeParts(b.dueDate);
       const metaA = parseTaskMetadata(a.description);
       const metaB = parseTaskMetadata(b.description);
-      const timeA = metaA.due_time || '';
-      const timeB = metaB.due_time || '';
+      const timeA = timePartA || metaA.due_time || '';
+      const timeB = timePartB || metaB.due_time || '';
 
       if (timeA && timeB) return timeA.localeCompare(timeB);
       if (timeA && !timeB) return -1;
@@ -201,11 +203,11 @@ function TaskSection({ title, tasks, icon, accent, onEdit, onDelete, onToggle, d
 
     const now = new Date();
     const meta = parseTaskMetadata(task.description || '');
-    const { datePart } = extractDateAndTimeParts(task.dueDate);
+    const { datePart, timePart } = extractDateAndTimeParts(task.dueDate);
     
     let overdue = false;
     if (datePart) {
-      const activeTime = meta.due_time || '';
+      const activeTime = timePart || meta.due_time || '';
       if (activeTime) {
         const [hours, minutes] = activeTime.split(':').map(Number);
         const [year, month, day] = datePart.split('-').map(Number);
@@ -628,7 +630,7 @@ export default function MyDayView() {
     setCategory(task.category);
     setPriority(task.priority);
     setDueDate(datePart || '');
-    setDueTime(meta.due_time || '');
+    setDueTime(timePart || meta.due_time || '');
     setRecurrence(meta.recurrence || 'nenhuma');
     setRecurrenceInterval(meta.recurrence_interval || 1);
     setRecurrenceUnit(meta.recurrence_unit || 'dias');
@@ -676,7 +678,7 @@ export default function MyDayView() {
       extraMeta.recurrence_days = recurrenceDays;
     }
 
-    const metaDescription = buildDescriptionWithMetadata(description, dueTime, recurrence, false, extraMeta);
+    const metaDescription = buildDescriptionWithMetadata(description, '', recurrence, false, extraMeta);
 
     const taskData = {
       title: title.trim(),
@@ -2376,7 +2378,7 @@ export default function MyDayView() {
                     {/* Botão Adicionar ao Google Calendar */}
                     {task.dueDate && (
                       <button
-                        onClick={() => addToGoogleCalendar({ ...task, dueTime: parseTaskMetadata(task.description).due_time })}
+                        onClick={() => addToGoogleCalendar({ ...task, dueTime: extractDateAndTimeParts(task.dueDate).timePart })}
                         className="todo-item-action-btn" // Reusing a similar style, adjust as needed
                         title="Adicionar ao Google Calendar"
                         aria-label="Adicionar tarefa ao Google Calendar"
@@ -3256,7 +3258,7 @@ export default function MyDayView() {
                         <div style={{ display: 'flex', gap: '8px' }}>
                           <button
                             onClick={() => {
-                              const updatedDesc = buildDescriptionWithMetadata(task.description, meta.due_time, meta.recurrence, false);
+                              const updatedDesc = buildDescriptionWithMetadata(task.description, '', meta.recurrence, false);
                               onUpdateTask(task.id, { description: updatedDesc });
                               openCustomAlert("Tarefa restaurada com sucesso!", "Restaurada");
                             }}

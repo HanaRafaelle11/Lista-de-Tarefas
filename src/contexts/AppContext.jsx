@@ -3111,16 +3111,39 @@ export function AppProvider({ children }) {
       toggleHabitLog: async (habitId, dateStr) => {
         if (!currentUser?.id) return false;
         const existing = habitLogs.find((l) => l.habit_id === habitId && l.completed_date === dateStr);
-        const { data: checked, logData } = await habitsService.toggleLog(
-          currentUser.id, habitId, dateStr, existing?.id ?? null
-        );
-        if (checked === false && existing) {
-          setHabitLogs((prev) => prev.filter((l) => l.id !== existing.id));
-        } else if (checked === true && logData) {
-          setHabitLogs((prev) => [...prev, logData]);
-          logEvent('habit_completed', { habit_id: habitId, date: dateStr });
+        
+        // Optimistic UI update
+        const tempId = 'temp_hlog_' + Date.now();
+        if (existing) {
+          setHabitLogs((prev) => prev.filter((l) => !(l.habit_id === habitId && l.completed_date === dateStr)));
+        } else {
+          const tempLog = { id: tempId, habit_id: habitId, completed_date: dateStr, created_at: new Date().toISOString() };
+          setHabitLogs((prev) => [...prev, tempLog]);
         }
-        return checked ?? false;
+
+        try {
+          const { data: checked, logData } = await habitsService.toggleLog(
+            currentUser.id, habitId, dateStr, existing?.id ?? null
+          );
+          if (checked === false) {
+            // Confirm removal locally
+            setHabitLogs((prev) => prev.filter((l) => !(l.habit_id === habitId && l.completed_date === dateStr)));
+          } else if (checked === true && logData) {
+            // Replace temporary log item with real database item
+            setHabitLogs((prev) => prev.map((l) => l.id === tempId ? logData : l));
+            logEvent('habit_completed', { habit_id: habitId, date: dateStr });
+          }
+          return checked ?? false;
+        } catch (e) {
+          console.error('Erro ao alternar hábito:', e);
+          // Rollback on error
+          if (existing) {
+            setHabitLogs((prev) => [...prev, existing]);
+          } else {
+            setHabitLogs((prev) => prev.filter((l) => l.id !== tempId));
+          }
+          return false;
+        }
       }
     };
   }, [habits, habitLogs, habitsLoading, currentUser, logEvent]);

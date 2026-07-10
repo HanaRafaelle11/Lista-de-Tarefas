@@ -155,10 +155,12 @@ function categorizeTasks(tasks, goals = [], goalTasks = []) {
 const priorityOrder = { 'Alta': 0, 'Média': 1, 'Baixa': 2 };
 const sortByTime = (tasksList) =>
   [...tasksList].sort((a, b) => {
+    const { timePart: timePartA } = extractDateAndTimeParts(a.dueDate);
+    const { timePart: timePartB } = extractDateAndTimeParts(b.dueDate);
     const metaA = parseTaskMetadata(a.description);
     const metaB = parseTaskMetadata(b.description);
-    const timeA = metaA.due_time || '';
-    const timeB = metaB.due_time || '';
+    const timeA = timePartA || metaA.due_time || '';
+    const timeB = timePartB || metaB.due_time || '';
 
     if (timeA && timeB) {
       return timeA.localeCompare(timeB);
@@ -441,7 +443,7 @@ export default function TodoView() {
     setCategory(task.category);
     setPriority(task.priority);
     setDueDate(datePart || '');
-    setDueTime(meta.due_time || '');
+    setDueTime(timePart || meta.due_time || '');
     setRecurrence(meta.recurrence || 'nenhuma');
     setRecurrenceInterval(meta.recurrence_interval || 1);
     setRecurrenceUnit(meta.recurrence_unit || 'dias');
@@ -489,7 +491,7 @@ export default function TodoView() {
       extraMeta.recurrence_days = recurrenceDays;
     }
 
-    const metaDescription = buildDescriptionWithMetadata(description, dueTime, recurrence, false, extraMeta);
+    const metaDescription = buildDescriptionWithMetadata(description, '', recurrence, false, extraMeta);
 
     const taskData = {
       title: title.trim(),
@@ -1632,7 +1634,7 @@ export default function TodoView() {
                     {/* Botão Adicionar ao Google Calendar */}
                     {task.dueDate && (
                       <button
-                        onClick={() => addToGoogleCalendar({ ...task, dueTime: parseTaskMetadata(task.description).due_time })}
+                        onClick={() => addToGoogleCalendar({ ...task, dueTime: extractDateAndTimeParts(task.dueDate).timePart })}
                         className="todo-item-action-btn" // Reusing a similar style, adjust as needed
                         title="Adicionar ao Google Calendar"
                         aria-label="Adicionar tarefa ao Google Calendar"

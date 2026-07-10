@@ -290,7 +290,7 @@ export default function TodoItem({ item, onToggleComplete, onDelete, onEdit, goa
                     "Arquivar Tarefa",
                     () => {
                       const meta = parseTaskMetadata(item.description);
-                      const updatedDesc = buildDescriptionWithMetadata(item.description, meta.due_time, meta.recurrence, true);
+                      const updatedDesc = buildDescriptionWithMetadata(item.description, '', meta.recurrence, true);
                       handleUpdateTask(item.id, { description: updatedDesc });
                     }
                   );
