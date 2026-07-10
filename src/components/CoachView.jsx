@@ -121,7 +121,7 @@ function formatCoachMessage(message = '', isPro = true, openPaywall = () => {}) 
           description="Desbloqueie o Coach IA Pro para acessar recomendações completas e personalizadas."
           buttonText="Desbloquear Coach Pro"
           paywallSource={{ source: 'coach_pro_insights', trigger: 'blur_overlay' }}
-          containerStyle={{ backgroundColor: 'rgba(15, 23, 42, 0.65)' }}
+          containerStyle={{ justifyContent: 'flex-start', paddingTop: '40px', backgroundColor: 'rgba(15, 23, 42, 0.65)' }}
         />
       </div>
     </div>
@@ -460,46 +460,7 @@ export default function CoachView() {
           </div>
         </div>
 
-        {/* Upsell box if Free */}
-        {!isPro && (
-          <div 
-            onClick={() => openPaywall('coach_bottom_upsell')}
-            style={{
-              background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.05), rgba(59, 130, 246, 0.05))',
-              border: '1px dashed var(--primary)',
-              borderRadius: 'var(--radius-lg)',
-              padding: '24px',
-              textAlign: 'center',
-              cursor: 'pointer',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              gap: '12px',
-              transition: 'transform 0.2s, box-shadow 0.2s'
-            }}
-            onMouseEnter={e => {
-              e.currentTarget.style.transform = 'translateY(-2px)';
-              e.currentTarget.style.boxShadow = '0 6px 20px rgba(0,0,0,0.15)';
-            }}
-            onMouseLeave={e => {
-              e.currentTarget.style.transform = 'translateY(0)';
-              e.currentTarget.style.boxShadow = 'none';
-            }}
-          >
-            <Zap size={24} className="text-primary" />
-            <div>
-              <h4 style={{ fontSize: '14.5px', fontWeight: '750', color: 'var(--text-main)', margin: '0 0 6px 0' }}>
-                Desbloqueie o Coach MyFlowDay Pro
-              </h4>
-              <p style={{ fontSize: '12px', color: 'var(--text-muted)', maxWidth: '520px', margin: '0 auto', lineHeight: '1.5' }}>
-                Inicie hoje sua jornada Pro para habilitar análises comportamentais quinzenais ou mensais profundas, alertas preditivos de estagnação e conselhos de IA totalmente customizados.
-              </p>
-            </div>
-            <button className="btn-primary-glow" style={{ padding: '8px 18px', fontSize: '13px', fontWeight: 'bold' }}>
-              Experimentar Pro Grátis
-            </button>
-          </div>
-        )}
+
 
       </div>
 

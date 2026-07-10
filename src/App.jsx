@@ -409,19 +409,7 @@ function AppLayout() {
           </div>
         </div>
       )}
-      {!isInitializing && isAccessChecked && !isPro && (
-        <div className="pro-upgrade-banner">
-          <span>Desbloqueie o MyFlowDay Pro para ter acesso a relatórios e análises completas!</span>
-          <button 
-            onClick={() => {
-              window.history.pushState(null, '', '/checkout');
-              window.dispatchEvent(new Event('popstate'));
-            }}
-          >
-            Quero ser Pro
-          </button>
-        </div>
-      )}
+
       <SyncStatusBanner />
       
       <Navbar />

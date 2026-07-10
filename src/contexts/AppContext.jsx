@@ -3030,10 +3030,7 @@ export function AppProvider({ children }) {
 
   const closePaywall = useCallback(() => {
     setIsPaywallOpen(false);
-    if (['coach', 'revenue'].includes(activeTab)) {
-      setActiveTab('home');
-    }
-  }, [activeTab]);
+  }, []);
 
   const handleCancelSubscription = useCallback(async () => {
     if (!currentUser?.id) return;

@@ -30,10 +30,17 @@ export default function PremiumOverlay({
     openPaywall(paywallSource);
   };
 
+  const handleTouchStop = (e) => {
+    e.stopPropagation();
+  };
+
   if (inline) {
     return (
       <div 
         onClick={handleOpenPaywall}
+        onTouchStart={handleTouchStop}
+        onTouchMove={handleTouchStop}
+        onTouchEnd={handleTouchStop}
         style={{
           marginTop: '4px',
           marginBottom: '16px',
@@ -77,6 +84,9 @@ export default function PremiumOverlay({
   return (
     <div 
       onClick={handleOpenPaywall}
+      onTouchStart={handleTouchStop}
+      onTouchMove={handleTouchStop}
+      onTouchEnd={handleTouchStop}
       style={{
         position: 'absolute',
         top: 0,
