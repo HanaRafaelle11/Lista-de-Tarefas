@@ -301,11 +301,14 @@ export default function WeeklyPlannerModal({ isOpen, onClose, tasks, onUpdateTas
                 alignItems: 'center',
                 justifyContent: 'center',
                 margin: 0,
-                padding: '6px',
+                padding: 0,
+                width: '32px',
+                height: '32px',
                 border: 'none',
                 background: 'transparent',
                 cursor: 'pointer',
-                color: 'var(--text-light)'
+                color: 'var(--text-light)',
+                borderRadius: '50%'
               }}
             >
               <X size={18} />

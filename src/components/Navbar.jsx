@@ -135,7 +135,7 @@ export default function Navbar() {
 
       {/* ── Menu Flutuante Inferior ──────────────────────── */}
       <nav
-        className={`app-bottom-nav hide-on-desktop${showBottomNav ? '' : ' hidden'}`}
+        className={`mobile-bottom-nav hide-on-desktop${showBottomNav ? '' : ' hidden'}`}
         role="navigation"
         aria-label="Navegação principal"
       >
@@ -144,7 +144,7 @@ export default function Navbar() {
             key={key}
             id={`tour-nav-mobile-${key}`}
             onClick={() => setActiveTab(key)}
-            className={`app-bottom-nav-btn ${activeTab === key ? 'active' : ''}`}
+            className={`mobile-bottom-nav-btn ${activeTab === key ? 'active' : ''}`}
             aria-current={activeTab === key ? 'page' : undefined}
           >
             <MFIcon name={icon} size={20} className="nav-icon" />

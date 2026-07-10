@@ -6553,6 +6553,15 @@ body,
   top: 40px !important;
 }
 
+@media (max-width: 1023px) {
+  .app-wrapper.has-demo-banner {
+    padding-top: 104px !important;
+  }
+  .app-wrapper.has-demo-banner .mobile-top-header {
+    top: 40px !important;
+  }
+}
+
 /* --- CLICKABLE GOAL HEALTH CARDS --- */
 .goal-health-card-clickable {
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
@@ -7104,6 +7113,11 @@ body,
   justify-content: space-around;
   align-items: center;
   padding: 0 8px;
+  transition: transform 0.3s ease;
+}
+
+.mobile-bottom-nav.hidden {
+  transform: translateY(100%);
 }
 
 .mobile-bottom-nav-btn {
@@ -7155,7 +7169,7 @@ body,
 }
 
 .sidebar-logo {
-  height: 56px;
+  height: 64px;
   width: auto;
   object-fit: contain;
 }
@@ -7182,7 +7196,7 @@ body,
 .sidebar-nav-item {
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   gap: 12px;
   padding: 10px 14px;
   border: none;
@@ -7192,7 +7206,7 @@ body,
   font-weight: 600;
   border-radius: var(--radius-sm);
   cursor: pointer;
-  text-align: center;
+  text-align: left;
   transition: all 0.2s ease;
   width: 100%;
 }
@@ -7260,9 +7274,11 @@ body,
 
 .sidebar-profile-card {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 12px;
-  padding: 8px 10px;
+  text-align: center;
+  gap: 8px;
+  padding: 12px 10px;
   border-radius: var(--radius-sm);
   cursor: pointer;
   transition: all 0.2s ease;
@@ -7280,8 +7296,8 @@ body,
 }
 
 .sidebar-avatar-container {
-  width: 44px;
-  height: 44px;
+  width: 56px;
+  height: 56px;
   border-radius: 50%;
   overflow: hidden;
   border: 1px solid var(--border-medium);

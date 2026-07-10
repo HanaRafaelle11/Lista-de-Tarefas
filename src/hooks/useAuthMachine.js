@@ -44,7 +44,7 @@
  *   [OK] loading infinito é impossível: qualquer caminho converge em ≤3s
  */
 
-import { useReducer, useEffect, useRef, useCallback } from 'react';
+import { useReducer, useEffect, useRef, useCallback, useMemo } from 'react';
 import { supabase } from '../supabaseClient';
 import { eventsService } from '../services/eventsService';
 
@@ -358,12 +358,14 @@ export function useAuthMachine() {
     };
   }, [clearFallback]); // clearFallback é stable (useCallback + [])
 
-  return {
+  const isLoading = authState.status === 'BOOTING' || authState.status === 'CHECKING_SESSION';
+
+  return useMemo(() => ({
     status: authState.status,
     user: authState.user,
     session: authState.session,
     error: authState.error,
-    isLoading: authState.status === 'BOOTING' || authState.status === 'CHECKING_SESSION',
+    isLoading,
     dispatch,
-  };
+  }), [authState.status, authState.user, authState.session, authState.error, isLoading, dispatch]);
 }

@@ -254,8 +254,10 @@ export function AppProvider({ children }) {
       }
     } else if (tab === 'analytics' || tab === 'performance' || tab === 'evolution' || tab === 'jornada') {
       target = 'evolution';
-      setActiveEvoTab('jornada');
-      if (typeof window !== 'undefined') localStorage.setItem('flowday_active_evo_tab', 'jornada');
+      if (tab !== 'evolution') {
+        setActiveEvoTab('jornada');
+        if (typeof window !== 'undefined') localStorage.setItem('flowday_active_evo_tab', 'jornada');
+      }
     }
     
     if (subTab) {
@@ -1254,9 +1256,8 @@ export function AppProvider({ children }) {
 
   // 2. Efeito central de carga de dados baseado em currentUser?.id
   useEffect(() => {
-    setIsAmbientPlaying(false);
-
     if (!currentUser?.id) {
+      setIsAmbientPlaying(false);
       initialLoadFinished.current = false;
       setUserProfile(null);
       setTasks([]);

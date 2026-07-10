@@ -332,8 +332,8 @@ function EmptyState({ filter, searchQuery, onAdd, onAddGoal }) {
       <div className="tasks-empty-icon-wrap" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <Sprout size={24} style={{ color: 'var(--text-light)' }} />
       </div>
-      <h3 className="tasks-empty-title">Sua lista está em branco</h3>
-      <p className="tasks-empty-desc">Sua lista está em branco. Comece criando sua primeira tarefa ou objetivo.</p>
+      <h3 className="tasks-empty-title">Sua lista está vazia</h3>
+      <p className="tasks-empty-desc">Comece criando sua primeira tarefa ou objetivo.</p>
       <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', marginTop: '16px', flexWrap: 'wrap' }}>
         <button onClick={onAdd} className="tasks-empty-cta" style={{ margin: 0 }}>
           <Plus size={15} />

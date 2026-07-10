@@ -110,12 +110,12 @@ Crie objetivos ou tarefas e comece a executar para receber conselhos personaliza
 
   // 2b. Verificação de Histórico Suficiente
   const completedRecentTasksCount = completedRecentTasks.length;
-  const hasHistory = completedRecentTasksCount > 0 || completedRecentHabitsCount > 0 || currentStreak > 0;
+  const hasHistory = completedRecentTasksCount > 0 || completedRecentHabitsCount > 0;
 
   if (!hasHistory) {
     const formattedMessage = `Nota da semana: --/10
  
-Sem dados suficientes para avaliar sua evolução.
+Ainda não há dados suficientes para avaliar sua produtividade.
  
 Tendência Atual:
 Sem histórico de atividades recente.

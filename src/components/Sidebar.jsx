@@ -48,10 +48,10 @@ export default function Sidebar() {
     <>
       {/* ── Mobile/Tablet Top Header (Compacto com Drawer) ── */}
       <header className="mobile-top-header hide-on-desktop">
-        <div className="mobile-header-container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 16px', height: '60px' }}>
+        <div className="mobile-header-container" style={{ display: 'flex', alignItems: 'center', height: '64px', padding: '0 16px', position: 'relative' }}>
           <button 
             onClick={() => setIsMobileMenuOpen(true)}
-            style={{ background: 'none', border: 'none', color: 'var(--text-main)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '8px' }}
+            style={{ background: 'none', border: 'none', color: 'var(--text-main)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '8px', zIndex: 2 }}
             aria-label="Abrir menu"
           >
             <Menu size={24} />
@@ -60,18 +60,25 @@ export default function Sidebar() {
           <div 
             className="navbar-brand"
             onClick={() => currentUser?.isDemo ? handleLogout() : setActiveTab('home')}
-            style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            style={{ 
+              cursor: 'pointer', 
+              position: 'absolute',
+              left: '50%',
+              top: '50%',
+              transform: 'translate(-50%, -50%)',
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center',
+              zIndex: 1
+            }}
           >
             <img 
               src={logo.src}
               alt={logo.alt} 
               className="mobile-logo"
-              style={{ height: '34px', width: 'auto' }}
+              style={{ height: '42px', width: 'auto' }}
             />
           </div>
-          
-          {/* Spacer de compensação para manter o logotipo perfeitamente centralizado */}
-          <div style={{ width: '40px' }} />
         </div>
       </header>
 
@@ -236,8 +243,8 @@ export default function Sidebar() {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    width: '36px',
-                    height: '36px',
+                    width: '44px',
+                    height: '44px',
                     borderRadius: '50%',
                     border: '1px solid var(--border-light)',
                     backgroundColor: 'var(--bg-app)',
@@ -258,8 +265,8 @@ export default function Sidebar() {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    width: '36px',
-                    height: '36px',
+                    width: '44px',
+                    height: '44px',
                     borderRadius: '50%',
                     border: activeTab === 'settings' ? '1px solid var(--primary)' : '1px solid var(--border-light)',
                     backgroundColor: activeTab === 'settings' ? 'var(--primary-light)' : 'var(--bg-app)',
@@ -280,8 +287,8 @@ export default function Sidebar() {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    width: '36px',
-                    height: '36px',
+                    width: '44px',
+                    height: '44px',
                     borderRadius: '50%',
                     border: '1px solid rgba(239, 68, 68, 0.2)',
                     backgroundColor: 'rgba(239, 68, 68, 0.05)',
@@ -393,7 +400,7 @@ export default function Sidebar() {
               {userProfile?.avatar_url ? (
                 <img src={userProfile.avatar_url} alt="Avatar" className="sidebar-avatar" />
               ) : (
-                <DefaultAvatar size={44} />
+                <DefaultAvatar size={56} />
               )}
             </div>
             <div className="sidebar-profile-info">

@@ -107,7 +107,10 @@ function formatCoachMessage(message = '', isPro = true, openPaywall = () => {}) 
         </div>
         {/* Pro Overlay Trigger */}
         <div 
-          onClick={() => openPaywall('coach_pro_insights')}
+          onClick={() => {
+            window.history.pushState(null, '', '/checkout');
+            window.dispatchEvent(new Event('popstate'));
+          }}
           style={{
             position: 'absolute',
             top: 0,
@@ -481,7 +484,10 @@ export default function CoachView() {
         {/* Upsell box if Free */}
         {!isPro && (
           <div 
-            onClick={() => openPaywall('coach_bottom_upsell')}
+            onClick={() => {
+              window.history.pushState(null, '', '/checkout');
+              window.dispatchEvent(new Event('popstate'));
+            }}
             style={{
               background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.05), rgba(59, 130, 246, 0.05))',
               border: '1px dashed var(--primary)',

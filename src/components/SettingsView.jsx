@@ -92,6 +92,56 @@ export default function SettingsView() {
   const [isSyncModalOpen, setIsSyncModalOpen] = useState(false);
   const [expandedSection, setExpandedSection] = useState(null);
 
+  const renderAccordionSection = (id, icon, title, content, isDanger = false) => {
+    const isExpanded = expandedSection === id;
+    return (
+      <div 
+        key={id}
+        style={{ 
+          backgroundColor: 'var(--bg-card)', 
+          borderRadius: 'var(--radius-lg)', 
+          border: `1px solid ${isDanger ? '#ef4444' : 'var(--border-light)'}`,
+          overflow: 'hidden',
+          boxShadow: 'var(--shadow-sm)',
+          transition: 'all 0.2s ease',
+          marginBottom: '12px'
+        }}
+      >
+        <div 
+          onClick={() => setExpandedSection(isExpanded ? null : id)}
+          style={{ 
+            padding: '16px 24px', 
+            cursor: 'pointer', 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: 'center',
+            backgroundColor: isExpanded ? 'var(--bg-card-hover)' : 'transparent',
+            userSelect: 'none',
+            borderBottom: isExpanded ? '1px solid var(--border-light)' : 'none'
+          }}
+        >
+          <h2 style={{ fontSize: '15px', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '8px', margin: 0, color: isDanger ? '#ef4444' : 'var(--text-main)' }}>
+            {icon} {title}
+          </h2>
+          <ChevronRight 
+            size={18} 
+            style={{ 
+              transform: isExpanded ? 'rotate(90deg)' : 'none', 
+              transition: 'transform 0.2s',
+              color: 'var(--text-light)' 
+            }} 
+          />
+        </div>
+        
+        {isExpanded && (
+          <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px', borderTop: '1px solid var(--border-light)' }}>
+            {content}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   const notifications = useNotifications();
 
   // Password States
@@ -956,6 +1006,7 @@ export default function SettingsView() {
 
   const handleTouchStart = (e) => {
     touchStartX.current = e.targetTouches[0].clientX;
+    touchEndX.current = e.targetTouches[0].clientX;
   };
 
   const handleTouchMove = (e) => {
@@ -1023,62 +1074,9 @@ export default function SettingsView() {
       {settingsTab === 'general' ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
 
-          {/* Accordion Helper */}
-          {(() => {
-            if (!window._renderAccordionSection) {
-              window._renderAccordionSection = (id, icon, title, content, isDanger = false) => {
-                const isExpanded = expandedSection === id;
-                return (
-                  <div 
-                    style={{ 
-                      backgroundColor: 'var(--bg-card)', 
-                      borderRadius: 'var(--radius-lg)', 
-                      border: `1px solid ${isDanger ? '#ef4444' : 'var(--border-light)'}`,
-                      overflow: 'hidden',
-                      boxShadow: 'var(--shadow-sm)',
-                      transition: 'all 0.2s ease'
-                    }}
-                  >
-                    <div 
-                      onClick={() => setExpandedSection(isExpanded ? null : id)}
-                      style={{ 
-                        padding: '16px 24px', 
-                        cursor: 'pointer', 
-                        display: 'flex', 
-                        justifyContent: 'space-between', 
-                        alignItems: 'center',
-                        backgroundColor: isExpanded ? 'var(--bg-card-hover)' : 'transparent',
-                        userSelect: 'none',
-                        borderBottom: isExpanded ? '1px solid var(--border-light)' : 'none'
-                      }}
-                    >
-                      <h2 style={{ fontSize: '15px', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '8px', margin: 0, color: isDanger ? '#ef4444' : 'var(--text-main)' }}>
-                        {icon} {title}
-                      </h2>
-                      <ChevronRight 
-                        size={18} 
-                        style={{ 
-                          transform: isExpanded ? 'rotate(90deg)' : 'none', 
-                          transition: 'transform 0.2s',
-                          color: 'var(--text-light)' 
-                        }} 
-                      />
-                    </div>
-                    
-                    {isExpanded && (
-                      <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px', borderTop: '1px solid var(--border-light)' }}>
-                        {content}
-                      </div>
-                    )}
-                  </div>
-                );
-              };
-            }
-            return null;
-          })()}
 
           {/* Perfil */}
-          {window._renderAccordionSection('account', <User size={18} />, 'Sua Conta', (
+          {renderAccordionSection('account', <User size={18} />, 'Sua Conta', (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <div>
                 <span style={{ fontSize: '12px', color: 'var(--text-light)', textTransform: 'uppercase' }}>Nome</span>
@@ -1092,7 +1090,7 @@ export default function SettingsView() {
           ))}
 
           {/* Segurança e Autenticação MFA */}
-          {window._renderAccordionSection('security', <Shield size={18} />, 'Segurança da Conta', (
+          {renderAccordionSection('security', <Shield size={18} />, 'Segurança da Conta', (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '100%' }}>
 
               {/* Seção de Senha de Acesso */}
@@ -1272,7 +1270,7 @@ export default function SettingsView() {
           ))}
 
           {/* Assinatura SaaS (Simulador Pro) - Bloco 6 */}
-          {window._renderAccordionSection('subscription', <Award size={18} />, 'Assinatura Flowday', (
+          {renderAccordionSection('subscription', <Award size={18} />, 'Assinatura Flowday', (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', width: '100%' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                 <div style={{ padding: '8px', borderRadius: '50%', backgroundColor: isPro ? 'var(--primary-light)' : 'var(--border-medium)', color: isPro ? 'var(--primary)' : 'var(--text-light)' }}>
@@ -1318,7 +1316,7 @@ export default function SettingsView() {
           ))}
 
           {/* Exportação de Dados */}
-          {window._renderAccordionSection('backup', <Download size={18} />, 'Exportar Dados', (
+          {renderAccordionSection('backup', <Download size={18} />, 'Exportar Dados', (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', width: '100%' }}>
               <p style={{ fontSize: '12px', color: 'var(--text-light)', lineHeight: '1.5', margin: '0 0 16px' }}>
                 Faça download dos seus objetivos, tarefas e rotinas em múltiplos formatos. Recursos exclusivos do plano Pro.
@@ -1445,7 +1443,7 @@ export default function SettingsView() {
           )}
 
           {/* Configurações de Produtividade */}
-          {window._renderAccordionSection('calendar', <Calendar size={18} />, 'Configurações de Produtividade', (
+          {renderAccordionSection('calendar', <Calendar size={18} />, 'Configurações de Produtividade', (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', width: '100%' }}>
               <p style={{ fontSize: '14px', color: 'var(--text-main)', fontWeight: '500', margin: 0 }}>
                 Sincronização do Calendário de Tarefas
@@ -1484,7 +1482,7 @@ export default function SettingsView() {
           ))}
 
           {/* Aparência */}
-          {window._renderAccordionSection('appearance', <Moon size={18} />, 'Aparência', (
+          {renderAccordionSection('appearance', <Moon size={18} />, 'Aparência', (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '100%' }}>
               <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
                 {[
@@ -1555,7 +1553,7 @@ export default function SettingsView() {
           ))}
 
           {/* Notificações */}
-          {window._renderAccordionSection('notifications', <Bell size={18} />, 'Notificações do Navegador', (
+          {renderAccordionSection('notifications', <Bell size={18} />, 'Notificações do Navegador', (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '100%' }}>
               {!notifications.isSupported ? (
                 <p style={{ fontSize: '13px', color: 'var(--text-light)', margin: 0 }}>
@@ -1654,7 +1652,7 @@ export default function SettingsView() {
           ))}
 
           {/* Seção de Feedback */}
-          {window._renderAccordionSection('feedback', <MessageSquare size={18} />, 'Compartilhe com o MyFlowDay', (
+          {renderAccordionSection('feedback', <MessageSquare size={18} />, 'Compartilhe com o MyFlowDay', (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', width: '100%' }}>
               <textarea
                 value={feedbackText}
@@ -1752,7 +1750,7 @@ export default function SettingsView() {
           ))}
 
           {/* Zona de Perigo */}
-          {window._renderAccordionSection('danger', <AlertTriangle size={18} />, 'Zona de Perigo', (
+          {renderAccordionSection('danger', <AlertTriangle size={18} />, 'Zona de Perigo', (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%' }}>
               <p style={{ fontSize: '13px', color: 'var(--text-light)', margin: 0 }}>Ações destrutivas. Tenha certeza absoluta antes de prosseguir.</p>
               <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginTop: '16px' }}>
@@ -1777,7 +1775,7 @@ export default function SettingsView() {
           ), true)}
 
           {/* PWA & Sistema */}
-          {window._renderAccordionSection('system', <Shield size={18} />, 'Flowday v1.0', (
+          {renderAccordionSection('system', <Shield size={18} />, 'Flowday v1.0', (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%' }}>
               <p style={{ fontSize: '13px', color: 'var(--text-light)', margin: 0 }}>Plataforma de Progresso Pessoal</p>
               <p style={{ fontSize: '13px', color: 'var(--text-light)', margin: 0 }}>Construído para clareza, evolução e consistência.</p>

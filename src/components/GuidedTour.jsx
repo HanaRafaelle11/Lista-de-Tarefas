@@ -39,7 +39,7 @@ export default function GuidedTour() {
       placement: isMobile ? 'top' : 'right',
     },
     {
-      target: isMobile ? '#tour-nav-mobile-tasks' : '#tour-nav-sidebar-tasks',
+      target: isMobile ? '#tour-nav-mobile-myday' : '#tour-nav-sidebar-myday',
       title: 'Seu Planejamento Diário',
       content: 'Gerencie suas tarefas e objetivos organizados por prazos ou visualize-os em um painel Kanban altamente produtivo.',
       placement: isMobile ? 'top' : 'right',
@@ -51,7 +51,7 @@ export default function GuidedTour() {
       placement: isMobile ? 'top' : 'right',
     },
     {
-      target: isMobile ? '#tour-nav-mobile-analytics' : '#tour-nav-sidebar-evolution',
+      target: isMobile ? '#tour-nav-mobile-evolution' : '#tour-nav-sidebar-evolution',
       title: 'Gamificação e Evolução',
       content: 'Acompanhe a evolução do seu pet virtual, consulte suas conquistas e receba análises do Coach de Produtividade.',
       placement: isMobile ? 'top' : 'right',
