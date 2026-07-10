@@ -59,7 +59,15 @@ export const AccessDecisionEngine = {
               ai_requests: 100,
               tasks: 'unlimited'
             },
-            reason: 'admin_automatic_access'
+            reason: 'admin_automatic_access',
+            subscriptionDetails: {
+              plan: 'pro',
+              status: 'active',
+              current_period_start: null,
+              current_period_end: null,
+              price: 0,
+              provider: 'admin'
+            }
           };
         }
       } catch (e) {
@@ -109,6 +117,36 @@ export const AccessDecisionEngine = {
         }
       }
 
+      // Fetch latest subscription details for presentation in Settings / UI
+      const { data: subData } = await supabaseAdmin
+        .from('subscriptions')
+        .select('plan, status, current_period_start, current_period_end, price, provider')
+        .eq('user_id', userId)
+        .order('updated_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      let subscriptionDetails = null;
+      if (subData) {
+        subscriptionDetails = {
+          plan: subData.plan || 'pro',
+          status: subData.status || 'free',
+          current_period_start: subData.current_period_start || null,
+          current_period_end: subData.current_period_end || null,
+          price: subData.price ? Number(subData.price) : 29.90,
+          provider: subData.provider || 'asaas'
+        };
+      } else if (entitlement) {
+        subscriptionDetails = {
+          plan: 'pro',
+          status: 'active',
+          current_period_start: null,
+          current_period_end: entitlement.valid_until || null,
+          price: 29.90,
+          provider: 'system'
+        };
+      }
+
       return {
         plan,
         status,
@@ -117,7 +155,8 @@ export const AccessDecisionEngine = {
           ai_requests: canAccessPro ? 100 : 0,
           tasks: canAccessPro ? 'unlimited' : '30_days_limit'
         },
-        reason
+        reason,
+        subscriptionDetails
       };
     } catch (err) {
       console.error(`[AccessDecisionEngine Exception] Erro ao obter access resolution para ${userId}:`, err.message);

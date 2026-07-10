@@ -1,7 +1,7 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import ReactDOM from 'react-dom';
 import { Target, CheckCircle, Clock, ChevronRight, Award, Plus, Flame, Calendar, Lightbulb, Sparkles, AlertTriangle, BarChart3, Zap, Brain, Play } from 'lucide-react';
-import { calcStreak, ACHIEVEMENTS } from '../hooks/useAchievements';
+import { calcStreak } from '../hooks/useAchievements';
 import { useAuraAssistant } from '../hooks/useAuraAssistant';
 import AuraAssistantWidget from './AuraAssistantWidget';
 import Skeleton from './Skeleton';

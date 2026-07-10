@@ -1789,7 +1789,7 @@ export default function TodoView() {
                     className="todo-modal-select"
                   >
                     <option value="">Nenhum objetivo</option>
-                    {goals.filter(g => g.status === 'active').map(g => (
+                    {goals.filter(g => g.status === 'active' && !g.deletedAt && !g.deleted_at).map(g => (
                       <option key={g.id} value={g.id}>{g.title}</option>
                     ))}
                   </select>

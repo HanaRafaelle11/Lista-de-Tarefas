@@ -1,4 +1,5 @@
 import React from 'react';
+import ReactDOM from 'react-dom';
 import * as LucideIcons from 'lucide-react';
 import { Calendar, MoreVertical, Trash2, Archive, CheckCircle, RotateCcw, Link2, Edit2, Award, Clock, Copy, FileText, Paperclip } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
@@ -299,7 +300,7 @@ export default function GoalCard({
         )}
       </div>
 
-      {activeLightboxFile && (
+      {activeLightboxFile && ReactDOM.createPortal(
         <div 
           className="goal-lightbox-overlay animate-fade-in"
           onClick={() => setActiveLightboxFile(null)}
@@ -463,7 +464,7 @@ export default function GoalCard({
             </div>
           </div>
         </div>
-      )}
+      , document.body)}
     </article>
   );
 }

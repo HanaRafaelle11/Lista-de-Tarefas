@@ -296,9 +296,35 @@ export const AdminDashboardService = {
     const goalCreatedCount = goals.length;
     const goalCompletedCount = goals.filter(g => g.status === 'completed').length;
 
-    const pomodoroEvents = events.filter(e => e.event_type === 'focus_session_completed' || e.event_type === 'pomodoro_completed').length;
-    const weeklyPlanEvents = events.filter(e => e.event_type === 'weekly_plan_created').length;
-    const calendarEvents = events.filter(e => e.event_type === 'calendar_task_created').length;
+    // Obter contagem exata e completa de eventos de foco, planos semanais e tarefas de calendário diretamente do banco
+    let pomodoroEvents = 0;
+    let weeklyPlanEvents = 0;
+    let calendarEvents = 0;
+    try {
+      const { count: focusCount } = await supabaseAdmin
+        .from('events')
+        .select('*', { count: 'exact', head: true })
+        .in('event_type', ['focus_session_completed', 'pomodoro_completed']);
+      pomodoroEvents = focusCount || 0;
+
+      const { count: planCount } = await supabaseAdmin
+        .from('events')
+        .select('*', { count: 'exact', head: true })
+        .eq('event_type', 'weekly_plan_created');
+      weeklyPlanEvents = planCount || 0;
+
+      const { count: calendarCount } = await supabaseAdmin
+        .from('events')
+        .select('*', { count: 'exact', head: true })
+        .eq('event_type', 'calendar_task_created');
+      calendarEvents = calendarCount || 0;
+    } catch (e) {
+      console.warn('[ADMIN DASHBOARD WARN exact event counts]', e.message);
+      // Fallback para filtros em memória se a consulta direta falhar
+      pomodoroEvents = events.filter(e => e.event_type === 'focus_session_completed' || e.event_type === 'pomodoro_completed').length;
+      weeklyPlanEvents = events.filter(e => e.event_type === 'weekly_plan_created').length;
+      calendarEvents = events.filter(e => e.event_type === 'calendar_task_created').length;
+    }
 
     // Calcular tempo médio de foco global real a partir dos eventos
     const focusCompletedEvents = events.filter(e => e.event_type === 'focus_session_completed');

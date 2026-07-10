@@ -463,6 +463,18 @@ export default function AdminDashboard() {
         }
         console.log('[AdminDashboard] Loaded events count:', evts.length, evts.slice(0, 5));
         setUserEvents(evts);
+
+        // Recalcular métricas de Sessões Foco e Planos Semanais baseadas na timeline real do usuário
+        const pomodoroCount = result.events.filter(e => e.event_type === 'focus_session_completed' || e.event_type === 'pomodoro_completed').length;
+        const weeklyPlansCount = result.events.filter(e => e.event_type === 'weekly_plan_created').length;
+        setUserDetails(prev => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            pomodoros: pomodoroCount,
+            weekly_plans: weeklyPlansCount
+          };
+        });
       } else {
         console.log('[AdminDashboard] result is null or has no events:', result);
         setUserEvents([]);
@@ -780,7 +792,18 @@ export default function AdminDashboard() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
           
           {/* Main Navigation Tabs */}
-          <div style={{ display: 'flex', borderBottom: '1px solid var(--border-medium)', gap: '16px', marginBottom: '8px' }}>
+          <div style={{ 
+            display: 'flex', 
+            borderBottom: '1px solid var(--border-medium)', 
+            gap: '16px', 
+            marginBottom: '8px',
+            overflowX: 'auto',
+            whiteSpace: 'nowrap',
+            msOverflowStyle: 'none',
+            scrollbarWidth: 'none',
+            WebkitOverflowScrolling: 'touch',
+            paddingBottom: '2px'
+          }}>
             {[
               { id: 'metrics', label: 'Métricas SaaS', icon: <BarChart size={16} /> },
               { id: 'status', label: 'Status do Sistema', icon: <Activity size={16} /> },
@@ -806,7 +829,9 @@ export default function AdminDashboard() {
                   alignItems: 'center',
                   gap: '8px',
                   borderRadius: 0,
-                  transition: 'all 0.15s'
+                  transition: 'all 0.15s',
+                  flexShrink: 0,
+                  whiteSpace: 'nowrap'
                 }}
               >
                 {tab.icon} {tab.label}
@@ -1495,7 +1520,7 @@ export default function AdminDashboard() {
                     { label: 'Tarefas Concluídas', count: metrics?.task_completed || 3, max: 25, color: '#10b981', icon: <CheckCircle2 size={13} /> },
                     { label: 'Hábitos Concluídos', count: metrics?.habits_completed || 2, max: 25, color: '#3B82F6', icon: <Activity size={13} /> },
                     { label: 'Pomodoros', count: metrics?.focus_completed || 0, max: 25, color: '#EC4899', icon: <Clock size={13} /> },
-                    { label: 'Metas Criadas', count: metrics?.goal_created || 0, max: 25, color: '#8B5CF6', icon: <Target size={13} /> },
+                    { label: 'Objetivos Criados', count: metrics?.goal_created || 0, max: 25, color: '#8B5CF6', icon: <Target size={13} /> },
                     { label: 'Planejamentos', count: metrics?.weekly_plans || 0, max: 25, color: '#F59E0B', icon: <Calendar size={13} /> }
                   ].map(bar => {
                     const heightPercent = Math.max(Math.min((bar.count / bar.max) * 100, 100), bar.count > 0 ? 15 : 6);
@@ -1612,7 +1637,7 @@ export default function AdminDashboard() {
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px' }}>
                   {[
                     { title: 'Tarefas Criadas', value: metrics?.task_created, sub: `${metrics?.task_completed} concluídas`, icon: <CheckSquare size={20} /> },
-                    { title: 'Metas Criadas', value: metrics?.goal_created, sub: `${metrics?.goal_completed} concluídas`, icon: <Target size={20} /> },
+                    { title: 'Objetivos Criados', value: metrics?.goal_created, sub: `${metrics?.goal_completed} concluídas`, icon: <Target size={20} /> },
                     { title: 'Pomodoros Concluídos', value: metrics?.focus_completed, sub: 'Ciclos de foco', icon: <Clock size={20} /> },
                     { title: 'Planejamentos', value: metrics?.weekly_plans, sub: 'Planos Semanais salvos', icon: <Calendar size={20} /> },
                     { title: 'Agenda Calendário', value: metrics?.calendar_tasks, sub: 'Tarefas no calendário', icon: <Calendar size={20} /> },
@@ -1890,7 +1915,19 @@ export default function AdminDashboard() {
                 </div>
 
                 {/* 3-Tier Human Attention Hierarchy Sub-Tabs */}
-                <div style={{ display: 'flex', backgroundColor: 'var(--bg-app)', padding: '4px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-medium)', gap: '4px' }}>
+                <div style={{ 
+                  display: 'flex', 
+                  backgroundColor: 'var(--bg-app)', 
+                  padding: '4px', 
+                  borderRadius: 'var(--radius-md)', 
+                  border: '1px solid var(--border-medium)', 
+                  gap: '4px',
+                  overflowX: 'auto',
+                  whiteSpace: 'nowrap',
+                  msOverflowStyle: 'none',
+                  scrollbarWidth: 'none',
+                  WebkitOverflowScrolling: 'touch'
+                }}>
                   {[
                     { id: 'overview', label: 'Overview (Saúde + Dinheiro)' },
                     { id: 'diagnostics', label: 'Diagnostics (Problemas)' },
@@ -1909,7 +1946,9 @@ export default function AdminDashboard() {
                         color: paymentHierarchyTab === htab.id ? 'var(--primary)' : 'var(--text-light)',
                         cursor: 'pointer',
                         boxShadow: paymentHierarchyTab === htab.id ? 'var(--shadow-sm)' : 'none',
-                        transition: 'all 0.15s'
+                        transition: 'all 0.15s',
+                        flexShrink: 0,
+                        whiteSpace: 'nowrap'
                       }}
                     >
                       {htab.label}

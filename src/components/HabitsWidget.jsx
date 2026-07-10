@@ -148,9 +148,23 @@ export default function HabitsWidget({ habitsManager, goals }) {
             onChange={e => setNewGoalId(e.target.value)}
           >
             <option value="">Sem objetivo vinculado</option>
-            {activeGoals.map(g => (
-              <option key={g.id} value={g.id}>{g.icon} {g.title}</option>
-            ))}
+            {activeGoals.map(g => {
+              const iconEmoji = (() => {
+                if (!g.icon) return '🎯';
+                const isEmoji = /\p{Emoji}/u.test(g.icon) && !/^[a-zA-Z0-9-]+$/.test(g.icon);
+                if (isEmoji) return g.icon;
+                const map = {
+                  target: '🎯', rocket: '🚀', book: '📖', dollar: '💰',
+                  home: '🏠', globe: '🌍', dumbbell: '💪', brain: '🧠',
+                  heart: '❤️', palette: '🎨', music: '🎵', plane: '✈️',
+                  sprout: '🌱', trending: '📈', star: '⭐', users: '👥'
+                };
+                return map[g.icon.toLowerCase()] || '🎯';
+              })();
+              return (
+                <option key={g.id} value={g.id}>{iconEmoji} {g.title}</option>
+              );
+            })}
           </select>
           <div style={{ display: 'flex', gap: '8px' }}>
             <button type="submit" className="btn-primary-glow" style={{ padding: '8px 16px', borderRadius: '6px' }}>Adicionar</button>

@@ -6520,12 +6520,22 @@ body,
 }
 
 /* --- 13. DEMO BANNER --- */
+:root {
+  --demo-banner-height: 40px;
+}
+
+@media (max-width: 600px) {
+  :root {
+    --demo-banner-height: 76px;
+  }
+}
+
 .demo-banner {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
-  height: 40px;
+  height: var(--demo-banner-height);
   background: linear-gradient(90deg, #f59e0b, #d97706);
   color: white;
   text-align: center;
@@ -6541,24 +6551,32 @@ body,
   box-sizing: border-box;
 }
 
+@media (max-width: 600px) {
+  .demo-banner {
+    flex-direction: column !important;
+    gap: 6px !important;
+    padding: 8px 12px !important;
+  }
+}
+
 /* --- DEMO BANNER SHIFTING --- */
 .app-wrapper.has-demo-banner {
-  padding-top: 40px !important;
+  padding-top: var(--demo-banner-height) !important;
 }
 .app-wrapper.has-demo-banner .app-sidebar {
-  top: 40px !important;
-  height: calc(100vh - 40px) !important;
+  top: var(--demo-banner-height) !important;
+  height: calc(100vh - var(--demo-banner-height)) !important;
 }
 .app-wrapper.has-demo-banner .app-top-header {
-  top: 40px !important;
+  top: var(--demo-banner-height) !important;
 }
 
 @media (max-width: 1023px) {
   .app-wrapper.has-demo-banner {
-    padding-top: 104px !important;
+    padding-top: calc(var(--demo-banner-height) + 64px) !important;
   }
   .app-wrapper.has-demo-banner .mobile-top-header {
-    top: 40px !important;
+    top: var(--demo-banner-height) !important;
   }
 }
 

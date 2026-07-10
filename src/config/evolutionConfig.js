@@ -136,7 +136,7 @@ export const EVOLUTION_CATEGORIES = {
       },
       {
         level: 2,
-        title: 'Cão Brincalhão',
+        title: 'Cãozinho Brincalhão',
         badge: 'Nível 2 • Ativo & Feliz',
         color: 'var(--primary)',
         asset: dog2,
@@ -145,12 +145,12 @@ export const EVOLUTION_CATEGORIES = {
       },
       {
         level: 3,
-        title: 'Cão Dinâmico',
+        title: 'Cãozinho Dinâmico',
         badge: 'Nível 3 • Companheiro',
         color: '#10b981',
         asset: dog3,
         desc: 'Ritmo acelerado! Seu pet corre cheio de energia com belos rastros de dados neon na cauda, acompanhando sua velocidade.',
-        alt: 'Cachorro neon dinâmico correndo com rastros de dados na cauda'
+        alt: 'Cachorrinho neon dinâmico correndo com rastros de dados na cauda'
       },
       {
         level: 4,
@@ -158,8 +158,8 @@ export const EVOLUTION_CATEGORIES = {
         badge: 'Nível 4 • Nobreza & Foco',
         color: '#8b5cf6',
         asset: dog4,
-        desc: 'Desempenho lendário! Seu companheiro se tornou um cão alfa cibernético heroico, equipado com armadura holográfica e capa neon.',
-        alt: 'Cão alfa cibernético heroico com capa neon e armadura holográfica'
+        desc: 'Desempenho lendário! Seu companheiro se tornou um cãozinho alfa cibernético heroico, equipado com armadura holográfica e capa neon.',
+        alt: 'Cãozinho alfa cibernético heroico com capa neon e armadura holográfica'
       }
     ]
   },
@@ -180,21 +180,21 @@ export const EVOLUTION_CATEGORIES = {
       },
       {
         level: 2,
-        title: 'Gato Explorador',
+        title: 'Gatinho Explorador',
         badge: 'Nível 2 • Em Movimento',
         color: 'var(--primary)',
         asset: cat2,
         desc: 'Seu gatinho cresceu e agora está ativamente brincando e explorando a plataforma com energia! Mantenha seus hábitos para preservar o equilíbrio.',
-        alt: 'Gato jovem neon brincando e explorando de forma ativa'
+        alt: 'Gatinho jovem neon brincando e explorando de forma ativa'
       },
       {
         level: 3,
-        title: 'Gato Elegante',
+        title: 'Gatinho Elegante',
         badge: 'Nível 3 • Presença Forte',
         color: '#10b981',
         asset: cat3,
-        desc: 'Foco impecável! Seu gato se tornou um elegante felino neon adulto que observa graciosamente sua rotina produtiva.',
-        alt: 'Gato adulto neon elegante em pé de forma graciosa'
+        desc: 'Foco impecável! Seu gatinho se tornou um elegante felino neon que observa graciosamente sua rotina produtiva.',
+        alt: 'Gatinho elegante neon em pé de forma graciosa'
       },
       {
         level: 4,
@@ -202,8 +202,8 @@ export const EVOLUTION_CATEGORIES = {
         badge: 'Nível 4 • Soberano Master',
         color: '#ec4899',
         asset: cat4,
-        desc: 'Incrível! Seu pet se transformou em um poderoso gato guardião cibernético soberano, com uma coroa de neon e aura brilhante.',
-        alt: 'Gato guardião cibernético poderoso com coroa de neon e efeitos de aura'
+        desc: 'Incrível! Seu gatinho se transformou em um poderoso guardião cibernético soberano, com uma coroa de neon e aura brilhante.',
+        alt: 'Gatinho guardião cibernético poderoso com coroa de neon e efeitos de aura'
       }
     ]
   }

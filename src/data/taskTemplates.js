@@ -1,9 +1,9 @@
 export const TASK_TEMPLATES = [
   {
     id: 'dog_care',
-    title: 'Cuidados com Cachorro',
+    title: 'Cuidados com Cachorrinho',
     category: 'Pets',
-    description: 'Rotina diária essencial para manter seu cão feliz e saudável.',
+    description: 'Rotina diária essencial para manter seu cãozinho feliz e saudável.',
     tasks: [
       { title: 'Dar ração e água fresca', description: 'Garantir comedouro limpo e água gelada' },
       { title: 'Passear de manhã/tarde', description: 'Passeio de pelo menos 20 minutos' },

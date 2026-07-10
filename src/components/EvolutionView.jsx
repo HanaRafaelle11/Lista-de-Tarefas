@@ -98,29 +98,14 @@ function MetricCard({ iconName, iconColor, value, label, highlight }) {
   );
 }
 
-// ─── Badge de Conquista Rarity Map ──────────────────────────────────────────
-const RARITY_MAP = {
-  first_task: { rarity: 'Bronze', color: '#cd7f32', bg: 'linear-gradient(135deg, rgba(205, 127, 50, 0.15) 0%, rgba(205, 127, 50, 0.03) 100%)', border: '1px solid rgba(205, 127, 50, 0.35)' },
-  tasks_10: { rarity: 'Bronze', color: '#cd7f32', bg: 'linear-gradient(135deg, rgba(205, 127, 50, 0.15) 0%, rgba(205, 127, 50, 0.03) 100%)', border: '1px solid rgba(205, 127, 50, 0.35)' },
-  first_goal: { rarity: 'Bronze', color: '#cd7f32', bg: 'linear-gradient(135deg, rgba(205, 127, 50, 0.15) 0%, rgba(205, 127, 50, 0.03) 100%)', border: '1px solid rgba(205, 127, 50, 0.35)' },
-  streak_3: { rarity: 'Bronze', color: '#cd7f32', bg: 'linear-gradient(135deg, rgba(205, 127, 50, 0.15) 0%, rgba(205, 127, 50, 0.03) 100%)', border: '1px solid rgba(205, 127, 50, 0.35)' },
-  pet_lover: { rarity: 'Bronze', color: '#cd7f32', bg: 'linear-gradient(135deg, rgba(205, 127, 50, 0.15) 0%, rgba(205, 127, 50, 0.03) 100%)', border: '1px solid rgba(205, 127, 50, 0.35)' },
-  financista: { rarity: 'Bronze', color: '#cd7f32', bg: 'linear-gradient(135deg, rgba(205, 127, 50, 0.15) 0%, rgba(205, 127, 50, 0.03) 100%)', border: '1px solid rgba(205, 127, 50, 0.35)' },
-  carreira: { rarity: 'Bronze', color: '#cd7f32', bg: 'linear-gradient(135deg, rgba(205, 127, 50, 0.15) 0%, rgba(205, 127, 50, 0.03) 100%)', border: '1px solid rgba(205, 127, 50, 0.35)' },
-  perfect_habits: { rarity: 'Bronze', color: '#cd7f32', bg: 'linear-gradient(135deg, rgba(205, 127, 50, 0.15) 0%, rgba(205, 127, 50, 0.03) 100%)', border: '1px solid rgba(205, 127, 50, 0.35)' },
-  
-  tasks_50: { rarity: 'Prata', color: '#9ca3af', bg: 'linear-gradient(135deg, rgba(156, 163, 175, 0.15) 0%, rgba(156, 163, 175, 0.03) 100%)', border: '1px solid rgba(156, 163, 175, 0.35)' },
-  streak_7: { rarity: 'Prata', color: '#9ca3af', bg: 'linear-gradient(135deg, rgba(156, 163, 175, 0.15) 0%, rgba(156, 163, 175, 0.03) 100%)', border: '1px solid rgba(156, 163, 175, 0.35)' },
-  first_goal_completed: { rarity: 'Prata', color: '#9ca3af', bg: 'linear-gradient(135deg, rgba(156, 163, 175, 0.15) 0%, rgba(156, 163, 175, 0.03) 100%)', border: '1px solid rgba(156, 163, 175, 0.35)' },
-  
-  tasks_100: { rarity: 'Ouro', color: '#fbbf24', bg: 'linear-gradient(135deg, rgba(251, 191, 36, 0.15) 0%, rgba(251, 191, 36, 0.03) 100%)', border: '1px solid rgba(251, 191, 36, 0.35)' },
-  streak_30: { rarity: 'Ouro', color: '#fbbf24', bg: 'linear-gradient(135deg, rgba(251, 191, 36, 0.15) 0%, rgba(251, 191, 36, 0.03) 100%)', border: '1px solid rgba(251, 191, 36, 0.35)' },
-  goals_10: { rarity: 'Ouro', color: '#fbbf24', bg: 'linear-gradient(135deg, rgba(251, 191, 36, 0.15) 0%, rgba(251, 191, 36, 0.03) 100%)', border: '1px solid rgba(251, 191, 36, 0.35)' }
-};
-
 // ─── Badge de Conquista ──────────────────────────────────────────────────────
 function AchievementBadge({ achievement, unlocked, unlockedAt }) {
-  const info = RARITY_MAP[achievement.key] || { rarity: 'Bronze', color: '#cd7f32', bg: 'var(--bg-card)', border: '1px solid var(--border-light)' };
+  const info = {
+    rarity: achievement.rarityName || achievement.rarity || 'Bronze',
+    color: achievement.color || '#cd7f32',
+    bg: achievement.bg || 'var(--bg-card)',
+    border: achievement.border || '1px solid var(--border-light)'
+  };
   
   const cardStyle = unlocked 
     ? {
@@ -937,7 +922,7 @@ export default function EvolutionView() {
 
               <div>
                 <div className="evo-card-section-label" style={{ fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', color: 'var(--text-light)', marginBottom: '8px' }}>Últimos 7 dias</div>
-                <WeeklyRhythm tasks={tasks} />
+                <WeeklyRhythm tasks={activeTasks} />
               </div>
             </section>
 
@@ -1332,11 +1317,11 @@ export default function EvolutionView() {
                   <div className={!isPro ? 'premium-lock-blur' : ''} style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
                     <div style={{ flex: 1, minWidth: '260px', padding: '16px', backgroundColor: 'var(--bg-app)', border: '1px solid var(--border-light)', borderRadius: 'var(--radius-sm)' }}>
                       <span style={{ fontSize: '12.5px', fontWeight: '750', color: 'var(--text-main)', display: 'block', marginBottom: '12px' }}>Distribuição de Categorias</span>
-                      <CategoryDonut tasks={tasks} />
+                      <CategoryDonut tasks={activeTasks} />
                     </div>
                     <div style={{ flex: 1, minWidth: '260px', padding: '16px', backgroundColor: 'var(--bg-app)', border: '1px solid var(--border-light)', borderRadius: 'var(--radius-sm)' }}>
                       <span style={{ fontSize: '12.5px', fontWeight: '750', color: 'var(--text-main)', display: 'block', marginBottom: '12px' }}>Distribuição de Prioridades</span>
-                      <PriorityBars tasks={tasks} />
+                      <PriorityBars tasks={activeTasks} />
                     </div>
                   </div>
                 </section>
@@ -1353,7 +1338,7 @@ export default function EvolutionView() {
         <WeeklyPlannerModal 
           isOpen={isWeeklyPlannerOpen} 
           onClose={() => setIsWeeklyPlannerOpen(false)} 
-          tasks={tasks} 
+          tasks={activeTasks} 
           onUpdateTask={handleUpdateTask} 
         />
       </Suspense>

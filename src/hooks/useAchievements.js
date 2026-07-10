@@ -1,5 +1,3 @@
-import { useEffect, useRef, useCallback } from 'react';
-import { supabase } from '../supabaseClient';
 
 // ─── Definições de Conquistas ────────────────────────────────────────────────
 export const ACHIEVEMENTS = [
@@ -9,7 +7,11 @@ export const ACHIEVEMENTS = [
     title: 'Primeira conquista',
     desc: 'Você concluiu sua primeira tarefa.',
     check: (s) => s.completedTasks >= 1,
-    rarity: 'Comum'
+    rarity: 'Comum',
+    rarityName: 'Bronze',
+    color: '#cd7f32',
+    bg: 'linear-gradient(135deg, rgba(205, 127, 50, 0.15) 0%, rgba(205, 127, 50, 0.03) 100%)',
+    border: '1px solid rgba(205, 127, 50, 0.35)'
   },
   {
     key: 'tasks_10',
@@ -17,7 +19,11 @@ export const ACHIEVEMENTS = [
     title: 'Em ritmo',
     desc: '10 tarefas concluídas. O hábito está se formando.',
     check: (s) => s.completedTasks >= 10,
-    rarity: 'Comum'
+    rarity: 'Comum',
+    rarityName: 'Bronze',
+    color: '#cd7f32',
+    bg: 'linear-gradient(135deg, rgba(205, 127, 50, 0.15) 0%, rgba(205, 127, 50, 0.03) 100%)',
+    border: '1px solid rgba(205, 127, 50, 0.35)'
   },
   {
     key: 'tasks_50',
@@ -25,7 +31,11 @@ export const ACHIEVEMENTS = [
     title: 'Meio centenário',
     desc: '50 tarefas concluídas. Consistência de nível avançado.',
     check: (s) => s.completedTasks >= 50,
-    rarity: 'Rara'
+    rarity: 'Rara',
+    rarityName: 'Prata',
+    color: '#9ca3af',
+    bg: 'linear-gradient(135deg, rgba(156, 163, 175, 0.15) 0%, rgba(156, 163, 175, 0.03) 100%)',
+    border: '1px solid rgba(156, 163, 175, 0.35)'
   },
   {
     key: 'tasks_100',
@@ -33,7 +43,11 @@ export const ACHIEVEMENTS = [
     title: 'Centenário',
     desc: '100 tarefas. Uma prova de comprometimento raro.',
     check: (s) => s.completedTasks >= 100,
-    rarity: 'Épica'
+    rarity: 'Épica',
+    rarityName: 'Ouro',
+    color: '#fbbf24',
+    bg: 'linear-gradient(135deg, rgba(251, 191, 36, 0.15) 0%, rgba(251, 191, 36, 0.03) 100%)',
+    border: '1px solid rgba(251, 191, 36, 0.35)'
   },
   {
     key: 'streak_3',
@@ -41,7 +55,11 @@ export const ACHIEVEMENTS = [
     title: '3 dias seguidos',
     desc: 'Três dias consecutivos de progresso.',
     check: (s) => s.currentStreak >= 3,
-    rarity: 'Comum'
+    rarity: 'Comum',
+    rarityName: 'Bronze',
+    color: '#cd7f32',
+    bg: 'linear-gradient(135deg, rgba(205, 127, 50, 0.15) 0%, rgba(205, 127, 50, 0.03) 100%)',
+    border: '1px solid rgba(205, 127, 50, 0.35)'
   },
   {
     key: 'streak_7',
@@ -49,7 +67,11 @@ export const ACHIEVEMENTS = [
     title: 'Semana perfeita',
     desc: '7 dias consecutivos. Isso é um hábito real.',
     check: (s) => s.currentStreak >= 7,
-    rarity: 'Rara'
+    rarity: 'Rara',
+    rarityName: 'Prata',
+    color: '#9ca3af',
+    bg: 'linear-gradient(135deg, rgba(156, 163, 175, 0.15) 0%, rgba(156, 163, 175, 0.03) 100%)',
+    border: '1px solid rgba(156, 163, 175, 0.35)'
   },
   {
     key: 'streak_30',
@@ -57,7 +79,11 @@ export const ACHIEVEMENTS = [
     title: '30 dias de consistência',
     desc: 'Um mês inteiro de progresso diário.',
     check: (s) => s.currentStreak >= 30,
-    rarity: 'Épica'
+    rarity: 'Épica',
+    rarityName: 'Ouro',
+    color: '#fbbf24',
+    bg: 'linear-gradient(135deg, rgba(251, 191, 36, 0.15) 0%, rgba(251, 191, 36, 0.03) 100%)',
+    border: '1px solid rgba(251, 191, 36, 0.35)'
   },
   {
     key: 'first_goal',
@@ -65,7 +91,11 @@ export const ACHIEVEMENTS = [
     title: 'Primeiro objetivo',
     desc: 'Você criou seu primeiro objetivo. O caminho começa aqui.',
     check: (s) => s.totalGoals >= 1,
-    rarity: 'Comum'
+    rarity: 'Comum',
+    rarityName: 'Bronze',
+    color: '#cd7f32',
+    bg: 'linear-gradient(135deg, rgba(205, 127, 50, 0.15) 0%, rgba(205, 127, 50, 0.03) 100%)',
+    border: '1px solid rgba(205, 127, 50, 0.35)'
   },
   {
     key: 'first_goal_completed',
@@ -73,7 +103,11 @@ export const ACHIEVEMENTS = [
     title: 'Objetivo alcançado',
     desc: 'Você alcançou um objetivo. Isso é raro e valioso.',
     check: (s) => s.completedGoals >= 1,
-    rarity: 'Rara'
+    rarity: 'Rara',
+    rarityName: 'Prata',
+    color: '#9ca3af',
+    bg: 'linear-gradient(135deg, rgba(156, 163, 175, 0.15) 0%, rgba(156, 163, 175, 0.03) 100%)',
+    border: '1px solid rgba(156, 163, 175, 0.35)'
   },
   {
     key: 'goals_10',
@@ -81,7 +115,11 @@ export const ACHIEVEMENTS = [
     title: 'Visionário',
     desc: '10 objetivos concluídos. Você constrói grandes coisas.',
     check: (s) => s.completedGoals >= 10,
-    rarity: 'Épica'
+    rarity: 'Épica',
+    rarityName: 'Ouro',
+    color: '#fbbf24',
+    bg: 'linear-gradient(135deg, rgba(251, 191, 36, 0.15) 0%, rgba(251, 191, 36, 0.03) 100%)',
+    border: '1px solid rgba(251, 191, 36, 0.35)'
   },
   {
     key: 'pet_lover',
@@ -89,7 +127,11 @@ export const ACHIEVEMENTS = [
     title: 'Amigo dos Animais',
     desc: 'Você concluiu 3 ou mais tarefas de cuidados com pets.',
     check: (s) => s.petTasksCompleted >= 3,
-    rarity: 'Rara'
+    rarity: 'Rara',
+    rarityName: 'Prata',
+    color: '#9ca3af',
+    bg: 'linear-gradient(135deg, rgba(156, 163, 175, 0.15) 0%, rgba(156, 163, 175, 0.03) 100%)',
+    border: '1px solid rgba(156, 163, 175, 0.35)'
   },
   {
     key: 'financista',
@@ -97,7 +139,11 @@ export const ACHIEVEMENTS = [
     title: 'Mestre Financeiro',
     desc: 'Você concluiu 3 ou mais tarefas de finanças pessoais.',
     check: (s) => s.financeTasksCompleted >= 3,
-    rarity: 'Rara'
+    rarity: 'Rara',
+    rarityName: 'Prata',
+    color: '#9ca3af',
+    bg: 'linear-gradient(135deg, rgba(156, 163, 175, 0.15) 0%, rgba(156, 163, 175, 0.03) 100%)',
+    border: '1px solid rgba(156, 163, 175, 0.35)'
   },
   {
     key: 'carreira',
@@ -105,7 +151,11 @@ export const ACHIEVEMENTS = [
     title: 'Foco Profissional',
     desc: 'Você concluiu 3 ou mais tarefas de transição de carreira.',
     check: (s) => s.careerTasksCompleted >= 3,
-    rarity: 'Rara'
+    rarity: 'Rara',
+    rarityName: 'Prata',
+    color: '#9ca3af',
+    bg: 'linear-gradient(135deg, rgba(156, 163, 175, 0.15) 0%, rgba(156, 163, 175, 0.03) 100%)',
+    border: '1px solid rgba(156, 163, 175, 0.35)'
   },
   {
     key: 'perfect_habits',
@@ -113,7 +163,11 @@ export const ACHIEVEMENTS = [
     title: 'Foco Total',
     desc: 'Você concluiu 100% dos seus hábitos de hoje.',
     check: (s) => s.habits100PercentToday === true,
-    rarity: 'Lendária'
+    rarity: 'Lendária',
+    rarityName: 'Lendária',
+    color: '#eab308',
+    bg: 'linear-gradient(135deg, rgba(234, 179, 8, 0.2) 0%, rgba(234, 179, 8, 0.03) 100%)',
+    border: '2px solid #eab308'
   },
 ];
 
@@ -187,7 +241,7 @@ export function calcStats(tasks, goals, habits = [], habitLogs = []) {
         try {
           const parts = t.description.split(marker);
           const meta = JSON.parse(parts[1].trim());
-          if (meta.template_name === 'Cuidados com Cachorro') petTasksCompleted++;
+          if (meta.template_name === 'Cuidados com Cachorrinho') petTasksCompleted++;
           if (meta.template_name === 'Organizar Finanças Pessoais') financeTasksCompleted++;
           if (meta.template_name === 'Transição de Carreira') careerTasksCompleted++;
         } catch (e) {
@@ -220,74 +274,4 @@ export function calcStats(tasks, goals, habits = [], habitLogs = []) {
   };
 }
 
-// ─── Hook Principal ──────────────────────────────────────────────────────────
-export default function useAchievements({
-  tasks,
-  goals,
-  userId,
-  unlockedKeys,          // Set<string> — chaves já no banco
-  onUnlock,              // (achievement) => void — atualiza estado local
-  onToast,               // (achievement) => void — dispara toast
-}) {
-  // Ref para evitar re-check enquanto está gravando
-  const checking = useRef(false);
 
-  const checkAndUnlock = useCallback(async () => {
-    if (!userId || checking.current || unlockedKeys === null) return;
-    checking.current = true;
-
-    try {
-      if (tasks.length === 0 && goals.length === 0) {
-        checking.current = false;
-        return; // Aguarda os dados reais carregarem
-      }
-
-      const stats = calcStats(tasks, goals);
-      const newlyUnlocked = [];
-
-      for (const achievement of ACHIEVEMENTS) {
-        if (!unlockedKeys.has(achievement.key) && achievement.check(stats)) {
-          // Double check: não liberar primeira conquista se o número de tasks concluídas for 0
-          if (achievement.key === 'first_task' && stats.completedTasks === 0) continue;
-          
-          newlyUnlocked.push(achievement);
-        }
-      }
-
-      if (newlyUnlocked.length === 0) {
-        checking.current = false;
-        return;
-      }
-
-      // Gravar todas de uma vez no Supabase
-      const rows = newlyUnlocked.map(a => ({
-        user_id: userId,
-        achievement_key: a.key,
-      }));
-
-      const { error } = await supabase
-        .from('user_achievements')
-        .upsert(rows, { onConflict: 'user_id,achievement_key', ignoreDuplicates: true });
-
-      if (error) {
-        console.error('Erro ao gravar conquistas:', error);
-        return;
-      }
-
-      // Atualizar estado local e disparar toasts com delay entre eles
-      newlyUnlocked.forEach((a, i) => {
-        setTimeout(() => {
-          onUnlock(a.key);
-          onToast(a);
-        }, i * 1200);
-      });
-    } finally {
-      checking.current = false;
-    }
-  }, [tasks, goals, userId, unlockedKeys, onUnlock, onToast]);
-
-  // Re-verifica toda vez que tasks ou goals mudarem
-  useEffect(() => {
-    checkAndUnlock();
-  }, [checkAndUnlock]);
-}

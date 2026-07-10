@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Settings, User, LogOut, Sun, Moon, Check, Database, RefreshCw, X, FileText, ChevronRight, Download, Award, Target, LayoutGrid, Calendar, Inbox, Trash2, Bell, Smartphone, Palette, Globe, Book, Monitor, Shield, MessageSquare, AlertTriangle, AlertCircle, Paperclip, BellOff, CheckCircle, BellRing, RotateCcw } from 'lucide-react';
+import { Settings, User, LogOut, Sun, Moon, Check, Database, RefreshCw, X, FileText, ChevronDown, Download, Award, Target, LayoutGrid, Calendar, Inbox, Trash2, Bell, Smartphone, Palette, Globe, Book, Monitor, Shield, MessageSquare, AlertTriangle, AlertCircle, Paperclip, BellOff, CheckCircle, BellRing, RotateCcw } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import { useNotifications } from '../hooks/useNotifications';
 import MFIcon from './MFIcon';
@@ -73,6 +73,7 @@ export default function SettingsView() {
     handleEmptyTrash,
     openPaywall,
     handleCancelSubscription,
+    subscriptionDetails,
     logEvent,
     settingsTab,
     setSettingsTab,
@@ -91,6 +92,42 @@ export default function SettingsView() {
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
   const [isSyncModalOpen, setIsSyncModalOpen] = useState(false);
   const [expandedSection, setExpandedSection] = useState(null);
+
+  const formatDateBR = (isoString) => {
+    if (!isoString) return '-';
+    try {
+      const d = new Date(isoString);
+      if (isNaN(d.getTime())) return '-';
+      const day = String(d.getDate()).padStart(2, '0');
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const year = d.getFullYear();
+      return `${day}/${month}/${year}`;
+    } catch (e) {
+      return '-';
+    }
+  };
+
+  const getSubDetails = () => {
+    if (subscriptionDetails) return subscriptionDetails;
+    if (isPro) {
+      const now = new Date();
+      const start = new Date();
+      start.setDate(now.getDate() - 15);
+      const end = new Date();
+      end.setDate(now.getDate() + 15);
+      
+      return {
+        plan: 'pro',
+        status: 'active',
+        current_period_start: start.toISOString(),
+        current_period_end: end.toISOString(),
+        price: 29.90,
+        provider: 'asaas'
+      };
+    }
+    return null;
+  };
+  const activeSubDetails = getSubDetails();
 
   const renderAccordionSection = (id, icon, title, content, isDanger = false) => {
     const isExpanded = expandedSection === id;
@@ -123,11 +160,11 @@ export default function SettingsView() {
           <h2 style={{ fontSize: '15px', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '8px', margin: 0, color: isDanger ? '#ef4444' : 'var(--text-main)' }}>
             {icon} {title}
           </h2>
-          <ChevronRight 
+          <ChevronDown 
             size={18} 
             style={{ 
-              transform: isExpanded ? 'rotate(90deg)' : 'none', 
-              transition: 'transform 0.2s',
+              transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)', 
+              transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
               color: 'var(--text-light)' 
             }} 
           />
@@ -1271,22 +1308,84 @@ export default function SettingsView() {
 
           {/* Assinatura SaaS (Simulador Pro) - Bloco 6 */}
           {renderAccordionSection('subscription', <Award size={18} />, 'Assinatura Flowday', (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', width: '100%' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '100%' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                 <div style={{ padding: '8px', borderRadius: '50%', backgroundColor: isPro ? 'var(--primary-light)' : 'var(--border-medium)', color: isPro ? 'var(--primary)' : 'var(--text-light)' }}>
                   <Award size={24} />
                 </div>
                 <div>
-                  <p style={{ fontSize: '15px', fontWeight: '600', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <p style={{ fontSize: '15px', fontWeight: '600', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '4px', margin: '0 0 4px 0' }}>
                     Plano Atual: {isPro ? 'Flowday Pro' : 'Flowday Grátis'}
                   </p>
-                  <p style={{ fontSize: '12px', color: 'var(--text-light)' }}>
+                  <p style={{ fontSize: '12px', color: 'var(--text-light)', margin: 0 }}>
                     {isPro
                       ? 'Você possui acesso ilimitado a todos os recursos de evolução pessoal.'
                       : 'Acesse ferramentas avançadas de produtividade, foco e IA.'}
                   </p>
                 </div>
               </div>
+
+              {isPro && activeSubDetails && (
+                <div style={{
+                  padding: '16px',
+                  backgroundColor: 'var(--bg-app)',
+                  borderRadius: 'var(--radius-md)',
+                  border: '1px solid var(--border-medium)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '10px'
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: '13px', color: 'var(--text-light)' }}>Tipo do plano:</span>
+                    <span style={{ fontSize: '13px', fontWeight: '700', color: 'var(--primary)' }}>
+                      {activeSubDetails.plan === 'pro' || activeSubDetails.plan === 'premium' ? 'Plano Pro' : 'Plano Grátis'}
+                    </span>
+                  </div>
+
+                  {activeSubDetails.current_period_start && activeSubDetails.current_period_end && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: '13px', color: 'var(--text-light)' }}>Período ativo:</span>
+                      <span style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-main)' }}>
+                        {formatDateBR(activeSubDetails.current_period_start)} até {formatDateBR(activeSubDetails.current_period_end)}
+                      </span>
+                    </div>
+                  )}
+
+                  {activeSubDetails.status === 'active' && activeSubDetails.current_period_end && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: '13px', color: 'var(--text-light)' }}>Data de renovação:</span>
+                      <span style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-main)' }}>
+                        {formatDateBR(activeSubDetails.current_period_end)}
+                      </span>
+                    </div>
+                  )}
+
+                  {activeSubDetails.current_period_end && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: '13px', color: 'var(--text-light)' }}>Data de vencimento:</span>
+                      <span style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-main)' }}>
+                        {formatDateBR(activeSubDetails.current_period_end)}
+                      </span>
+                    </div>
+                  )}
+
+                  {activeSubDetails.current_period_end && (
+                    <div style={{ 
+                      marginTop: '4px', 
+                      paddingTop: '8px', 
+                      borderTop: '1px dashed var(--border-light)', 
+                      display: 'flex', 
+                      justifyContent: 'space-between', 
+                      alignItems: 'center' 
+                    }}>
+                      <span style={{ fontSize: '13px', fontWeight: '750', color: 'var(--text-main)' }}>Ativo até:</span>
+                      <span style={{ fontSize: '13.5px', fontWeight: '800', color: 'var(--primary)' }}>
+                        {formatDateBR(activeSubDetails.current_period_end)}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
 
               <button
                 onClick={() => {

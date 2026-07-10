@@ -48,37 +48,35 @@ export default function Sidebar() {
     <>
       {/* ── Mobile/Tablet Top Header (Compacto com Drawer) ── */}
       <header className="mobile-top-header hide-on-desktop">
-        <div className="mobile-header-container" style={{ display: 'flex', alignItems: 'center', height: '64px', padding: '0 16px', position: 'relative' }}>
-          <button 
-            onClick={() => setIsMobileMenuOpen(true)}
-            style={{ background: 'none', border: 'none', color: 'var(--text-main)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '8px', zIndex: 2 }}
-            aria-label="Abrir menu"
-          >
-            <Menu size={24} />
-          </button>
-
+        <div className="mobile-header-container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '64px', padding: '0 16px', width: '100%' }}>
+          {/* Logo à esquerda */}
           <div 
             className="navbar-brand"
             onClick={() => currentUser?.isDemo ? handleLogout() : setActiveTab('home')}
             style={{ 
               cursor: 'pointer', 
-              position: 'absolute',
-              left: '50%',
-              top: '50%',
-              transform: 'translate(-50%, -50%)',
               display: 'flex', 
-              alignItems: 'center', 
-              justifyContent: 'center',
-              zIndex: 1
+              alignItems: 'center',
+              flexShrink: 1,
+              minWidth: 0
             }}
           >
             <img 
               src={logo.src}
               alt={logo.alt} 
               className="mobile-logo"
-              style={{ height: '42px', width: 'auto' }}
+              style={{ height: '40px', width: 'auto', maxWidth: '180px', objectFit: 'contain' }}
             />
           </div>
+
+          {/* Hambúrguer à direita */}
+          <button 
+            onClick={() => setIsMobileMenuOpen(true)}
+            style={{ background: 'none', border: 'none', color: 'var(--text-main)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '8px', flexShrink: 0 }}
+            aria-label="Abrir menu"
+          >
+            <Menu size={24} />
+          </button>
         </div>
       </header>
 
@@ -216,11 +214,11 @@ export default function Sidebar() {
                   setIsMobileMenuOpen(false);
                 }}
               >
-                <div className="sidebar-avatar-container" style={{ width: '44px', height: '44px' }}>
+                <div className="sidebar-avatar-container" style={{ width: '56px', height: '56px' }}>
                   {userProfile?.avatar_url ? (
                     <img src={userProfile.avatar_url} alt="Avatar" className="sidebar-avatar" />
                   ) : (
-                    <DefaultAvatar size={44} />
+                    <DefaultAvatar size={56} />
                   )}
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>

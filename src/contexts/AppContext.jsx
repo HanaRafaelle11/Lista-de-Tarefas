@@ -559,6 +559,7 @@ export function AppProvider({ children }) {
   const [paywallSource, setPaywallSource] = useState('');
   const [subscriptionStatus, setSubscriptionStatus] = useState('free'); // 'ACTIVE', 'CANCELED', 'PAST_DUE', 'TRIALING'
   const [subscriptionPlan, setSubscriptionPlan] = useState('free'); // 'pro', 'free'
+  const [subscriptionDetails, setSubscriptionDetails] = useState(null);
   const [churnScore, setChurnScore] = useState(0);
   const [churnRisk, setChurnRisk] = useState('low');
 
@@ -619,7 +620,7 @@ export function AppProvider({ children }) {
     setActiveTab('home');
   }, []);
 
-  const handleLogout = useCallback(async () => {
+  const handleLogout = useCallback(async (skipReload = false) => {
     try {
       localStorage.removeItem('flowday_demo_active'); // Limpa a flag de modo demo ativo
       if (currentUser?.id) {
@@ -646,13 +647,19 @@ export function AppProvider({ children }) {
       await localDB.clear('events').catch(() => { });
       await localDB.clear('notifications').catch(() => { });
 
-      // Redireciona imediatamente, limpando toda a memória da aba do navegador de forma limpa
-      window.location.href = '/';
+      setCurrentUser(null);
+      setUserProfile(null);
+
+      if (!skipReload) {
+        window.location.href = '/';
+      }
     } catch (e) {
       console.error(e);
-      window.location.href = '/';
+      if (!skipReload) {
+        window.location.href = '/';
+      }
     }
-  }, [currentUser]);
+  }, [currentUser, setCurrentUser, setUserProfile]);
 
   // Determina se usuário logado é administrador
   const isAdmin = useMemo(() => checkIsAdmin(currentUser), [currentUser]);
@@ -958,13 +965,17 @@ export function AppProvider({ children }) {
     if (localAchievements) {
       const parsed = JSON.parse(localAchievements);
       setUnlockedAchievements(parsed);
-      setUnlockedKeys(new Set(parsed.map(a => a.achievement_key)));
+      const keys = new Set(parsed.map(a => a.achievement_key));
+      setUnlockedKeys(keys);
+      if (unlockedKeysRef) unlockedKeysRef.current = keys;
     } else {
       const mockAchievements = [
         { achievement_key: 'first_task', unlocked_at: now.toISOString(), seen: true, dismissed_at: null }
       ];
       setUnlockedAchievements(mockAchievements);
-      setUnlockedKeys(new Set(['first_task']));
+      const keys = new Set(['first_task']);
+      setUnlockedKeys(keys);
+      if (unlockedKeysRef) unlockedKeysRef.current = keys;
       localStorage.setItem(demoAchievementsKey, JSON.stringify(mockAchievements));
     }
 
@@ -1144,7 +1155,9 @@ export function AppProvider({ children }) {
     const { data } = await achievementsService.getAll(userId);
     const list = data || [];
     setUnlockedAchievements(list);
-    setUnlockedKeys(new Set(list.map((a) => a.achievement_key)));
+    const keys = new Set(list.map((a) => a.achievement_key));
+    setUnlockedKeys(keys);
+    if (unlockedKeysRef) unlockedKeysRef.current = keys;
   }, []);
 
   const loadHabits = useCallback(async (userId) => {
@@ -1231,6 +1244,7 @@ export function AppProvider({ children }) {
       setIsPro(false);
       setSubscriptionStatus('FREE');
       setSubscriptionPlan('free');
+      setSubscriptionDetails(null);
       setChurnScore(0);
       setChurnRisk('low');
       return false;
@@ -1245,6 +1259,12 @@ export function AppProvider({ children }) {
         setIsPro(prev => prev !== active ? active : prev);
         setSubscriptionStatus(prev => prev !== (data.status || 'free').toUpperCase() ? (data.status || 'free').toUpperCase() : prev);
         setSubscriptionPlan(prev => prev !== (data.plan || 'free') ? (data.plan || 'free') : prev);
+
+        if (data.subscriptionDetails) {
+          setSubscriptionDetails(data.subscriptionDetails);
+        } else {
+          setSubscriptionDetails(null);
+        }
 
         if (data.churn) {
           setChurnScore(prev => prev !== data.churn.score ? data.churn.score : prev);
@@ -1276,6 +1296,7 @@ export function AppProvider({ children }) {
       setIsPro(false);
       setSubscriptionStatus('free');
       setSubscriptionPlan('free');
+      setSubscriptionDetails(null);
       setIsAccessChecked(false);
       if (typeof window !== 'undefined') {
         localStorage.removeItem('flowday_access_checked');
@@ -1562,6 +1583,9 @@ export function AppProvider({ children }) {
           return;
         }
 
+        // Lock síncrono imediato no ref para evitar unlocks concorrentes durante a chamada de rede abaixo
+        newlyUnlocked.forEach((a) => unlockedKeysRef.current.add(a.key));
+
         try {
           const { error } = await achievementsService.unlock(
             currentUser.id,
@@ -1695,8 +1719,8 @@ export function AppProvider({ children }) {
   // TASKS CRUD
   // ═══════════════════════════════════════════════════════════════════════════
   const resetAchievementsIfEmpty = useCallback(async (userId, updatedTasks, updatedGoals) => {
-    const activeTasks = updatedTasks.filter(t => !t.deletedAt);
-    const activeGoals = updatedGoals.filter(g => !g.deletedAt);
+    const activeTasks = updatedTasks.filter(t => !t.deletedAt && !t.deleted_at);
+    const activeGoals = updatedGoals.filter(g => !g.deletedAt && !g.deleted_at);
     if (activeTasks.length === 0 && activeGoals.length === 0) {
       console.log('[AppContext] Limpeza total de tarefas e objetivos detectada. Resetando conquistas.');
       try {
@@ -1901,41 +1925,45 @@ export function AppProvider({ children }) {
   // Exclusão em lote de tarefas concluídas (soft delete com undo em 5s)
   const handleBulkDeleteCompleted = useCallback(async () => {
     if (!currentUser?.id) return;
-    const completedTasks = tasks.filter(t => t.completed && !t.deletedAt);
+    const completedTasks = tasks.filter(t => t.completed && !t.deletedAt && !t.deleted_at);
     if (completedTasks.length === 0) return;
 
     const nowIso = new Date().toISOString();
     const ids = completedTasks.map(t => t.id);
 
     // 1. Soft delete imediato na UI
-    setTasks(prev => prev.map(t => ids.includes(t.id) ? { ...t, deletedAt: nowIso } : t));
+    setTasks(prev => {
+      const updated = prev.map(t => ids.includes(t.id) ? { ...t, deletedAt: nowIso, deleted_at: nowIso } : t);
+      if (currentUser.isDemo) {
+        localStorage.setItem(`flowday_demo_tasks_${currentUser.id}`, JSON.stringify(updated));
+      }
+      return updated;
+    });
 
     // 2. Cancela qualquer undo ativo anterior para não conflitar
     if (undoAction) clearTimeout(undoAction.timerId);
 
     // 3. Executa a deleção no banco imediatamente
-    if (currentUser.isDemo) {
-      const updatedList = tasks.filter(t => !ids.includes(t.id));
-      const updatedGT = goalTasks.filter(gt => !ids.includes(gt.task_id));
-      setTasks(updatedList);
-      setGoalTasks(updatedGT);
-      localStorage.setItem(`flowday_demo_tasks_${currentUser.id}`, JSON.stringify(updatedList));
-      localStorage.setItem(`flowday_demo_goals_${currentUser.id}`, JSON.stringify({ goals, goalTasks: updatedGT }));
-      logEvent('bulk_tasks_deleted', { count: ids.length });
-    } else {
+    if (!currentUser.isDemo) {
       Promise.all(ids.map(id => tasksService.delete(currentUser.id, id))).then(() => {
         logEvent('bulk_tasks_deleted', { count: ids.length });
       });
+    } else {
+      logEvent('bulk_tasks_deleted', { count: ids.length });
     }
 
     // 4. Agenda a expiração do undo (3 segundos)
     const timerId = setTimeout(() => {
       setUndoAction(null);
-      const finalTasks = tasks.filter(t => !ids.includes(t.id));
-      if (!currentUser.isDemo) {
-        setTasks(finalTasks);
-      }
-      resetAchievementsIfEmpty(currentUser.id, finalTasks, goals);
+      setTasks(currentTasks => {
+        setGoals(currentGoals => {
+          const activeTasks = currentTasks.filter(t => !t.deletedAt && !t.deleted_at);
+          const activeGoals = currentGoals.filter(g => !g.deletedAt && !g.deleted_at);
+          resetAchievementsIfEmpty(currentUser.id, activeTasks, activeGoals);
+          return currentGoals;
+        });
+        return currentTasks;
+      });
     }, 3000);
 
     // 5. Undo action para lote (restaura todos)
@@ -1943,7 +1971,7 @@ export function AppProvider({ children }) {
       type: 'bulk_task',
       ids,
       timerId,
-      items: completedTasks,
+      items: completedTasks
     });
 
     return completedTasks.length;
@@ -1956,10 +1984,10 @@ export function AppProvider({ children }) {
     let activeIds = [];
 
     setTasks(prev => {
-      activeIds = prev.filter(t => !t.deletedAt).map(t => t.id);
+      activeIds = prev.filter(t => !t.deletedAt && !t.deleted_at).map(t => t.id);
       if (activeIds.length === 0) return prev;
 
-      const updatedList = prev.map(t => activeIds.includes(t.id) ? { ...t, deletedAt: nowIso } : t);
+      const updatedList = prev.map(t => activeIds.includes(t.id) ? { ...t, deletedAt: nowIso, deleted_at: nowIso } : t);
       if (currentUser.isDemo) {
         localStorage.setItem(`flowday_demo_tasks_${currentUser.id}`, JSON.stringify(updatedList));
       } else {
@@ -1967,12 +1995,15 @@ export function AppProvider({ children }) {
           logEvent('all_tasks_deleted', { count: activeIds.length });
         }).catch(err => console.error('Error batch deleting tasks:', err));
       }
+      const activeTasks = updatedList.filter(t => !t.deletedAt && !t.deleted_at);
+      const activeGoals = goals.filter(g => !g.deletedAt && !g.deleted_at);
+      resetAchievementsIfEmpty(currentUser.id, activeTasks, activeGoals);
       return updatedList;
     });
 
     if (undoAction?.timerId) clearTimeout(undoAction.timerId);
     setUndoAction(null);
-  }, [currentUser, undoAction, logEvent]);
+  }, [currentUser, undoAction, logEvent, goals, resetAchievementsIfEmpty]);
 
   const handleResetAllData = useCallback(async () => {
     if (!currentUser?.id) return;
@@ -2037,37 +2068,6 @@ export function AppProvider({ children }) {
           task_title: task.title,
           ts: new Date().toISOString(),
         });
-      }
-
-      // --- Auto-complete Goal Check ---
-      const taskGoalLinks = goalTasks.filter(gt => gt.task_id === id);
-      for (const link of taskGoalLinks) {
-        const goalId = link.goal_id;
-        const goalObj = goals.find(g => g.id === goalId);
-        if (goalObj && goalObj.status === 'active') {
-          const linkedIds = goalTasks.filter(gt => gt.goal_id === goalId).map(gt => gt.task_id);
-          const linkedTasks = tasks.filter(t => linkedIds.includes(t.id));
-          const allCompleted = linkedTasks.every(t => t.id === id ? next : t.completed);
-          if (allCompleted) {
-            console.log('[AppContext] Auto-completing goal:', goalId);
-            setGoals(prev => prev.map(g => g.id === goalId ? { ...g, status: 'completed' } : g));
-            if (!currentUser.isDemo) {
-              goalsService.update(currentUser.id, goalId, { status: 'completed' }).catch(err => {
-                console.error('[AppContext] Error auto-completing goal:', err);
-              });
-            } else {
-              const demoGoalsKey = `flowday_demo_goals_${currentUser.id}`;
-              const storedData = localStorage.getItem(demoGoalsKey);
-              if (storedData) {
-                const parsed = JSON.parse(storedData);
-                parsed.goals = parsed.goals.map(g => g.id === goalId ? { ...g, status: 'completed' } : g);
-                localStorage.setItem(demoGoalsKey, JSON.stringify(parsed));
-              }
-            }
-            logEvent('goal_completed', { goalId, auto: true });
-            incrementCompanionProgress(currentUser.id);
-          }
-        }
       }
     }
 
@@ -2785,41 +2785,45 @@ export function AppProvider({ children }) {
 
   const handleBulkDeleteCompletedGoals = useCallback(async () => {
     if (!currentUser?.id) return;
-    const completedGoals = goals.filter(g => g.status === 'completed' && !g.deletedAt);
+    const completedGoals = goals.filter(g => g.status === 'completed' && !g.deletedAt && !g.deleted_at);
     if (completedGoals.length === 0) return;
 
     const nowIso = new Date().toISOString();
     const ids = completedGoals.map(g => g.id);
 
     // 1. Soft delete imediato na UI
-    setGoals(prev => prev.map(g => ids.includes(g.id) ? { ...g, deletedAt: nowIso } : g));
+    setGoals(prev => {
+      const updated = prev.map(g => ids.includes(g.id) ? { ...g, deletedAt: nowIso, deleted_at: nowIso } : g);
+      if (currentUser.isDemo) {
+        localStorage.setItem(`flowday_demo_goals_${currentUser.id}`, JSON.stringify({ goals: updated, goalTasks }));
+      }
+      return updated;
+    });
 
     // 2. Cancela qualquer undo ativo anterior para não conflitar
     if (undoAction) clearTimeout(undoAction.timerId);
 
     // 3. Executa a deleção no banco imediatamente
-    if (currentUser.isDemo) {
-      const mockGoals = goals.filter(g => !ids.includes(g.id));
-      const updatedGT = goalTasks.filter(gt => !ids.includes(gt.goal_id));
-      setGoals(mockGoals);
-      setGoalTasks(updatedGT);
-      localStorage.setItem(`flowday_demo_goals_${currentUser.id}`, JSON.stringify({ goals: mockGoals, goalTasks: updatedGT }));
-      logEvent('bulk_goals_deleted', { count: ids.length });
-    } else {
+    if (!currentUser.isDemo) {
       Promise.all(ids.map(id => goalsService.delete(currentUser.id, id))).then(() => {
         logEvent('bulk_goals_deleted', { count: ids.length });
       });
+    } else {
+      logEvent('bulk_goals_deleted', { count: ids.length });
     }
 
     // 4. Agenda a expiração do undo (3 segundos)
     const timerId = setTimeout(() => {
       setUndoAction(null);
-      const finalGoals = goals.filter(g => !ids.includes(g.id));
-      if (!currentUser.isDemo) {
-        setGoals(finalGoals);
-        setGoalTasks(prev => prev.filter(gt => !ids.includes(gt.goal_id)));
-      }
-      resetAchievementsIfEmpty(currentUser.id, tasks, finalGoals);
+      setGoals(currentGoals => {
+        setTasks(currentTasks => {
+          const activeTasks = currentTasks.filter(t => !t.deletedAt && !t.deleted_at);
+          const activeGoals = currentGoals.filter(g => !g.deletedAt && !g.deleted_at);
+          resetAchievementsIfEmpty(currentUser.id, activeTasks, activeGoals);
+          return currentTasks;
+        });
+        return currentGoals;
+      });
     }, 3000);
 
     // 5. Ativa o Undo
@@ -2833,39 +2837,45 @@ export function AppProvider({ children }) {
 
   const handleDeleteAllGoals = useCallback(async () => {
     if (!currentUser?.id) return;
-    const activeGoals = goals.filter(g => !g.deletedAt);
+    const activeGoals = goals.filter(g => !g.deletedAt && !g.deleted_at);
     if (activeGoals.length === 0) return;
 
     const nowIso = new Date().toISOString();
     const ids = activeGoals.map(g => g.id);
 
     // 1. Soft delete imediato na UI
-    setGoals(prev => prev.map(g => ids.includes(g.id) ? { ...g, deletedAt: nowIso } : g));
+    setGoals(prev => {
+      const updated = prev.map(g => ids.includes(g.id) ? { ...g, deletedAt: nowIso, deleted_at: nowIso } : g);
+      if (currentUser.isDemo) {
+        localStorage.setItem(`flowday_demo_goals_${currentUser.id}`, JSON.stringify({ goals: updated, goalTasks }));
+      }
+      return updated;
+    });
 
     // 2. Cancela qualquer undo ativo anterior para não conflitar
     if (undoAction) clearTimeout(undoAction.timerId);
 
     // 3. Executa a deleção no banco imediatamente
-    if (currentUser.isDemo) {
-      setGoals([]);
-      setGoalTasks([]);
-      localStorage.setItem(`flowday_demo_goals_${currentUser.id}`, JSON.stringify({ goals: [], goalTasks: [] }));
-      logEvent('all_goals_deleted', { count: ids.length });
-    } else {
+    if (!currentUser.isDemo) {
       Promise.all(ids.map(id => goalsService.delete(currentUser.id, id))).then(() => {
         logEvent('all_goals_deleted', { count: ids.length });
       });
+    } else {
+      logEvent('all_goals_deleted', { count: ids.length });
     }
 
     // 4. Agenda a expiração do undo (3 segundos)
     const timerId = setTimeout(() => {
       setUndoAction(null);
-      const finalGoals = goals.filter(g => !ids.includes(g.id));
-      if (!currentUser.isDemo) {
-        setGoals(finalGoals);
-        setGoalTasks(prev => prev.filter(gt => !ids.includes(gt.goal_id)));
-      }
-      resetAchievementsIfEmpty(currentUser.id, tasks, finalGoals);
+      setGoals(currentGoals => {
+        setTasks(currentTasks => {
+          const activeTasks = currentTasks.filter(t => !t.deletedAt && !t.deleted_at);
+          const activeGoals = currentGoals.filter(g => !g.deletedAt && !g.deleted_at);
+          resetAchievementsIfEmpty(currentUser.id, activeTasks, activeGoals);
+          return currentTasks;
+        });
+        return currentGoals;
+      });
     }, 3000);
 
     // 5. Ativa o Undo
@@ -3082,6 +3092,20 @@ export function AppProvider({ children }) {
       loading: habitsLoading,
       addHabit: async (habitData) => {
         if (!currentUser?.id) return null;
+        if (currentUser.isDemo) {
+          const demoId = 'dh_' + Date.now();
+          const newHabit = {
+            id: demoId,
+            user_id: currentUser.id,
+            ...habitData,
+            created_at: new Date().toISOString()
+          };
+          const nextHabits = [newHabit, ...habits];
+          setHabits(nextHabits);
+          localStorage.setItem(`flowday_demo_habits_${currentUser.id}`, JSON.stringify({ habits: nextHabits, habitLogs }));
+          logEvent('habit_created', { title: habitData.title });
+          return newHabit;
+        }
         const { data } = await habitsService.create(currentUser.id, habitData);
         if (data) {
           setHabits((prev) => [data, ...prev]);
@@ -3091,6 +3115,13 @@ export function AppProvider({ children }) {
       },
       updateHabit: async (id, updates) => {
         if (!currentUser?.id) return null;
+        if (currentUser.isDemo) {
+          const nextHabits = habits.map((h) => h.id === id ? { ...h, ...updates } : h);
+          setHabits(nextHabits);
+          localStorage.setItem(`flowday_demo_habits_${currentUser.id}`, JSON.stringify({ habits: nextHabits, habitLogs }));
+          logEvent('habit_updated', { habit_id: id });
+          return nextHabits.find((h) => h.id === id) || null;
+        }
         const { data } = await habitsService.update(currentUser.id, id, updates);
         if (data) {
           setHabits((prev) => prev.map((h) => h.id === id ? data : h));
@@ -3100,6 +3131,15 @@ export function AppProvider({ children }) {
       },
       deleteHabit: async (id) => {
         if (!currentUser?.id) return false;
+        if (currentUser.isDemo) {
+          const nextHabits = habits.filter((h) => h.id !== id);
+          const nextLogs = habitLogs.filter((l) => l.habit_id !== id);
+          setHabits(nextHabits);
+          setHabitLogs(nextLogs);
+          localStorage.setItem(`flowday_demo_habits_${currentUser.id}`, JSON.stringify({ habits: nextHabits, habitLogs: nextLogs }));
+          logEvent('habit_deleted', { habit_id: id });
+          return true;
+        }
         const { error } = await habitsService.delete(currentUser.id, id);
         if (!error) {
           setHabits((prev) => prev.filter((h) => h.id !== id));
@@ -3112,6 +3152,22 @@ export function AppProvider({ children }) {
         if (!currentUser?.id) return false;
         const existing = habitLogs.find((l) => l.habit_id === habitId && l.completed_date === dateStr);
         
+        if (currentUser.isDemo) {
+          let nextLogs;
+          if (existing) {
+            nextLogs = habitLogs.filter((l) => !(l.habit_id === habitId && l.completed_date === dateStr));
+            setHabitLogs(nextLogs);
+          } else {
+            const tempId = 'dl_' + Date.now();
+            const tempLog = { id: tempId, habit_id: habitId, completed_date: dateStr, user_id: currentUser.id, created_at: new Date().toISOString() };
+            nextLogs = [...habitLogs, tempLog];
+            setHabitLogs(nextLogs);
+            logEvent('habit_completed', { habit_id: habitId, date: dateStr });
+          }
+          localStorage.setItem(`flowday_demo_habits_${currentUser.id}`, JSON.stringify({ habits, habitLogs: nextLogs }));
+          return true;
+        }
+
         // Optimistic UI update
         const tempId = 'temp_hlog_' + Date.now();
         if (existing) {
@@ -3244,36 +3300,48 @@ export function AppProvider({ children }) {
 
   const handleRestoreTask = useCallback(async (id) => {
     if (!currentUser?.id) return;
-    setTasks(prev => prev.map(t => t.id === id ? { ...t, deletedAt: null } : t));
+    setTasks(prev => {
+      const updated = prev.map(t => t.id === id ? { ...t, deletedAt: null, deleted_at: null } : t);
+      if (currentUser.isDemo) {
+        localStorage.setItem(`flowday_demo_tasks_${currentUser.id}`, JSON.stringify(updated));
+      }
+      return updated;
+    });
 
-    if (currentUser.isDemo) {
-      const updated = tasks.map(t => t.id === id ? { ...t, deletedAt: null } : t);
-      localStorage.setItem(`flowday_demo_tasks_${currentUser.id}`, JSON.stringify(updated));
-      return;
-    }
+    if (currentUser.isDemo) return;
     await tasksService.restore(currentUser.id, id);
     addNotification('system', 'Tarefa restaurada', 'A tarefa foi movida de volta à lista ativa.');
-  }, [currentUser, tasks, addNotification]);
+  }, [currentUser, addNotification]);
 
   const handleDeleteTaskPermanent = useCallback(async (id, force = false) => {
     if (!currentUser?.id) return;
 
     const proceed = async () => {
-      const nextTasks = tasks.filter(t => t.id !== id);
-      const nextGoalTasks = goalTasks.filter(gt => gt.task_id !== id);
+      let finalTasks = [];
+      setTasks(prev => {
+        finalTasks = prev.filter(t => t.id !== id);
+        if (currentUser.isDemo) {
+          localStorage.setItem(`flowday_demo_tasks_${currentUser.id}`, JSON.stringify(finalTasks));
+        }
+        return finalTasks;
+      });
+      setGoalTasks(prev => {
+        const nextGoalTasks = prev.filter(gt => gt.task_id !== id);
+        if (currentUser.isDemo) {
+          localStorage.setItem(`flowday_demo_goals_${currentUser.id}`, JSON.stringify({ goals, goalTasks: nextGoalTasks }));
+        }
+        return nextGoalTasks;
+      });
 
-      setTasks(nextTasks);
-      setGoalTasks(nextGoalTasks);
-
-      if (currentUser.isDemo) {
-        localStorage.setItem(`flowday_demo_tasks_${currentUser.id}`, JSON.stringify(nextTasks));
-        localStorage.setItem(`flowday_demo_goals_${currentUser.id}`, JSON.stringify({ goals, goalTasks: nextGoalTasks }));
-      } else {
+      if (!currentUser.isDemo) {
         await tasksService.deletePermanent(currentUser.id, id);
         addNotification('system', 'Tarefa excluída', 'A tarefa foi removida em definitivo.');
       }
 
-      resetAchievementsIfEmpty(currentUser.id, nextTasks, goals);
+      setGoals(currentGoals => {
+        resetAchievementsIfEmpty(currentUser.id, finalTasks, currentGoals);
+        return currentGoals;
+      });
     };
 
     if (force) {
@@ -3285,38 +3353,52 @@ export function AppProvider({ children }) {
         proceed
       );
     }
-  }, [currentUser, tasks, goalTasks, goals, addNotification, openCustomConfirm, resetAchievementsIfEmpty]);
+  }, [currentUser, goals, addNotification, openCustomConfirm, resetAchievementsIfEmpty]);
 
   const handleRestoreGoal = useCallback(async (id) => {
-    setGoals(prev => prev.map(g => g.id === id ? { ...g, deletedAt: null, deleted_at: null } : g));
+    if (!currentUser?.id) return;
+    setGoals(prev => {
+      const updated = prev.map(g => g.id === id ? { ...g, deletedAt: null, deleted_at: null } : g);
+      if (currentUser.isDemo) {
+        localStorage.setItem(`flowday_demo_goals_${currentUser.id}`, JSON.stringify({ goals: updated, goalTasks }));
+      }
+      return updated;
+    });
 
-    if (currentUser.isDemo) {
-      const mockGoals = goals.map(g => g.id === id ? { ...g, deletedAt: null, deleted_at: null } : g);
-      localStorage.setItem(`flowday_demo_goals_${currentUser.id}`, JSON.stringify({ goals: mockGoals, goalTasks }));
-      return;
-    }
+    if (currentUser.isDemo) return;
     await goalsService.restore(currentUser.id, id);
     addNotification('system', 'Objetivo restaurado', 'O objetivo foi restaurado com sucesso.');
-  }, [currentUser, goals, goalTasks, addNotification]);
+  }, [currentUser, goalTasks, addNotification]);
 
   const handleDeleteGoalPermanent = useCallback(async (id, force = false) => {
     if (!currentUser?.id) return;
 
     const proceed = async () => {
-      const nextGoals = goals.filter(g => g.id !== id);
-      const nextGoalTasks = goalTasks.filter(gt => gt.goal_id !== id);
+      let finalGoals = [];
+      setGoals(prev => {
+        finalGoals = prev.filter(g => g.id !== id);
+        if (currentUser.isDemo) {
+          localStorage.setItem(`flowday_demo_goals_${currentUser.id}`, JSON.stringify({ goals: finalGoals, goalTasks }));
+        }
+        return finalGoals;
+      });
+      setGoalTasks(prev => {
+        const nextGoalTasks = prev.filter(gt => gt.goal_id !== id);
+        if (currentUser.isDemo) {
+          localStorage.setItem(`flowday_demo_goals_${currentUser.id}`, JSON.stringify({ goals: finalGoals, goalTasks: nextGoalTasks }));
+        }
+        return nextGoalTasks;
+      });
 
-      setGoals(nextGoals);
-      setGoalTasks(nextGoalTasks);
-
-      if (currentUser.isDemo) {
-        localStorage.setItem(`flowday_demo_goals_${currentUser.id}`, JSON.stringify({ goals: nextGoals, goalTasks: nextGoalTasks }));
-      } else {
+      if (!currentUser.isDemo) {
         await goalsService.deletePermanent(currentUser.id, id);
         addNotification('system', 'Objetivo excluído', 'O objetivo foi removido em definitivo.');
       }
 
-      resetAchievementsIfEmpty(currentUser.id, tasks, nextGoals);
+      setTasks(currentTasks => {
+        resetAchievementsIfEmpty(currentUser.id, currentTasks, finalGoals);
+        return currentTasks;
+      });
     };
 
     if (force) {
@@ -3328,7 +3410,7 @@ export function AppProvider({ children }) {
         proceed
       );
     }
-  }, [currentUser, goals, goalTasks, tasks, addNotification, openCustomConfirm, resetAchievementsIfEmpty]);
+  }, [currentUser, addNotification, openCustomConfirm, resetAchievementsIfEmpty]);
 
   const handleEmptyTrash = useCallback(async () => {
     if (!currentUser?.id) return;
@@ -3701,6 +3783,7 @@ export function AppProvider({ children }) {
     paywallSource,
     subscriptionStatus,
     subscriptionPlan,
+    subscriptionDetails,
     hiddenTasksCount,
     hiddenGoalsCount,
     openPaywall,

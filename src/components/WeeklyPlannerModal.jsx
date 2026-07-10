@@ -71,11 +71,11 @@ export default function WeeklyPlannerModal({ isOpen, onClose, tasks, onUpdateTas
 
   const [selectedTask, setSelectedTask] = useState(null);
 
-  const pendingTasks = tasks.filter(t => !t.completed);
+  const pendingTasks = tasks.filter(t => !t.completed && !t.deletedAt && !t.deleted_at);
   const unscheduledTasks = pendingTasks.filter(t => {
     return !t.dueDate || t.dueDate === '' || t.dueDate === 'null' || t.dueDate === 'undefined';
   });
-  const activeGoals = goals.filter(g => g.status === 'active');
+  const activeGoals = goals.filter(g => g.status === 'active' && !g.deletedAt && !g.deleted_at);
   
   // Próximos 7 dias (computados no fuso local para evitar timezone shifts)
   const days = [];

@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Play, Pause, RotateCcw, CheckCircle2, Moon, Sun, Volume2, Settings, VolumeX, Music, Clock, Target, Coffee } from 'lucide-react';
+import { Play, Pause, RotateCcw, CheckCircle2, Moon, Sun, Volume2, Settings, VolumeX, Music, Clock, Target, Coffee, Award } from 'lucide-react';
 import { useAppContext, parseTaskMetadata } from '../contexts/AppContext';
-import { MFIcon } from './MFIcon';
+import MFIcon from './MFIcon';
+import { EVOLUTION_CATEGORIES } from '../config/evolutionConfig';
 
 export default function FocusView() {
   const {
@@ -21,7 +22,8 @@ export default function FocusView() {
     audioBlocked,
     setAudioBlocked,
     openCustomAlert,
-    setActiveTab
+    setActiveTab,
+    growthPet
   } = useAppContext();
 
   const pendingTasks = tasks.filter(t => !t.completed);
@@ -279,6 +281,56 @@ export default function FocusView() {
   const strokeDashoffset = 283 - (283 * percentage);
 
   const activeTask = pendingTasks.find(t => t.id === selectedTaskId);
+  
+  const relation = activeTask ? goalTasks.find(gt => gt.task_id === activeTask.id) : null;
+  const goalObj = relation ? goals.find(g => g.id === relation.goal_id) : null;
+  
+  const estimatedMinutes = activeTask 
+    ? (activeTask.priority === 'Alta' ? 45 : activeTask.priority === 'Baixa' ? 15 : 25)
+    : 25;
+    
+  const estimatedXP = activeTask
+    ? (activeTask.priority === 'Alta' ? 50 : activeTask.priority === 'Baixa' ? 15 : 30)
+    : 30;
+    
+  const petObj = EVOLUTION_CATEGORIES[growthPet || 'plant'] || EVOLUTION_CATEGORIES.plant;
+  const petName = petObj ? petObj.name : 'Companheiro';
+  
+  let impactText = 'Constância diária';
+  if (activeTask) {
+    if (activeTask.priority === 'Alta') {
+      impactText = `Acelera ${petName}`;
+    } else if (activeTask.priority === 'Média') {
+      impactText = `Nutre ${petName}`;
+    } else {
+      impactText = 'Manutenção diária';
+    }
+  }
+
+  const contextDescription = activeTask ? (() => {
+    let priorityText = '';
+    if (activeTask.priority === 'Alta') {
+      priorityText = 'Esta é uma tarefa de alta prioridade, exigindo foco absoluto.';
+    } else if (activeTask.priority === 'Baixa') {
+      priorityText = 'Esta tarefa tem prioridade baixa, ideal para progresso incremental.';
+    } else {
+      priorityText = 'Uma tarefa de prioridade média para manter seu ritmo produtivo.';
+    }
+
+    let categoryText = '';
+    if (goalObj) {
+      categoryText = ` Conectada ao objetivo "${goalObj.title}".`;
+    } else if (activeTask.category) {
+      categoryText = ` Alinhada à sua categoria de "${activeTask.category}".`;
+    }
+
+    let actionText = ' Prepare seu ambiente e inicie o cronômetro para começar!';
+    if (activeTask.priority === 'Alta') {
+      actionText = ' Desative as notificações e dedique sua energia total.';
+    }
+
+    return `${priorityText}${categoryText}${actionText}`;
+  })() : '';
 
   const ambientSounds = [
     { value: 'none',            label: 'Nenhum', emoji: '🔇' },
@@ -489,35 +541,50 @@ export default function FocusView() {
                     flexDirection: 'column',
                     gap: '12px'
                   }}>
-                    <span style={{ fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-light)', borderBottom: '1px solid var(--border-light)', paddingBottom: '6px', display: 'block' }}>
-                      📋 Briefing da Missão
-                    </span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-light)', borderBottom: '1px solid var(--border-light)', paddingBottom: '6px' }}>
+                      <MFIcon name="insights" size={14} color="var(--text-light)" />
+                      <span>Briefing da Missão</span>
+                    </div>
+
+                    <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-muted)', lineHeight: '1.4', fontStyle: 'italic' }}>
+                      {contextDescription}
+                    </p>
                     
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '12.5px' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <span style={{ color: 'var(--text-light)' }}>🎯 Objetivo Relacionado:</span>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-light)' }}>
+                          <MFIcon name="objectives" size={14} color="var(--text-light)" />
+                          <span>Objetivo Relacionado:</span>
+                        </div>
                         <strong style={{ color: 'var(--text-main)' }}>
-                          {(() => {
-                            const relation = goalTasks.find(gt => gt.task_id === activeTask.id);
-                            const goalObj = relation ? goals.find(g => g.id === relation.goal_id) : null;
-                            return goalObj ? goalObj.title : 'Geral (Nenhum)';
-                          })()}
+                          {goalObj ? goalObj.title : 'Geral (Nenhum)'}
                         </strong>
                       </div>
 
-                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <span style={{ color: 'var(--text-light)' }}>⏱️ Tempo Estimado:</span>
-                        <strong style={{ color: 'var(--text-main)' }}>{focusTime} minutos</strong>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-light)' }}>
+                          <MFIcon name="focus" size={14} color="var(--text-light)" />
+                          <span>Tempo Estimado:</span>
+                        </div>
+                        <strong style={{ color: 'var(--text-main)' }}>{estimatedMinutes} minutos</strong>
                       </div>
 
-                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <span style={{ color: 'var(--text-light)' }}>⚡ XP Estimado:</span>
-                        <strong style={{ color: 'var(--primary)' }}>+{focusTime} XP</strong>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-light)' }}>
+                          <MFIcon name="bolt" size={14} color="var(--text-light)" />
+                          <span>XP Estimado:</span>
+                        </div>
+                        <strong style={{ color: 'var(--primary)' }}>+{estimatedXP} XP</strong>
                       </div>
 
-                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <span style={{ color: 'var(--text-light)' }}>📈 Impacto na Evolução:</span>
-                        <strong style={{ color: '#10b981' }}>Sequência & Pets</strong>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-light)' }}>
+                          <MFIcon name="evolution" size={14} color="var(--text-light)" />
+                          <span>Impacto na Evolução:</span>
+                        </div>
+                        <strong style={{ color: activeTask.priority === 'Alta' ? '#ec4899' : activeTask.priority === 'Média' ? '#10b981' : '#3b82f6' }}>
+                          {impactText}
+                        </strong>
                       </div>
                     </div>
                   </div>
