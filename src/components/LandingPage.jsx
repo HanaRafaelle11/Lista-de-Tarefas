@@ -106,24 +106,25 @@ export default function LandingPage({ onEnterApp }) {
   const freeFeatures = [
     { text: 'Tarefas e objetivos ilimitados', on: true },
     { text: 'Rastreamento de hábitos diários', on: true },
-    { text: 'Timer Pomodoro integrado', on: true },
-    { text: 'Companheiro virtual básico', on: true },
-    { text: 'Coach IA básico (insights semanais)', on: true },
-    { text: 'Relatórios de progresso essenciais', on: true },
-    { text: 'Coach IA ilimitado', on: false },
-    { text: 'Relatórios de foco avançados', on: false }
+    { text: 'Companheiro virtual básico (até Nível 2)', on: true },
+    { text: 'Introdução do Coach IA grátis', on: true },
+    { text: 'Timer Pomodoro (até 25 minutos)', on: true },
+    { text: 'Classificador IA (visualização)', on: true },
+    { text: 'Evoluções completas (Níveis 3 e 4)', on: false },
+    { text: 'Google Calendar integrado', on: false },
+    { text: 'Exportação em PDF, CSV ou PNG', on: false }
   ];
 
   const proFeatures = [
     'Tudo do plano Gratuito',
-    'Coach IA ilimitado',
-    'Insights diários personalizados',
-    'Relatórios de foco avançados',
-    'Análises preditivas de produtividade',
+    'Análise completa do Coach IA',
+    'Evolução de Pet e Plantas ilimitada',
+    'Classificador Inteligente IA ativo',
+    'Sincronização com Google Calendar',
+    'Foco Sem Limites (Pomodoro > 25min)',
+    'Exportação estruturada (PDF, CSV, PNG)',
     'Histórico de evolução completo',
-    'Companheiros e avatares exclusivos',
-    'Temas exclusivos (Dark/Glow Premium)',
-    'Acesso antecipado a novos recursos'
+    'Análises avançadas e gráficos Pro'
   ];
 
   const showcaseTabs = [

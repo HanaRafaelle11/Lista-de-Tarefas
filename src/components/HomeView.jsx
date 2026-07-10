@@ -142,6 +142,7 @@ export default function HomeView() {
     isInitializing,
     handleUpdateTask,
     isPro,
+    openPaywall,
     handleToggleComplete,
     handleAddTask,
     handleAddGoal,
@@ -484,12 +485,16 @@ export default function HomeView() {
   const weeklyTotal = ritmoSemanal.reduce((acc, d) => acc + d.count, 0);
   const currentPetData = EVOLUTION_CATEGORIES[viewedPet] || EVOLUTION_CATEGORIES.plant;
   const hasNoItems = activeTasksList.length === 0 && activeGoalsList.length === 0 && habits.length === 0;
-  const stageIndex = hasNoItems ? 0 : getEvolutionStage({
+  const calculatedStageIndex = hasNoItems ? 0 : getEvolutionStage({
     weeklyTotal,
     currentStreak,
     completedGoalsCount: viewedPetCompletedGoals,
     consistencyScore
   }, currentPetData.stages.length);
+  
+  // Free users are capped at stage index 1 (level 2)
+  const stageIndex = !isPro ? Math.min(1, calculatedStageIndex) : calculatedStageIndex;
+  const nextStageIsBlocked = !isPro && calculatedStageIndex > 1;
   const currentStage = currentPetData.stages[stageIndex];
 
   useEffect(() => {
@@ -595,63 +600,147 @@ export default function HomeView() {
           pointerEvents: 'none'
         }} />
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
           <Sparkles size={16} style={{ color: 'var(--primary)' }} />
-          <h4 style={{ margin: 0, fontSize: '14.5px', fontWeight: '800', color: 'var(--text-main)' }}>Conte seu objetivo ou descreva um sonho</h4>
+          <h4 style={{ margin: 0, fontSize: '14.5px', fontWeight: '800', color: 'var(--text-main)' }}>Classificador Inteligente</h4>
           <span style={{ fontSize: '10px', fontWeight: '700', color: 'var(--text-light)', backgroundColor: 'var(--primary-light)', padding: '2px 8px', borderRadius: '12px', border: '1px solid rgba(94, 96, 206, 0.1)' }}>
             Classificador IA
           </span>
         </div>
 
-        <form onSubmit={handleQuickSubmit} style={{ display: 'flex', gap: '12px' }}>
-          <textarea 
-            value={quickInput}
-            onChange={(e) => setQuickInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                handleQuickSubmit(e);
-              }
-            }}
-            placeholder="Conte seu objetivo ou descreva um sonho. A IA do MyFlowDay cria seu plano..."
-            rows={2}
-            style={{
-              flex: 1,
-              padding: '12px 16px',
-              borderRadius: 'var(--radius-md)',
-              border: '1px solid var(--border-medium)',
-              backgroundColor: 'var(--bg-app)',
-              color: 'var(--text-main)',
-              fontSize: '13.5px',
-              fontWeight: '550',
-              outline: 'none',
-              transition: 'border-color 0.2s',
-              resize: 'none',
-              fontFamily: 'inherit',
-              lineHeight: '1.4'
-            }}
-          />
-          <button 
-            type="submit"
-            className="btn-primary-glow" 
+        <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: '0 0 12px 0', lineHeight: '1.4' }}>
+          A IA do MyFlowDay analisa o texto e decide se cria uma tarefa rápida para hoje ou se abre o planejador detalhado de metas.
+        </p>
+
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px 16px', marginBottom: '16px', fontSize: '11.5px', color: 'var(--text-light)' }}>
+          <span>✓ Classificação em Tarefa ou Objetivo</span>
+          <span>✓ Mapeamento automático de categoria</span>
+          <span>✓ Planejamento ágil e simplificado</span>
+        </div>
+
+        <div style={{ position: 'relative' }}>
+          <form 
+            onSubmit={handleQuickSubmit} 
             style={{ 
-              padding: '10px 24px', 
-              fontSize: '13px', 
-              fontWeight: '700',
-              borderRadius: 'var(--radius-md)',
-              border: 'none',
-              backgroundColor: 'var(--primary)',
-              color: '#fff',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px'
+              display: 'flex', 
+              gap: '12px',
+              filter: !isPro ? 'blur(5px)' : 'none',
+              pointerEvents: !isPro ? 'none' : 'auto',
+              userSelect: !isPro ? 'none' : 'auto'
             }}
           >
-            <Plus size={14} />
-            <span>Adicionar</span>
-          </button>
-        </form>
+            <textarea 
+              value={quickInput}
+              onChange={(e) => setQuickInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  handleQuickSubmit(e);
+                }
+              }}
+              placeholder="Conte seu objetivo ou descreva um sonho. A IA do MyFlowDay cria seu plano..."
+              rows={2}
+              style={{
+                flex: 1,
+                padding: '12px 16px',
+                borderRadius: 'var(--radius-md)',
+                border: '1px solid var(--border-medium)',
+                backgroundColor: 'var(--bg-app)',
+                color: 'var(--text-main)',
+                fontSize: '13.5px',
+                fontWeight: '550',
+                outline: 'none',
+                transition: 'border-color 0.2s',
+                resize: 'none',
+                fontFamily: 'inherit',
+                lineHeight: '1.4'
+              }}
+            />
+            <button 
+              type="submit"
+              className="btn-primary-glow" 
+              style={{ 
+                padding: '10px 24px', 
+                fontSize: '13px', 
+                fontWeight: '700',
+                borderRadius: 'var(--radius-md)',
+                border: 'none',
+                backgroundColor: 'var(--primary)',
+                color: '#fff',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px'
+              }}
+            >
+              <Plus size={14} />
+              <span>Adicionar</span>
+            </button>
+          </form>
+
+          {!isPro && (
+            <div 
+              onClick={() => openPaywall('ai_classifier')}
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                backgroundColor: 'rgba(15, 23, 42, 0.45)',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderRadius: 'var(--radius-md)',
+                cursor: 'pointer',
+                zIndex: 5
+              }}
+            >
+              <div style={{
+                backgroundColor: 'var(--bg-card)',
+                border: '1px solid var(--border-medium)',
+                padding: '16px 20px',
+                borderRadius: 'var(--radius-md)',
+                boxShadow: 'var(--shadow-lg)',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: '8px',
+                textAlign: 'center',
+                maxWidth: '360px'
+              }}>
+                <Lock size={18} style={{ color: 'var(--primary)' }} />
+                <h5 style={{ fontSize: '13.5px', fontWeight: '800', color: 'var(--text-main)', margin: 0 }}>
+                  Classificação Inteligente disponível no Pro
+                </h5>
+                <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: 0, lineHeight: '1.4' }}>
+                  Receba análises inteligentes e classificação automática utilizando IA.
+                </p>
+                <button 
+                  className="btn-primary-glow"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    openPaywall('ai_classifier');
+                  }}
+                  style={{ 
+                    padding: '8px 16px', 
+                    fontSize: '11.5px', 
+                    fontWeight: 'bold',
+                    marginTop: '4px',
+                    cursor: 'pointer',
+                    borderRadius: '6px',
+                    border: 'none',
+                    backgroundColor: 'var(--primary)',
+                    color: '#ffffff'
+                  }}
+                >
+                  Quero o MyFlowDay Pro
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Layout Grid do Dashboard */}
@@ -782,10 +871,47 @@ export default function HomeView() {
               />
             </div>
 
-            {/* Informações de Nível */}
-            <span style={{ fontSize: '11px', fontWeight: '700', padding: '3px 12px', borderRadius: '20px', backgroundColor: `${currentStage.color}15`, color: currentStage.color, border: `1px solid ${currentStage.color}25`, marginBottom: '16px' }}>
-              Nível {getLevelFromCount(viewedPetCompletedGoals)} • {currentStage.title} • Metas: {viewedPetCompletedGoals}
-            </span>
+            {/* Informações de Nível ou Bloqueio Pro */}
+            {nextStageIsBlocked ? (
+              <div style={{
+                marginTop: '4px',
+                marginBottom: '16px',
+                padding: '14px 16px',
+                borderRadius: 'var(--radius-md)',
+                backgroundColor: 'rgba(15, 23, 42, 0.45)',
+                border: '1.5px dashed var(--border-medium)',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: '8px',
+                width: '100%',
+                boxSizing: 'border-box'
+              }}>
+                <span style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <Lock size={13} style={{ color: 'var(--primary)' }} /> Seu companheiro está pronto para evoluir ainda mais.
+                </span>
+                <button 
+                  className="btn-primary-glow"
+                  onClick={() => openPaywall('pet_evolution')}
+                  style={{
+                    padding: '8px 16px',
+                    fontSize: '11.5px',
+                    fontWeight: 'bold',
+                    cursor: 'pointer',
+                    borderRadius: '8px',
+                    border: 'none',
+                    backgroundColor: 'var(--primary)',
+                    color: '#ffffff'
+                  }}
+                >
+                  Desbloquear Evoluções
+                </button>
+              </div>
+            ) : (
+              <span style={{ fontSize: '11px', fontWeight: '700', padding: '3px 12px', borderRadius: '20px', backgroundColor: `${currentStage.color}15`, color: currentStage.color, border: `1px solid ${currentStage.color}25`, marginBottom: '16px' }}>
+                Nível {getLevelFromCount(viewedPetCompletedGoals)} • {currentStage.title} • Metas: {viewedPetCompletedGoals}
+              </span>
+            )}
 
             {/* Consistency Score integrado */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', width: '100%', padding: '12px 16px', borderRadius: 'var(--radius-md)', backgroundColor: 'var(--bg-card-hover)', border: '1px solid var(--border-light)', cursor: 'pointer' }} onClick={() => setShowHealthExplanation(!showHealthExplanation)}>

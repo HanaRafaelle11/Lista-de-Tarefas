@@ -71,12 +71,12 @@ export default function PaywallModal() {
 
   const renderCheckoutForm = () => {
     const features = [
-      { t: "Coach MyFlowDay", d: "Insights profundos de IA baseados em dados reais, melhores ações recomendadas e análises comportamentais." },
-      { t: "Análises Avançadas", d: "Gráficos interativos por categoria, prioridade e consistência no painel de Evolução." },
+      { t: "Coach MyFlowDay Pro", d: "Insights profundos de IA baseados em dados reais, melhores ações recomendadas e análise completa." },
+      { t: "Classificador IA", d: "Classificação automática inteligente de tarefas ou objetivos a partir de descrições livres." },
+      { t: "Evolução do Pet/Plantas", d: "Desbloqueie todas as fases e níveis de evolução (Níveis 3 e 4) de todos os companheiros." },
       { t: "Google Calendar", d: "Sincronização reativa de suas tarefas diretamente com a sua agenda externa do Google." },
       { t: "Exportação de Dados", d: "Exporte seus relatórios estruturados a qualquer momento em PDF, CSV ou imagem PNG." },
-      { t: "Histórico Ilimitado", d: "Elimine a barreira de 30 dias do plano gratuito. Visualize todos os seus dados desde o início." },
-      { t: "Foco Sem Limites", d: "Pomodoro customizável superior a 25 minutos para longas sessões de hiperfoco." }
+      { t: "Histórico e Gráficos", d: "Gráficos Pro de comportamento e fim do limite de 30 dias do plano gratuito." }
     ];
 
     return (

@@ -16,7 +16,14 @@ function formatCoachMessage(message = '', isPro = true, openPaywall = () => {}) 
 
   lines.forEach((line, idx) => {
     const trimmed = line.trim();
-    if (trimmed.startsWith('**Tendência Atual:**') || trimmed.startsWith('**Insights do Mentor:**') || trimmed.startsWith('**Recomendação Prática:**')) {
+    if (
+      trimmed.startsWith('Tendência Atual:') || 
+      trimmed.startsWith('Insights do Mentor:') || 
+      trimmed.startsWith('Recomendação Prática:') ||
+      trimmed.startsWith('**Tendência Atual:**') || 
+      trimmed.startsWith('**Insights do Mentor:**') || 
+      trimmed.startsWith('**Recomendação Prática:**')
+    ) {
       currentGroup = 'pro';
     }
 
@@ -102,15 +109,12 @@ function formatCoachMessage(message = '', isPro = true, openPaywall = () => {}) 
       <div>{freeElements}</div>
       <div style={{ position: 'relative', marginTop: '16px' }}>
         {/* Blurred Content */}
-        <div style={{ filter: 'blur(4px)', opacity: 0.3, pointerEvents: 'none', userSelect: 'none' }}>
+        <div style={{ filter: 'blur(5px)', opacity: 0.25, pointerEvents: 'none', userSelect: 'none' }}>
           {proElements}
         </div>
         {/* Pro Overlay Trigger */}
         <div 
-          onClick={() => {
-            window.history.pushState(null, '', '/checkout');
-            window.dispatchEvent(new Event('popstate'));
-          }}
+          onClick={() => openPaywall('coach_pro_insights')}
           style={{
             position: 'absolute',
             top: 0,
@@ -122,26 +126,47 @@ function formatCoachMessage(message = '', isPro = true, openPaywall = () => {}) 
             alignItems: 'center',
             justifyContent: 'center',
             cursor: 'pointer',
-            backgroundColor: 'rgba(255, 255, 255, 0.02)',
+            backgroundColor: 'rgba(15, 23, 42, 0.65)',
             borderRadius: '8px',
-            padding: '16px'
+            padding: '24px'
           }}
         >
           <div style={{
             backgroundColor: 'var(--bg-card)',
             border: '1px solid var(--border-medium)',
-            padding: '16px 24px',
-            borderRadius: 'var(--radius-md)',
-            boxShadow: 'var(--shadow-md)',
+            padding: '24px',
+            borderRadius: 'var(--radius-lg)',
+            boxShadow: 'var(--shadow-lg)',
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
-            gap: '8px',
-            textAlign: 'center'
+            gap: '12px',
+            textAlign: 'center',
+            maxWidth: '380px'
           }}>
-            <Lock size={18} style={{ color: 'var(--primary)' }} />
-            <span style={{ fontSize: '13.5px', fontWeight: '800', color: 'var(--text-main)' }}>Desbloquear Análise Completa</span>
-            <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Tendências e recomendações acionáveis são recursos Pro</span>
+            <Lock size={20} style={{ color: 'var(--primary)' }} />
+            <h4 style={{ fontSize: '15px', fontWeight: '800', color: 'var(--text-main)', margin: 0 }}>
+              Continue sua análise personalizada
+            </h4>
+            <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0, lineHeight: '1.5' }}>
+              Desbloqueie o Coach IA Pro para acessar recomendações completas e personalizadas.
+            </p>
+            <button 
+              className="btn-primary-glow"
+              onClick={(e) => {
+                e.stopPropagation();
+                openPaywall('coach_pro_insights');
+              }}
+              style={{ 
+                padding: '10px 20px', 
+                fontSize: '13px', 
+                fontWeight: 'bold',
+                marginTop: '8px',
+                cursor: 'pointer'
+              }}
+            >
+              Desbloquear Coach Pro
+            </button>
           </div>
         </div>
       </div>
@@ -484,10 +509,7 @@ export default function CoachView() {
         {/* Upsell box if Free */}
         {!isPro && (
           <div 
-            onClick={() => {
-              window.history.pushState(null, '', '/checkout');
-              window.dispatchEvent(new Event('popstate'));
-            }}
+            onClick={() => openPaywall('coach_bottom_upsell')}
             style={{
               background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.05), rgba(59, 130, 246, 0.05))',
               border: '1px dashed var(--primary)',
