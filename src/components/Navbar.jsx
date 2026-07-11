@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sun, Moon, User, Settings, LogOut } from 'lucide-react';
+import { LogOut } from 'lucide-react';
 import { useAppContext } from '../contexts/AppContext';
 import MFIcon from './MFIcon';
 import DefaultAvatar from './DefaultAvatar';

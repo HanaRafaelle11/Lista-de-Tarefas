@@ -183,7 +183,7 @@ export default function SettingsView() {
         </div>
         
         {isExpanded && (
-          <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px', borderTop: '1px solid var(--border-light)' }}>
+          <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
             {content}
           </div>
         )}
