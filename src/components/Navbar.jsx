@@ -112,15 +112,6 @@ export default function Navbar() {
           {/* Ações com Alinhamento Perfeito */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '10px', height: '100%', flex: 1 }}>
             <button
-              id="tour-nav-settings"
-              onClick={() => setActiveTab('settings')}
-              className="header-btn hide-on-mobile"
-              title="Configurações"
-              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '38px', height: '38px', padding: 0, margin: 0, flexShrink: 0, color: activeTab === 'settings' ? 'var(--primary)' : 'var(--text-muted)' }}
-            >
-              <Settings size={22} strokeWidth={2} className="header-btn-icon" />
-            </button>
-            <button
               onClick={handleLogout}
               className="header-btn hide-on-mobile"
               title="Sair do App"

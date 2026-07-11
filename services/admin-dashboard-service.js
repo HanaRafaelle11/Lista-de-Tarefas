@@ -214,12 +214,19 @@ export const AdminDashboardService = {
 
     // Agrupar eventos de foco (pomodoros), planos semanais, sessões e dias ativos por usuário
     const userActiveDaysMap = new Map();
+    const userLatestEventMap = new Map();
 
     events.forEach(e => {
       if (!e.user_id) return;
       const u = userMasterMap.get(e.user_id);
       if (u) {
         u.total_events = (u.total_events || 0) + 1;
+        
+        // Registrar o evento mais recente (já que o array está ordenado DESC por created_at)
+        if (!userLatestEventMap.has(e.user_id) && e.created_at) {
+          userLatestEventMap.set(e.user_id, e.created_at);
+        }
+        
         // Pomodoros
         if (e.event_type === 'focus_session_completed' || e.event_type === 'pomodoro_completed') {
           u.pomodoros++;
@@ -251,6 +258,16 @@ export const AdminDashboardService = {
       const u = userMasterMap.get(uid);
       if (u) {
         u.active_days = daySet.size;
+      }
+    });
+
+    // Atualizar Último Acesso (last_login) baseado no evento mais recente do usuário
+    userLatestEventMap.forEach((latestEventTime, uid) => {
+      const u = userMasterMap.get(uid);
+      if (u) {
+        if (!u.last_login || latestEventTime > u.last_login) {
+          u.last_login = latestEventTime;
+        }
       }
     });
 
@@ -332,29 +349,87 @@ export const AdminDashboardService = {
     const totalFocusMinutes = focusCompletedEvents.reduce((acc, e) => acc + Number(e.metadata?.duration_minutes || e.metadata?.durationMinutes || 0), 0);
     const avgFocusTime = focusCompletedEvents.length > 0 ? Math.round((totalFocusMinutes / focusCompletedEvents.length) * 10) / 10 : 0;
 
-    // Onboarding Funnel Counts (Mapeando o formato real do evento do banco com metadata.step)
-    const onboardingStarted = events.filter(e => e.event_type === 'onboarding_started').length;
-    const onboardingStep1 = events.filter(e => 
-      e.event_type === 'onboarding_step1' || 
-      (e.event_type === 'onboarding_step_completed' && (e.metadata?.step === '1' || e.metadata?.step === 1 || e.metadata?.step === '0' || e.metadata?.step === 0))
-    ).length;
-    const onboardingStep2 = events.filter(e => 
-      e.event_type === 'onboarding_step2' || 
-      (e.event_type === 'onboarding_step_completed' && (e.metadata?.step === '2' || e.metadata?.step === 2))
-    ).length;
-    const onboardingStep3 = events.filter(e => 
-      e.event_type === 'onboarding_step3' || 
-      (e.event_type === 'onboarding_step_completed' && (e.metadata?.step === '3' || e.metadata?.step === 3))
-    ).length;
-    const onboardingStep4 = events.filter(e => 
-      e.event_type === 'onboarding_step4' || 
-      (e.event_type === 'onboarding_step_completed' && (e.metadata?.step === '4' || e.metadata?.step === 4))
-    ).length;
-    const onboardingCompleted = events.filter(e => e.event_type === 'onboarding_completed').length;
-    
-    // Paywall and Conversion Funnel metrics
-    const paywallViews = events.filter(e => e.event_type === 'paywall_viewed').length;
-    const upgradeClicks = events.filter(e => e.event_type === 'upgrade_clicked').length;
+    // Onboarding Funnel Counts (Mapeando o formato real do evento do banco com metadata.step de forma 100% precisa)
+    let onboardingStarted = 0;
+    let onboardingStep1 = 0;
+    let onboardingStep2 = 0;
+    let onboardingStep3 = 0;
+    let onboardingStep4 = 0;
+    let onboardingCompleted = 0;
+    let paywallViews = 0;
+    let upgradeClicks = 0;
+
+    try {
+      const { count: startedCount } = await supabaseAdmin
+        .from('events')
+        .select('*', { count: 'exact', head: true })
+        .eq('event_type', 'onboarding_started');
+      onboardingStarted = startedCount || 0;
+
+      // Select all step completed events to count in memory accurately
+      const { data: stepEvents } = await supabaseAdmin
+        .from('events')
+        .select('event_type, metadata')
+        .in('event_type', ['onboarding_step_completed', 'onboarding_step1', 'onboarding_step2', 'onboarding_step3', 'onboarding_step4']);
+
+      (stepEvents || []).forEach(e => {
+        if (e.event_type === 'onboarding_step1') {
+          onboardingStep1++;
+        } else if (e.event_type === 'onboarding_step2') {
+          onboardingStep2++;
+        } else if (e.event_type === 'onboarding_step3') {
+          onboardingStep3++;
+        } else if (e.event_type === 'onboarding_step4') {
+          onboardingStep4++;
+        } else if (e.event_type === 'onboarding_step_completed') {
+          const stepVal = e.metadata?.step;
+          if (stepVal === '1' || stepVal === 1 || stepVal === '0' || stepVal === 0) onboardingStep1++;
+          else if (stepVal === '2' || stepVal === 2) onboardingStep2++;
+          else if (stepVal === '3' || stepVal === 3) onboardingStep3++;
+          else if (stepVal === '4' || stepVal === 4) onboardingStep4++;
+        }
+      });
+
+      const { count: completedCount } = await supabaseAdmin
+        .from('events')
+        .select('*', { count: 'exact', head: true })
+        .eq('event_type', 'onboarding_completed');
+      onboardingCompleted = completedCount || 0;
+
+      const { count: paywallCount } = await supabaseAdmin
+        .from('events')
+        .select('*', { count: 'exact', head: true })
+        .eq('event_type', 'paywall_viewed');
+      paywallViews = paywallCount || 0;
+
+      const { count: upgradeCount } = await supabaseAdmin
+        .from('events')
+        .select('*', { count: 'exact', head: true })
+        .eq('event_type', 'upgrade_clicked');
+      upgradeClicks = upgradeCount || 0;
+    } catch (e) {
+      console.warn('[ADMIN DASHBOARD WARN onboarding counts]', e.message);
+      onboardingStarted = events.filter(e => e.event_type === 'onboarding_started').length;
+      onboardingStep1 = events.filter(e => 
+        e.event_type === 'onboarding_step1' || 
+        (e.event_type === 'onboarding_step_completed' && (e.metadata?.step === '1' || e.metadata?.step === 1 || e.metadata?.step === '0' || e.metadata?.step === 0))
+      ).length;
+      onboardingStep2 = events.filter(e => 
+        e.event_type === 'onboarding_step2' || 
+        (e.event_type === 'onboarding_step_completed' && (e.metadata?.step === '2' || e.metadata?.step === 2))
+      ).length;
+      onboardingStep3 = events.filter(e => 
+        e.event_type === 'onboarding_step3' || 
+        (e.event_type === 'onboarding_step_completed' && (e.metadata?.step === '3' || e.metadata?.step === 3))
+      ).length;
+      onboardingStep4 = events.filter(e => 
+        e.event_type === 'onboarding_step4' || 
+        (e.event_type === 'onboarding_step_completed' && (e.metadata?.step === '4' || e.metadata?.step === 4))
+      ).length;
+      onboardingCompleted = events.filter(e => e.event_type === 'onboarding_completed').length;
+      paywallViews = events.filter(e => e.event_type === 'paywall_viewed').length;
+      upgradeClicks = events.filter(e => e.event_type === 'upgrade_clicked').length;
+    }
     const monetizationConversion = paywallViews > 0 ? Math.round((upgradeClicks / paywallViews) * 100) : 0;
 
     const churnCalculated = subscriptions.length > 0 ? Math.round((canceledSubs.length / subscriptions.length) * 100) : 0;

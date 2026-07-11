@@ -79,12 +79,30 @@ serve(async (req) => {
 
       if (lockError) continue;
 
+      // Normalize event payload: client-logged events have data in event.metadata
+      if (!event.payload && event.metadata) {
+        event.payload = event.metadata;
+      }
+
+      let normalizedType = event.event_type;
+      const typeMappings: Record<string, string> = {
+        'task_created': 'TaskCreated',
+        'task_completed': 'TaskCompleted',
+        'task_updated': 'TaskUpdated',
+        'task_deleted': 'TaskDeleted',
+        'goal_completed': 'GoalCompleted',
+        'habit_completed': 'HabitCompleted'
+      };
+      if (normalizedType && typeMappings[normalizedType]) {
+        normalizedType = typeMappings[normalizedType];
+      }
+
       let handlerName = 'unknown';
       let handlerResult = null;
       let handlerError = null;
 
       try {
-        switch (event.event_type) {
+        switch (normalizedType) {
           case 'TaskCreated':
             handlerName = 'task-created';
             handlerResult = await handleTaskCreated(supabase, event);

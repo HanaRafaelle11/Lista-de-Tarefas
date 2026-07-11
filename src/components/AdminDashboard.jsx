@@ -476,13 +476,21 @@ export default function AdminDashboard() {
         // Recalcular métricas de Sessões Foco e Planos Semanais baseadas na timeline real do usuário
         const pomodoroCount = result.events.filter(e => e.event_type === 'focus_session_completed' || e.event_type === 'pomodoro_completed').length;
         const weeklyPlansCount = result.events.filter(e => e.event_type === 'weekly_plan_created').length;
+        
+        const latestEvent = result.events[0];
+        const latestTime = latestEvent ? latestEvent.created_at : null;
+
         setUserDetails(prev => {
           if (!prev) return prev;
-          return {
+          const next = {
             ...prev,
             pomodoros: pomodoroCount,
             weekly_plans: weeklyPlansCount
           };
+          if (latestTime && (!next.last_login || latestTime > next.last_login)) {
+            next.last_login = latestTime;
+          }
+          return next;
         });
       } else {
         console.log('[AdminDashboard] result is null or has no events:', result);
@@ -510,7 +518,7 @@ export default function AdminDashboard() {
     if (eventCategoryFilter === 'all') return userEvents;
     
     return userEvents.filter(evt => {
-      const type = evt.event_type || '';
+      const type = (evt.event_type || '').toLowerCase();
       switch (eventCategoryFilter) {
         case 'onboarding':
           return type.includes('onboarding');
@@ -523,7 +531,7 @@ export default function AdminDashboard() {
         case 'monetization':
           return type.includes('upgrade') || type.includes('downgrade') || type.includes('paywall') || type.includes('subscription') || type.includes('trial') || type.includes('payment');
         case 'sessions':
-          return type.includes('session') || type.includes('login') || type.includes('logout') || type.includes('signed_up');
+          return type.includes('session') || type.includes('login') || type.includes('logout') || type.includes('signed_up') || type.includes('logged_in');
         default:
           return true;
       }

@@ -92,6 +92,16 @@ export default function SettingsView() {
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
   const [isSyncModalOpen, setIsSyncModalOpen] = useState(false);
   const [expandedSection, setExpandedSection] = useState(null);
+  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' ? window.innerWidth <= 768 : false);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const handleResize = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const formatDateBR = (isoString) => {
     if (!isoString) return '-';
@@ -130,7 +140,7 @@ export default function SettingsView() {
   const activeSubDetails = getSubDetails();
 
   const renderAccordionSection = (id, icon, title, content, isDanger = false) => {
-    const isExpanded = expandedSection === id;
+    const isExpanded = !isMobile || expandedSection === id;
     return (
       <div 
         key={id}
@@ -141,18 +151,18 @@ export default function SettingsView() {
           overflow: 'hidden',
           boxShadow: 'var(--shadow-sm)',
           transition: 'all 0.2s ease',
-          marginBottom: '12px'
+          marginBottom: isMobile ? '12px' : '24px'
         }}
       >
         <div 
-          onClick={() => setExpandedSection(isExpanded ? null : id)}
+          onClick={isMobile ? () => setExpandedSection(expandedSection === id ? null : id) : undefined}
           style={{ 
             padding: '16px 24px', 
-            cursor: 'pointer', 
+            cursor: isMobile ? 'pointer' : 'default', 
             display: 'flex', 
             justifyContent: 'space-between', 
             alignItems: 'center',
-            backgroundColor: isExpanded ? 'var(--bg-card-hover)' : 'transparent',
+            backgroundColor: (isMobile && isExpanded) ? 'var(--bg-card-hover)' : 'transparent',
             userSelect: 'none',
             borderBottom: isExpanded ? '1px solid var(--border-light)' : 'none'
           }}
@@ -160,14 +170,16 @@ export default function SettingsView() {
           <h2 style={{ fontSize: '15px', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '8px', margin: 0, color: isDanger ? '#ef4444' : 'var(--text-main)' }}>
             {icon} {title}
           </h2>
-          <ChevronDown 
-            size={18} 
-            style={{ 
-              transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)', 
-              transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-              color: 'var(--text-light)' 
-            }} 
-          />
+          {isMobile && (
+            <ChevronDown 
+              size={18} 
+              style={{ 
+                transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)', 
+                transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                color: 'var(--text-light)' 
+              }} 
+            />
+          )}
         </div>
         
         {isExpanded && (
