@@ -25,6 +25,7 @@ export default function LandingPage({ onEnterApp }) {
   const [tasksPerDay, setTasksPerDay] = useState(5);
   const [lostTime, setLostTime] = useState(10);
   const [workDays, setWorkDays] = useState(5);
+  const [showCalcExplain, setShowCalcExplain] = useState(false);
 
   const hoursPerYear = Math.round((tasksPerDay * lostTime * workDays * 52) / 60);
   const hoursPerMonth = Math.round((tasksPerDay * lostTime * workDays * 4.33) / 60);
@@ -421,19 +422,36 @@ export default function LandingPage({ onEnterApp }) {
                 <span style={{ fontSize: '13px', color: isDark ? '#94A3B8' : '#64748B', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Você pode economizar aproximadamente</span>
                 
                 <div style={{ margin: '20px 0' }}>
-                  <div style={{ fontSize: '38px', fontWeight: 800, color: isDark ? '#FFFFFF' : '#0F172A', lineHeight: 1.1 }}>
+                  <div style={{ fontSize: '38px', fontWeight: 800, color: isDark ? '#FFFFFF' : '#0F172A', lineHeight: 1.1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
                     <span style={{ background: 'linear-gradient(to right,#818CF8,#C084FC)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
                       {hoursPerYear} horas
                     </span>
+                    <button
+                      type="button"
+                      onClick={() => setShowCalcExplain(true)}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        fontSize: '18px',
+                        padding: '4px',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        transition: 'transform 0.2s',
+                        userSelect: 'none'
+                      }}
+                      onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.2)'}
+                      onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
+                      title="Como este cálculo é feito?"
+                    >
+                      ❓
+                    </button>
                   </div>
                   <span style={{ fontSize: '14px', color: '#64748B', fontWeight: 600 }}>por ano</span>
                   
                   <div style={{ fontSize: '22px', fontWeight: 700, color: isDark ? '#CBD5E1' : '#1E293B', marginTop: '12px' }}>
                     ou {hoursPerMonth} horas/mês
-                  </div>
-
-                  <div style={{ fontSize: '11px', color: '#64748B', fontFamily: 'monospace', marginTop: '12px', background: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.03)', padding: '6px 10px', borderRadius: '6px', border: isDark ? '1px solid rgba(255,255,255,0.03)' : '1px solid rgba(0,0,0,0.06)' }}>
-                    Cálculo: {tasksPerDay} tarefas/dia × {lostTime} min × {workDays} dias/sem × 52 sem = {hoursPerYear}h/ano
                   </div>
                 </div>
 
@@ -453,6 +471,79 @@ export default function LandingPage({ onEnterApp }) {
                   * Estimativa baseada no tempo médio gasto organizando atividades e alternando entre ferramentas.
                 </span>
               </div>
+
+              {/* Modal de Explicação do Cálculo */}
+              {showCalcExplain && (
+                <div 
+                  style={{
+                    position: 'fixed',
+                    top: 0, left: 0, right: 0, bottom: 0,
+                    backgroundColor: 'rgba(9, 13, 18, 0.85)',
+                    backdropFilter: 'blur(8px)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: 10000,
+                    padding: '20px'
+                  }}
+                  onClick={() => setShowCalcExplain(false)}
+                >
+                  <div 
+                    style={{
+                      backgroundColor: isDark ? '#141E28' : '#FFFFFF',
+                      border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.1)',
+                      borderRadius: '16px',
+                      padding: '24px',
+                      maxWidth: '430px',
+                      width: '100%',
+                      boxShadow: '0 20px 40px rgba(0,0,0,0.4)',
+                      color: isDark ? '#F8FAFC' : '#0F172A',
+                      position: 'relative',
+                      textAlign: 'left'
+                    }}
+                    onClick={e => e.stopPropagation()}
+                  >
+                    <h3 style={{ fontSize: '18px', fontWeight: 800, marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span>Como funciona o cálculo?</span>
+                      <span>💡</span>
+                    </h3>
+                    
+                    <p style={{ fontSize: '14px', color: isDark ? '#94A3B8' : '#475569', lineHeight: 1.5, marginBottom: '16px' }}>
+                      A estimativa é baseada no tempo médio de foco recuperado ao evitar a fragmentação mental (alternar entre várias ferramentas, anotações perdidas e reestabelecimento de foco).
+                    </p>
+
+                    <div style={{ background: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)', padding: '12px 16px', borderRadius: '8px', border: isDark ? '1px solid rgba(255,255,255,0.05)' : '1px solid rgba(0,0,0,0.05)', fontSize: '12.5px', fontFamily: 'monospace', lineHeight: 1.4, color: '#818CF8', marginBottom: '20px' }}>
+                      <strong>Fórmula Aplicada:</strong><br />
+                      {tasksPerDay} tarefas/dia × {lostTime} min × {workDays} dias/sem × 52 sem = {hoursPerYear}h/ano
+                    </div>
+
+                    <div style={{ fontSize: '13.5px', color: isDark ? '#94A3B8' : '#475569', lineHeight: 1.5 }}>
+                      Ao centralizar suas tarefas, objetivos, matrizes e notas no MyFlowDay, você reduz a fragmentação e recupera preciosas horas de foco ao longo do ano.
+                    </div>
+
+                    <button 
+                      onClick={() => setShowCalcExplain(false)}
+                      style={{
+                        marginTop: '24px',
+                        width: '100%',
+                        padding: '10px',
+                        backgroundColor: '#6366F1',
+                        border: 'none',
+                        borderRadius: '8px',
+                        color: '#FFFFFF',
+                        fontWeight: '700',
+                        fontSize: '13.5px',
+                        cursor: 'pointer',
+                        transition: 'background-color 0.2s'
+                      }}
+                      onMouseEnter={e => e.currentTarget.style.backgroundColor = '#4F46E5'}
+                      onMouseLeave={e => e.currentTarget.style.backgroundColor = '#6366F1'}
+                    >
+                      Entendido
+                    </button>
+                  </div>
+                </div>
+              )}
 
             </div>
           </div>

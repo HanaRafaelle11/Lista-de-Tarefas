@@ -746,21 +746,29 @@ export default function EvolutionView() {
 
   const touchStartX = useRef(0);
   const touchEndX = useRef(0);
+  const touchStartY = useRef(0);
+  const touchEndY = useRef(0);
 
   const handleTouchStart = (e) => {
     touchStartX.current = e.targetTouches[0].clientX;
+    touchStartY.current = e.targetTouches[0].clientY;
     touchEndX.current = e.targetTouches[0].clientX;
+    touchEndY.current = e.targetTouches[0].clientY;
   };
 
   const handleTouchMove = (e) => {
     touchEndX.current = e.targetTouches[0].clientX;
+    touchEndY.current = e.targetTouches[0].clientY;
   };
 
   const handleTouchEnd = () => {
-    const diff = touchStartX.current - touchEndX.current;
+    const diffX = touchStartX.current - touchEndX.current;
+    const diffY = touchStartY.current - touchEndY.current;
     const minSwipeDistance = 60;
-    if (Math.abs(diff) > minSwipeDistance) {
-      if (diff > 0) {
+
+    // Garante que o movimento foi predominantemente horizontal para evitar trocar de aba durante o scroll vertical
+    if (Math.abs(diffX) > minSwipeDistance && Math.abs(diffX) > Math.abs(diffY) * 2) {
+      if (diffX > 0) {
         if (activeEvoTab === 'jornada') handleSwitchEvoTab('coach');
       } else {
         if (activeEvoTab === 'coach') handleSwitchEvoTab('jornada');

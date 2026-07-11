@@ -979,12 +979,18 @@ export default function MyDayView() {
 
   const looseTasksFiltered = useMemo(() => {
     return baseFiltered.filter(task => {
+      // Se não estivermos visualizando "Todas" (all), não podemos ocultar a tarefa (senão ela fica completamente invisível!)
+      if (filter !== 'all') return true;
+
+      // Se a tarefa tiver prazo (dueDate), deve aparecer normalmente no fluxo diário/semanal
+      if (task.dueDate) return true;
+
       const link = goalTasks.find(gt => gt.task_id === task.id);
       const goal = link ? goals.find(g => g.id === link.goal_id && !g.deletedAt) : null;
       if (goal && goal.status === 'active') return false;
       return true;
     });
-  }, [baseFiltered, goalTasks, goals]);
+  }, [baseFiltered, goalTasks, goals, filter]);
 
   const activeGoals = useMemo(() => {
     let baseGoals = (goals || []).filter(g => g.status === 'active' && !g.deletedAt);

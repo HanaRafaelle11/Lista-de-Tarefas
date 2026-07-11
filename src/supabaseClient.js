@@ -5,9 +5,25 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 export const hasSupabaseConfig = !!(supabaseUrl && supabaseAnonKey);
 
-export const REDIRECT_URL = (typeof window !== 'undefined' && window.location.origin.includes('localhost'))
-  ? window.location.origin
-  : (import.meta.env.VITE_REDIRECT_URL || 'https://myflowday.com.br');
+export const REDIRECT_URL = (() => {
+  if (typeof window === 'undefined') return 'https://myflowday.com.br';
+  
+  const origin = window.location.origin;
+  
+  // Detecta se está em ambiente móvel nativo/customizado (como Capacitor, Cordova ou WebViews locais)
+  const isMobileNative = origin.startsWith('capacitor://') || 
+                         origin.startsWith('chrome-extension://') ||
+                         origin.startsWith('file://') ||
+                         localStorage.getItem('flowday_mobile_native_mode') === 'true';
+                         
+  if (isMobileNative) {
+    return 'myflowday://auth-callback';
+  }
+
+  return origin.includes('localhost')
+    ? origin
+    : (import.meta.env.VITE_REDIRECT_URL || 'https://myflowday.com.br');
+})();
 
 if (!hasSupabaseConfig) {
   console.warn(

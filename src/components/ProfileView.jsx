@@ -3,6 +3,64 @@ import { User, Shield, Briefcase, FileText, Camera, Trash2, CheckCircle2, Sun, M
 import { useAppContext } from '../contexts/AppContext';
 import DefaultAvatar from './DefaultAvatar';
 
+// ── Gerador dinâmico de avatares SVG inline ──
+const generateAvatarDataUrl = (type, color1, color2) => {
+  const bgGradient = `<linearGradient id="bg-grad-${type}-${color1.replace('#','')}" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="${color1}"/><stop offset="100%" stop-color="${color2}"/></linearGradient>`;
+  
+  let headAndBody = '';
+  if (type === 'female') {
+    headAndBody = `
+      <circle cx="50" cy="40" r="16" fill="#F3E8FF" />
+      <path d="M50 20 C40 20, 36 28, 36 38 C36 44, 40 45, 40 48 C42 52, 46 54, 50 54 C54 54, 58 52, 60 48 C60 45, 64 44, 64 38 C64 28, 60 20, 50 20 Z" fill="#4B5563" />
+      <circle cx="50" cy="38" r="14" fill="#FCE7F3" />
+      <path d="M25 82 C25 65, 34 58, 50 58 C66 58, 75 65, 75 82 Z" fill="#EC4899" />
+    `;
+  } else if (type === 'male') {
+    headAndBody = `
+      <circle cx="50" cy="38" r="15" fill="#FEF3C7" />
+      <path d="M35 32 C35 20, 65 20, 65 32 Z" fill="#1F2937" />
+      <path d="M25 82 C25 65, 34 58, 50 58 C66 58, 75 65, 75 82 Z" fill="#3B82F6" />
+    `;
+  } else if (type === 'neutral') {
+    headAndBody = `
+      <circle cx="50" cy="38" r="16" fill="#E0F2FE" />
+      <path d="M25 82 C25 64, 34 56, 50 56 C66 56, 75 64, 75 82 Z" fill="#0F172A" />
+      <path d="M50 56 L42 66 L58 66 Z" fill="#FFFFFF" />
+      <path d="M50 66 L46 82 L54 82 Z" fill="#312E81" />
+    `;
+  } else {
+    headAndBody = `
+      <circle cx="50" cy="38" r="16" fill="#F87171" />
+      <path d="M30 35 L40 20 L60 20 L70 35 Z" fill="#F59E0B" />
+      <path d="M22 82 C22 62, 34 54, 50 54 C66 54, 78 62, 78 82 Z" fill="#10B981" />
+    `;
+  }
+  
+  const svg = `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><defs>${bgGradient}</defs><circle cx="50" cy="50" r="50" fill="url(#bg-grad-${type}-${color1.replace('#','')})" />${headAndBody}</svg>`;
+  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+};
+
+const LIBRARY_AVATARS = {
+  Masculino: [
+    { id: 'm1', label: 'Tech Lead', url: generateAvatarDataUrl('male', '#1E3A8A', '#3B82F6') },
+    { id: 'm2', label: 'Esportista', url: generateAvatarDataUrl('male', '#10B981', '#047857') },
+    { id: 'm3', label: 'Minimalista', url: generateAvatarDataUrl('male', '#4B5563', '#1F2937') }
+  ],
+  Feminino: [
+    { id: 'f1', label: 'Gestora', url: generateAvatarDataUrl('female', '#6D28D9', '#A78BFA') },
+    { id: 'f2', label: 'Artista', url: generateAvatarDataUrl('female', '#DB2777', '#F472B6') },
+    { id: 'f3', label: 'Criativa', url: generateAvatarDataUrl('female', '#D97706', '#F59E0B') }
+  ],
+  Neutro: [
+    { id: 'n1', label: 'Profissional', url: generateAvatarDataUrl('neutral', '#0F172A', '#334155') },
+    { id: 'n2', label: 'Foco Limpo', url: generateAvatarDataUrl('neutral', '#06B6D4', '#22D3EE') }
+  ],
+  Ilustrado: [
+    { id: 'i1', label: 'Moderna', url: generateAvatarDataUrl('illustrated', '#8B5CF6', '#EC4899') },
+    { id: 'i2', label: 'Inovador', url: generateAvatarDataUrl('illustrated', '#F59E0B', '#EF4444') }
+  ]
+};
+
 export default function ProfileView() {
   const { 
     currentUser, 
@@ -10,6 +68,7 @@ export default function ProfileView() {
     handleUpdateProfile, 
     handleUploadAvatar, 
     handleDeleteAvatar,
+    handleSelectLibraryAvatar,
     theme,
     setTheme,
     openCustomConfirm
@@ -24,6 +83,10 @@ export default function ProfileView() {
   const [loading, setLoading] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
+
+  const [showPhotoOptions, setShowPhotoOptions] = useState(false);
+  const [showAvatarLibrary, setShowAvatarLibrary] = useState(false);
+  const [activeAvatarTab, setActiveAvatarTab] = useState('Masculino');
 
   // Sincroniza dados com o profile vindo do banco
   useEffect(() => {
@@ -121,33 +184,28 @@ export default function ProfileView() {
         {/* Bloco de Foto / Avatar */}
         <div style={{ backgroundColor: 'var(--bg-card)', padding: '24px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-light)', display: 'flex', alignItems: 'center', gap: '24px', flexWrap: 'wrap' }}>
           
-          <div style={{ position: 'relative', width: '140px', height: '140px' }}>
+          <div 
+            style={{ position: 'relative', width: '140px', height: '140px', cursor: 'pointer' }}
+            onClick={() => setShowPhotoOptions(true)}
+            title="Mudar foto"
+          >
             {userProfile?.avatar_url ? (
               <img 
                 src={userProfile.avatar_url} 
                 alt="Avatar" 
-                style={{ width: '140px', height: '140px', borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--primary)' }}
+                style={{ width: '140px', height: '140px', borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--primary)', transition: 'opacity 0.2s' }}
+                onMouseEnter={e => e.currentTarget.style.opacity = '0.8'}
+                onMouseLeave={e => e.currentTarget.style.opacity = '1'}
               />
             ) : (
               <DefaultAvatar size={140} />
             )}
 
-            {/* Label click triggers input file */}
-            <label 
-              htmlFor="avatar-input"
-              style={{ position: 'absolute', bottom: '0', right: '0', backgroundColor: 'var(--primary)', color: 'white', padding: '6px', borderRadius: '50%', cursor: 'pointer', boxShadow: 'var(--shadow-sm)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-              title="Mudar foto"
+            <div 
+              style={{ position: 'absolute', bottom: '0', right: '0', backgroundColor: 'var(--primary)', color: 'white', padding: '6px', borderRadius: '50%', boxShadow: 'var(--shadow-sm)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
             >
               <Camera size={14} />
-            </label>
-            <input 
-              id="avatar-input" 
-              type="file" 
-              accept="image/*"
-              onChange={handleFileChange}
-              style={{ display: 'none' }}
-              disabled={loading}
-            />
+            </div>
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
@@ -311,6 +369,264 @@ export default function ProfileView() {
         </div>
 
       </div>
+
+      {/* Modal de Opções de Foto */}
+      {showPhotoOptions && (
+        <div style={{
+          position: 'fixed',
+          top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: 'rgba(9, 13, 18, 0.7)',
+          backdropFilter: 'blur(4px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 10000,
+          padding: '20px'
+        }} onClick={() => setShowPhotoOptions(false)}>
+          <div style={{
+            backgroundColor: 'var(--bg-card)',
+            border: '1px solid var(--border-medium)',
+            borderRadius: '12px',
+            padding: '20px',
+            maxWidth: '320px',
+            width: '100%',
+            boxShadow: 'var(--shadow-lg)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '12px',
+            textAlign: 'center'
+          }} onClick={e => e.stopPropagation()}>
+            <h3 style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-main)', marginBottom: '8px' }}>Alterar Foto de Perfil</h3>
+            
+            <button 
+              type="button"
+              onClick={() => {
+                setShowPhotoOptions(false);
+                document.getElementById('camera-input').click();
+              }}
+              style={{
+                padding: '10px',
+                borderRadius: '8px',
+                border: '1px solid var(--border-light)',
+                backgroundColor: 'var(--bg-card-hover)',
+                color: 'var(--text-main)',
+                fontWeight: '600',
+                cursor: 'pointer',
+                fontSize: '13px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px'
+              }}
+            >
+              📷 Tirar Foto (Câmera)
+            </button>
+            <input 
+              id="camera-input" 
+              type="file" 
+              accept="image/*"
+              capture="user"
+              onChange={handleFileChange}
+              style={{ display: 'none' }}
+              disabled={loading}
+            />
+
+            <button 
+              type="button"
+              onClick={() => {
+                setShowPhotoOptions(false);
+                document.getElementById('gallery-input').click();
+              }}
+              style={{
+                padding: '10px',
+                borderRadius: '8px',
+                border: '1px solid var(--border-light)',
+                backgroundColor: 'var(--bg-card-hover)',
+                color: 'var(--text-main)',
+                fontWeight: '600',
+                cursor: 'pointer',
+                fontSize: '13px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px'
+              }}
+            >
+              🖼️ Escolher da Galeria
+            </button>
+            <input 
+              id="gallery-input" 
+              type="file" 
+              accept="image/*"
+              onChange={handleFileChange}
+              style={{ display: 'none' }}
+              disabled={loading}
+            />
+
+            <button 
+              type="button"
+              onClick={() => {
+                setShowPhotoOptions(false);
+                setShowAvatarLibrary(true);
+              }}
+              style={{
+                padding: '10px',
+                borderRadius: '8px',
+                border: '1px solid var(--border-light)',
+                backgroundColor: 'var(--bg-card-hover)',
+                color: 'var(--text-main)',
+                fontWeight: '600',
+                cursor: 'pointer',
+                fontSize: '13px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px'
+              }}
+            >
+              👤 Escolher Avatar Pronto
+            </button>
+
+            <button 
+              type="button"
+              onClick={() => setShowPhotoOptions(false)}
+              style={{
+                marginTop: '8px',
+                padding: '8px',
+                border: 'none',
+                background: 'none',
+                color: 'var(--text-light)',
+                fontWeight: '600',
+                cursor: 'pointer',
+                fontSize: '12px'
+              }}
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Modal da Biblioteca de Avatares */}
+      {showAvatarLibrary && (
+        <div style={{
+          position: 'fixed',
+          top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: 'rgba(9, 13, 18, 0.7)',
+          backdropFilter: 'blur(4px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 10000,
+          padding: '20px'
+        }} onClick={() => setShowAvatarLibrary(false)}>
+          <div style={{
+            backgroundColor: 'var(--bg-card)',
+            border: '1px solid var(--border-medium)',
+            borderRadius: '16px',
+            padding: '24px',
+            maxWidth: '480px',
+            width: '100%',
+            boxShadow: 'var(--shadow-lg)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '16px'
+          }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 style={{ fontSize: '16px', fontWeight: '800', color: 'var(--text-main)' }}>Escolha um Avatar</h3>
+              <button 
+                type="button"
+                onClick={() => setShowAvatarLibrary(false)}
+                style={{ background: 'none', border: 'none', color: 'var(--text-light)', cursor: 'pointer', fontSize: '18px', fontWeight: 'bold' }}
+              >
+                &times;
+              </button>
+            </div>
+
+            {/* Abas */}
+            <div style={{ display: 'flex', borderBottom: '1px solid var(--border-light)', gap: '12px' }}>
+              {Object.keys(LIBRARY_AVATARS).map(tab => (
+                <button
+                  key={tab}
+                  type="button"
+                  onClick={() => setActiveAvatarTab(tab)}
+                  style={{
+                    padding: '8px 4px',
+                    background: 'none',
+                    border: 'none',
+                    borderBottom: activeAvatarTab === tab ? '2px solid var(--primary)' : '2px solid transparent',
+                    color: activeAvatarTab === tab ? 'var(--primary)' : 'var(--text-light)',
+                    fontWeight: activeAvatarTab === tab ? '700' : '500',
+                    cursor: 'pointer',
+                    fontSize: '13px'
+                  }}
+                >
+                  {tab}
+                </button>
+              ))}
+            </div>
+
+            {/* Grid */}
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(3, 1fr)',
+              gap: '16px',
+              maxHeight: '300px',
+              overflowY: 'auto',
+              padding: '8px 0'
+            }}>
+              {LIBRARY_AVATARS[activeAvatarTab].map(avatar => (
+                <div 
+                  key={avatar.id}
+                  onClick={async () => {
+                    setLoading(true);
+                    try {
+                      await handleSelectLibraryAvatar(avatar.url);
+                      setSuccessMsg('Avatar selecionado com sucesso!');
+                      setTimeout(() => setSuccessMsg(''), 3000);
+                    } catch (err) {
+                      setErrorMsg('Erro ao salvar avatar.');
+                    } finally {
+                      setLoading(false);
+                      setShowAvatarLibrary(false);
+                    }
+                  }}
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: '6px',
+                    cursor: 'pointer',
+                    padding: '10px',
+                    borderRadius: '12px',
+                    border: '1px solid transparent',
+                    transition: 'all 0.2s',
+                    backgroundColor: 'rgba(255,255,255,0.02)'
+                  }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.borderColor = 'var(--primary-light)';
+                    e.currentTarget.style.transform = 'scale(1.05)';
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.borderColor = 'transparent';
+                    e.currentTarget.style.transform = 'scale(1)';
+                  }}
+                >
+                  <img 
+                    src={avatar.url} 
+                    alt={avatar.label} 
+                    style={{ width: '70px', height: '70px', borderRadius: '50%' }}
+                  />
+                  <span style={{ fontSize: '11px', color: 'var(--text-light)', fontWeight: '600', textAlign: 'center' }}>
+                    {avatar.label}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

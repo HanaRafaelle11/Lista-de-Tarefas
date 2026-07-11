@@ -1,9 +1,12 @@
-import React from 'react';
-import { Zap, Calendar, User, Trash2, Edit2, AlertCircle } from 'lucide-react';
+import React, { useState } from 'react';
+import { Zap, Calendar, User, Trash2, Edit2, AlertCircle, Move } from 'lucide-react';
 import CategoryIcon from './CategoryIcon';
 import { parseTaskMetadata, formatDescriptionWithoutMetadata } from '../contexts/AppContext';
 
 export default function EisenhowerMatrix({ tasks, onEditTask, onDeleteTask, onUpdateTask, onToggleComplete }) {
+  const [draggedTaskId, setDraggedTaskId] = useState(null);
+  const [activeMoveMenuId, setActiveMoveMenuId] = useState(null);
+
   const pendingTasks = tasks.filter(t => !t.completed);
 
   // Classificar em quadrantes
@@ -23,7 +26,8 @@ export default function EisenhowerMatrix({ tasks, onEditTask, onDeleteTask, onUp
   });
 
   const handleDragStart = (e, taskId) => {
-    e.dataTransfer.setData('taskId', taskId);
+    e.dataTransfer.setData('text/plain', taskId);
+    setDraggedTaskId(taskId);
   };
 
   const handleDragOver = (e) => {
@@ -32,20 +36,27 @@ export default function EisenhowerMatrix({ tasks, onEditTask, onDeleteTask, onUp
 
   const handleDrop = (e, quadrantId) => {
     e.preventDefault();
-    const taskId = e.dataTransfer.getData('taskId');
+    const taskId = e.dataTransfer.getData('text/plain') || draggedTaskId;
+    setDraggedTaskId(null);
+    if (!taskId) return;
+
+    handleQuickMove(taskId, quadrantId);
+  };
+
+  const handleQuickMove = (taskId, targetQuadrant) => {
     const task = tasks.find(t => t.id === taskId);
     if (!task) return;
 
     let updates = {};
     const today = new Date().toISOString().split('T')[0];
 
-    if (quadrantId === 'q1') {
+    if (targetQuadrant === 'q1') {
       updates = { priority: 'Alta', dueDate: task.dueDate || today };
-    } else if (quadrantId === 'q2') {
+    } else if (targetQuadrant === 'q2') {
       updates = { priority: 'Alta', dueDate: null };
-    } else if (quadrantId === 'q3') {
+    } else if (targetQuadrant === 'q3') {
       updates = { priority: 'Média', dueDate: task.dueDate || today };
-    } else if (quadrantId === 'q4') {
+    } else if (targetQuadrant === 'q4') {
       updates = { priority: 'Baixa', dueDate: null };
     }
 
@@ -158,9 +169,82 @@ export default function EisenhowerMatrix({ tasks, onEditTask, onDeleteTask, onUp
                         </span>
                       )}
                     </div>
-                    <div style={{ display: 'flex', gap: '4px' }}>
-                      <button onClick={() => onEditTask(task)} style={{ background: 'none', border: 'none', color: 'var(--text-light)', cursor: 'pointer', padding: '2px' }} title="Editar"><Edit2 size={11} /></button>
-                      <button onClick={() => onDeleteTask(task.id)} style={{ background: 'none', border: 'none', color: 'var(--danger-light)', cursor: 'pointer', padding: '2px' }} title="Excluir"><Trash2 size={11} /></button>
+                    <div style={{ display: 'flex', gap: '6px', position: 'relative' }}>
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setActiveMoveMenuId(activeMoveMenuId === task.id ? null : task.id);
+                        }} 
+                        style={{ background: 'none', border: 'none', color: 'var(--text-light)', cursor: 'pointer', padding: '2px' }} 
+                        title="Mover Quadrante"
+                      >
+                        <Move size={11} />
+                      </button>
+
+                      {activeMoveMenuId === task.id && (
+                        <>
+                          <div 
+                            style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 998 }} 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setActiveMoveMenuId(null);
+                            }}
+                          />
+                          <div 
+                            style={{
+                              position: 'absolute',
+                              bottom: '22px',
+                              right: '0',
+                              backgroundColor: 'var(--bg-card)',
+                              border: '1px solid var(--border-medium)',
+                              borderRadius: '6px',
+                              padding: '4px 0',
+                              zIndex: 999,
+                              minWidth: '130px',
+                              boxShadow: 'var(--shadow-md)',
+                              display: 'flex',
+                              flexDirection: 'column'
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            {[
+                              { q: 'q1', label: '1. Fazer Agora', color: 'hsl(0, 75%, 60%)' },
+                              { q: 'q2', label: '2. Agendar', color: 'hsl(217, 91%, 60%)' },
+                              { q: 'q3', label: '3. Delegar', color: 'hsl(38, 92%, 50%)' },
+                              { q: 'q4', label: '4. Eliminar', color: 'hsl(180, 75%, 40%)' }
+                            ].map(opt => (
+                              <button
+                                key={opt.q}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleQuickMove(task.id, opt.q);
+                                  setActiveMoveMenuId(null);
+                                }}
+                                style={{
+                                  padding: '6px 12px',
+                                  background: 'none',
+                                  border: 'none',
+                                  color: 'var(--text-main)',
+                                  fontSize: '11px',
+                                  fontWeight: '600',
+                                  cursor: 'pointer',
+                                  textAlign: 'left',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '6px'
+                                }}
+                                onMouseEnter={e => e.currentTarget.style.backgroundColor = 'var(--bg-card-hover)'}
+                                onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+                              >
+                                <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: opt.color }} />
+                                {opt.label}
+                              </button>
+                            ))}
+                          </div>
+                        </>
+                      )}
+                      <button onClick={(e) => { e.stopPropagation(); onEditTask(task); }} style={{ background: 'none', border: 'none', color: 'var(--text-light)', cursor: 'pointer', padding: '2px' }} title="Editar"><Edit2 size={11} /></button>
+                      <button onClick={(e) => { e.stopPropagation(); onDeleteTask(task.id); }} style={{ background: 'none', border: 'none', color: 'var(--danger-light)', cursor: 'pointer', padding: '2px' }} title="Excluir"><Trash2 size={11} /></button>
                     </div>
                   </div>
                 </div>
@@ -201,7 +285,7 @@ export default function EisenhowerMatrix({ tasks, onEditTask, onDeleteTask, onUp
         className="eisenhower-matrix-grid"
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
           gap: '16px',
         }}
       >

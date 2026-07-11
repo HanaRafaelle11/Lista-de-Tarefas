@@ -1784,24 +1784,27 @@ export function AppProvider({ children }) {
         user_id: currentUser.id,
         title: payload.title,
         description: payload.description || '',
-        category: payload.category,
-        priority: payload.priority,
+        category: payload.category || 'Pessoal',
+        priority: payload.priority || 'Média',
         dueDate: payload.dueDate ? ensureDateTimezoneNoon(payload.dueDate) : '',
+        due_date: payload.dueDate ? ensureDateTimezoneNoon(payload.dueDate) : '',
         completed: false,
         createdAt: new Date().toISOString(),
+        created_at: new Date().toISOString(),
         completedAt: null,
+        completed_at: null,
         updatedAt: new Date().toISOString(),
-        deletedAt: null
+        updated_at: new Date().toISOString(),
+        deletedAt: null,
+        deleted_at: null
       };
       const updated = [newTask, ...tasks];
       setTasks(updated);
-      localStorage.setItem(`flowday_demo_tasks_${currentUser.id}`, JSON.stringify(updated));
       logEvent('task_created', { taskId: demoId, title: payload.title });
 
       if (goal_id) {
         const updatedGT = [...goalTasks, { goal_id, task_id: demoId }];
         setGoalTasks(updatedGT);
-        localStorage.setItem(`flowday_demo_goals_${currentUser.id}`, JSON.stringify({ goals, goalTasks: updatedGT }));
       }
       addNotification('task', 'Tarefa criada', payload.title);
       return newTask;
@@ -2275,6 +2278,22 @@ export function AppProvider({ children }) {
     }
   }, [currentUser?.id, logEvent]);
 
+  const handleSelectLibraryAvatar = useCallback(async (avatarUrl) => {
+    if (!currentUser?.id) return;
+
+    setUserProfile(prev => ({ ...prev, avatar_url: avatarUrl }));
+    localStorage.setItem(`flowday_user_avatar_${currentUser.id}`, avatarUrl);
+    logEvent('profile_updated', { avatar: true });
+
+    if (!currentUser.isDemo) {
+      try {
+        await profilesService.updateProfile(currentUser.id, { avatar_url: avatarUrl });
+      } catch (err) {
+        console.warn('[AppContext] Supabase library avatar update failed:', err);
+      }
+    }
+  }, [currentUser?.id, logEvent]);
+
   // Duplicar Objetivos e Tarefas
   const handleDuplicateGoal = useCallback(async (goalId) => {
     if (!currentUser?.id) return;
@@ -2507,7 +2526,12 @@ export function AppProvider({ children }) {
         start_time: goalPayload.start_time || null,
         end_time: goalPayload.end_time || null,
         status: 'active',
-        deletedAt: null
+        createdAt: new Date().toISOString(),
+        created_at: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        deletedAt: null,
+        deleted_at: null
       };
 
       const updatedGoals = [newGoal, ...goals];
@@ -2528,10 +2552,16 @@ export function AppProvider({ children }) {
             category: category || 'Trabalho',
             priority: 'Média',
             dueDate: null,
+            due_date: null,
             completed: false,
             createdAt: new Date().toISOString(),
+            created_at: new Date().toISOString(),
             completedAt: null,
-            deletedAt: null
+            completed_at: null,
+            updatedAt: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            deletedAt: null,
+            deleted_at: null
           };
           currentDemoTasks.push(taskData);
           currentDemoGT.push({ goal_id: demoGoalId, task_id: actionId });
@@ -2540,8 +2570,6 @@ export function AppProvider({ children }) {
         setGoalTasks(currentDemoGT);
       }
 
-      localStorage.setItem(`flowday_demo_goals_${currentUser.id}`, JSON.stringify({ goals: updatedGoals, goalTasks: currentDemoGT }));
-      localStorage.setItem(`flowday_demo_tasks_${currentUser.id}`, JSON.stringify(currentDemoTasks));
       addNotification('goal', 'Objetivo criado', goalPayload.title);
       return;
     }
@@ -3803,6 +3831,25 @@ export function AppProvider({ children }) {
     return activeGoals.length - visibleGoals.length;
   }, [goals, visibleGoals, isPro]);
 
+  // ── Sincronização automática do LocalStorage no Modo Demo ──────────────────
+  useEffect(() => {
+    if (currentUser?.isDemo && currentUser?.id) {
+      localStorage.setItem(`flowday_demo_tasks_${currentUser.id}`, JSON.stringify(tasks));
+    }
+  }, [tasks, currentUser]);
+
+  useEffect(() => {
+    if (currentUser?.isDemo && currentUser?.id) {
+      localStorage.setItem(`flowday_demo_goals_${currentUser.id}`, JSON.stringify({ goals, goalTasks }));
+    }
+  }, [goals, goalTasks, currentUser]);
+
+  useEffect(() => {
+    if (currentUser?.isDemo && currentUser?.id) {
+      localStorage.setItem(`flowday_demo_habits_${currentUser.id}`, JSON.stringify({ habits, habitLogs }));
+    }
+  }, [habits, habitLogs, currentUser]);
+
   // ═══════════════════════════════════════════════════════════════════════════
   // CONTEXT VALUE
   // ═══════════════════════════════════════════════════════════════════════════
@@ -3919,6 +3966,7 @@ export function AppProvider({ children }) {
     handleUpdateProfileFields,
     handleUploadAvatar,
     handleDeleteAvatar,
+    handleSelectLibraryAvatar,
     logAuthEvent,
 
     // Sync / Resiliência
