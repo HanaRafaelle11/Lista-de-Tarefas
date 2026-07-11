@@ -150,6 +150,16 @@ export const AdminDashboardService = {
 
     profiles.forEach(p => {
       const existing = userMasterMap.get(p.id) || {};
+      const dates = [
+        existing.last_login,
+        p.updated_at,
+        p.created_at
+      ].filter(Boolean).map(d => new Date(d).getTime());
+      
+      const latestDate = dates.length > 0 
+        ? new Date(Math.max(...dates)).toISOString() 
+        : (existing.last_login || p.updated_at || p.created_at || new Date().toISOString());
+
       userMasterMap.set(p.id, {
         ...existing,
         id: p.id,
@@ -157,7 +167,7 @@ export const AdminDashboardService = {
         name: p.name || existing.name || '',
         email: p.email || existing.email || emailMap.get(p.id) || 'N/A',
         created_at: p.created_at || existing.created_at || new Date().toISOString(),
-        last_login: p.updated_at || p.created_at || existing.last_login || new Date().toISOString()
+        last_login: latestDate
       });
     });
 

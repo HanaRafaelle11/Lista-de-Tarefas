@@ -68,3 +68,12 @@ export const supabase = hasSupabaseConfig
       }),
     };
 
+export const getApiUrl = (path) => {
+  const origin = typeof window !== 'undefined' ? window.location.origin : '';
+  const base = (origin && origin.startsWith('http')) 
+    ? origin 
+    : (import.meta.env.VITE_REDIRECT_URL || 'https://myflowday.com.br');
+  return `${base.replace(/\/$/, '')}${path}`;
+};
+
+

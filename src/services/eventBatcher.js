@@ -11,7 +11,7 @@
  * de syncQueue para que sejam sincronizados no retry exponencial.
  */
 
-import { supabase } from '../supabaseClient';
+import { supabase, getApiUrl } from '../supabaseClient';
 import { localDB } from '../db/localDB';
 import { enqueue, generateId } from './syncQueue';
 
@@ -208,7 +208,7 @@ export async function flushBatch() {
       headers['Authorization'] = `Bearer ${currentSessionToken}`;
     }
 
-    const response = await fetch('/api/events/log', {
+    const response = await fetch(getApiUrl('/api/events/log'), {
       method: 'POST',
       headers,
       body: JSON.stringify({ events: payload })
@@ -236,7 +236,7 @@ export async function flushBatch() {
 // Fallback to sendBeacon helper
 const fallbackToBeacon = (payload, batchToSend) => {
   if (typeof navigator !== 'undefined' && typeof navigator.sendBeacon === 'function') {
-    const beaconUrl = '/api/events/log';
+    const beaconUrl = getApiUrl('/api/events/log');
     const blob = new Blob([JSON.stringify({ events: payload })], { type: 'application/json' });
     const sent = navigator.sendBeacon(beaconUrl, blob);
     if (sent) {
@@ -276,7 +276,7 @@ if (typeof window !== 'undefined') {
         headers['Authorization'] = `Bearer ${currentSessionToken}`;
       }
 
-      fetch('/api/events/log', {
+      fetch(getApiUrl('/api/events/log'), {
         method: 'POST',
         headers,
         body: JSON.stringify({ events: payload }),
