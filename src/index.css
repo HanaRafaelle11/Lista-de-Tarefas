@@ -128,9 +128,9 @@ a {
 /* Utilitários Globais */
 .container {
   width: 100%;
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 var(--space-6);
+  max-width: 100% !important;
+  margin: 0 !important;
+  padding: 0 var(--space-4) !important;
 }
 
 .no-scrollbar::-webkit-scrollbar {
@@ -5173,7 +5173,7 @@ button[title="Sair do MyFlowDay"]:hover {
 /* Support for large desktops (1440px to 1920px) */
 @media (min-width: 1440px) {
   .container {
-    max-width: 1400px !important;
+    max-width: 100% !important;
   }
   .focus-main-grid {
     grid-template-columns: 1fr 350px !important;
@@ -5290,8 +5290,8 @@ button[title="Sair do MyFlowDay"]:hover {
 
 /* Profile container mobile margin fix */
 .profile-view-container {
-  width: calc(100vw - 32px) !important;
-  max-width: 640px !important;
+  width: 100% !important;
+  max-width: 100% !important;
 }
 
 @keyframes ping-animation {

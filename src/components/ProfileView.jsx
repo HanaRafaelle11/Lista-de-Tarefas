@@ -411,7 +411,7 @@ export default function ProfileView() {
   };
 
   return (
-    <div className="profile-view-container animate-fade-in" style={{ padding: '24px 0', maxWidth: '640px', margin: '0 auto' }}>
+    <div className="profile-view-container animate-fade-in" style={{ padding: '24px 0', width: '100%' }}>
       <div className="tasks-page-header" style={{ marginBottom: '32px' }}>
         <h1 className="tasks-page-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <User size={24} /> Meu Perfil
