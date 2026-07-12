@@ -1090,6 +1090,7 @@ export function AppProvider({ children }) {
   // ═══════════════════════════════════════════════════════════════════════════
   // GLOBAL POMODORO TIMER STATE & LOGIC
   // ═══════════════════════════════════════════════════════════════════════════
+  const handleToggleCompleteRef = useRef(null); // forward-ref to avoid hook ordering issues
   const [pomodoroFocusTime, setPomodoroFocusTime] = useState(() => Number(localStorage.getItem('flowday_pomodoro_focus')) || 25);
   const [pomodoroBreakTime, setPomodoroBreakTime] = useState(() => Number(localStorage.getItem('flowday_pomodoro_break')) || 5);
   const [pomodoroIsActive, setPomodoroIsActive] = useState(() => localStorage.getItem('flowday_pomodoro_is_active') === 'true');
@@ -1159,8 +1160,8 @@ export function AppProvider({ children }) {
       logEvent('pomodoro_completed', { duration_minutes: pomodoroFocusTime, task_id: pomodoroSelectedTaskId });
       logEvent('focus_session_completed', { duration_minutes: pomodoroFocusTime, task_id: pomodoroSelectedTaskId });
       
-      if (pomodoroSelectedTaskId) {
-        handleToggleComplete(pomodoroSelectedTaskId);
+      if (pomodoroSelectedTaskId && handleToggleCompleteRef.current) {
+        handleToggleCompleteRef.current(pomodoroSelectedTaskId);
         logEvent('task_completed_in_focus', { task_id: pomodoroSelectedTaskId });
         setPomodoroSelectedTaskId('');
       }
@@ -1196,7 +1197,7 @@ export function AppProvider({ children }) {
       setPomodoroMode('focus');
       setPomodoroTimeLeft(pomodoroFocusTime * 60);
     }
-  }, [pomodoroMode, pomodoroFocusTime, pomodoroBreakTime, pomodoroSelectedTaskId, currentUser?.id, incrementCompanionProgress, logEvent, handleToggleComplete, setIsAmbientPlaying]);
+  }, [pomodoroMode, pomodoroFocusTime, pomodoroBreakTime, pomodoroSelectedTaskId, currentUser?.id, incrementCompanionProgress, logEvent, setIsAmbientPlaying]);
 
   // Request Notification permission on startup if not set
   useEffect(() => {
@@ -2404,6 +2405,9 @@ export function AppProvider({ children }) {
       setTasks((prev) => prev.map((t) => t.id === id ? { ...t, completed: !next, completedAt: task.completedAt } : t));
     });
   }, [currentUser, tasks, goals, goalTasks, logEvent, incrementCompanionProgress]);
+
+  // Keep the ref updated so the Pomodoro timer can safely call handleToggleComplete
+  handleToggleCompleteRef.current = handleToggleComplete;
 
   const handleUpdateProfileFields = useCallback(async (fields) => {
     if (!currentUser?.id) return;
