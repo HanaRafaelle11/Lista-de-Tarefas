@@ -444,6 +444,8 @@ export function AppProvider({ children }) {
     level: 1
   });
 
+  const [companionProgressVersion, setCompanionProgressVersion] = useState(0);
+
   const closeCelebration = useCallback(() => {
     setCelebrationState(prev => ({ ...prev, isOpen: false }));
   }, []);
@@ -483,6 +485,8 @@ export function AppProvider({ children }) {
     const currentCount = Number(localStorage.getItem(storageKey)) || 0;
     const newCount = currentCount + 1;
     localStorage.setItem(storageKey, String(newCount));
+    
+    setCompanionProgressVersion(prev => prev + 1);
     
     const levelBefore = getLevelFromCount(currentCount);
     const levelAfter = getLevelFromCount(newCount);
@@ -1084,6 +1088,215 @@ export function AppProvider({ children }) {
   }, [currentUser?.id, logEvent]);
 
   // ═══════════════════════════════════════════════════════════════════════════
+  // GLOBAL POMODORO TIMER STATE & LOGIC
+  // ═══════════════════════════════════════════════════════════════════════════
+  const [pomodoroFocusTime, setPomodoroFocusTime] = useState(() => Number(localStorage.getItem('flowday_pomodoro_focus')) || 25);
+  const [pomodoroBreakTime, setPomodoroBreakTime] = useState(() => Number(localStorage.getItem('flowday_pomodoro_break')) || 5);
+  const [pomodoroIsActive, setPomodoroIsActive] = useState(() => localStorage.getItem('flowday_pomodoro_is_active') === 'true');
+  const [pomodoroMode, setPomodoroMode] = useState(() => localStorage.getItem('flowday_pomodoro_mode') || 'focus');
+  const [pomodoroSelectedTaskId, setPomodoroSelectedTaskId] = useState(() => localStorage.getItem('flowday_pomodoro_selected_task_id') || '');
+  
+  const [pomodoroTimeLeft, setPomodoroTimeLeft] = useState(() => {
+    const savedTime = localStorage.getItem('flowday_pomodoro_time_left');
+    if (savedTime !== null) {
+      const parsed = Number(savedTime);
+      const activeState = localStorage.getItem('flowday_pomodoro_is_active') === 'true';
+      if (parsed <= 0 && !activeState) {
+        const savedFocus = Number(localStorage.getItem('flowday_pomodoro_focus')) || 25;
+        const savedBreak = Number(localStorage.getItem('flowday_pomodoro_break')) || 5;
+        const savedMode = localStorage.getItem('flowday_pomodoro_mode') || 'focus';
+        return (savedMode === 'focus' ? savedFocus : savedBreak) * 60;
+      }
+      const lastTick = localStorage.getItem('flowday_pomodoro_last_tick');
+      if (activeState && lastTick) {
+        const elapsed = Math.floor((Date.now() - new Date(lastTick).getTime()) / 1000);
+        const adjusted = parsed - Math.max(0, elapsed);
+        return adjusted > 0 ? adjusted : 0;
+      }
+      return parsed;
+    }
+    const savedFocus = Number(localStorage.getItem('flowday_pomodoro_focus')) || 25;
+    return savedFocus * 60;
+  });
+
+  const [showFocusSuccessAnimation, setShowFocusSuccessAnimation] = useState(false);
+  const pomodoroTimerRef = useRef(null);
+
+  // Play Notification Sound
+  const playPomodoroNotificationSound = () => {
+    try {
+      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const oscillator = audioCtx.createOscillator();
+      const gainNode = audioCtx.createGain();
+      
+      oscillator.connect(gainNode);
+      gainNode.connect(audioCtx.destination);
+      
+      oscillator.type = 'sine';
+      oscillator.frequency.setValueAtTime(587.33, audioCtx.currentTime);
+      oscillator.frequency.setValueAtTime(880.00, audioCtx.currentTime + 0.15);
+      
+      gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
+      
+      oscillator.start();
+      oscillator.stop(audioCtx.currentTime + 0.5);
+    } catch (e) {
+      console.warn('Falha ao tocar som de notificação:', e);
+    }
+  };
+
+  // Completion logic
+  const handlePomodoroTimerComplete = useCallback(() => {
+    setPomodoroIsActive(false);
+    playPomodoroNotificationSound();
+    setIsAmbientPlaying(false);
+
+    if (pomodoroMode === 'focus') {
+      setShowFocusSuccessAnimation(true);
+      logEvent('focus_timer_completed', { duration_minutes: pomodoroFocusTime, task_id: pomodoroSelectedTaskId });
+      logEvent('focus_completed', { duration_minutes: pomodoroFocusTime, task_id: pomodoroSelectedTaskId });
+      logEvent('pomodoro_completed', { duration_minutes: pomodoroFocusTime, task_id: pomodoroSelectedTaskId });
+      logEvent('focus_session_completed', { duration_minutes: pomodoroFocusTime, task_id: pomodoroSelectedTaskId });
+      
+      if (pomodoroSelectedTaskId) {
+        handleToggleComplete(pomodoroSelectedTaskId);
+        logEvent('task_completed_in_focus', { task_id: pomodoroSelectedTaskId });
+        setPomodoroSelectedTaskId('');
+      }
+
+      if (currentUser?.id) {
+        incrementCompanionProgress(currentUser.id);
+      }
+      
+      if ('Notification' in window && Notification.permission === 'granted') {
+        try {
+          new Notification('Flowday - Timer', {
+            body: `Ciclo de foco concluído! Hora de uma pausa de ${pomodoroBreakTime} minutos.`,
+            icon: '/icon.svg'
+          });
+        } catch (e) {
+          console.warn('[AppContext] Erro ao disparar notificação de foco:', e);
+        }
+      }
+      setPomodoroMode('break');
+      setPomodoroTimeLeft(pomodoroBreakTime * 60);
+    } else {
+      logEvent('break_timer_completed', { duration_minutes: pomodoroBreakTime });
+      if ('Notification' in window && Notification.permission === 'granted') {
+        try {
+          new Notification('Flowday - Timer', {
+            body: 'A pausa acabou! Hora de voltar ao foco.',
+            icon: '/icon.svg'
+          });
+        } catch (e) {
+          console.warn('[AppContext] Erro ao disparar notificação de pausa:', e);
+        }
+      }
+      setPomodoroMode('focus');
+      setPomodoroTimeLeft(pomodoroFocusTime * 60);
+    }
+  }, [pomodoroMode, pomodoroFocusTime, pomodoroBreakTime, pomodoroSelectedTaskId, currentUser?.id, incrementCompanionProgress, logEvent, handleToggleComplete, setIsAmbientPlaying]);
+
+  // Request Notification permission on startup if not set
+  useEffect(() => {
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+  }, []);
+
+  // Sync state to localStorage
+  useEffect(() => {
+    localStorage.setItem('flowday_pomodoro_time_left', String(pomodoroTimeLeft));
+    localStorage.setItem('flowday_pomodoro_is_active', String(pomodoroIsActive));
+    localStorage.setItem('flowday_pomodoro_mode', pomodoroMode);
+    localStorage.setItem('flowday_pomodoro_selected_task_id', pomodoroSelectedTaskId);
+    if (pomodoroIsActive) {
+      localStorage.setItem('flowday_pomodoro_last_tick', new Date().toISOString());
+    } else {
+      localStorage.removeItem('flowday_pomodoro_last_tick');
+    }
+  }, [pomodoroTimeLeft, pomodoroIsActive, pomodoroMode, pomodoroSelectedTaskId]);
+
+  // Main ticking loop
+  useEffect(() => {
+    if (pomodoroIsActive) {
+      pomodoroTimerRef.current = setInterval(() => {
+        setPomodoroTimeLeft((prev) => {
+          if (prev <= 1) {
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    } else {
+      clearInterval(pomodoroTimerRef.current);
+    }
+    return () => clearInterval(pomodoroTimerRef.current);
+  }, [pomodoroIsActive]);
+
+  // Check completion outside render phase
+  useEffect(() => {
+    if (pomodoroIsActive && pomodoroTimeLeft === 0) {
+      handlePomodoroTimerComplete();
+    }
+  }, [pomodoroTimeLeft, pomodoroIsActive, handlePomodoroTimerComplete]);
+
+  // Actions
+  const togglePomodoroTimer = () => {
+    if (!pomodoroIsActive) {
+      const isResume = pomodoroTimeLeft < (pomodoroMode === 'focus' ? pomodoroFocusTime : pomodoroBreakTime) * 60;
+      if (isResume) {
+        logEvent('focus_session_resumed', { mode: pomodoroMode, task_id: pomodoroSelectedTaskId, timeLeft: pomodoroTimeLeft });
+      } else {
+        logEvent('focus_session_started', { mode: pomodoroMode, task_id: pomodoroSelectedTaskId });
+        logEvent('focus_started', { mode: pomodoroMode, task_id: pomodoroSelectedTaskId });
+      }
+    } else {
+      logEvent('focus_session_paused', { mode: pomodoroMode, timeLeft: pomodoroTimeLeft });
+    }
+    setPomodoroIsActive(!pomodoroIsActive);
+  };
+
+  const resetPomodoroTimer = () => {
+    setPomodoroIsActive(false);
+    setPomodoroMode('focus');
+    setPomodoroTimeLeft(pomodoroFocusTime * 60);
+    logEvent('focus_session_cancelled', { mode: pomodoroMode, timeLeft: pomodoroTimeLeft });
+  };
+
+  const savePomodoroConfig = (focusVal, breakVal) => {
+    setPomodoroFocusTime(focusVal);
+    setPomodoroBreakTime(breakVal);
+    localStorage.setItem('flowday_pomodoro_focus', String(focusVal));
+    localStorage.setItem('flowday_pomodoro_break', String(breakVal));
+    
+    if (!pomodoroIsActive) {
+      setPomodoroTimeLeft((pomodoroMode === 'focus' ? focusVal : breakVal) * 60);
+    }
+    logEvent('pomodoro_config_saved', { focus_minutes: focusVal, break_minutes: breakVal });
+  };
+
+  // On mount, check if timer finished while app was closed / off-screen
+  useEffect(() => {
+    const activeState = localStorage.getItem('flowday_pomodoro_is_active') === 'true';
+    const lastTick = localStorage.getItem('flowday_pomodoro_last_tick');
+    const savedTime = localStorage.getItem('flowday_pomodoro_time_left');
+    if (activeState && lastTick && savedTime !== null) {
+      const parsed = Number(savedTime);
+      const elapsed = Math.floor((Date.now() - new Date(lastTick).getTime()) / 1000);
+      const adjusted = parsed - Math.max(0, elapsed);
+      if (adjusted <= 0) {
+        setPomodoroTimeLeft(0);
+        setPomodoroIsActive(false);
+        handlePomodoroTimerComplete();
+      } else {
+        setPomodoroTimeLeft(adjusted);
+      }
+    }
+  }, [handlePomodoroTimerComplete]);
+
+  // ═══════════════════════════════════════════════════════════════════════════
   // SCORE DE CONSISTÊNCIA (Bloco 5)
   // ═══════════════════════════════════════════════════════════════════════════
   const consistencyScore = useMemo(() => {
@@ -1162,7 +1375,7 @@ export function AppProvider({ children }) {
       (goalRate * 20)
     ));
     return isNaN(finalScore) ? 0 : finalScore;
-  }, [tasks, habits, habitLogs, goals, goalTasks, currentUser]);
+  }, [tasks, habits, habitLogs, goals, goalTasks, currentUser, focusEvents]);
 
   // ═══════════════════════════════════════════════════════════════════════════
   // LOADERS
@@ -3698,6 +3911,10 @@ export function AppProvider({ children }) {
     habitLogs.filter(l => l.completed_date >= sevenDaysAgoStr).forEach(l => {
       activeDates.add(l.completed_date);
     });
+    (focusEvents || []).filter(e => e.created_at).forEach(e => {
+      const dateStr = e.created_at.split('T')[0];
+      if (dateStr >= sevenDaysAgoStr) activeDates.add(dateStr);
+    });
     const activeDaysRecent = activeDates.size;
     const diasAtivosPct = Math.round((activeDaysRecent / 7) * 100);
     const diasAtivosOk = activeDaysRecent >= 3;
@@ -3790,7 +4007,7 @@ export function AppProvider({ children }) {
     }
 
     return { positives, negatives, breakdown, motivationalMessage };
-  }, [tasks, habits, habitLogs, goals, goalTasks, currentUser, userState, consistencyScore]);
+  }, [tasks, habits, habitLogs, goals, goalTasks, currentUser, userState, consistencyScore, focusEvents]);
 
   // ═══════════════════════════════════════════════════════════════════════════
   // VISIBLE DATA & HIDDEN COUNTS (SaaS History Limits)
@@ -4000,6 +4217,27 @@ export function AppProvider({ children }) {
     getLevelFromCount,
     celebrationState,
     closeCelebration,
+    incrementCompanionProgress,
+    companionProgressVersion,
+
+    // Global Pomodoro Timer
+    pomodoroFocusTime,
+    setPomodoroFocusTime,
+    pomodoroBreakTime,
+    setPomodoroBreakTime,
+    pomodoroTimeLeft,
+    setPomodoroTimeLeft,
+    pomodoroIsActive,
+    setPomodoroIsActive,
+    pomodoroMode,
+    setPomodoroMode,
+    pomodoroSelectedTaskId,
+    setPomodoroSelectedTaskId,
+    showFocusSuccessAnimation,
+    setShowFocusSuccessAnimation,
+    togglePomodoroTimer,
+    resetPomodoroTimer,
+    savePomodoroConfig,
 
     // Custom Dialogs & Reactivation
     openCustomAlert,

@@ -3,61 +3,301 @@ import { User, Shield, Briefcase, FileText, Camera, Trash2, CheckCircle2, Sun, M
 import { useAppContext } from '../contexts/AppContext';
 import DefaultAvatar from './DefaultAvatar';
 
-// ── Gerador dinâmico de avatares SVG inline ──
-const generateAvatarDataUrl = (type, color1, color2) => {
-  const bgGradient = `<linearGradient id="bg-grad-${type}-${color1.replace('#','')}" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="${color1}"/><stop offset="100%" stop-color="${color2}"/></linearGradient>`;
-  
-  let headAndBody = '';
-  if (type === 'female') {
-    headAndBody = `
-      <circle cx="50" cy="40" r="16" fill="#F3E8FF" />
-      <path d="M50 20 C40 20, 36 28, 36 38 C36 44, 40 45, 40 48 C42 52, 46 54, 50 54 C54 54, 58 52, 60 48 C60 45, 64 44, 64 38 C64 28, 60 20, 50 20 Z" fill="#4B5563" />
-      <circle cx="50" cy="38" r="14" fill="#FCE7F3" />
-      <path d="M25 82 C25 65, 34 58, 50 58 C66 58, 75 65, 75 82 Z" fill="#EC4899" />
-    `;
-  } else if (type === 'male') {
-    headAndBody = `
-      <circle cx="50" cy="38" r="15" fill="#FEF3C7" />
-      <path d="M35 32 C35 20, 65 20, 65 32 Z" fill="#1F2937" />
-      <path d="M25 82 C25 65, 34 58, 50 58 C66 58, 75 65, 75 82 Z" fill="#3B82F6" />
-    `;
-  } else if (type === 'neutral') {
-    headAndBody = `
-      <circle cx="50" cy="38" r="16" fill="#E0F2FE" />
-      <path d="M25 82 C25 64, 34 56, 50 56 C66 56, 75 64, 75 82 Z" fill="#0F172A" />
-      <path d="M50 56 L42 66 L58 66 Z" fill="#FFFFFF" />
-      <path d="M50 66 L46 82 L54 82 Z" fill="#312E81" />
-    `;
-  } else {
-    headAndBody = `
-      <circle cx="50" cy="38" r="16" fill="#F87171" />
-      <path d="M30 35 L40 20 L60 20 L70 35 Z" fill="#F59E0B" />
-      <path d="M22 82 C22 62, 34 54, 50 54 C66 54, 78 62, 78 82 Z" fill="#10B981" />
-    `;
-  }
-  
-  const svg = `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><defs>${bgGradient}</defs><circle cx="50" cy="50" r="50" fill="url(#bg-grad-${type}-${color1.replace('#','')})" />${headAndBody}</svg>`;
-  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
-};
+// ── Custom SVG Avatars matching the MyFlowDay visual identity ──
+const dogSvg = `
+<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+  <circle cx="50" cy="50" r="48" fill="#FFFFFF" stroke="#1E293B" stroke-width="3" />
+  <path d="M22 28 C14 36, 12 56, 20 62 C24 65, 27 60, 26 50 Z" fill="#0EA5E9" stroke="#1E293B" stroke-width="2.5" />
+  <path d="M78 28 C86 36, 88 56, 80 62 C76 65, 73 60, 74 50 Z" fill="#0EA5E9" stroke="#1E293B" stroke-width="2.5" />
+  <ellipse cx="50" cy="48" rx="26" ry="24" fill="#F8FAFC" stroke="#1E293B" stroke-width="2.5" />
+  <ellipse cx="50" cy="56" rx="14" ry="12" fill="#FFFFFF" stroke="#1E293B" stroke-width="2" />
+  <circle cx="39" cy="44" r="8" fill="#38BDF8" opacity="0.8" />
+  <circle cx="39" cy="44" r="3.5" fill="#1E293B" />
+  <circle cx="61" cy="44" r="3.5" fill="#1E293B" />
+  <circle cx="40.5" cy="42.5" r="1" fill="#FFFFFF" />
+  <circle cx="62.5" cy="42.5" r="1" fill="#FFFFFF" />
+  <path d="M46 52 Q50 49 54 52 Q56 55 50 58 Q44 55 46 52 Z" fill="#1E293B" />
+  <path d="M45 61 Q50 63 55 61" stroke="#1E293B" stroke-width="2" fill="none" />
+  <path d="M47 62 C47 68, 53 68, 53 62 Z" fill="#F43F5E" stroke="#1E293B" stroke-width="2" />
+  <path d="M35 70 C35 70, 50 75, 65 70" fill="none" stroke="#0EA5E9" stroke-width="5" stroke-linecap="round" />
+  <circle cx="50" cy="74" r="4.5" fill="#F59E0B" stroke="#1E293B" stroke-width="1.5" />
+</svg>
+`;
+
+const catSvg = `
+<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+  <circle cx="50" cy="50" r="48" fill="#FFFFFF" stroke="#1E293B" stroke-width="3" />
+  <path d="M26 40 L20 18 C20 18, 38 24, 40 32 Z" fill="#0EA5E9" stroke="#1E293B" stroke-width="2.5" />
+  <path d="M74 40 L80 18 C80 18, 62 24, 60 32 Z" fill="#0EA5E9" stroke="#1E293B" stroke-width="2.5" />
+  <path d="M28 37 L24 23 C24 23, 35 27, 36 32 Z" fill="#FCE7F3" />
+  <path d="M72 37 L76 23 C76 23, 65 27, 64 32 Z" fill="#FCE7F3" />
+  <ellipse cx="50" cy="50" rx="26" ry="22" fill="#F8FAFC" stroke="#1E293B" stroke-width="2.5" />
+  <ellipse cx="38" cy="46" rx="4.5" ry="3.5" fill="#1E293B" />
+  <ellipse cx="62" cy="46" rx="4.5" ry="3.5" fill="#1E293B" />
+  <circle cx="39.5" cy="44.5" r="1" fill="#FFFFFF" />
+  <circle cx="63.5" cy="44.5" r="1" fill="#FFFFFF" />
+  <polygon points="47,53 53,53 50,56" fill="#F43F5E" stroke="#1E293B" stroke-width="1" />
+  <path d="M45 59 Q50 61 50 56 Q50 61 55 59" stroke="#1E293B" stroke-width="2" fill="none" />
+  <path d="M20 50 L34 52 M18 57 L32 56 M20 64 L34 60" stroke="#1E293B" stroke-width="2" stroke-linecap="round" />
+  <path d="M80 50 L66 52 M82 57 L68 56 M80 64 L66 60" stroke="#1E293B" stroke-width="2" stroke-linecap="round" />
+  <path d="M36 68 C36 68, 50 72, 64 68" fill="none" stroke="#0EA5E9" stroke-width="4" stroke-linecap="round" />
+</svg>
+`;
+
+const raccoonSvg = `
+<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+  <circle cx="50" cy="50" r="48" fill="#FFFFFF" stroke="#1E293B" stroke-width="3" />
+  <path d="M25 35 L18 15 C18 15, 34 20, 38 27 Z" fill="#64748B" stroke="#1E293B" stroke-width="2.5" />
+  <path d="M75 35 L82 15 C82 15, 66 20, 62 27 Z" fill="#64748B" stroke="#1E293B" stroke-width="2.5" />
+  <path d="M26 31 L21 19 C21 19, 31 23, 33 27 Z" fill="#F8FAFC" />
+  <path d="M74 31 L79 19 C79 19, 69 23, 67 27 Z" fill="#F8FAFC" />
+  <ellipse cx="50" cy="52" rx="27" ry="22" fill="#94A3B8" stroke="#1E293B" stroke-width="2.5" />
+  <polygon points="23,52 35,52 32,60 21,57" fill="#F8FAFC" />
+  <polygon points="77,52 65,52 68,60 79,57" fill="#F8FAFC" />
+  <path d="M25 48 C28 42, 45 44, 45 54 C45 58, 28 58, 25 48 Z" fill="#1E293B" />
+  <path d="M75 48 C72 42, 55 44, 55 54 C55 58, 72 58, 75 48 Z" fill="#1E293B" />
+  <circle cx="35" cy="50" r="3.5" fill="#FFFFFF" />
+  <circle cx="65" cy="50" r="3.5" fill="#FFFFFF" />
+  <circle cx="35" cy="50" r="1.5" fill="#1E293B" />
+  <circle cx="65" cy="50" r="1.5" fill="#1E293B" />
+  <ellipse cx="50" cy="62" rx="9" ry="7" fill="#F8FAFC" stroke="#1E293B" stroke-width="2" />
+  <ellipse cx="50" cy="60" rx="4" ry="2.5" fill="#1E293B" />
+  <path d="M48 64 Q50 66 52 64" stroke="#1E293B" stroke-width="1.5" fill="none" />
+</svg>
+`;
+
+const capybaraSvg = `
+<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+  <circle cx="50" cy="50" r="48" fill="#FFFFFF" stroke="#1E293B" stroke-width="3" />
+  <path d="M52 78 C52 60, 68 55, 80 62 L80 82 H45 Z" fill="#0EA5E9" stroke="#1E293B" stroke-width="2.5" />
+  <path d="M68 38 C72 38, 75 42, 72 47 C69 50, 65 48, 65 44 Z" fill="#0284C7" stroke="#1E293B" stroke-width="2.5" />
+  <path d="M30 54 C28 50, 26 44, 30 38 C34 32, 54 32, 68 34 C72 35, 74 42, 72 50 C70 58, 62 68, 50 68 C40 68, 32 58, 30 54 Z" fill="#0EA5E9" stroke="#1E293B" stroke-width="2.5" />
+  <path d="M30 38 Q34 48 30 54" fill="none" stroke="#1E293B" stroke-width="2" />
+  <path d="M28 40 Q26 43 28 46" fill="none" stroke="#1E293B" stroke-width="2.5" stroke-linecap="round" />
+  <ellipse cx="44" cy="42" rx="3.5" ry="2" fill="#1E293B" transform="rotate(-10 44 42)" />
+  <circle cx="43" cy="41" r="0.8" fill="#FFFFFF" />
+  <path d="M68 41 C69 41, 71 42, 70 44 C69 45, 67 45, 67 43 Z" fill="#FFFFFF" />
+</svg>
+`;
+
+const persona1Svg = `
+<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+  <circle cx="50" cy="50" r="48" fill="#FFFFFF" stroke="#1E293B" stroke-width="3" />
+  <path d="M32 40 C28 46, 28 62, 32 68 C34 70, 66 70, 68 68 C72 62, 72 46, 68 40 Z" fill="#1E293B" />
+  <rect x="46" y="54" width="8" height="12" fill="#FEE2E2" stroke="#1E293B" stroke-width="2" />
+  <circle cx="50" cy="42" r="18" fill="#FEE2E2" stroke="#1E293B" stroke-width="2.5" />
+  <circle cx="42" cy="42" r="6" fill="none" stroke="#1E293B" stroke-width="2.5" />
+  <circle cx="58" cy="42" r="6" fill="none" stroke="#1E293B" stroke-width="2.5" />
+  <line x1="48" y1="42" x2="52" y2="42" stroke="#1E293B" stroke-width="2.5" />
+  <line x1="32" y1="40" x2="36" y2="40" stroke="#1E293B" stroke-width="2.5" />
+  <line x1="64" y1="40" x2="68" y2="40" stroke="#1E293B" stroke-width="2.5" />
+  <path d="M32 40 C32 26, 68 26, 68 40 C68 40, 60 30, 50 34 C40 30, 32 40, 32 40 Z" fill="#1E293B" stroke="#1E293B" stroke-width="1" />
+  <circle cx="42" cy="42" r="1.5" fill="#1E293B" />
+  <circle cx="58" cy="42" r="1.5" fill="#1E293B" />
+  <path d="M47 51 Q50 53 53 51" stroke="#1E293B" stroke-width="2" fill="none" stroke-linecap="round" />
+  <path d="M22 82 C22 66, 30 60, 50 60 C70 60, 78 66, 78 82 Z" fill="#0D9488" stroke="#1E293B" stroke-width="2.5" />
+  <path d="M42 60 L50 74 L58 60 Z" fill="#FFFFFF" stroke="#1E293B" stroke-width="2" />
+  <path d="M48 70 L50 74 L52 70 Z" fill="#0D9488" />
+</svg>
+`;
+
+const persona2Svg = `
+<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+  <circle cx="50" cy="50" r="48" fill="#FFFFFF" stroke="#1E293B" stroke-width="3" />
+  <path d="M32 38 C32 22, 68 22, 68 38 Z" fill="#1E293B" stroke="#1E293B" stroke-width="2" />
+  <rect x="46" y="54" width="8" height="12" fill="#FEF3C7" stroke="#1E293B" stroke-width="2" />
+  <circle cx="50" cy="42" r="18" fill="#FEF3C7" stroke="#1E293B" stroke-width="2.5" />
+  <rect x="36" y="38" width="10" height="8" rx="1.5" fill="none" stroke="#1E293B" stroke-width="2.5" />
+  <rect x="54" y="38" width="10" height="8" rx="1.5" fill="none" stroke="#1E293B" stroke-width="2.5" />
+  <line x1="46" y1="42" x2="54" y2="42" stroke="#1E293B" stroke-width="2.5" />
+  <circle cx="41" cy="42" r="1.5" fill="#1E293B" />
+  <circle cx="59" cy="42" r="1.5" fill="#1E293B" />
+  <path d="M47 51 Q50 53 53 51" stroke="#1E293B" stroke-width="2" fill="none" stroke-linecap="round" />
+  <path d="M22 82 C22 66, 30 60, 50 60 C70 60, 78 66, 78 82 Z" fill="#0EA5E9" stroke="#1E293B" stroke-width="2.5" />
+  <path d="M44 60 L50 72 L56 60 Z" fill="#FFFFFF" stroke="#1E293B" stroke-width="2" />
+  <path d="M49 66 L51 66 L52 82 L48 82 Z" fill="#0F172A" />
+</svg>
+`;
+
+const persona3Svg = `
+<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+  <circle cx="50" cy="50" r="48" fill="#FFFFFF" stroke="#1E293B" stroke-width="3" />
+  <rect x="46" y="54" width="8" height="12" fill="#F1F5F9" stroke="#1E293B" stroke-width="2" />
+  <circle cx="50" cy="42" r="18" fill="#F1F5F9" stroke="#1E293B" stroke-width="2.5" />
+  <path d="M30 40 A20 20 0 0 1 70 40" fill="none" stroke="#1E293B" stroke-width="3.5" stroke-linecap="round" />
+  <rect x="28" y="36" width="5" height="10" rx="2" fill="#0EA5E9" stroke="#1E293B" stroke-width="2" />
+  <rect x="67" y="36" width="5" height="10" rx="2" fill="#0EA5E9" stroke="#1E293B" stroke-width="2" />
+  <path d="M33 44 C33 50, 43 54, 46 54" fill="none" stroke="#1E293B" stroke-width="2" />
+  <circle cx="47" cy="54" r="2.5" fill="#1E293B" />
+  <circle cx="42" cy="42" r="2" fill="#1E293B" />
+  <circle cx="58" cy="42" r="2" fill="#1E293B" />
+  <path d="M47 51 Q50 53 53 51" stroke="#1E293B" stroke-width="2" fill="none" stroke-linecap="round" />
+  <path d="M22 82 C22 66, 30 60, 50 60 C70 60, 78 66, 78 82 Z" fill="#0D9488" stroke="#1E293B" stroke-width="2.5" />
+  <path d="M44 60 L50 72 L56 60 Z" fill="#FFFFFF" stroke="#1E293B" stroke-width="2" />
+  <path d="M49 66 L51 66 L52 82 L48 82 Z" fill="#0F172A" />
+</svg>
+`;
+
+const persona4Svg = `
+<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+  <circle cx="50" cy="50" r="48" fill="#FFFFFF" stroke="#1E293B" stroke-width="3" />
+  <path d="M32 36 C32 20, 68 20, 68 36 Z" fill="#1E293B" stroke="#1E293B" stroke-width="2" />
+  <rect x="46" y="54" width="8" height="12" fill="#FEF3C7" stroke="#1E293B" stroke-width="2" />
+  <circle cx="50" cy="42" r="18" fill="#FEF3C7" stroke="#1E293B" stroke-width="2.5" />
+  <circle cx="42" cy="42" r="2.5" fill="#1E293B" />
+  <circle cx="58" cy="42" r="2.5" fill="#1E293B" />
+  <path d="M46 51 Q50 54 54 51" stroke="#1E293B" stroke-width="2" fill="none" stroke-linecap="round" />
+  <path d="M22 82 C22 66, 30 60, 50 60 C70 60, 78 66, 78 82 Z" fill="#0F172A" stroke="#1E293B" stroke-width="2.5" />
+  <path d="M44 60 L50 72 L56 60 Z" fill="#FFFFFF" stroke="#1E293B" stroke-width="2" />
+  <path d="M49 66 L51 66 L52 82 L48 82 Z" fill="#0EA5E9" />
+</svg>
+`;
+
+const growth1Svg = `
+<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+  <circle cx="50" cy="50" r="48" fill="#FFFFFF" stroke="#1E293B" stroke-width="3" />
+  <line x1="26" y1="72" x2="74" y2="72" stroke="#1E293B" stroke-width="3.5" stroke-linecap="round" />
+  <rect x="30" y="54" width="8" height="18" rx="1.5" fill="#94A3B8" stroke="#1E293B" stroke-width="2.5" />
+  <rect x="44" y="42" width="8" height="30" rx="1.5" fill="#38BDF8" stroke="#1E293B" stroke-width="2.5" />
+  <rect x="58" y="28" width="8" height="44" rx="1.5" fill="#0EA5E9" stroke="#1E293B" stroke-width="2.5" />
+  <polygon points="62,14 65,20 72,21 67,26 68,33 62,29 56,33 57,26 52,21 59,20" fill="#F59E0B" stroke="#1E293B" stroke-width="2" stroke-linejoin="round" />
+  <path d="M28 50 Q46 36 60 22" fill="none" stroke="#0EA5E9" stroke-width="3" stroke-linecap="round" />
+  <polygon points="56,22 62,20 60,26" fill="#0EA5E9" />
+</svg>
+`;
+
+const growth2Svg = `
+<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+  <circle cx="50" cy="50" r="48" fill="#FFFFFF" stroke="#1E293B" stroke-width="3" />
+  <line x1="50" y1="14" x2="50" y2="20" stroke="#0EA5E9" stroke-width="3" stroke-linecap="round" />
+  <line x1="28" y1="28" x2="33" y2="33" stroke="#0EA5E9" stroke-width="3" stroke-linecap="round" />
+  <line x1="72" y1="28" x2="67" y2="33" stroke="#0EA5E9" stroke-width="3" stroke-linecap="round" />
+  <line x1="20" y1="50" x2="26" y2="50" stroke="#0EA5E9" stroke-width="3" stroke-linecap="round" />
+  <line x1="80" y1="50" x2="74" y2="50" stroke="#0EA5E9" stroke-width="3" stroke-linecap="round" />
+  <path d="M35 48 C35 34, 65 34, 65 48 C65 56, 58 60, 58 66 L42 66 C42 60, 35 56, 35 48 Z" fill="#FFFFFF" stroke="#1E293B" stroke-width="3" stroke-linejoin="round" />
+  <path d="M46 54 L46 45 Q50 41 54 45 L54 54" fill="none" stroke="#F59E0B" stroke-width="2.5" stroke-linecap="round" />
+  <rect x="44" y="68" width="12" height="4" rx="1" fill="#94A3B8" stroke="#1E293B" stroke-width="2.5" />
+  <rect x="45" y="74" width="10" height="4" rx="1" fill="#94A3B8" stroke="#1E293B" stroke-width="2.5" />
+  <circle cx="50" cy="80" r="1.5" fill="#1E293B" />
+</svg>
+`;
+
+const growth3Svg = `
+<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+  <circle cx="50" cy="50" r="48" fill="#FFFFFF" stroke="#1E293B" stroke-width="3" />
+  <polygon points="56,44 76,74 36,74" fill="#94A3B8" stroke="#1E293B" stroke-width="2" />
+  <polygon points="56,44 64,56 60,60 56,58 52,60 50,56" fill="#F8FAFC" />
+  <polygon points="46,32 70,74 22,74" fill="#0EA5E9" stroke="#1E293B" stroke-width="3" />
+  <polygon points="46,32 54,46 50,50 46,48 42,50 38,46" fill="#F8FAFC" />
+  <line x1="46" y1="32" x2="46" y2="16" stroke="#1E293B" stroke-width="2" />
+  <polygon points="46,16 60,21 46,26" fill="#F59E0B" stroke="#1E293B" stroke-width="2" stroke-linejoin="round" />
+</svg>
+`;
+
+const growth4Svg = `
+<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+  <circle cx="50" cy="50" r="48" fill="#FFFFFF" stroke="#1E293B" stroke-width="3" />
+  <line x1="50" y1="50" x2="50" y2="24" stroke="#94A3B8" stroke-width="2" />
+  <line x1="50" y1="50" x2="50" y2="76" stroke="#94A3B8" stroke-width="2" />
+  <line x1="50" y1="50" x2="24" y2="50" stroke="#94A3B8" stroke-width="2" />
+  <line x1="50" y1="50" x2="76" y2="50" stroke="#94A3B8" stroke-width="2" />
+  <line x1="50" y1="50" x2="31" y2="31" stroke="#94A3B8" stroke-width="2" />
+  <line x1="50" y1="50" x2="69" y2="31" stroke="#94A3B8" stroke-width="2" />
+  <line x1="50" y1="50" x2="31" y2="69" stroke="#94A3B8" stroke-width="2" />
+  <line x1="50" y1="50" x2="69" y2="69" stroke="#94A3B8" stroke-width="2" />
+  <circle cx="50" cy="24" r="5" fill="#0EA5E9" stroke="#1E293B" stroke-width="2" />
+  <circle cx="50" cy="76" r="5" fill="#0EA5E9" stroke="#1E293B" stroke-width="2" />
+  <circle cx="24" cy="50" r="5" fill="#0EA5E9" stroke="#1E293B" stroke-width="2" />
+  <circle cx="76" cy="50" r="5" fill="#0EA5E9" stroke="#1E293B" stroke-width="2" />
+  <circle cx="31" cy="31" r="5" fill="#0D9488" stroke="#1E293B" stroke-width="2" />
+  <circle cx="69" cy="31" r="5" fill="#0D9488" stroke="#1E293B" stroke-width="2" />
+  <circle cx="31" cy="69" r="5" fill="#0D9488" stroke="#1E293B" stroke-width="2" />
+  <circle cx="69" cy="69" r="5" fill="#0D9488" stroke="#1E293B" stroke-width="2" />
+  <circle cx="50" cy="50" r="12" fill="#FFFFFF" stroke="#1E293B" stroke-width="3" />
+  <circle cx="50" cy="50" r="6" fill="#F59E0B" />
+</svg>
+`;
+
+const flow1Svg = `
+<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+  <circle cx="50" cy="50" r="48" fill="#FFFFFF" stroke="#1E293B" stroke-width="3" />
+  <path d="M28 66 L28 42 C28 32, 40 24, 50 36 C60 24, 72 32, 72 42 L72 66" fill="none" stroke="#1E293B" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" />
+  <path d="M38 66 L38 46 C38 38, 45 34, 50 41 C55 34, 62 38, 62 46 L62 66" fill="none" stroke="#0EA5E9" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" />
+  <circle cx="50" cy="50" r="4" fill="#F59E0B" />
+</svg>
+`;
+
+const flow2Svg = `
+<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+  <circle cx="50" cy="50" r="48" fill="#FFFFFF" stroke="#1E293B" stroke-width="3" />
+  <circle cx="50" cy="50" r="32" fill="none" stroke="#94A3B8" stroke-width="2" stroke-dasharray="3 3" />
+  <polygon points="50,18 53,47 50,50 47,47" fill="#0EA5E9" stroke="#1E293B" stroke-width="1.5" />
+  <polygon points="50,82 53,53 50,50 47,53" fill="#64748B" stroke="#1E293B" stroke-width="1.5" />
+  <polygon points="82,50 53,53 50,50 53,47" fill="#0EA5E9" stroke="#1E293B" stroke-width="1.5" />
+  <polygon points="18,50 47,53 50,50 47,47" fill="#64748B" stroke="#1E293B" stroke-width="1.5" />
+  <polygon points="72,28 52,48 50,50 48,48" fill="#0D9488" />
+  <polygon points="28,72 48,52 50,50 52,52" fill="#64748B" />
+  <polygon points="72,72 52,52 50,50 48,52" fill="#0D9488" />
+  <polygon points="28,28 48,48 50,50 52,48" fill="#64748B" />
+  <circle cx="50" cy="50" r="5" fill="#FFFFFF" stroke="#1E293B" stroke-width="2" />
+  <circle cx="50" cy="50" r="2.5" fill="#F59E0B" />
+</svg>
+`;
+
+const flow3Svg = `
+<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+  <circle cx="50" cy="50" r="48" fill="#FFFFFF" stroke="#1E293B" stroke-width="3" />
+  <path d="M50 20 C42 34, 38 42, 38 48 C38 55, 43 60, 50 60 C57 60, 62 55, 62 48 C62 42, 58 34, 50 20 Z" fill="#0EA5E9" stroke="#1E293B" stroke-width="2.5" stroke-linejoin="round" />
+  <path d="M47 38 C44 44, 44 48, 47 52" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" />
+  <ellipse cx="50" cy="68" rx="28" ry="8" fill="none" stroke="#94A3B8" stroke-width="2" stroke-dasharray="4 2" />
+  <ellipse cx="50" cy="74" rx="20" ry="6" fill="none" stroke="#0EA5E9" stroke-width="2" />
+  <ellipse cx="50" cy="78" rx="12" ry="4" fill="none" stroke="#0D9488" stroke-width="1.5" />
+</svg>
+`;
+
+const flow4Svg = `
+<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+  <circle cx="50" cy="50" r="48" fill="#FFFFFF" stroke="#1E293B" stroke-width="3" />
+  <circle cx="50" cy="50" r="32" fill="none" stroke="#94A3B8" stroke-width="2" stroke-dasharray="2 4" />
+  <g transform="translate(50,50)">
+    <circle cx="0" cy="-24" r="3.5" fill="#0EA5E9" stroke="#1E293B" stroke-width="1.5" />
+    <circle cx="17" cy="-17" r="3.5" fill="#0D9488" stroke="#1E293B" stroke-width="1.5" />
+    <circle cx="24" cy="0" r="3.5" fill="#0EA5E9" stroke="#1E293B" stroke-width="1.5" />
+    <circle cx="17" cy="17" r="3.5" fill="#0D9488" stroke="#1E293B" stroke-width="1.5" />
+    <circle cx="0" cy="24" r="3.5" fill="#0EA5E9" stroke="#1E293B" stroke-width="1.5" />
+    <circle cx="-17" cy="17" r="3.5" fill="#0D9488" stroke="#1E293B" stroke-width="1.5" />
+    <circle cx="-24" cy="0" r="3.5" fill="#0EA5E9" stroke="#1E293B" stroke-width="1.5" />
+    <circle cx="-17" cy="-17" r="3.5" fill="#0D9488" stroke="#1E293B" stroke-width="1.5" />
+  </g>
+  <circle cx="50" cy="50" r="16" fill="none" stroke="#1E293B" stroke-width="2.5" />
+  <circle cx="50" cy="50" r="10" fill="#F59E0B" />
+</svg>
+`;
 
 const LIBRARY_AVATARS = {
-  Masculino: [
-    { id: 'm1', label: 'Tech Lead', url: generateAvatarDataUrl('male', '#1E3A8A', '#3B82F6') },
-    { id: 'm2', label: 'Esportista', url: generateAvatarDataUrl('male', '#10B981', '#047857') },
-    { id: 'm3', label: 'Minimalista', url: generateAvatarDataUrl('male', '#4B5563', '#1F2937') }
+  'Animais & Mascotes': [
+    { id: 'am1', label: 'Cachorro', url: `data:image/svg+xml;utf8,${encodeURIComponent(dogSvg)}` },
+    { id: 'am2', label: 'Gato', url: `data:image/svg+xml;utf8,${encodeURIComponent(catSvg)}` },
+    { id: 'am3', label: 'Guaxinim', url: `data:image/svg+xml;utf8,${encodeURIComponent(raccoonSvg)}` },
+    { id: 'am4', label: 'Capivara', url: `data:image/svg+xml;utf8,${encodeURIComponent(capybaraSvg)}` }
   ],
-  Feminino: [
-    { id: 'f1', label: 'Gestora', url: generateAvatarDataUrl('female', '#6D28D9', '#A78BFA') },
-    { id: 'f2', label: 'Artista', url: generateAvatarDataUrl('female', '#DB2777', '#F472B6') },
-    { id: 'f3', label: 'Criativa', url: generateAvatarDataUrl('female', '#D97706', '#F59E0B') }
+  'Personas': [
+    { id: 'pe1', label: 'Mulher com Óculos', url: `data:image/svg+xml;utf8,${encodeURIComponent(persona1Svg)}` },
+    { id: 'pe2', label: 'Homem com Óculos', url: `data:image/svg+xml;utf8,${encodeURIComponent(persona2Svg)}` },
+    { id: 'pe3', label: 'Suporte', url: `data:image/svg+xml;utf8,${encodeURIComponent(persona3Svg)}` },
+    { id: 'pe4', label: 'Executivo', url: `data:image/svg+xml;utf8,${encodeURIComponent(persona4Svg)}` }
   ],
-  Neutro: [
-    { id: 'n1', label: 'Profissional', url: generateAvatarDataUrl('neutral', '#0F172A', '#334155') },
-    { id: 'n2', label: 'Foco Limpo', url: generateAvatarDataUrl('neutral', '#06B6D4', '#22D3EE') }
+  'Growth & Focus': [
+    { id: 'gf1', label: 'Gráfico & Estrela', url: `data:image/svg+xml;utf8,${encodeURIComponent(growth1Svg)}` },
+    { id: 'gf2', label: 'Lâmpada de Ideias', url: `data:image/svg+xml;utf8,${encodeURIComponent(growth2Svg)}` },
+    { id: 'gf3', label: 'Montanha & Bandeira', url: `data:image/svg+xml;utf8,${encodeURIComponent(growth3Svg)}` },
+    { id: 'gf4', label: 'Foco Conectado', url: `data:image/svg+xml;utf8,${encodeURIComponent(growth4Svg)}` }
   ],
-  Ilustrado: [
-    { id: 'i1', label: 'Moderna', url: generateAvatarDataUrl('illustrated', '#8B5CF6', '#EC4899') },
-    { id: 'i2', label: 'Inovador', url: generateAvatarDataUrl('illustrated', '#F59E0B', '#EF4444') }
+  'Flow & Mindfulness': [
+    { id: 'fm1', label: 'Flow M', url: `data:image/svg+xml;utf8,${encodeURIComponent(flow1Svg)}` },
+    { id: 'fm2', label: 'Bússola', url: `data:image/svg+xml;utf8,${encodeURIComponent(flow2Svg)}` },
+    { id: 'fm3', label: 'Gota d\'Água', url: `data:image/svg+xml;utf8,${encodeURIComponent(flow3Svg)}` },
+    { id: 'fm4', label: 'Energia Central', url: `data:image/svg+xml;utf8,${encodeURIComponent(flow4Svg)}` }
   ]
 };
 
@@ -86,7 +326,7 @@ export default function ProfileView() {
 
   const [showPhotoOptions, setShowPhotoOptions] = useState(false);
   const [showAvatarLibrary, setShowAvatarLibrary] = useState(false);
-  const [activeAvatarTab, setActiveAvatarTab] = useState('Masculino');
+  const [activeAvatarTab, setActiveAvatarTab] = useState('Animais & Mascotes');
 
   // Sincroniza dados com o profile vindo do banco
   useEffect(() => {

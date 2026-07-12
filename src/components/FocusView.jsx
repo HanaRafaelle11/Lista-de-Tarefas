@@ -23,195 +23,37 @@ export default function FocusView() {
     setAudioBlocked,
     openCustomAlert,
     setActiveTab,
-    growthPet
+    growthPet,
+    incrementCompanionProgress,
+    currentUser,
+
+    // Global Pomodoro Timer
+    pomodoroFocusTime: focusTime,
+    setPomodoroFocusTime: setFocusTime,
+    pomodoroBreakTime: breakTime,
+    setPomodoroBreakTime: setBreakTime,
+    pomodoroTimeLeft: timeLeft,
+    setPomodoroTimeLeft: setTimeLeft,
+    pomodoroIsActive: isActive,
+    setPomodoroIsActive: setIsActive,
+    pomodoroMode: mode,
+    setPomodoroMode: setMode,
+    pomodoroSelectedTaskId: selectedTaskId,
+    setPomodoroSelectedTaskId: setSelectedTaskId,
+    showFocusSuccessAnimation: showSuccessAnimation,
+    setShowFocusSuccessAnimation: setShowSuccessAnimation,
+    togglePomodoroTimer: toggleTimer,
+    resetPomodoroTimer: resetTimer,
+    savePomodoroConfig
   } = useAppContext();
 
   const pendingTasks = tasks.filter(t => !t.completed);
 
-  // Estados do Timer
-  const [focusTime, setFocusTime] = useState(() => Number(localStorage.getItem('flowday_pomodoro_focus')) || 25);
-  const [breakTime, setBreakTime] = useState(() => Number(localStorage.getItem('flowday_pomodoro_break')) || 5);
-  
-  const [isActive, setIsActive] = useState(() => localStorage.getItem('flowday_pomodoro_is_active') === 'true');
-  const [mode, setMode] = useState(() => localStorage.getItem('flowday_pomodoro_mode') || 'focus');
-  const [selectedTaskId, setSelectedTaskId] = useState(() => localStorage.getItem('flowday_pomodoro_selected_task_id') || '');
-  
-  const [timeLeft, setTimeLeft] = useState(() => {
-    const savedTime = localStorage.getItem('flowday_pomodoro_time_left');
-    if (savedTime !== null) {
-      const parsed = Number(savedTime);
-      const activeState = localStorage.getItem('flowday_pomodoro_is_active') === 'true';
-      if (parsed <= 0 && !activeState) {
-        const savedFocus = Number(localStorage.getItem('flowday_pomodoro_focus')) || 25;
-        const savedBreak = Number(localStorage.getItem('flowday_pomodoro_break')) || 5;
-        const savedMode = localStorage.getItem('flowday_pomodoro_mode') || 'focus';
-        return (savedMode === 'focus' ? savedFocus : savedBreak) * 60;
-      }
-      const lastTick = localStorage.getItem('flowday_pomodoro_last_tick');
-      if (activeState && lastTick) {
-        const elapsed = Math.floor((Date.now() - new Date(lastTick).getTime()) / 1000);
-        const adjusted = parsed - Math.max(0, elapsed);
-        return adjusted > 0 ? adjusted : 0;
-      }
-      return parsed;
-    }
-    const savedFocus = Number(localStorage.getItem('flowday_pomodoro_focus')) || 25;
-    return savedFocus * 60;
-  });
-
   const [showConfig, setShowConfig] = useState(false);
-  const [showSuccessAnimation, setShowSuccessAnimation] = useState(false);
-  const isFirstMount = useRef(true);
-
+  
   // Estados temporários do painel de configuração
   const [tempFocus, setTempFocus] = useState(focusTime);
   const [tempBreak, setTempBreak] = useState(breakTime);
-
-  const timerRef = useRef(null);
-
-  // Sincroniza timeLeft ao alterar focusTime/breakTime se inativo (apenas após o mount inicial)
-  useEffect(() => {
-    if (isFirstMount.current) {
-      isFirstMount.current = false;
-      return;
-    }
-    if (!isActive) {
-      setTimeLeft((mode === 'focus' ? focusTime : breakTime) * 60);
-    }
-  }, [focusTime, breakTime, mode]);
-
-  // Efeito on-mount para completar timer se terminou enquanto fora
-  useEffect(() => {
-    const activeState = localStorage.getItem('flowday_pomodoro_is_active') === 'true';
-    const lastTick = localStorage.getItem('flowday_pomodoro_last_tick');
-    const savedTime = localStorage.getItem('flowday_pomodoro_time_left');
-    if (activeState && lastTick && savedTime !== null) {
-      const parsed = Number(savedTime);
-      const elapsed = Math.floor((Date.now() - new Date(lastTick).getTime()) / 1000);
-      const adjusted = parsed - Math.max(0, elapsed);
-      if (adjusted <= 0) {
-        setTimeLeft(0);
-        setIsActive(false);
-        handleTimerComplete();
-      }
-    }
-  }, []);
-
-  // Migração para garantir que o tempo padrão de foco seja resetado para 25 minutos no primeiro acesso
-  useEffect(() => {
-    if (!localStorage.getItem('flowday_pomodoro_default_fixed_25')) {
-      localStorage.setItem('flowday_pomodoro_focus', '25');
-      localStorage.setItem('flowday_pomodoro_break', '5');
-      localStorage.setItem('flowday_pomodoro_default_fixed_25', 'true');
-      setFocusTime(25);
-      setBreakTime(5);
-      setTimeLeft(25 * 60);
-    }
-  }, []);
-
-  // Persiste estado do timer a cada tick/mudança
-  useEffect(() => {
-    localStorage.setItem('flowday_pomodoro_time_left', String(timeLeft));
-    localStorage.setItem('flowday_pomodoro_is_active', String(isActive));
-    localStorage.setItem('flowday_pomodoro_mode', mode);
-    localStorage.setItem('flowday_pomodoro_selected_task_id', selectedTaskId);
-    if (isActive) {
-      localStorage.setItem('flowday_pomodoro_last_tick', new Date().toISOString());
-    } else {
-      localStorage.removeItem('flowday_pomodoro_last_tick');
-    }
-  }, [timeLeft, isActive, mode, selectedTaskId]);
-
-  // Efeito principal do Timer
-  useEffect(() => {
-    if (isActive) {
-      timerRef.current = setInterval(() => {
-        setTimeLeft((prev) => {
-          if (prev <= 1) {
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-    } else {
-      clearInterval(timerRef.current);
-    }
-    return () => clearInterval(timerRef.current);
-  }, [isActive]);
-
-  // Efeito para disparar a finalização de forma segura fora da fase de render/update do state
-  useEffect(() => {
-    if (isActive && timeLeft === 0) {
-      handleTimerComplete();
-    }
-  }, [timeLeft, isActive]);
-
-  const handleTimerComplete = () => {
-    setIsActive(false);
-    playNotificationSound();
-    setIsAmbientPlaying(false);
-    
-    if (mode === 'focus') {
-      setShowSuccessAnimation(true);
-      logEvent('focus_timer_completed', { duration_minutes: focusTime, task_id: selectedTaskId });
-      logEvent('focus_completed', { duration_minutes: focusTime, task_id: selectedTaskId });
-      logEvent('pomodoro_completed', { duration_minutes: focusTime, task_id: selectedTaskId });
-      logEvent('focus_session_completed', { duration_minutes: focusTime, task_id: selectedTaskId });
-      
-      if (selectedTaskId) {
-        handleTaskComplete(selectedTaskId);
-      }
-      
-      if ('Notification' in window && Notification.permission === 'granted') {
-        try {
-          new Notification('Flowday - Timer', {
-            body: 'Ciclo de foco concluído! Hora de uma pausa de ' + breakTime + ' minutos.',
-            icon: '/icon.svg'
-          });
-        } catch (e) {
-          console.warn('[FocusView] Erro ao disparar notificação de foco:', e);
-        }
-      }
-      setMode('break');
-      setTimeLeft(breakTime * 60);
-    } else {
-      logEvent('break_timer_completed', { duration_minutes: breakTime });
-      if ('Notification' in window && Notification.permission === 'granted') {
-        try {
-          new Notification('Flowday - Timer', {
-            body: 'A pausa acabou! Hora de voltar ao foco.',
-            icon: '/icon.svg'
-          });
-        } catch (e) {
-          console.warn('[FocusView] Erro ao disparar notificação de pausa:', e);
-        }
-      }
-      setMode('focus');
-      setTimeLeft(focusTime * 60);
-    }
-  };
-
-  const toggleTimer = () => {
-    if (!isActive) {
-      const isResume = timeLeft < (mode === 'focus' ? focusTime : breakTime) * 60;
-      if (isResume) {
-        logEvent('focus_session_resumed', { mode, task_id: selectedTaskId, timeLeft });
-      } else {
-        logEvent('focus_session_started', { mode, task_id: selectedTaskId });
-        logEvent('focus_started', { mode, task_id: selectedTaskId });
-      }
-    } else {
-      logEvent('focus_session_paused', { mode, timeLeft });
-    }
-    setIsActive(!isActive);
-  };
-
-  const resetTimer = () => {
-    setIsActive(false);
-    setMode('focus');
-    setTimeLeft(focusTime * 60);
-    logEvent('focus_session_cancelled', { mode, timeLeft });
-  };
 
   const handleSaveConfig = () => {
     const focusVal = parseInt(tempFocus, 10);
@@ -231,17 +73,8 @@ export default function FocusView() {
       return;
     }
 
-    setFocusTime(focusVal);
-    setBreakTime(breakVal);
-    localStorage.setItem('flowday_pomodoro_focus', String(focusVal));
-    localStorage.setItem('flowday_pomodoro_break', String(breakVal));
-    
-    if (!isActive) {
-      setTimeLeft((mode === 'focus' ? focusVal : breakVal) * 60);
-    }
-    
+    savePomodoroConfig(focusVal, breakVal);
     setShowConfig(false);
-    logEvent('pomodoro_config_saved', { focus_minutes: focusVal, break_minutes: breakVal });
   };
 
   const handleTaskComplete = (taskId) => {
@@ -249,29 +82,6 @@ export default function FocusView() {
     logEvent('task_completed_in_focus', { task_id: taskId });
     if (selectedTaskId === taskId) {
       setSelectedTaskId('');
-    }
-  };
-
-  const playNotificationSound = () => {
-    try {
-      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      const oscillator = audioCtx.createOscillator();
-      const gainNode = audioCtx.createGain();
-      
-      oscillator.connect(gainNode);
-      gainNode.connect(audioCtx.destination);
-      
-      oscillator.type = 'sine';
-      oscillator.frequency.setValueAtTime(587.33, audioCtx.currentTime);
-      oscillator.frequency.setValueAtTime(880.00, audioCtx.currentTime + 0.15);
-      
-      gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
-      gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
-      
-      oscillator.start();
-      oscillator.stop(audioCtx.currentTime + 0.5);
-    } catch (e) {
-      console.warn('Falha ao tocar som de notificação:', e);
     }
   };
 
@@ -813,6 +623,7 @@ export default function FocusView() {
             <button
               onClick={() => {
                 setShowSuccessAnimation(false);
+                setIsActive(true);
               }}
               className="btn-primary-glow"
               style={{
@@ -825,6 +636,35 @@ export default function FocusView() {
               }}
             >
               Iniciar Pausa Coletiva
+            </button>
+
+            <button
+              onClick={() => {
+                setShowSuccessAnimation(false);
+              }}
+              style={{
+                width: '100%',
+                padding: '12px',
+                fontSize: '14px',
+                fontWeight: '600',
+                borderRadius: 'var(--radius-md)',
+                cursor: 'pointer',
+                backgroundColor: 'transparent',
+                border: '1px solid var(--border-medium)',
+                color: 'var(--text-muted)',
+                marginTop: '4px',
+                transition: 'all 0.2s'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = 'var(--bg-card-hover)';
+                e.currentTarget.style.color = 'var(--text-main)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'transparent';
+                e.currentTarget.style.color = 'var(--text-muted)';
+              }}
+            >
+              Fechar Janela
             </button>
           </div>
         </div>

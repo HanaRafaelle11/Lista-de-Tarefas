@@ -154,7 +154,8 @@ export default function HomeView() {
     handleSelectGrowthPet,
     getLevelFromCount,
     categories,
-    focusEvents
+    focusEvents,
+    companionProgressVersion
   } = useAppContext();
   
   const [showHealthExplanation, setShowHealthExplanation] = useState(false);
@@ -472,7 +473,7 @@ export default function HomeView() {
     if (!currentUser?.id) return 0;
     const storageKey = `flowday_${viewedPet}_completed_goals_${currentUser.id}`;
     return Number(localStorage.getItem(storageKey)) || 0;
-  }, [currentUser?.id, viewedPet]);
+  }, [currentUser?.id, viewedPet, companionProgressVersion]);
 
   const weeklyTotal = ritmoSemanal.reduce((acc, d) => acc + d.count, 0);
   const currentPetData = EVOLUTION_CATEGORIES[viewedPet] || EVOLUTION_CATEGORIES.plant;
