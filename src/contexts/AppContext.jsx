@@ -1987,6 +1987,103 @@ export function AppProvider({ children }) {
     }
   }, [currentUser]);
 
+  const scheduleNotificationForTask = useCallback(async (task) => {
+    if (!currentUser?.id || currentUser.isDemo) return;
+
+    try {
+      await supabase
+        .from('notification_queue')
+        .delete()
+        .eq('task_id', task.id)
+        .eq('status', 'pending');
+    } catch (err) {
+      console.warn('Erro ao limpar notificações antigas da tarefa:', err);
+    }
+
+    if (task.completed || task.deletedAt || task.deleted_at) return;
+
+    if (!task.dueDate) return;
+
+    const meta = parseTaskMetadata(task.description);
+    let dueTimeStr = meta.due_time || '09:00';
+
+    const datePart = task.dueDate.split('T')[0];
+    const combinedDateTimeStr = `${datePart}T${dueTimeStr}:00`;
+    const dueDateTime = new Date(combinedDateTimeStr);
+
+    let scheduledFor = new Date(dueDateTime.getTime() - 15 * 60 * 1000);
+    if (scheduledFor.getTime() <= Date.now()) {
+      scheduledFor = new Date(Date.now() + 60 * 1000);
+    }
+
+    try {
+      const { error } = await supabase
+        .from('notification_queue')
+        .insert([{
+          task_id: task.id,
+          user_id: currentUser.id,
+          title: 'Tarefa Próxima do Vencimento ⏰',
+          body: `"${task.title}" vence em breve no MyFlowDay.`,
+          scheduled_for: scheduledFor.toISOString(),
+          status: 'pending',
+          priority: 'normal'
+        }]);
+      if (error) {
+        console.warn('Erro ao agendar notificação da tarefa:', error);
+      }
+    } catch (err) {
+      console.warn('Erro ao agendar notificação:', err);
+    }
+  }, [currentUser, supabase]);
+
+  const scheduleNotificationForGoal = useCallback(async (goal) => {
+    if (!currentUser?.id || currentUser.isDemo) return;
+
+    try {
+      await supabase
+        .from('notification_queue')
+        .delete()
+        .eq('user_id', currentUser.id)
+        .eq('status', 'pending')
+        .like('body', `%--flowday-meta--goal-id:${goal.id}%`);
+    } catch (err) {
+      console.warn('Erro ao limpar notificações do objetivo:', err);
+    }
+
+    if (goal.status === 'completed' || goal.status === 'archived' || goal.deletedAt || goal.deleted_at) return;
+
+    if (!goal.target_date) return;
+
+    let startTimeStr = goal.start_time || '09:00';
+
+    const datePart = goal.target_date.split('T')[0];
+    const combinedDateTimeStr = `${datePart}T${startTimeStr}:00`;
+    const dueDateTime = new Date(combinedDateTimeStr);
+
+    let scheduledFor = new Date(dueDateTime.getTime() - 15 * 60 * 1000);
+    if (scheduledFor.getTime() <= Date.now()) {
+      scheduledFor = new Date(Date.now() + 60 * 1000);
+    }
+
+    try {
+      const { error } = await supabase
+        .from('notification_queue')
+        .insert([{
+          user_id: currentUser.id,
+          title: 'Prazo do Objetivo Próximo 🎯',
+          body: `Seu objetivo "${goal.title}" está agendado para iniciar/vencer. --flowday-meta--goal-id:${goal.id}`,
+          scheduled_for: scheduledFor.toISOString(),
+          status: 'pending',
+          priority: 'normal'
+        }]);
+      if (error) {
+        console.warn('Erro ao agendar notificação do objetivo:', error);
+      }
+    } catch (err) {
+      console.warn('Erro ao agendar notificação do objetivo:', err);
+    }
+  }, [currentUser, supabase]);
+
   const handleAddTask = useCallback(async (taskData) => {
     if (!currentUser?.id) return;
     const { goal_id, ...payload } = taskData;
@@ -2051,6 +2148,7 @@ export function AppProvider({ children }) {
       if (data) {
         setTasks((prev) => prev.map(t => t.id === tempId ? data : t));
         logEvent('task_created', { taskId: data.id, title: payload.title });
+        scheduleNotificationForTask(data);
         if (goal_id) {
           await goalsService.linkTask(goal_id, data.id);
           setGoalTasks((prev) => prev.map(gt => gt.task_id === tempId ? { goal_id, task_id: data.id } : gt));
@@ -2072,7 +2170,7 @@ export function AppProvider({ children }) {
       }
       return null;
     }
-  }, [currentUser, tasks, goals, goalTasks, logEvent, addNotification]);
+  }, [currentUser, tasks, goals, goalTasks, logEvent, addNotification, scheduleNotificationForTask]);
 
   const handleUpdateTask = useCallback(async (id, updatedData) => {
     if (!currentUser?.id) return;
@@ -2115,10 +2213,14 @@ export function AppProvider({ children }) {
       return;
     }
 
+    if (existingTask) {
+      scheduleNotificationForTask({ ...existingTask, ...updatedData });
+    }
+
     tasksService.update(currentUser.id, id, updatedData).catch(err => {
       console.error('[AppContext] Erro ao atualizar tarefa:', err);
     });
-  }, [currentUser, tasks, logEvent]);
+  }, [currentUser, tasks, logEvent, scheduleNotificationForTask]);
 
   const handleDeleteTask = useCallback(async (id) => {
     if (!currentUser?.id) return;
@@ -2134,6 +2236,8 @@ export function AppProvider({ children }) {
     const nowIso = new Date().toISOString();
 
     // 2. Executa a deleção lógica imediatamente no banco/cache
+    scheduleNotificationForTask({ id, deletedAt: nowIso });
+
     if (currentUser.isDemo) {
       setTasks(prev => {
         const updatedTasks = prev.map(t => t.id === id ? { ...t, deletedAt: nowIso, deleted_at: nowIso } : t);
@@ -2169,7 +2273,7 @@ export function AppProvider({ children }) {
       timerId,
       item: taskToDelete
     });
-  }, [currentUser, tasks, goals, goalTasks, undoAction, logEvent, resetAchievementsIfEmpty]);
+  }, [currentUser, tasks, goals, goalTasks, undoAction, logEvent, resetAchievementsIfEmpty, scheduleNotificationForTask]);
 
   // Exclusão em lote de tarefas concluídas (soft delete com undo em 5s)
   const handleBulkDeleteCompleted = useCallback(async () => {
@@ -2373,6 +2477,8 @@ export function AppProvider({ children }) {
       }
     }
 
+    scheduleNotificationForTask({ ...task, completed: next });
+
     if (currentUser.isDemo) {
       return;
     }
@@ -2404,7 +2510,7 @@ export function AppProvider({ children }) {
       console.error('[AppContext] Erro ao toggleComplete:', err);
       setTasks((prev) => prev.map((t) => t.id === id ? { ...t, completed: !next, completedAt: task.completedAt } : t));
     });
-  }, [currentUser, tasks, goals, goalTasks, logEvent, incrementCompanionProgress]);
+  }, [currentUser, tasks, goals, goalTasks, logEvent, incrementCompanionProgress, scheduleNotificationForTask]);
 
   // Keep the ref updated so the Pomodoro timer can safely call handleToggleComplete
   handleToggleCompleteRef.current = handleToggleComplete;
@@ -2839,6 +2945,7 @@ export function AppProvider({ children }) {
       if (data) {
         setGoals((prev) => prev.map(g => g.id === tempGoalId ? data : g));
         logEvent('goal_created', { title: goalPayload.title });
+        scheduleNotificationForGoal(data);
         if (goalPayload.start_time && goalPayload.end_time) {
           logEvent('goal_scheduled', { title: goalPayload.title, start_time: goalPayload.start_time, end_time: goalPayload.end_time });
         }
@@ -2923,7 +3030,7 @@ export function AppProvider({ children }) {
         setGoalTasks((prev) => prev.filter(gt => gt.goal_id !== tempGoalId));
       }
     }
-  }, [currentUser, goals, tasks, goalTasks, logEvent, addNotification]);
+  }, [currentUser, goals, tasks, goalTasks, logEvent, addNotification, scheduleNotificationForGoal]);
 
   const handleUpdateGoal = useCallback(async (id, updatedData) => {
     if (!currentUser?.id) return;
@@ -2985,6 +3092,9 @@ export function AppProvider({ children }) {
     if (payload) {
       setGoals((prev) => prev.map((g) => g.id === id ? { ...g, ...payload } : g));
       logEvent('goal_updated', { goal_id: id });
+      if (existingGoal) {
+        scheduleNotificationForGoal({ ...existingGoal, ...payload });
+      }
 
       if (actions && actions.length > 0) {
         const newTasks = [];
@@ -3035,7 +3145,7 @@ export function AppProvider({ children }) {
         }
       }
 
-      if (payloadData.start_time !== undefined && existingGoal.start_time !== payloadData.start_time) {
+      if (payloadData.start_time !== undefined && existingGoal?.start_time !== payloadData.start_time) {
         logEvent('goal_time_updated', { goal_id: id, start_time: payloadData.start_time, end_time: payloadData.end_time });
       }
       if (payloadData.status === 'completed' && existingGoal?.status !== 'completed') {
@@ -3063,7 +3173,7 @@ export function AppProvider({ children }) {
         ));
       }
     }
-  }, [currentUser, goals, goalTasks, tasks, logEvent, addNotification, incrementCompanionProgress]);
+  }, [currentUser, goals, goalTasks, tasks, logEvent, addNotification, incrementCompanionProgress, scheduleNotificationForGoal]);
 
   const handleDeleteGoal = useCallback(async (id) => {
     if (!currentUser?.id) return;
@@ -3079,6 +3189,8 @@ export function AppProvider({ children }) {
     const nowIso = new Date().toISOString();
 
     // 2. Executa a deleção imediatamente no banco
+    scheduleNotificationForGoal({ id, deletedAt: nowIso });
+
     if (currentUser.isDemo) {
       setGoals(prev => {
         const updatedGoals = prev.map(g => g.id === id ? { ...g, deletedAt: nowIso, deleted_at: nowIso } : g);
@@ -3111,7 +3223,7 @@ export function AppProvider({ children }) {
       timerId,
       item: goalToDelete
     });
-  }, [currentUser, goals, goalTasks, tasks, undoAction, logEvent, resetAchievementsIfEmpty]);
+  }, [currentUser, goals, goalTasks, tasks, undoAction, logEvent, resetAchievementsIfEmpty, scheduleNotificationForGoal]);
 
   const handleBulkDeleteCompletedGoals = useCallback(async () => {
     if (!currentUser?.id) return;

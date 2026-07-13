@@ -835,29 +835,41 @@ export default function ProfileView() {
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
-                    gap: '6px',
+                    justifyContent: 'center',
+                    gap: '8px',
                     cursor: 'pointer',
-                    padding: '10px',
+                    padding: '16px 12px',
                     borderRadius: '12px',
-                    border: '1px solid transparent',
+                    border: '1px solid var(--border-light)',
                     transition: 'all 0.2s',
-                    backgroundColor: 'rgba(255,255,255,0.02)'
+                    backgroundColor: 'var(--bg-card-hover)',
+                    boxSizing: 'border-box'
                   }}
                   onMouseEnter={e => {
-                    e.currentTarget.style.borderColor = 'var(--primary-light)';
+                    e.currentTarget.style.borderColor = 'var(--primary)';
                     e.currentTarget.style.transform = 'scale(1.05)';
+                    e.currentTarget.style.boxShadow = 'var(--shadow-md)';
                   }}
                   onMouseLeave={e => {
-                    e.currentTarget.style.borderColor = 'transparent';
+                    e.currentTarget.style.borderColor = 'var(--border-light)';
                     e.currentTarget.style.transform = 'scale(1)';
+                    e.currentTarget.style.boxShadow = 'none';
                   }}
                 >
                   <img 
                     src={avatar.url} 
                     alt={avatar.label} 
-                    style={{ width: '70px', height: '70px', borderRadius: '50%' }}
+                    style={{ 
+                      width: '64px', 
+                      height: '64px', 
+                      borderRadius: '50%', 
+                      objectFit: 'contain',
+                      padding: '4px',
+                      backgroundColor: 'var(--bg-card)',
+                      boxShadow: 'var(--shadow-sm)'
+                    }}
                   />
-                  <span style={{ fontSize: '11px', color: 'var(--text-light)', fontWeight: '600', textAlign: 'center' }}>
+                  <span style={{ fontSize: '11px', color: 'var(--text-main)', fontWeight: '600', textAlign: 'center' }}>
                     {avatar.label}
                   </span>
                 </div>

@@ -167,7 +167,8 @@ export default function GoalModal({ isOpen, onClose, onSave, onDelete, editingGo
   useEffect(() => {
     if (editingGoal) {
       setTitle(editingGoal.title || '');
-      setDescription(editingGoal.description || '');
+      const cleanDesc = (editingGoal.description || '').split('--flowday-meta--')[0].trim();
+      setDescription(cleanDesc);
       setColor(editingGoal.color || 'hsl(243, 75%, 59%)');
       setIcon(editingGoal.icon || 'target');
       setTargetDate(editingGoal.target_date || '');

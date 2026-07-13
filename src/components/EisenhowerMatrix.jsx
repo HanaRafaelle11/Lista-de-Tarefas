@@ -165,7 +165,11 @@ export default function EisenhowerMatrix({ tasks, onEditTask, onDeleteTask, onUp
                       {task.dueDate && (
                         <span style={{ fontSize: '9px', color: 'var(--text-muted)', display: 'inline-flex', alignItems: 'center', gap: '2px' }}>
                           <Calendar size={10} />
-                          <span>{task.dueDate.split('-').reverse().slice(0, 2).join('/')}</span>
+                          <span>{(() => {
+                            const cleanDate = task.dueDate.split('T')[0];
+                            const parts = cleanDate.split('-');
+                            return parts.length === 3 ? `${parts[2]}/${parts[1]}` : task.dueDate;
+                          })()}</span>
                         </span>
                       )}
                     </div>
