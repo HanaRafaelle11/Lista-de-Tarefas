@@ -284,8 +284,12 @@ export const goalsService = {
 
     const existing = await localDB.get('goals', id);
 
+    const cleanExistingDesc = existing?.description
+      ? existing.description.split('--flowday-meta--')[0].trim()
+      : '';
+
     const enrichedDescription = buildEnrichedDescription(
-      updates.description || existing?.description || '',
+      updates.description !== undefined ? updates.description : cleanExistingDesc,
       updates.start_time ?? existing?.start_time,
       updates.end_time ?? existing?.end_time,
       updates.attachments ?? existing?.attachments ?? []
@@ -346,14 +350,17 @@ export const goalsService = {
         }
       } catch (e) {}
 
+      const fallbackGoal = { 
+        id, 
+        user_id: userId,
+        ...existing,
+        ...updates, 
+        description: enrichedDescription,
+        updated_at: nowIso 
+      };
+
       return { 
-        data: { 
-          id, 
-          user_id: userId,
-          ...updates, 
-          description: enrichedDescription,
-          updated_at: nowIso 
-        }, 
+        data: mapGoal(fallbackGoal), 
         error, 
         degraded: true 
       };

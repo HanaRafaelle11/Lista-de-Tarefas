@@ -425,12 +425,13 @@ a {
     align-items: center !important;
     justify-content: center !important;
     overflow: hidden !important;
-    padding: 16px !important;
+    padding: 16px 16px 100px 16px !important; /* Respiro inferior para nao sobrepor a Bottom Nav Bar */
+    box-sizing: border-box !important;
   }
 
   .modal-content {
     max-width: 95%;
-    max-height: 85vh !important;
+    max-height: calc(100vh - 150px) !important; /* Altura maxima ajustada para caber acima do Bottom Nav */
     overflow-y: auto !important;
     margin: 0 auto !important;
   }
