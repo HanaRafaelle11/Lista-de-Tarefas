@@ -764,13 +764,14 @@ export default function ProfileView() {
             backgroundColor: 'var(--bg-card)',
             border: '1px solid var(--border-medium)',
             borderRadius: '16px',
-            padding: '24px',
-            maxWidth: '480px',
+            padding: '20px',
+            maxWidth: '450px',
             width: '100%',
             boxShadow: 'var(--shadow-lg)',
             display: 'flex',
             flexDirection: 'column',
-            gap: '16px'
+            gap: '16px',
+            boxSizing: 'border-box'
           }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <h3 style={{ fontSize: '16px', fontWeight: '800', color: 'var(--text-main)' }}>Escolha um Avatar</h3>
@@ -784,7 +785,15 @@ export default function ProfileView() {
             </div>
 
             {/* Abas */}
-            <div style={{ display: 'flex', borderBottom: '1px solid var(--border-light)', gap: '12px' }}>
+            <div style={{ 
+              display: 'flex', 
+              borderBottom: '1px solid var(--border-light)', 
+              gap: '16px',
+              overflowX: 'auto',
+              whiteSpace: 'nowrap',
+              scrollbarWidth: 'none',
+              paddingBottom: '4px'
+            }}>
               {Object.keys(LIBRARY_AVATARS).map(tab => (
                 <button
                   key={tab}
@@ -798,7 +807,8 @@ export default function ProfileView() {
                     color: activeAvatarTab === tab ? 'var(--primary)' : 'var(--text-light)',
                     fontWeight: activeAvatarTab === tab ? '700' : '500',
                     cursor: 'pointer',
-                    fontSize: '13px'
+                    fontSize: '13px',
+                    flexShrink: 0
                   }}
                 >
                   {tab}
@@ -809,8 +819,8 @@ export default function ProfileView() {
             {/* Grid */}
             <div style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(3, 1fr)',
-              gap: '16px',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(110px, 1fr))',
+              gap: '12px',
               maxHeight: '300px',
               overflowY: 'auto',
               padding: '8px 0'
