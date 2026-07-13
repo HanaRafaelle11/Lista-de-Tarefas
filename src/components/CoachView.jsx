@@ -110,7 +110,7 @@ function formatCoachMessage(message = '', isPro = true, openPaywall = () => {}) 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
       <div>{freeElements}</div>
-      <div style={{ position: 'relative', marginTop: '16px', maxHeight: '220px', overflow: 'hidden' }}>
+      <div style={{ position: 'relative', marginTop: '16px', maxHeight: '260px', overflow: 'hidden' }}>
         {/* Blurred Content */}
         <div style={{ filter: 'blur(5px)', opacity: 0.25, pointerEvents: 'none', userSelect: 'none' }}>
           {proElements}
@@ -121,7 +121,7 @@ function formatCoachMessage(message = '', isPro = true, openPaywall = () => {}) 
           description="Desbloqueie o Coach IA Pro para acessar recomendações completas e personalizadas."
           buttonText="Desbloquear Coach Pro"
           paywallSource={{ source: 'coach_pro_insights', trigger: 'blur_overlay' }}
-          containerStyle={{ justifyContent: 'flex-start', paddingTop: '40px', backgroundColor: 'rgba(15, 23, 42, 0.65)' }}
+          containerStyle={{ justifyContent: 'center', backgroundColor: 'rgba(15, 23, 42, 0.65)' }}
         />
       </div>
     </div>
