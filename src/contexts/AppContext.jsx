@@ -555,9 +555,45 @@ export function AppProvider({ children }) {
   const setIsPro = useCallback((valOrFn) => {
     setIsProState((prev) => {
       const next = typeof valOrFn === 'function' ? valOrFn(prev) : valOrFn;
+      if (currentUser?.id) {
+        localStorage.setItem(`flowday_is_pro_${currentUser.id}`, String(next));
+      }
       return next;
     });
-  }, []);
+  }, [currentUser?.id]);
+
+  // Inicialização instantânea do perfil e status Pro do cache local para evitar flicker/flashing
+  useEffect(() => {
+    if (!currentUser?.id) {
+      setUserProfile(null);
+      setIsProState(false);
+      return;
+    }
+    const cachedProfile = localStorage.getItem(`flowday_user_profile_${currentUser.id}`);
+    if (cachedProfile) {
+      try {
+        setUserProfile(JSON.parse(cachedProfile));
+      } catch (e) {}
+    }
+    const cachedIsPro = localStorage.getItem(`flowday_is_pro_${currentUser.id}`);
+    if (cachedIsPro) {
+      setIsProState(cachedIsPro === 'true');
+    }
+  }, [currentUser?.id]);
+
+  // Sincroniza alterações do userProfile para o localStorage
+  useEffect(() => {
+    if (currentUser?.id && userProfile) {
+      localStorage.setItem(`flowday_user_profile_${currentUser.id}`, JSON.stringify(userProfile));
+    }
+  }, [userProfile, currentUser?.id]);
+
+  // Sincroniza alterações do isPro para o localStorage
+  useEffect(() => {
+    if (currentUser?.id) {
+      localStorage.setItem(`flowday_is_pro_${currentUser.id}`, String(isPro));
+    }
+  }, [isPro, currentUser?.id]);
 
   const [isPaywallOpen, setIsPaywallOpen] = useState(false);
   const [paywallSource, setPaywallSource] = useState('');
