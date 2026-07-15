@@ -764,17 +764,18 @@ export default function ProfileView() {
             backgroundColor: 'var(--bg-card)',
             border: '1px solid var(--border-medium)',
             borderRadius: '16px',
-            padding: '20px',
+            padding: '10px 14px',
             maxWidth: '450px',
             width: '100%',
+            height: 'auto',
             boxShadow: 'var(--shadow-lg)',
             display: 'flex',
             flexDirection: 'column',
-            gap: '16px',
+            gap: '10px',
             boxSizing: 'border-box'
           }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h3 style={{ fontSize: '16px', fontWeight: '800', color: 'var(--text-main)' }}>Escolha um Avatar</h3>
+              <h3 style={{ fontSize: '16px', fontWeight: '800', color: 'var(--text-main)', margin: 0 }}>Escolha um Avatar</h3>
               <button 
                 type="button"
                 onClick={() => setShowAvatarLibrary(false)}
@@ -792,7 +793,8 @@ export default function ProfileView() {
               overflowX: 'auto',
               whiteSpace: 'nowrap',
               scrollbarWidth: 'none',
-              paddingBottom: '4px'
+              paddingBottom: '2px',
+              marginTop: 0
             }}>
               {Object.keys(LIBRARY_AVATARS).map(tab => (
                 <button
@@ -800,7 +802,7 @@ export default function ProfileView() {
                   type="button"
                   onClick={() => setActiveAvatarTab(tab)}
                   style={{
-                    padding: '8px 4px',
+                    padding: '6px 2px',
                     background: 'none',
                     border: 'none',
                     borderBottom: activeAvatarTab === tab ? '2px solid var(--primary)' : '2px solid transparent',
@@ -823,7 +825,8 @@ export default function ProfileView() {
               gap: '12px',
               maxHeight: '300px',
               overflowY: 'auto',
-              padding: '8px 0'
+              padding: '4px 0',
+              marginTop: 0
             }}>
               {LIBRARY_AVATARS[activeAvatarTab].map(avatar => (
                 <div 

@@ -14,6 +14,7 @@ import PremiumOverlay from './PremiumOverlay';
 
 import GoalModal from './GoalModal';
 import { extractDateAndTimeParts } from '../utils/dateUtils';
+import { executeAIClassifier } from '../intelligence/aiClassifier';
 
 // Formata data amigável
 function formatFriendlyDate(dateStr) {
@@ -238,87 +239,15 @@ export default function HomeView() {
   const currentStreak = useMemo(() => calcStreak(activeTasksList), [activeTasksList]);
   const unlockedCount = (unlockedAchievements || []).length;
 
-  // Classificador Inteligente de IA (Client-side)
-  const classifyInput = (text) => {
-    const lower = text.toLowerCase().trim();
-    
-    // Palavras-chave / Padrões que indicam fortemente um Objetivo (Metas amplas / longo prazo)
-    const objectivePatterns = [
-      /\b(projeto|project|tcc|curso|faculdade|universidade|carreira|business|empresa|startup)\b/,
-      /\b(aprender|desenvolver|construir|criar|estruturar|planejar|concluir|melhorar|dominar)\b/,
-      /\b(estabelecer|implementar|organizar|mudar|emagrecer|perder peso|viajar|comprar carro|comprar casa)\b/,
-      /\b(hábito|rotina|habits|academia|meditar|leitura|livro|ler)\b/
-    ];
-    
-    // Palavras-chave / Padrões que indicam fortemente uma Tarefa (Ação imediata / pontual)
-    const taskPatterns = [
-      /\b(fazer|comprar|ligar|enviar|escrever|mandar|responder|pagar|limpar|lavar|levar|consertar|arrumar)\b/,
-      /\b(leite|pão|mercado|supermercado|farmácia|comida|jantar|almoço|café|email|e-mail|mensagem|whatsapp)\b/,
-      /\b(hoje|amanhã|sábado|domingo|segunda|terça|quarta|quinta|sexta|às|horas|minutos|min)\b/
-    ];
-    
-    let objScore = 0;
-    let taskScore = 0;
-    
-    objectivePatterns.forEach(pattern => {
-      if (pattern.test(lower)) objScore += 2;
-    });
-    
-    taskPatterns.forEach(pattern => {
-      if (pattern.test(lower)) taskScore += 2;
-    });
-    
-    if (lower.split(' ').length > 8) {
-      objScore += 0.5;
-    }
-    
-    if (objScore > taskScore) {
-      return 'objective';
-    }
-    return 'task';
-  };
-
-  const detectCategory = (text) => {
-    const t = text.toLowerCase().trim();
-
-    // Priorizar categorias customizadas criadas pelo usuário por comparação direta do nome
-    if (categories && categories.length > 0) {
-      const matchedCat = categories.find(cat => {
-        const catName = (cat.name || '').toLowerCase().trim();
-        if (!catName) return false;
-        const regex = new RegExp('\\b' + catName + '\\b', 'i');
-        return regex.test(t);
-      });
-      if (matchedCat) {
-        return matchedCat.id || matchedCat.name;
-      }
-    }
-
-    // Regras de mapeamento padrão (Lazer, Estudos, Pessoal)
-    if (t.includes('cantar') || t.includes('tocar') || t.includes('jogar') || t.includes('assistir') || t.includes('filme') || t.includes('série') || t.includes('lazer') || t.includes('passear') || t.includes('amigos') || t.includes('festa') || t.includes('divertir') || t.includes('música') || t.includes('hobby')) {
-      const cat = categories?.find(c => (c.name || '').toLowerCase() === 'lazer');
-      return cat ? (cat.id || cat.name) : 'Lazer';
-    }
-    if (t.includes('estudar') || t.includes('ler') || t.includes('curso') || t.includes('aula') || t.includes('faculdade') || t.includes('estudos') || t.includes('livro') || t.includes('aprender') || t.includes('pesquisar')) {
-      const cat = categories?.find(c => (c.name || '').toLowerCase() === 'estudos');
-      return cat ? (cat.id || cat.name) : 'Estudos';
-    }
-    if (t.includes('comprar') || t.includes('mercado') || t.includes('casa') || t.includes('limpar') || t.includes('arrumar') || t.includes('pessoal') || t.includes('família') || t.includes('médico') || t.includes('dentista') || t.includes('pagar') || t.includes('boleto') || t.includes('água') || t.includes('beber') || t.includes('academia') || t.includes('treino') || t.includes('treinar') || t.includes('exercício') || t.includes('exercitar') || t.includes('dormir') || t.includes('descanso') || t.includes('saúde') || t.includes('dieta') || t.includes('correr') || t.includes('caminhar') || t.includes('vitamina') || t.includes('remédio') || t.includes('meditação') || t.includes('meditar') || t.includes('acordar') || t.includes('levantar') || t.includes('rotina') || t.includes('café') || t.includes('almoço') || t.includes('jantar') || t.includes('comer') || t.includes('comida') || t.includes('banho') || t.includes('dentes') || t.includes('escovar') || t.includes('sono')) {
-      const cat = categories?.find(c => (c.name || '').toLowerCase() === 'pessoal');
-      return cat ? (cat.id || cat.name) : 'Pessoal';
-    }
-    
-    // Trabalho como padrão
-    const workCat = categories?.find(c => (c.name || '').toLowerCase() === 'trabalho');
-    return workCat ? (workCat.id || workCat.name) : 'Trabalho';
-  };
-
   const handleQuickSubmit = async (e) => {
     e.preventDefault();
     if (!quickInput.trim()) return;
 
     const text = quickInput.trim();
-    const type = classifyInput(text);
+    // Executa a classificação inteligente via IA
+    const aiResult = executeAIClassifier(text, categories);
+    const type = aiResult.type;
+    const detectedCat = aiResult.category;
 
     if (type === 'objective') {
       setPrefilledGoalTitle(text);
@@ -333,17 +262,26 @@ export default function HomeView() {
     } else {
       try {
         const todayStr = todayDate;
-        const detectedCat = detectCategory(text);
+        
+        // Mapeia a categoria detectada pela IA para o ID/Nome real nas categorias cadastradas do usuário
+        let mappedCategory = detectedCat;
+        if (detectedCat && detectedCat !== 'Sem categoria') {
+          const matched = categories?.find(c => (c.name || '').toLowerCase() === detectedCat.toLowerCase());
+          if (matched) {
+            mappedCategory = matched.id || matched.name;
+          }
+        }
+
         await handleAddTask({
           title: text,
           dueDate: todayStr,
           priority: 'Média',
-          category: detectedCat
+          category: mappedCategory
         });
         setQuickInput('');
         setLocalNotification({
           title: 'IA detectou uma Tarefa!',
-          desc: `Adicionada na agenda de hoje: "${text}"`,
+          desc: `Adicionada hoje: "${text}"` + (detectedCat === 'Sem categoria' ? '' : ` (${detectedCat})`),
           type: 'success'
         });
         setTimeout(() => setLocalNotification(null), 4000);
@@ -471,9 +409,9 @@ export default function HomeView() {
 
   const viewedPetCompletedGoals = useMemo(() => {
     if (!currentUser?.id) return 0;
-    const storageKey = `flowday_${viewedPet}_completed_goals_${currentUser.id}`;
+    const storageKey = `flowday_shared_completed_goals_${currentUser.id}`;
     return Number(localStorage.getItem(storageKey)) || 0;
-  }, [currentUser?.id, viewedPet, companionProgressVersion]);
+  }, [currentUser?.id, companionProgressVersion]);
 
   const weeklyTotal = ritmoSemanal.reduce((acc, d) => acc + d.count, 0);
   const currentPetData = EVOLUTION_CATEGORIES[viewedPet] || EVOLUTION_CATEGORIES.plant;

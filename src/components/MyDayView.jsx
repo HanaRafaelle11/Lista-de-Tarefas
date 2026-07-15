@@ -1602,7 +1602,7 @@ export default function MyDayView() {
                   const totalTasks = linkedTasks.length;
                   const doneTasks = linkedTasks.filter(t => t.completed).length;
                   const pct = totalTasks > 0 ? Math.round((doneTasks / totalTasks) * 100) : 0;
-                  const isExpanded = selectedGoalIdFilter === goal.id || !!expandedGoals[goal.id];
+                  const isExpanded = expandedGoals[goal.id] !== undefined ? !!expandedGoals[goal.id] : (selectedGoalIdFilter === goal.id);
                   const isMatchingCategory = categoryFilter === 'all' || linkedTasks.some(t => t.category === categoryFilter);
 
                   return (

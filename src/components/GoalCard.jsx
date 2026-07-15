@@ -35,6 +35,13 @@ function GoalIcon({ name, size = 18, className = '' }) {
   return <IconComponent size={size} className={className} style={{ color: 'var(--goal-color, var(--primary))' }} />;
 }
 
+const isImageFile = (file) => {
+  if (!file) return false;
+  if (file.type && file.type.startsWith('image/')) return true;
+  if (file.name && /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(file.name)) return true;
+  return false;
+};
+
 // Formata data para pt-BR legível
 function formatDate(dateStr) {
   if (!dateStr) return null;
@@ -155,7 +162,7 @@ export default function GoalCard({
             {goal.attachments && goal.attachments.length > 0 && (
               <div className="goal-card-attachments" style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '8px' }}>
                 {goal.attachments.map((file, idx) => {
-                  const isImage = file.type && file.type.startsWith('image/');
+                  const isImage = isImageFile(file);
                   return (
                     <button
                       key={idx}
@@ -368,7 +375,7 @@ export default function GoalCard({
                   {(activeLightboxFile.size / 1024).toFixed(1)} KB • {activeLightboxFile.type || 'Tipo desconhecido'}
                 </span>
               </div>
-              {activeLightboxFile.type && (activeLightboxFile.type.startsWith('image/') || /\.(jpg|jpeg|png|gif|webp)$/i.test(activeLightboxFile.name || '')) && (
+              {isImageFile(activeLightboxFile) && (
                 <div style={{ display: 'flex', gap: '4px', backgroundColor: 'rgba(255,255,255,0.03)', padding: '2px', borderRadius: '8px', border: '1px solid var(--border-light, rgba(255,255,255,0.1))' }}>
                   <button
                     type="button"
@@ -414,7 +421,7 @@ export default function GoalCard({
               overflow: 'auto',
               position: 'relative'
             }}>
-              {activeLightboxFile.type && (activeLightboxFile.type.startsWith('image/') || /\.(jpg|jpeg|png|gif|webp)$/i.test(activeLightboxFile.name || '')) ? (
+              {isImageFile(activeLightboxFile) ? (
                 <img 
                   src={activeLightboxFile.url} 
                   alt={activeLightboxFile.name} 

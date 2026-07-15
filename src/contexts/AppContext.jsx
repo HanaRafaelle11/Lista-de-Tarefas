@@ -207,6 +207,12 @@ export function AppProvider({ children }) {
     return 'home';
   });
 
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      window.setFlowdayTab = setActiveTab;
+    }
+  }, [setActiveTab]);
+
   const [activeEvoTab, setActiveEvoTab] = useState(() => {
     try {
       if (typeof window !== 'undefined') {
@@ -480,7 +486,7 @@ export function AppProvider({ children }) {
 
   const incrementCompanionProgress = useCallback((userId) => {
     const petType = localStorage.getItem('flowday_growth_pet') || 'plant';
-    const storageKey = `flowday_${petType}_completed_goals_${userId}`;
+    const storageKey = `flowday_shared_completed_goals_${userId}`;
       
     const currentCount = Number(localStorage.getItem(storageKey)) || 0;
     const newCount = currentCount + 1;
@@ -502,17 +508,18 @@ export function AppProvider({ children }) {
     const userId = currentUser.id;
     const totalCompleted = goals.filter(g => g.status === 'completed' && !g.deletedAt && !g.deleted_at).length;
     
-    const legacyPetVal = localStorage.getItem(`flowday_pet_completed_goals_${userId}`);
-    const defaultPetVal = legacyPetVal !== null ? legacyPetVal : String(totalCompleted);
-
-    if (localStorage.getItem(`flowday_plant_completed_goals_${userId}`) === null) {
-      localStorage.setItem(`flowday_plant_completed_goals_${userId}`, String(totalCompleted));
+    const sharedKey = `flowday_shared_completed_goals_${userId}`;
+    if (localStorage.getItem(sharedKey) === null) {
+      // Procura pelo maior progresso entre todos os pets legados, ou usa o total de metas concluídas
+      let maxLegacyVal = totalCompleted;
+      ['plant', 'baby', 'dog', 'cat', 'pet'].forEach(p => {
+        const val = Number(localStorage.getItem(`flowday_${p}_completed_goals_${userId}`));
+        if (!isNaN(val) && val > maxLegacyVal) {
+          maxLegacyVal = val;
+        }
+      });
+      localStorage.setItem(sharedKey, String(maxLegacyVal));
     }
-    ['baby', 'dog', 'cat'].forEach(p => {
-      if (localStorage.getItem(`flowday_${p}_completed_goals_${userId}`) === null) {
-        localStorage.setItem(`flowday_${p}_completed_goals_${userId}`, defaultPetVal);
-      }
-    });
   }, [currentUser?.id, goals]);
 
   // Auto-conclusão de objetivos ao finalizar tarefas vinculadas
@@ -1745,6 +1752,88 @@ export function AppProvider({ children }) {
     };
   }, [currentUser?.id, currentUser?.isDemo, checkServerAccess]);
 
+  // ── Escuta em tempo real (Supabase Realtime) para Sincronização Instantânea Celular/Web ──
+  useEffect(() => {
+    if (!currentUser?.id || currentUser.isDemo) return;
+
+    const userId = currentUser.id;
+    console.log(`[Realtime] Iniciando canal de sincronização em tempo real para o usuário ${userId}`);
+
+    const syncChannel = supabase
+      .channel(`sync-realtime-${userId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'tasks',
+          filter: `user_id=eq.${userId}`
+        },
+        (payload) => {
+          console.log('[Realtime] Alteração em tasks recebida:', payload.eventType);
+          loadTasks(userId);
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'goals',
+          filter: `user_id=eq.${userId}`
+        },
+        (payload) => {
+          console.log('[Realtime] Alteração em goals recebida:', payload.eventType);
+          loadGoals(userId);
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'goal_tasks',
+          filter: `user_id=eq.${userId}`
+        },
+        (payload) => {
+          console.log('[Realtime] Alteração em goal_tasks recebida:', payload.eventType);
+          loadGoals(userId);
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'habits',
+          filter: `user_id=eq.${userId}`
+        },
+        (payload) => {
+          console.log('[Realtime] Alteração em habits recebida:', payload.eventType);
+          loadHabits(userId);
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'habit_logs',
+          filter: `user_id=eq.${userId}`
+        },
+        (payload) => {
+          console.log('[Realtime] Alteração em habit_logs recebida:', payload.eventType);
+          loadHabits(userId);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      console.log(`[Realtime] Removendo canal de sincronização em tempo real para o usuário ${userId}`);
+      supabase.removeChannel(syncChannel);
+    };
+  }, [currentUser?.id, currentUser?.isDemo, loadTasks, loadGoals, loadHabits]);
+
   // ═══════════════════════════════════════════════════════════════════════════
   // CONQUISTAS — detecção automática (PROTEGIDA contra false positives)
   // ═══════════════════════════════════════════════════════════════════════════
@@ -2044,8 +2133,9 @@ export function AppProvider({ children }) {
     let dueTimeStr = meta.due_time || '09:00';
 
     const datePart = task.dueDate.split('T')[0];
-    const combinedDateTimeStr = `${datePart}T${dueTimeStr}:00`;
-    const dueDateTime = new Date(combinedDateTimeStr);
+    const [year, month, day] = datePart.split('-').map(Number);
+    const [hours, minutes] = dueTimeStr.split(':').map(Number);
+    const dueDateTime = new Date(year, month - 1, day, hours, minutes, 0, 0);
 
     let scheduledFor = new Date(dueDateTime.getTime() - 15 * 60 * 1000);
     if (scheduledFor.getTime() <= Date.now()) {
@@ -2093,8 +2183,9 @@ export function AppProvider({ children }) {
     let startTimeStr = goal.start_time || '09:00';
 
     const datePart = goal.target_date.split('T')[0];
-    const combinedDateTimeStr = `${datePart}T${startTimeStr}:00`;
-    const dueDateTime = new Date(combinedDateTimeStr);
+    const [year, month, day] = datePart.split('-').map(Number);
+    const [hours, minutes] = startTimeStr.split(':').map(Number);
+    const dueDateTime = new Date(year, month - 1, day, hours, minutes, 0, 0);
 
     let scheduledFor = new Date(dueDateTime.getTime() - 15 * 60 * 1000);
     if (scheduledFor.getTime() <= Date.now()) {
@@ -2473,6 +2564,7 @@ export function AppProvider({ children }) {
     localStorage.removeItem('flowday_hide_evo_guide');
     localStorage.removeItem('flowday_growth_pet');
     localStorage.removeItem('flowday_userstate_snapshot');
+    localStorage.removeItem(`flowday_shared_completed_goals_${currentUser.id}`);
     localStorage.removeItem(`flowday_pet_completed_goals_${currentUser.id}`);
     localStorage.removeItem(`flowday_plant_completed_goals_${currentUser.id}`);
     localStorage.removeItem(`flowday_baby_completed_goals_${currentUser.id}`);
