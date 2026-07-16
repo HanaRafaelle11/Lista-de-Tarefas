@@ -139,7 +139,7 @@ export default function GuidedTour() {
         }}
       />
 
-      {!run && !isObCompleted && (
+      {!run && (
         <button
           onClick={() => {
             setTourKey(prev => prev + 1);
@@ -149,7 +149,7 @@ export default function GuidedTour() {
           title="Fazer tour da plataforma"
           aria-label="Fazer tour guiado da plataforma"
         >
-          <MFIcon name="sparkles" size={18} style={{ marginRight: '8px' }} />
+          <MFIcon name="compass" size={18} style={{ marginRight: '8px' }} />
           <span>Tour Guiado</span>
         </button>
       )}

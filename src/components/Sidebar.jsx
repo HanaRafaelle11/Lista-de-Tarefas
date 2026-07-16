@@ -38,56 +38,7 @@ export default function Sidebar() {
     { key: 'evolution', icon: 'evolution',   label: 'Evolução' },
   ];
 
-  const renderTourMenuItem = (isMobile = false) => {
-    const isObCompleted = !!currentUser?.user_metadata?.onboarding_completed || 
-      (currentUser?.id && localStorage.getItem(`flowday_onboarding_completed_${currentUser.id}`) === 'true');
-      
-    const label = isObCompleted ? 'Refazer Tour' : 'Tour Guiado';
-    const title = isObCompleted ? 'Refazer Tour Guiado' : 'Fazer tour da plataforma';
-    const ariaLabel = isObCompleted ? 'Refazer o tour guiado da plataforma' : 'Iniciar o tour guiado da plataforma';
-    const iconName = isObCompleted ? 'compass' : 'sparkles';
-    
-    const handleClick = () => {
-      window.dispatchEvent(new CustomEvent('start-flowday-tour'));
-      if (isMobile) {
-        setIsMobileMenuOpen(false);
-      }
-    };
 
-    return (
-      <button
-        onClick={handleClick}
-        className={`sidebar-nav-item tour-menu-item-custom ${!isObCompleted ? 'tour-menu-item--new' : 'tour-menu-item--completed'}`}
-        title={title}
-        aria-label={ariaLabel}
-        style={isMobile ? {
-          display: 'flex',
-          alignItems: 'center',
-          gap: '12px',
-          padding: '12px 16px',
-          borderRadius: 'var(--radius-sm)',
-          border: 'none',
-          backgroundColor: 'transparent',
-          color: 'var(--text-main)',
-          fontWeight: '550',
-          fontSize: '14.5px',
-          cursor: 'pointer',
-          textAlign: 'left',
-          width: '100%',
-          transition: 'all 0.15s',
-          minHeight: '44px'
-        } : {
-          minHeight: '44px'
-        }}
-      >
-        <div className="tour-menu-item-icon-wrapper" style={{ display: 'flex', alignItems: 'center', position: 'relative' }}>
-          <MFIcon name={iconName} size={20} className="sidebar-icon tour-icon" />
-          {!isObCompleted && <span className="tour-badge-dot" />}
-        </div>
-        <span className={isMobile ? '' : 'sidebar-label'}>{label}</span>
-      </button>
-    );
-  };
 
   const adminNavItems = [];
   if (isAdmin) {
@@ -174,36 +125,33 @@ export default function Sidebar() {
             <nav style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1 }}>
               {mainNavItems.map(item => {
                 const isActive = activeTab === item.key;
-                const isHome = item.key === 'home';
                 return (
-                  <React.Fragment key={item.key}>
-                    <button
-                      onClick={() => {
-                        setActiveTab(item.key);
-                        setIsMobileMenuOpen(false);
-                      }}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '12px',
-                        padding: '12px 16px',
-                        borderRadius: 'var(--radius-sm)',
-                        border: 'none',
-                        backgroundColor: isActive ? 'var(--primary-light)' : 'transparent',
-                        color: isActive ? 'var(--primary)' : 'var(--text-main)',
-                        fontWeight: isActive ? '700' : '550',
-                        fontSize: '14.5px',
-                        cursor: 'pointer',
-                        textAlign: 'left',
-                        width: '100%',
-                        transition: 'all 0.15s'
-                      }}
-                    >
-                      <MFIcon name={item.icon} size={20} />
-                      <span>{item.label}</span>
-                    </button>
-                    {isHome && renderTourMenuItem(true)}
-                  </React.Fragment>
+                  <button
+                    key={item.key}
+                    onClick={() => {
+                      setActiveTab(item.key);
+                      setIsMobileMenuOpen(false);
+                    }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '12px',
+                      padding: '12px 16px',
+                      borderRadius: 'var(--radius-sm)',
+                      border: 'none',
+                      backgroundColor: isActive ? 'var(--primary-light)' : 'transparent',
+                      color: isActive ? 'var(--primary)' : 'var(--text-main)',
+                      fontWeight: isActive ? '700' : '550',
+                      fontSize: '14.5px',
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                      width: '100%',
+                      transition: 'all 0.15s'
+                    }}
+                  >
+                    <MFIcon name={item.icon} size={20} />
+                    <span>{item.label}</span>
+                  </button>
                 );
               })}
 
@@ -373,24 +321,18 @@ export default function Sidebar() {
 
         <nav className="sidebar-nav">
           <div className="sidebar-nav-section">
-            {mainNavItems.map(({ key, icon, label }) => {
-              const isActive = activeTab === key;
-              const isHome = key === 'home';
-              return (
-                <React.Fragment key={key}>
-                  <button
-                    id={`tour-nav-sidebar-${key}`}
-                    onClick={() => setActiveTab(key)}
-                    className={`sidebar-nav-item ${isActive ? 'active' : ''}`}
-                    title={label}
-                  >
-                    <MFIcon name={icon} size={20} className="sidebar-icon" />
-                    <span className="sidebar-label">{label}</span>
-                  </button>
-                  {isHome && renderTourMenuItem(false)}
-                </React.Fragment>
-              );
-            })}
+            {mainNavItems.map(({ key, icon, label }) => (
+              <button
+                key={key}
+                id={`tour-nav-sidebar-${key}`}
+                onClick={() => setActiveTab(key)}
+                className={`sidebar-nav-item ${activeTab === key ? 'active' : ''}`}
+                title={label}
+              >
+                <MFIcon name={icon} size={20} className="sidebar-icon" />
+                <span className="sidebar-label">{label}</span>
+              </button>
+            ))}
           </div>
 
           {isAdmin && (

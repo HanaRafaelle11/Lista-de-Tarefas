@@ -7677,8 +7677,8 @@ body,
 /* Onboarding Floating FAB style */
 .onboarding-floating-fab {
   position: fixed;
-  bottom: 24px;
-  right: 24px;
+  bottom: 32px;
+  right: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -7708,7 +7708,7 @@ body,
 @media (max-width: 768px) {
   .onboarding-floating-fab {
     bottom: 96px; /* Fica acima da bottom nav no mobile */
-    right: 16px;
+    right: 20px;
     padding: 8px 14px;
     font-size: 12px;
   }
