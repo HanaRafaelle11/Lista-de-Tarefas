@@ -4,7 +4,7 @@ import { useAppContext } from '../contexts/AppContext';
 import MFIcon from './MFIcon';
 
 export default function GuidedTour() {
-  const { currentUser, logEvent, handleCompleteOnboarding, isSidebarCollapsed } = useAppContext();
+  const { currentUser, logEvent, handleCompleteOnboarding, isSidebarCollapsed, setActiveTab } = useAppContext();
   const [run, setRun] = useState(false);
   const [tourKey, setTourKey] = useState(0);
 
@@ -76,6 +76,14 @@ export default function GuidedTour() {
     const { status, type, index } = data;
     const finishedStatuses = [STATUS.FINISHED, STATUS.SKIPPED];
 
+    if (type === 'step:before') {
+      const tabs = ['home', 'myday', 'focus', 'evolution', 'settings'];
+      const targetTab = tabs[index];
+      if (targetTab) {
+        setActiveTab(targetTab);
+      }
+    }
+
     if (type === 'step:after') {
       const stepNumber = index + 1; // 1, 2, 3, 4
       if (stepNumber >= 1 && stepNumber <= 4) {
@@ -139,7 +147,7 @@ export default function GuidedTour() {
         }}
       />
 
-      {!run && (isSidebarCollapsed || isMobile) && (
+      {!run && (
         <button
           onClick={() => {
             setTourKey(prev => prev + 1);
