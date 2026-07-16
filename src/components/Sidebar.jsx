@@ -8,28 +8,24 @@ import { useTheme } from '../design-system/theme/useTheme';
 import { getLogo } from '../design-system/branding/logo';
 
 export default function Sidebar() {
-  const { activeTab, setActiveTab, currentUser, handleLogout, userProfile, isAdmin, theme, setTheme, isPro } = useAppContext();
+  const { 
+    activeTab, 
+    setActiveTab, 
+    currentUser, 
+    handleLogout, 
+    userProfile, 
+    isAdmin, 
+    theme, 
+    setTheme, 
+    isPro,
+    isSidebarCollapsed,
+    toggleSidebarCollapse 
+  } = useAppContext();
   const { mode } = useTheme();
   const logo = getLogo(mode);
 
-  // Estado para controlar a sidebar colapsada/recolhida
-  const [isCollapsed, setIsCollapsed] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('flowday_sidebar_collapsed') === 'true';
-    }
-    return false;
-  });
-
   // Estado para controlar o menu drawer no mobile
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-
-  const toggleCollapse = () => {
-    const nextVal = !isCollapsed;
-    setIsCollapsed(nextVal);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('flowday_sidebar_collapsed', String(nextVal));
-    }
-  };
 
   const mainNavItems = [
     { key: 'home',      icon: 'consistency', label: 'Início' },
@@ -300,9 +296,9 @@ export default function Sidebar() {
 
 
       {/* ── Desktop Sidebar (Fixo à Esquerda - Expansível) ── */}
-      <aside className={`app-sidebar hide-on-mobile ${isCollapsed ? 'app-sidebar--collapsed' : ''}`}>
+      <aside className={`app-sidebar hide-on-mobile ${isSidebarCollapsed ? 'app-sidebar--collapsed' : ''}`}>
         <div className="sidebar-brand-wrapper" onClick={() => currentUser?.isDemo ? handleLogout() : setActiveTab('home')}>
-          {isCollapsed ? (
+          {isSidebarCollapsed ? (
             <img src="/favicon.svg" alt="M" className="sidebar-logo" style={{ height: '32px', width: '32px', objectFit: 'contain' }} onError={(e) => { e.target.src = logo.src }} />
           ) : (
             <img src={logo.src} alt={logo.alt} className="sidebar-logo" />
@@ -311,12 +307,12 @@ export default function Sidebar() {
 
         {/* Botão de Toggle para expandir/recolher a sidebar */}
         <button 
-          onClick={toggleCollapse} 
+          onClick={toggleSidebarCollapse} 
           className="sidebar-collapse-toggle-btn"
-          title={isCollapsed ? "Expandir menu" : "Recolher menu"}
-          aria-label={isCollapsed ? "Expandir menu" : "Recolher menu"}
+          title={isSidebarCollapsed ? "Expandir menu" : "Recolher menu"}
+          aria-label={isSidebarCollapsed ? "Expandir menu" : "Recolher menu"}
         >
-          {isCollapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
+          {isSidebarCollapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
         </button>
 
         <nav className="sidebar-nav">
@@ -337,7 +333,7 @@ export default function Sidebar() {
 
           {isAdmin && (
             <div className="sidebar-nav-section admin-section">
-              {!isCollapsed && <div className="sidebar-section-divider" />}
+              {!isSidebarCollapsed && <div className="sidebar-section-divider" />}
               {adminNavItems.map(({ key, icon, label }) => (
                 <button
                   key={key}

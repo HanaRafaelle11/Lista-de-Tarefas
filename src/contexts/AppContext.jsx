@@ -129,6 +129,21 @@ export const useAppContext = () => {
 // ─── Provider ─────────────────────────────────────────────────────────────────
 export function AppProvider({ children }) {
 
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('flowday_sidebar_collapsed') === 'true';
+    }
+    return false;
+  });
+
+  const toggleSidebarCollapse = useCallback(() => {
+    setIsSidebarCollapsed(prev => {
+      const nextVal = !prev;
+      localStorage.setItem('flowday_sidebar_collapsed', String(nextVal));
+      return nextVal;
+    });
+  }, []);
+
   // ── Auth State Machine (Single Source of Truth) ───────────────────────────
   // Toda lógica de auth vive em useAuthMachine — AppContext é apenas consumidor.
   const authMachine = useAuthMachine();
@@ -4485,7 +4500,11 @@ export function AppProvider({ children }) {
 
     // Custom Dialogs & Reactivation
     openCustomAlert,
-    openCustomConfirm
+    openCustomConfirm,
+
+    // Sidebar State
+    isSidebarCollapsed,
+    toggleSidebarCollapse
   };
 
   return (

@@ -4,7 +4,7 @@ import { useAppContext } from '../contexts/AppContext';
 import MFIcon from './MFIcon';
 
 export default function GuidedTour() {
-  const { currentUser, logEvent, handleCompleteOnboarding } = useAppContext();
+  const { currentUser, logEvent, handleCompleteOnboarding, isSidebarCollapsed } = useAppContext();
   const [run, setRun] = useState(false);
   const [tourKey, setTourKey] = useState(0);
 
@@ -139,7 +139,7 @@ export default function GuidedTour() {
         }}
       />
 
-      {!run && (
+      {!run && (isSidebarCollapsed || isMobile) && (
         <button
           onClick={() => {
             setTourKey(prev => prev + 1);
