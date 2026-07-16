@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Joyride, STATUS } from 'react-joyride';
 import { useAppContext } from '../contexts/AppContext';
 import MFIcon from './MFIcon';
@@ -16,9 +16,18 @@ export default function GuidedTour() {
     const tourStorageKey = `flowday_tour_v2_${currentUser.id}`;
     const hasSeenTour = localStorage.getItem(tourStorageKey);
     if (!hasSeenTour) {
-      const timer = setTimeout(() => {
-        setRun(true);
-      }, 300);
+      let attempts = 0;
+      const checkAndStart = () => {
+        const targetId = window.innerWidth <= 768 ? 'tour-nav-mobile-home' : 'tour-nav-sidebar-home';
+        const targetEl = document.getElementById(targetId);
+        if (targetEl) {
+          setRun(true);
+        } else if (attempts < 10) {
+          attempts++;
+          setTimeout(checkAndStart, 200);
+        }
+      };
+      const timer = setTimeout(checkAndStart, 500);
       return () => clearTimeout(timer);
     }
   }, [currentUser]);
@@ -32,48 +41,49 @@ export default function GuidedTour() {
     return () => window.removeEventListener('start-flowday-tour', handleStartTour);
   }, []);
 
-  const isMobile = window.innerWidth <= 768;
-
-  const steps = [
-    {
-      target: isMobile ? '#tour-nav-mobile-home' : '#tour-nav-sidebar-home',
-      title: 'Tudo começa aqui',
-      content: 'Seu painel principal (Dashboard). Tarefas e objetivos em um só lugar, organizados pelo que mais importa agora.',
-      disableBeacon: true,
-      placement: isMobile ? 'top' : 'right',
-    },
-    {
-      target: isMobile ? '#tour-nav-mobile-myday' : '#tour-nav-sidebar-myday',
-      title: 'Seu Planejamento Diário',
-      content: 'Gerencie suas tarefas e objetivos organizados por prazos ou visualize-os em um painel Kanban altamente produtivo.',
-      disableBeacon: true,
-      placement: isMobile ? 'top' : 'right',
-    },
-    {
-      target: isMobile ? '#tour-nav-mobile-focus' : '#tour-nav-sidebar-focus',
-      title: 'Aumente seu Foco',
-      content: 'Utilize o timer Pomodoro integrado e as sessões de foco profundo para maximizar seu rendimento diário.',
-      disableBeacon: true,
-      placement: isMobile ? 'top' : 'right',
-    },
-    {
-      target: isMobile ? '#tour-nav-mobile-evolution' : '#tour-nav-sidebar-evolution',
-      title: 'Gamificação e Evolução',
-      content: 'Acompanhe a evolução do seu pet virtual, consulte suas conquistas e receba análises do Coach de Produtividade.',
-      disableBeacon: true,
-      placement: isMobile ? 'top' : 'right',
-    },
-    ...(!isMobile ? [{
-      target: '#tour-nav-settings',
-      title: 'Ajuste Fino',
-      content: 'Acesse as configurações para gerenciar seus dados, trocar o tema visual, exportar relatórios ou enviar feedbacks.',
-      disableBeacon: true,
-      placement: 'right',
-    }] : [])
-  ];
+  const steps = useMemo(() => {
+    const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
+    return [
+      {
+        target: isMobile ? '#tour-nav-mobile-home' : '#tour-nav-sidebar-home',
+        title: 'Tudo começa aqui',
+        content: 'Seu painel principal (Dashboard). Tarefas e objetivos em um só lugar, organizados pelo que mais importa agora.',
+        disableBeacon: true,
+        placement: isMobile ? 'top' : 'right',
+      },
+      {
+        target: isMobile ? '#tour-nav-mobile-myday' : '#tour-nav-sidebar-myday',
+        title: 'Seu Planejamento Diário',
+        content: 'Gerencie suas tarefas e objetivos organizados por prazos ou visualize-os em um painel Kanban altamente produtivo.',
+        disableBeacon: true,
+        placement: isMobile ? 'top' : 'right',
+      },
+      {
+        target: isMobile ? '#tour-nav-mobile-focus' : '#tour-nav-sidebar-focus',
+        title: 'Aumente seu Foco',
+        content: 'Utilize o timer Pomodoro integrado e as sessões de foco profundo para maximizar seu rendimento diário.',
+        disableBeacon: true,
+        placement: isMobile ? 'top' : 'right',
+      },
+      {
+        target: isMobile ? '#tour-nav-mobile-evolution' : '#tour-nav-sidebar-evolution',
+        title: 'Gamificação e Evolução',
+        content: 'Acompanhe a evolução do seu pet virtual, consulte suas conquistas e receba análises do Coach de Produtividade.',
+        disableBeacon: true,
+        placement: isMobile ? 'top' : 'right',
+      },
+      ...(!isMobile ? [{
+        target: '#tour-nav-settings',
+        title: 'Ajuste Fino',
+        content: 'Acesse as configurações para gerenciar seus dados, trocar o tema visual, exportar relatórios ou enviar feedbacks.',
+        disableBeacon: true,
+        placement: 'right',
+      }] : [])
+    ];
+  }, [currentUser]);
 
   const handleJoyrideCallback = (data) => {
-    const { status, type, index } = data;
+    const { status, type, index, action } = data;
     const finishedStatuses = [STATUS.FINISHED, STATUS.SKIPPED];
 
     if (type === 'step:before') {
@@ -91,7 +101,13 @@ export default function GuidedTour() {
       }
     }
 
-    if (finishedStatuses.includes(status)) {
+    if (
+      finishedStatuses.includes(status) || 
+      type === 'tour:end' || 
+      type === 'error:target_not_found' || 
+      type === 'error' ||
+      action === 'close'
+    ) {
       setRun(false);
       if (currentUser?.id) {
         localStorage.setItem(`flowday_tour_v2_${currentUser.id}`, 'true');
@@ -164,3 +180,4 @@ export default function GuidedTour() {
     </>
   );
 }
+
