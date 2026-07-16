@@ -60,7 +60,7 @@ export default function GuidedTour() {
       target: '#tour-nav-settings',
       title: 'Ajuste Fino',
       content: 'Acesse as configurações para gerenciar seus dados, trocar o tema visual, exportar relatórios ou enviar feedbacks.',
-      placement: 'left',
+      placement: 'right',
     }] : [])
   ];
 
@@ -130,39 +130,7 @@ export default function GuidedTour() {
         }}
       />
 
-      {!run && (
-        <button
-          onClick={() => {
-            setTourKey(prev => prev + 1);
-            setRun(true);
-          }}
-          style={{
-            position: 'fixed',
-            bottom: isMobile ? '96px' : '24px',
-            right: '24px',
-            width: '42px',
-            height: '42px',
-            borderRadius: '50%',
-            backgroundColor: 'var(--primary)',
-            color: '#FFFFFF',
-            border: 'none',
-            boxShadow: 'var(--shadow-lg)',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 9998,
-            fontSize: '18px',
-            fontWeight: 'bold',
-            transition: 'transform 0.2s',
-          }}
-          title="Iniciar Tour de Ajuda"
-          onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.1)'}
-          onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
-        >
-          ?
-        </button>
-      )}
+
     </>
   );
 }
