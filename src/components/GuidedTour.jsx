@@ -46,24 +46,28 @@ export default function GuidedTour() {
       target: isMobile ? '#tour-nav-mobile-myday' : '#tour-nav-sidebar-myday',
       title: 'Seu Planejamento Diário',
       content: 'Gerencie suas tarefas e objetivos organizados por prazos ou visualize-os em um painel Kanban altamente produtivo.',
+      disableBeacon: true,
       placement: isMobile ? 'top' : 'right',
     },
     {
       target: isMobile ? '#tour-nav-mobile-focus' : '#tour-nav-sidebar-focus',
       title: 'Aumente seu Foco',
       content: 'Utilize o timer Pomodoro integrado e as sessões de foco profundo para maximizar seu rendimento diário.',
+      disableBeacon: true,
       placement: isMobile ? 'top' : 'right',
     },
     {
       target: isMobile ? '#tour-nav-mobile-evolution' : '#tour-nav-sidebar-evolution',
       title: 'Gamificação e Evolução',
       content: 'Acompanhe a evolução do seu pet virtual, consulte suas conquistas e receba análises do Coach de Produtividade.',
+      disableBeacon: true,
       placement: isMobile ? 'top' : 'right',
     },
     ...(!isMobile ? [{
       target: '#tour-nav-settings',
       title: 'Ajuste Fino',
       content: 'Acesse as configurações para gerenciar seus dados, trocar o tema visual, exportar relatórios ou enviar feedbacks.',
+      disableBeacon: true,
       placement: 'right',
     }] : [])
   ];
@@ -104,6 +108,7 @@ export default function GuidedTour() {
         disableScrollParentFix={true}
         spotlightClicks={true}
         disableOverlayClose={true}
+        disableBeacon={true}
         styles={{
           options: {
             zIndex: 99999,
