@@ -14,6 +14,7 @@ import SyncStatusBanner from './components/SyncStatusBanner';
 import PaywallModal from './components/PaywallModal';
 import MFIcon from './components/MFIcon';
 import Navbar from './components/Navbar';
+import GuidedTour from './components/GuidedTour';
 
 const LandingPage = lazy(() => import('./components/LandingPage'));
 const HomeView = lazy(() => import('./components/HomeView'));
@@ -28,7 +29,7 @@ const AchievementToastManager = lazy(() => import('./components/AchievementToast
 const RevenueDashboard = lazy(() => import('./pages/RevenueDashboard'));
 const Checkout = lazy(() => import('./pages/Checkout'));
 
-const GuidedTour = lazy(() => import('./components/GuidedTour'));
+
 const NotificationEngine = lazy(() => import('./components/NotificationEngine'));
 const PwaInstallPrompt = lazy(() => import('./components/PwaInstallPrompt'));
 const EvolutionCelebrationModal = lazy(() => import('./components/EvolutionCelebrationModal'));

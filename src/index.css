@@ -7666,3 +7666,65 @@ body,
   border-color: transparent !important;
 }
 
+/* Force React Joyride elements to be on top of everything, including the sidebar and modais */
+.react-joyride__portal, 
+.react-joyride__overlay, 
+.react-joyride__spotlight, 
+.react-joyride__tooltip {
+  z-index: 999999 !important;
+}
+
+/* Onboarding Floating FAB style */
+.onboarding-floating-fab {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 18px;
+  border-radius: 9999px;
+  background: linear-gradient(135deg, var(--primary) 0%, #4f46e5 100%);
+  color: #FFFFFF;
+  border: none;
+  box-shadow: 0 4px 14px rgba(99, 102, 241, 0.4);
+  cursor: pointer;
+  z-index: 9998;
+  font-size: 13.5px;
+  font-weight: 700;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.onboarding-floating-fab:hover {
+  transform: translateY(-2px) scale(1.05);
+  box-shadow: 0 6px 20px rgba(99, 102, 241, 0.6);
+  background: linear-gradient(135deg, #4f46e5 0%, var(--primary) 100%);
+}
+
+.onboarding-floating-fab:active {
+  transform: translateY(0) scale(0.95);
+}
+
+@media (max-width: 768px) {
+  .onboarding-floating-fab {
+    bottom: 96px; /* Fica acima da bottom nav no mobile */
+    right: 16px;
+    padding: 8px 14px;
+    font-size: 12px;
+  }
+}
+
+/* Make sidebar nav scrollable if items overflow */
+.sidebar-nav {
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+.sidebar-nav::-webkit-scrollbar {
+  width: 4px;
+}
+.sidebar-nav::-webkit-scrollbar-thumb {
+  background-color: var(--border-light);
+  border-radius: 4px;
+}
+
+

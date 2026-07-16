@@ -1,11 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { Joyride, STATUS } from 'react-joyride';
 import { useAppContext } from '../contexts/AppContext';
+import MFIcon from './MFIcon';
 
 export default function GuidedTour() {
   const { currentUser, logEvent, handleCompleteOnboarding } = useAppContext();
   const [run, setRun] = useState(false);
   const [tourKey, setTourKey] = useState(0);
+
+  const isObCompleted = !!currentUser?.user_metadata?.onboarding_completed || 
+    (currentUser?.id && localStorage.getItem(`flowday_onboarding_completed_${currentUser.id}`) === 'true');
 
   useEffect(() => {
     if (!currentUser) return;
@@ -130,7 +134,20 @@ export default function GuidedTour() {
         }}
       />
 
-
+      {!run && !isObCompleted && (
+        <button
+          onClick={() => {
+            setTourKey(prev => prev + 1);
+            setRun(true);
+          }}
+          className="onboarding-floating-fab"
+          title="Fazer tour da plataforma"
+          aria-label="Fazer tour guiado da plataforma"
+        >
+          <MFIcon name="sparkles" size={18} style={{ marginRight: '8px' }} />
+          <span>Tour Guiado</span>
+        </button>
+      )}
     </>
   );
 }
