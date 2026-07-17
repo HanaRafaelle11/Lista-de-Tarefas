@@ -335,6 +335,11 @@ export default function GoalModal({ isOpen, onClose, onSave, onDelete, editingGo
               placeholder="Ex: Inglês Fluente, Reserva de Emergência..."
               value={title}
               onChange={e => setTitle(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                }
+              }}
               className="todo-modal-input"
               required
               autoFocus
@@ -639,8 +644,8 @@ export default function GoalModal({ isOpen, onClose, onSave, onDelete, editingGo
                 onChange={e => setSaveAsTemplate(e.target.checked)}
                 style={{ width: 'auto', cursor: 'pointer', accentColor: 'var(--primary)' }}
               />
-              <label htmlFor="save-as-template" className="todo-form-label" style={{ cursor: 'pointer', margin: 0, fontSize: '13px' }}>
-                Salvar na lista de modelos pré-determinados
+              <label htmlFor="save-as-template" style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-main)', cursor: 'pointer' }}>
+                Salvar como modelo pré-definido
               </label>
             </div>
           )}

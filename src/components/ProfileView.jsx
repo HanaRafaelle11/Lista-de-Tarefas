@@ -67,36 +67,33 @@ const raccoonSvg = `
 </svg>
 `;
 
-const capybaraSvg = `
+export const capybaraSvg = `
 <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-  <!-- Círculo de fundo -->
-  <circle cx="50" cy="50" r="48" fill="#E0F2FE" stroke="#1E293B" stroke-width="3" />
+  <!-- Círculo de fundo com tom azul suave -->
+  <circle cx="50" cy="50" r="48" fill="#E2E8F0" stroke="#1E293B" stroke-width="3" />
   
-  <!-- Corpo/Pescoço -->
-  <path d="M35 75 Q42 62 50 62 Q58 62 65 75 Z" fill="#D2A078" stroke="#1E293B" stroke-width="2.5" />
+  <!-- Orelha da capivara -->
+  <path d="M68 34 C64 26, 78 26, 74 38 Z" fill="#D2A078" stroke="#1E293B" stroke-width="2.5" />
+  <path d="M69 35 C66 30, 75 30, 72 37 Z" fill="#9A6A48" />
   
-  <!-- Cachecol/Detalhe Azul -->
-  <path d="M33 72 C33 66, 67 66, 67 72 C67 78, 33 78, 33 72 Z" fill="#0EA5E9" stroke="#1E293B" stroke-width="2.5" />
-  <path d="M38 74 L32 90 H44 Z" fill="#0284C7" stroke="#1E293B" stroke-width="2.5" />
-  
-  <!-- Cabeça da Capivara -->
-  <!-- Orelha -->
-  <path d="M60 28 C56 22, 68 22, 65 32 Z" fill="#D2A078" stroke="#1E293B" stroke-width="2.5" />
-  <path d="M61 29 C59 25, 65 25, 63 31 Z" fill="#9A6A48" />
-  
-  <!-- Cabeça principal -->
-  <path d="M28 50 C26 42, 34 32, 50 32 C58 32, 66 38, 66 48 C66 56, 58 62, 50 62 C38 62, 30 58, 28 50 Z" fill="#D2A078" stroke="#1E293B" stroke-width="2.5" />
+  <!-- Rosto/Cabeça principal (Formato clássico de bloco da capivara, centralizado e focado no rosto) -->
+  <path d="M30 52 C28 42, 36 30, 56 30 C68 30, 74 38, 74 52 C74 62, 66 70, 56 70 C42 70, 32 64, 30 52 Z" fill="#D2A078" stroke="#1E293B" stroke-width="2.5" />
   
   <!-- Focinho (Snout) -->
-  <path d="M28 44 C26 38, 36 34, 38 48 C40 54, 34 58, 28 54 Z" fill="#9A6A48" stroke="#1E293B" stroke-width="2" />
-  <path d="M26 44 Q28 47 30 46" fill="none" stroke="#1E293B" stroke-width="2.5" stroke-linecap="round" />
+  <path d="M30 46 C28 38, 38 34, 40 48 C42 56, 36 60, 30 56 Z" fill="#9A6A48" stroke="#1E293B" stroke-width="2" />
+  <path d="M28 46 Q30 49 32 48" fill="none" stroke="#1E293B" stroke-width="2.5" stroke-linecap="round" />
   
-  <!-- Olho -->
-  <circle cx="50" cy="42" r="3.5" fill="#1E293B" />
-  <circle cx="49" cy="41" r="1" fill="#FFFFFF" />
+  <!-- Olho (Com pálpebra relaxada/sonolenta característica) -->
+  <circle cx="54" cy="42" r="4" fill="#1E293B" />
+  <circle cx="52.5" cy="40.5" r="1.2" fill="#FFFFFF" />
+  <path d="M50 39 Q54 37 58 39" fill="none" stroke="#1E293B" stroke-width="2" stroke-linecap="round" />
   
   <!-- Detalhe da bochecha/nariz -->
-  <path d="M38 52 Q42 54 44 52" fill="none" stroke="#1E293B" stroke-width="2" stroke-linecap="round" />
+  <path d="M40 54 Q44 56 46 54" fill="none" stroke="#1E293B" stroke-width="2" stroke-linecap="round" />
+  
+  <!-- Detalhe azul (Cachecol/laço estiloso azul sob o queixo) -->
+  <path d="M42 66 C48 68, 60 68, 66 63 L68 76 L58 74 L52 78 Z" fill="#0EA5E9" stroke="#1E293B" stroke-width="2.5" stroke-linejoin="round" />
+  <circle cx="50" cy="69" r="3" fill="#0284C7" stroke="#1E293B" stroke-width="1.5" />
 </svg>
 `;
 
@@ -643,7 +640,7 @@ export default function ProfileView() {
 
       {/* Modal de Opções de Foto */}
       {showPhotoOptions && createPortal(
-        <div style={{
+        <div className="modal-overlay" style={{
           position: 'fixed',
           top: 0, left: 0, right: 0, bottom: 0,
           backgroundColor: 'rgba(9, 13, 18, 0.7)',
@@ -781,7 +778,7 @@ export default function ProfileView() {
 
       {/* Modal da Biblioteca de Avatares */}
       {showAvatarLibrary && createPortal(
-        <div style={{
+        <div className="modal-overlay" style={{
           position: 'fixed',
           top: 0, left: 0, right: 0, bottom: 0,
           backgroundColor: 'rgba(9, 13, 18, 0.7)',

@@ -28,6 +28,7 @@ import { useAuthMachine } from '../hooks/useAuthMachine.js';
 import AccountReactivationModal from '../components/AccountReactivationModal.jsx';
 import CustomDialogModal from '../components/CustomDialogModal.jsx';
 import { ensureDateTimezoneNoon, extractDateAndTimeParts } from '../utils/dateUtils';
+import { capybaraSvg } from '../components/ProfileView.jsx';
 
 // ─── Helpers para Metadados de Tarefas (Horário e Recorrência) ───────────────
 export function parseTaskMetadata(description = '') {
@@ -524,14 +525,15 @@ export function AppProvider({ children }) {
     }
   }, [getLevelFromCount, triggerLevelUpCelebration]);
 
-  // Inicializa progresso de evolução para Planta/Pet a partir das metas concluídas legadas
+  // Inicializa progresso de evolução para Planta/Pet a partir das metas concluídas legadas e mantém sincronizado
   useEffect(() => {
     if (!currentUser?.id) return;
     const userId = currentUser.id;
     const totalCompleted = goals.filter(g => g.status === 'completed' && !g.deletedAt && !g.deleted_at).length;
     
     const sharedKey = `flowday_shared_completed_goals_${userId}`;
-    if (localStorage.getItem(sharedKey) === null) {
+    const storedVal = localStorage.getItem(sharedKey);
+    if (storedVal === null) {
       // Procura pelo maior progresso entre todos os pets legados, ou usa o total de metas concluídas
       let maxLegacyVal = totalCompleted;
       ['plant', 'baby', 'dog', 'cat', 'pet'].forEach(p => {
@@ -541,6 +543,13 @@ export function AppProvider({ children }) {
         }
       });
       localStorage.setItem(sharedKey, String(maxLegacyVal));
+      setCompanionProgressVersion(prev => prev + 1);
+    } else {
+      const currentVal = Number(storedVal) || 0;
+      if (totalCompleted > currentVal) {
+        localStorage.setItem(sharedKey, String(totalCompleted));
+        setCompanionProgressVersion(prev => prev + 1);
+      }
     }
   }, [currentUser?.id, goals]);
 
@@ -592,6 +601,28 @@ export function AppProvider({ children }) {
   }, [currentUser?.id]);
 
   // Inicialização instantânea do perfil e status Pro do cache local para evitar flicker/flashing
+  const migrateAvatar = useCallback((profile) => {
+    if (profile && profile.avatar_url && typeof profile.avatar_url === 'string') {
+      if (profile.avatar_url.includes('svg') && (
+        profile.avatar_url.includes('rotate(-10 44 42)') || 
+        profile.avatar_url.includes('M35 75 Q42 62') ||
+        profile.avatar_url.includes('M52 78 C52 60') ||
+        profile.avatar_url.includes('Cachecol/Detalhe Azul') ||
+        profile.avatar_url.includes('%3Ccircle%20cx%3D%2250%22%20cy%3D%2250%22%20r%3D%2248%22%20fill%3D%22%23FFFFFF%22') ||
+        (profile.avatar_url.includes('am4') && profile.avatar_url.includes('fill=%23FFFFFF')) ||
+        profile.avatar_url.includes('fill=%23E0F2FE')
+      )) {
+        const migratedUrl = `data:image/svg+xml;utf8,${encodeURIComponent(capybaraSvg)}`;
+        profile.avatar_url = migratedUrl;
+        if (currentUser?.id) {
+          localStorage.setItem(`flowday_user_avatar_${currentUser.id}`, migratedUrl);
+          profilesService.updateProfile(currentUser.id, { avatar_url: migratedUrl }).catch(console.error);
+        }
+      }
+    }
+    return profile;
+  }, [currentUser?.id]);
+
   useEffect(() => {
     if (!currentUser?.id) {
       setUserProfile(null);
@@ -601,14 +632,16 @@ export function AppProvider({ children }) {
     const cachedProfile = localStorage.getItem(`flowday_user_profile_${currentUser.id}`);
     if (cachedProfile) {
       try {
-        setUserProfile(JSON.parse(cachedProfile));
+        let parsed = JSON.parse(cachedProfile);
+        parsed = migrateAvatar(parsed);
+        setUserProfile(parsed);
       } catch (e) {}
     }
     const cachedIsPro = localStorage.getItem(`flowday_is_pro_${currentUser.id}`);
     if (cachedIsPro) {
       setIsProState(cachedIsPro === 'true');
     }
-  }, [currentUser?.id]);
+  }, [currentUser?.id, migrateAvatar]);
 
   // Sincroniza alterações do userProfile para o localStorage
   useEffect(() => {
@@ -1490,6 +1523,7 @@ export function AppProvider({ children }) {
       profileData.avatar_url = localAvatar;
     }
 
+    profileData = migrateAvatar(profileData);
     setUserProfile(profileData);
 
     // Sync name with currentUser metadata to avoid generic name in auth machine
@@ -1506,7 +1540,7 @@ export function AppProvider({ children }) {
         };
       });
     }
-  }, [setCurrentUser]);
+  }, [setCurrentUser, migrateAvatar]);
 
   // ── Health Check SILENCIOSO (não-bloqueante) ──────────────────────────────────
   // Diagnostica o Supabase mas NUNCA impede o app de carregar.

@@ -20,6 +20,35 @@ const BASE_DELAY_MS  = 2_000;        // 2s
 const MAX_DELAY_MS   = 10_000;       // 10s
 const POLL_INTERVAL  = 30_000;       // 30s
 
+const buildEnrichedDescription = (description, start_time, end_time, attachments = []) => {
+  const cleanDesc = (description || '').split('--flowday-meta--')[0].trim();
+  const serializedMeta = {
+    start_time: start_time || null,
+    end_time: end_time || null,
+    attachments: attachments || []
+  };
+  return `${cleanDesc}\n\n--flowday-meta--\n${JSON.stringify(serializedMeta)}`;
+};
+
+const parseDescriptionMeta = (description) => {
+  let start_time = null;
+  let end_time = null;
+  let attachments = [];
+  let cleanDesc = description || '';
+
+  if (description && description.includes('--flowday-meta--')) {
+    const parts = description.split('--flowday-meta--');
+    cleanDesc = parts[0].trim();
+    try {
+      const meta = JSON.parse(parts[1].trim());
+      if (meta.start_time !== undefined) start_time = meta.start_time;
+      if (meta.end_time !== undefined) end_time = meta.end_time;
+      if (meta.attachments !== undefined) attachments = meta.attachments;
+    } catch (e) {}
+  }
+  return { cleanDesc, start_time, end_time, attachments };
+};
+
 // ─── Estado interno ───────────────────────────────────────────────────────────
 // ─── Estado interno ───────────────────────────────────────────────────────────
 let status = {
@@ -762,43 +791,38 @@ async function trySend(item) {
 
     if (type === 'goal_create') {
       const { userId, goalData, goalId } = payload;
+      
+      const enrichedDescription = buildEnrichedDescription(
+        goalData.description,
+        goalData.start_time,
+        goalData.end_time,
+        goalData.attachments
+      );
+
+      const payloadFields = {
+        id:          goalId || idempotency_key,
+        user_id:     userId,
+        title:       goalData.title,
+        description: enrichedDescription,
+        color:       goalData.color || '#4A654E',
+        icon:        goalData.icon || 'target',
+        target_date: goalData.target_date || null,
+        status:      'active'
+      };
+
       const { error } = await supabase
         .from('goals')
         .upsert([{
-          id:          goalId || idempotency_key,
-          user_id:     userId,
-          title:       goalData.title,
-          description: goalData.description || '',
-          color:       goalData.color || '#4A654E',
-          icon:        goalData.icon || 'target',
-          target_date: goalData.target_date || null,
+          ...payloadFields,
           start_time:  goalData.start_time || null,
-          end_time:    goalData.end_time || null,
-          status:      'active'
+          end_time:    goalData.end_time || null
         }], { onConflict: 'id' });
 
       if (error) {
-        // Fallback para colunas inexistentes (start_time/end_time)
-        if (error.code === 'PGRST204' || (error.message && error.message.includes("end_time"))) {
-          const serializedMeta = {
-            start_time: goalData.start_time || null,
-            end_time: goalData.end_time || null
-          };
-          const cleanDesc = (goalData.description || '').split('\n\n--flowday-meta--')[0].trim();
-          const enrichedDescription = `${cleanDesc}\n\n--flowday-meta--\n${JSON.stringify(serializedMeta)}`;
-
+        if (error.code === 'PGRST204' || (error.message && (error.message.includes("end_time") || error.message.includes("start_time")))) {
           const { error: fallbackError } = await supabase
             .from('goals')
-            .upsert([{
-              id:          goalId || idempotency_key,
-              user_id:     userId,
-              title:       goalData.title,
-              description: enrichedDescription,
-              color:       goalData.color || '#4A654E',
-              icon:        goalData.icon || 'target',
-              target_date: goalData.target_date || null,
-              status:      'active'
-            }], { onConflict: 'id' });
+            .upsert([payloadFields], { onConflict: 'id' });
           if (fallbackError) throw fallbackError;
         } else {
           throw error;
@@ -809,15 +833,36 @@ async function trySend(item) {
 
     if (type === 'goal_update') {
       const { userId, id, updates } = payload;
+      
+      const { data: currentGoal } = await supabase
+        .from('goals')
+        .select('description')
+        .eq('id', id)
+        .eq('user_id', userId)
+        .single();
+      
+      const { cleanDesc: currentDesc, start_time: currentStart, end_time: currentEnd, attachments: currentAttachments } = parseDescriptionMeta(currentGoal?.description || '');
+
+      const enrichedDescription = buildEnrichedDescription(
+        updates.description !== undefined ? updates.description : currentDesc,
+        updates.start_time !== undefined ? updates.start_time : currentStart,
+        updates.end_time !== undefined ? updates.end_time : currentEnd,
+        updates.attachments !== undefined ? updates.attachments : currentAttachments
+      );
+
+      const payloadFields = {
+        title:       updates.title,
+        description: enrichedDescription,
+        color:       updates.color,
+        icon:        updates.icon,
+        status:      updates.status,
+        target_date: updates.target_date
+      };
+
       const { error } = await supabase
         .from('goals')
         .update({
-          title:       updates.title,
-          description: updates.description,
-          color:       updates.color,
-          icon:        updates.icon,
-          status:      updates.status,
-          target_date: updates.target_date,
+          ...payloadFields,
           start_time:  updates.start_time,
           end_time:    updates.end_time
         })
@@ -825,53 +870,10 @@ async function trySend(item) {
         .eq('user_id', userId);
 
       if (error) {
-        if (error.code === 'PGRST204' || (error.message && error.message.includes("end_time"))) {
-          // Fallback de serialização na descrição
-          const { data: currentGoal } = await supabase
-            .from('goals')
-            .select('description')
-            .eq('id', id)
-            .eq('user_id', userId)
-            .single();
-
-          let currentStart = null;
-          let currentEnd = null;
-          let currentDescClean = '';
-
-          if (currentGoal && currentGoal.description) {
-            currentDescClean = currentGoal.description;
-            if (currentGoal.description.includes('--flowday-meta--')) {
-              const parts = currentGoal.description.split('--flowday-meta--');
-              currentDescClean = parts[0].trim();
-              try {
-                const meta = JSON.parse(parts[1].trim());
-                currentStart = meta.start_time || null;
-                currentEnd = meta.end_time || null;
-              } catch (e) {}
-            }
-          }
-
-          const updatedDescClean = updates.description !== undefined ? (updates.description || '') : currentDescClean;
-          const nextStart = updates.start_time !== undefined ? updates.start_time : currentStart;
-          const nextEnd = updates.end_time !== undefined ? updates.end_time : currentEnd;
-
-          const serializedMeta = {
-            start_time: nextStart,
-            end_time: nextEnd
-          };
-          const enrichedDescription = `${updatedDescClean}\n\n--flowday-meta--\n${JSON.stringify(serializedMeta)}`;
-
-          const fallbackPayload = {};
-          if (updates.title !== undefined) fallbackPayload.title = updates.title;
-          fallbackPayload.description = enrichedDescription;
-          if (updates.color !== undefined) fallbackPayload.color = updates.color;
-          if (updates.icon !== undefined) fallbackPayload.icon = updates.icon;
-          if (updates.status !== undefined) fallbackPayload.status = updates.status;
-          if (updates.target_date !== undefined) fallbackPayload.target_date = updates.target_date || null;
-
+        if (error.code === 'PGRST204' || (error.message && (error.message.includes("end_time") || error.message.includes("start_time")))) {
           const { error: fallbackError } = await supabase
             .from('goals')
-            .update(fallbackPayload)
+            .update(payloadFields)
             .eq('id', id)
             .eq('user_id', userId);
           if (fallbackError) throw fallbackError;
