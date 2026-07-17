@@ -27,7 +27,7 @@ import { isAdmin as checkIsAdmin } from '../../lib/auth/adminAuth.js';
 import { useAuthMachine } from '../hooks/useAuthMachine.js';
 import AccountReactivationModal from '../components/AccountReactivationModal.jsx';
 import CustomDialogModal from '../components/CustomDialogModal.jsx';
-import { ensureDateTimezoneNoon } from '../utils/dateUtils';
+import { ensureDateTimezoneNoon, extractDateAndTimeParts } from '../utils/dateUtils';
 
 // ─── Helpers para Metadados de Tarefas (Horário e Recorrência) ───────────────
 export function parseTaskMetadata(description = '') {
@@ -64,7 +64,14 @@ export function calculateNextOccurrence(dueDateStr, recurrence, metadata = {}) {
     return today.toISOString().split('T')[0];
   }
 
-  const [year, month, day] = dueDateStr.split('-').map(Number);
+  const { datePart } = extractDateAndTimeParts(dueDateStr);
+  if (!datePart || datePart.includes('NaN')) {
+    const today = new Date();
+    today.setDate(today.getDate() + 1);
+    return today.toISOString().split('T')[0];
+  }
+
+  const [year, month, day] = datePart.split('-').map(Number);
   const date = new Date(year, month - 1, day);
 
   if (recurrence === 'diaria') {

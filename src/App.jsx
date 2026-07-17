@@ -14,7 +14,7 @@ import SyncStatusBanner from './components/SyncStatusBanner';
 import PaywallModal from './components/PaywallModal';
 import MFIcon from './components/MFIcon';
 import Navbar from './components/Navbar';
-import GuidedTour from './components/GuidedTour';
+
 
 const LandingPage = lazy(() => import('./components/LandingPage'));
 const HomeView = lazy(() => import('./components/HomeView'));
@@ -474,7 +474,6 @@ function AppLayout() {
       )}
       <Suspense fallback={null}>
         <AchievementToastManager queue={toastQueue} onDismiss={dismissToast} />
-        <GuidedTour />
         <NotificationEngine />
         <PwaInstallPrompt />
       </Suspense>

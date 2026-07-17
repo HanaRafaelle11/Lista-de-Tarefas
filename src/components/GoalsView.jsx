@@ -99,7 +99,7 @@ export default function GoalsView() {
   }, [shouldOpenGoalModal, setShouldOpenGoalModal]);
 
   const activeGoals = useMemo(() => {
-    return (goals || []).filter(g => !g.deletedAt);
+    return (goals || []).filter(g => !g.deletedAt && !g.deleted_at);
   }, [goals]);
 
   // Filtrar e ordenar objetivos por status e data limite

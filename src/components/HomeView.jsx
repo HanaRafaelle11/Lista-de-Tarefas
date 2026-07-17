@@ -156,7 +156,8 @@ export default function HomeView() {
     getLevelFromCount,
     categories,
     focusEvents,
-    companionProgressVersion
+    companionProgressVersion,
+    setPomodoroSelectedTaskId
   } = useAppContext();
   
   const [showHealthExplanation, setShowHealthExplanation] = useState(false);
@@ -183,7 +184,7 @@ export default function HomeView() {
 
   const onStartTask = (task) => {
     if (task && task.id) {
-      localStorage.setItem('flowday_pomodoro_selected_task_id', task.id);
+      setPomodoroSelectedTaskId(task.id);
       setActiveTab('focus');
     } else {
       setActiveTab('myday');
@@ -361,7 +362,7 @@ export default function HomeView() {
       if (t.completed || t.deletedAt || t.deleted_at) return;
       if (!t.dueDate) return;
       const taskDateOnly = extractDateAndTimeParts(t.dueDate).datePart;
-      if (taskDateOnly === todayDate) {
+      if (taskDateOnly && taskDateOnly <= todayDate) {
         items.push({
           id: t.id,
           title: t.title,

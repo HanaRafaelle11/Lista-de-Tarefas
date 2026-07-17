@@ -47,7 +47,7 @@ export function combineDateAndTime(dateStr, timeStr) {
  * Exemplo em UTC-3: '2026-06-29T02:30:00.000Z' -> { datePart: '2026-06-28', timePart: '23:30' }
  */
 export function extractDateAndTimeParts(isoOrDateStr) {
-  if (!isoOrDateStr) return { datePart: '', timePart: '' };
+  if (!isoOrDateStr || String(isoOrDateStr).includes('NaN')) return { datePart: '', timePart: '' };
 
   const str = String(isoOrDateStr).trim();
 
@@ -78,7 +78,7 @@ export function extractDateAndTimeParts(isoOrDateStr) {
  * Formata a data para exibição no fuso horário local do usuário (ex: "Hoje", "Amanhã", "Ontem" ou "28/06/2026").
  */
 export function formatTaskDateDisplay(dueDateStr) {
-  if (!dueDateStr) return '';
+  if (!dueDateStr || String(dueDateStr).includes('NaN')) return '';
 
   const { datePart } = extractDateAndTimeParts(dueDateStr);
   if (!datePart || datePart.length < 10) return String(dueDateStr);
@@ -122,7 +122,7 @@ export function formatTaskTimeDisplay(dueDateStr, legacyDueTime) {
  * Verifica se a tarefa está atrasada comparando o timestamp com o horário atual do usuário.
  */
 export function isTaskOverdue(dueDateStr, completed, userDueTime = '') {
-  if (completed || !dueDateStr) return false;
+  if (completed || !dueDateStr || String(dueDateStr).includes('NaN')) return false;
 
   const { datePart } = extractDateAndTimeParts(dueDateStr);
   if (!datePart) return false;

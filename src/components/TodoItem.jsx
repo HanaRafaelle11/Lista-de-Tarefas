@@ -23,7 +23,7 @@ export default function TodoItem({ item, onToggleComplete, onDelete, onEdit, goa
   const [showMenu, setShowMenu] = useState(false);
   const [coords, setCoords] = useState({ top: 0, left: 0 });
   const buttonRef = useRef(null);
-  const { isPro, openPaywall, openCustomConfirm, setActiveTab, handleUpdateTask } = useAppContext();
+  const { isPro, openPaywall, openCustomConfirm, setActiveTab, handleUpdateTask, setPomodoroSelectedTaskId } = useAppContext();
 
   const handleExportCalendar = () => {
     if (!isPro) {
@@ -151,7 +151,7 @@ export default function TodoItem({ item, onToggleComplete, onDelete, onEdit, goa
         {!item.completed && (
           <button 
             onClick={() => {
-              localStorage.setItem('flowday_pomodoro_selected_task_id', item.id);
+              setPomodoroSelectedTaskId(item.id);
               setActiveTab('focus');
             }}
             className="todo-item-action-btn play-btn"

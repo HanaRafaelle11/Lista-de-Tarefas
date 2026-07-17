@@ -121,7 +121,7 @@ function categorizeTasks(tasks, goals = [], goalTasks = []) {
     if (!task.dueDate) {
       // Se não tiver prazo e estiver vinculada a um objetivo ativo, agrupa sob o título do objetivo
       const link = goalTasks.find(gt => gt.task_id === task.id);
-      const goal = link ? goals.find(g => g.id === link.goal_id && !g.deletedAt) : null;
+      const goal = link ? goals.find(g => g.id === link.goal_id && !g.deletedAt && !g.deleted_at) : null;
       if (goal) {
         const groupName = goal.title;
         if (!sections.templateGroups[groupName]) {
@@ -572,7 +572,7 @@ export default function TodoView() {
   const activeTemplates = useMemo(() => {
     const active = new Set();
     tasks.forEach(task => {
-      if (!task.completed && !task.deletedAt) {
+      if (!task.completed && !task.deletedAt && !task.deleted_at) {
         const meta = parseTaskMetadata(task.description);
         if (meta.template_name) {
           active.add(meta.template_name);
@@ -728,7 +728,7 @@ export default function TodoView() {
   // Filtragem de tarefas
   const baseFiltered = useMemo(() => {
     return tasks.filter(task => {
-      if (task.deletedAt) return false;
+      if (task.deletedAt || task.deleted_at) return false;
       const meta = parseTaskMetadata(task.description);
       if (meta.archived) return false;
 
@@ -750,7 +750,7 @@ export default function TodoView() {
   // Filtragem exclusiva para o Kanban que ignora o filtro de status superior (all/active/completed)
   const kanbanFiltered = useMemo(() => {
     return tasks.filter(task => {
-      if (task.deletedAt) return false;
+      if (task.deletedAt || task.deleted_at) return false;
       const meta = parseTaskMetadata(task.description);
       if (meta.archived) return false;
 
@@ -767,7 +767,7 @@ export default function TodoView() {
   const sections = useMemo(() => categorizeTasks(baseFiltered, goals, goalTasks), [baseFiltered, goals, goalTasks]);
 
   // Estatísticas rápidas
-  const activeTasks = useMemo(() => tasks.filter(t => !t.deletedAt), [tasks]);
+  const activeTasks = useMemo(() => tasks.filter(t => !t.deletedAt && !t.deleted_at), [tasks]);
   const total = activeTasks.length;
   const active = activeTasks.filter(t => !t.completed).length;
   const completed = activeTasks.filter(t => t.completed).length;
@@ -1313,7 +1313,7 @@ export default function TodoView() {
                 defaultOpen={false}
               />
               {Object.entries(sections.templateGroups || {}).map(([templateName, templateTasks]) => {
-                const goal = goals.find(g => g.title === templateName && !g.deletedAt);
+                const goal = goals.find(g => g.title === templateName && !g.deletedAt && !g.deleted_at);
                 return (
                   <TaskSection
                     key={templateName}

@@ -925,7 +925,7 @@ export default function MyDayView() {
   // Filtragem de tarefas
   const baseFiltered = useMemo(() => {
     return tasks.filter(task => {
-      if (task.deletedAt) return false;
+      if (task.deletedAt || task.deleted_at) return false;
       const meta = parseTaskMetadata(task.description);
 
       if (meta.archived) {
@@ -958,7 +958,7 @@ export default function MyDayView() {
   // Filtragem exclusiva para o Kanban que ignora o filtro de status superior (all/active/completed)
   const kanbanFiltered = useMemo(() => {
     return tasks.filter(task => {
-      if (task.deletedAt) return false;
+      if (task.deletedAt || task.deleted_at) return false;
       const meta = parseTaskMetadata(task.description);
       if (meta.archived) return false;
 
@@ -986,14 +986,14 @@ export default function MyDayView() {
       if (task.dueDate) return true;
 
       const link = goalTasks.find(gt => gt.task_id === task.id);
-      const goal = link ? goals.find(g => g.id === link.goal_id && !g.deletedAt) : null;
+      const goal = link ? goals.find(g => g.id === link.goal_id && !g.deletedAt && !g.deleted_at) : null;
       if (goal && goal.status === 'active') return false;
       return true;
     });
   }, [baseFiltered, goalTasks, goals, filter]);
 
   const activeGoals = useMemo(() => {
-    let baseGoals = (goals || []).filter(g => g.status === 'active' && !g.deletedAt);
+    let baseGoals = (goals || []).filter(g => g.status === 'active' && !g.deletedAt && !g.deleted_at);
     if (selectedGoalIdFilter !== 'all') {
       baseGoals = baseGoals.filter(g => g.id === selectedGoalIdFilter);
     }
@@ -1016,7 +1016,7 @@ export default function MyDayView() {
   const sections = useMemo(() => categorizeTasks(looseTasksFiltered, goals, goalTasks), [looseTasksFiltered, goals, goalTasks]);
 
   // Estatísticas rápidas
-  const activeTasks = useMemo(() => tasks.filter(t => !t.deletedAt), [tasks]);
+  const activeTasks = useMemo(() => tasks.filter(t => !t.deletedAt && !t.deleted_at), [tasks]);
   const total = activeTasks.length;
   const active = activeTasks.filter(t => !t.completed).length;
   const completed = activeTasks.filter(t => t.completed).length;
@@ -1187,7 +1187,7 @@ export default function MyDayView() {
               title="Ver itens arquivados"
             >
               <Archive size={12} />
-              <span>Arquivados ({(goals || []).filter(g => g.status === 'archived' && !g.deletedAt).length + (tasks || []).filter(t => parseTaskMetadata(t.description).archived === true && !t.deletedAt).length})</span>
+              <span>Arquivados ({(goals || []).filter(g => g.status === 'archived' && !g.deletedAt && !g.deleted_at).length + (tasks || []).filter(t => parseTaskMetadata(t.description).archived === true && !t.deletedAt && !t.deleted_at).length})</span>
             </button>
           </h1>
           <p className="tasks-page-subtitle">
@@ -3179,19 +3179,19 @@ export default function MyDayView() {
                   transition: 'all 0.2s'
                 }}
               >
-                Tarefas ({(tasks || []).filter(t => parseTaskMetadata(t.description).archived === true && !t.deletedAt).length})
+                Tarefas ({(tasks || []).filter(t => parseTaskMetadata(t.description).archived === true && !t.deletedAt && !t.deleted_at).length})
               </button>
             </div>
 
             {/* List Area */}
             <div style={{ padding: '20px 24px', overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: '12px' }}>
               {archivedTab === 'goals' ? (
-                (goals || []).filter(g => g.status === 'archived' && !g.deletedAt).length === 0 ? (
+                (goals || []).filter(g => g.status === 'archived' && !g.deletedAt && !g.deleted_at).length === 0 ? (
                   <div style={{ textAlign: 'center', color: 'var(--text-light)', padding: '40px 0', fontSize: '13.5px' }}>
                     Nenhum objetivo arquivado.
                   </div>
                 ) : (
-                  (goals || []).filter(g => g.status === 'archived' && !g.deletedAt).map(goal => (
+                  (goals || []).filter(g => g.status === 'archived' && !g.deletedAt && !g.deleted_at).map(goal => (
                     <div
                       key={goal.id}
                       style={{
@@ -3252,12 +3252,12 @@ export default function MyDayView() {
                   ))
                 )
               ) : (
-                (tasks || []).filter(t => parseTaskMetadata(t.description).archived === true && !t.deletedAt).length === 0 ? (
+                (tasks || []).filter(t => parseTaskMetadata(t.description).archived === true && !t.deletedAt && !t.deleted_at).length === 0 ? (
                   <div style={{ textAlign: 'center', color: 'var(--text-light)', padding: '40px 0', fontSize: '13.5px' }}>
                     Nenhuma tarefa arquivada.
                   </div>
                 ) : (
-                  (tasks || []).filter(t => parseTaskMetadata(t.description).archived === true && !t.deletedAt).map(task => {
+                  (tasks || []).filter(t => parseTaskMetadata(t.description).archived === true && !t.deletedAt && !t.deleted_at).map(task => {
                     const meta = parseTaskMetadata(task.description);
                     const cleanDesc = formatDescriptionWithoutMetadata(task.description);
                     return (
