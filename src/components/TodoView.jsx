@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect, useRef, lazy, Suspense } from 'react';
 import { createPortal } from 'react-dom';
 import { 
-  Plus, Search, X, Calendar, ChevronDown, ChevronRight, 
+  Plus, Minus, Search, X, Calendar, ChevronDown, ChevronRight, 
   List, Columns, Grid, Trash2, Edit2, AlertCircle, ArrowLeft, ArrowRight,
   Sparkles, Award, Sprout, Pin, Zap, CheckCircle, Moon, Sun, Tag, AlertTriangle, RotateCcw, Copy, Check, Download
 } from 'lucide-react';
@@ -58,14 +58,62 @@ const isTaskOnDate = (task, dateStr) => {
   if (!task.dueDate) return false;
   const taskDateOnly = extractDateAndTimeParts(task.dueDate).datePart;
   if (taskDateOnly === dateStr) return true;
-  
-  // Recorrência diária espelhada em todos os dias subsequentes se não concluída
-  if (taskDateOnly < dateStr && !task.completed) {
-    const meta = parseTaskMetadata(task.description);
-    if (meta.recurrence === 'diaria') {
-      return true;
+
+  if (task.completed) {
+    const compDate = task.completedAt ? extractDateAndTimeParts(task.completedAt).datePart : taskDateOnly;
+    return dateStr === compDate;
+  }
+
+  if (dateStr < taskDateOnly) return false;
+
+  const meta = parseTaskMetadata(task.description);
+  if (!meta.recurrence || meta.recurrence === 'nenhuma') return false;
+
+  if (meta.recurrence === 'diaria') return true;
+
+  const parseLocalDate = (str) => {
+    const parts = str.split('-');
+    return new Date(parts[0], parts[1] - 1, parts[2]);
+  };
+
+  const start = parseLocalDate(taskDateOnly);
+  const target = parseLocalDate(dateStr);
+
+  if (meta.recurrence === 'semanal') {
+    return start.getDay() === target.getDay();
+  }
+
+  if (meta.recurrence === 'mensal') {
+    return start.getDate() === target.getDate();
+  }
+
+  if (meta.recurrence === 'dias_semana') {
+    const days = meta.recurrence_days || [];
+    return days.includes(target.getDay());
+  }
+
+  if (meta.recurrence === 'personalizada') {
+    const interval = meta.recurrence_interval || 1;
+    const unit = meta.recurrence_unit || 'dias';
+
+    if (unit === 'dias') {
+      const diffTime = target - start;
+      const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+      return diffDays >= 0 && diffDays % interval === 0;
+    }
+
+    if (unit === 'semanas') {
+      const diffTime = target - start;
+      const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+      return diffDays >= 0 && diffDays % (interval * 7) === 0;
+    }
+
+    if (unit === 'meses') {
+      const diffMonths = (target.getFullYear() - start.getFullYear()) * 12 + (target.getMonth() - start.getMonth());
+      return diffMonths >= 0 && diffMonths % interval === 0 && target.getDate() === start.getDate();
     }
   }
+
   return false;
 };
 
@@ -379,6 +427,22 @@ export default function TodoView() {
       document.removeEventListener('keydown', handleEsc);
     };
   }, [showCategoryManager]);
+
+  useEffect(() => {
+    const handleGlobalEsc = (e) => {
+      if (e.key === 'Escape') {
+        setIsModalOpen(false);
+        setIsSyncModalOpen(false);
+        setIsTemplatesOpen(false);
+        setSelectedCalendarDay(null);
+        setEditingTask(null);
+        setTaskToDelete(null);
+        setCustomizingTemplate(null);
+      }
+    };
+    window.addEventListener('keydown', handleGlobalEsc);
+    return () => window.removeEventListener('keydown', handleGlobalEsc);
+  }, []);
 
   // Configurações do Calendário
   const [currentMonth, setCurrentMonth] = useState(new Date());
@@ -1616,7 +1680,7 @@ export default function TodoView() {
       )}
 
       {/* ── Modal de Detalhes do Dia (Calendário) ──────────────── */}
-      {selectedCalendarDay && (
+      {selectedCalendarDay && createPortal(
         <div className="modal-overlay" onClick={() => setSelectedCalendarDay(null)}>
           <div className="modal-content animate-scale-up" onClick={e => e.stopPropagation()} style={{ padding: '24px', maxWidth: '440px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
@@ -1646,7 +1710,13 @@ export default function TodoView() {
                     {/* Botão Adicionar ao Google Calendar */}
                     {task.dueDate && (
                       <button
-                        onClick={() => addToGoogleCalendar({ ...task, dueTime: extractDateAndTimeParts(task.dueDate).timePart })}
+                        onClick={() => {
+                          if (!isPro) {
+                            openPaywall('google_calendar');
+                            return;
+                          }
+                          addToGoogleCalendar({ ...task, dueTime: extractDateAndTimeParts(task.dueDate).timePart });
+                        }}
                         className="todo-item-action-btn" // Reusing a similar style, adjust as needed
                         title="Adicionar ao Google Calendar"
                         aria-label="Adicionar tarefa ao Google Calendar"
@@ -1721,11 +1791,12 @@ export default function TodoView() {
               + Nova Tarefa para este dia
             </button>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* ── Modal de Criar / Editar Tarefa ──────────────── */}
-      {isModalOpen && (
+      {isModalOpen && createPortal(
         <div className="modal-overlay" onClick={closeTaskModal}>
           <div className="modal-content tasks-modal animate-scale-up" onClick={e => e.stopPropagation()}>
             <div className="todo-modal-header">
@@ -1863,13 +1934,54 @@ export default function TodoView() {
                 <div className="todo-form-row animate-scale-up" style={{ marginTop: '12px', gap: '12px' }}>
                   <div className="todo-form-group" style={{ flex: 1 }}>
                     <label className="todo-form-label">Repetir a cada</label>
-                    <input
-                      type="number"
-                      min="1"
-                      value={recurrenceInterval}
-                      onChange={e => setRecurrenceInterval(Math.max(1, parseInt(e.target.value) || 1))}
-                      className="todo-modal-input"
-                    />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
+                      <button
+                        type="button"
+                        onClick={() => setRecurrenceInterval(prev => Math.max(1, prev - 1))}
+                        style={{
+                          padding: '8px',
+                          backgroundColor: 'var(--bg-app)',
+                          border: '1px solid var(--border-medium)',
+                          borderRadius: 'var(--radius-sm)',
+                          color: 'var(--text-main)',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          height: '38px',
+                          width: '38px'
+                        }}
+                      >
+                        <Minus size={14} />
+                      </button>
+                      <input
+                        type="number"
+                        min="1"
+                        value={recurrenceInterval}
+                        onChange={e => setRecurrenceInterval(Math.max(1, parseInt(e.target.value) || 1))}
+                        className="todo-modal-input"
+                        style={{ textAlign: 'center', flex: 1, height: '38px' }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setRecurrenceInterval(prev => prev + 1)}
+                        style={{
+                          padding: '8px',
+                          backgroundColor: 'var(--bg-app)',
+                          border: '1px solid var(--border-medium)',
+                          borderRadius: 'var(--radius-sm)',
+                          color: 'var(--text-main)',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          height: '38px',
+                          width: '38px'
+                        }}
+                      >
+                        <Plus size={14} />
+                      </button>
+                    </div>
                   </div>
                   <div className="todo-form-group" style={{ flex: 1 }}>
                     <label className="todo-form-label">Unidade de tempo</label>
@@ -1945,7 +2057,8 @@ export default function TodoView() {
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Modal de Planejamento Semanal */}
@@ -1968,7 +2081,7 @@ export default function TodoView() {
       />
 
       {/* Modal de Escolha de Sincronização do Calendário */}
-      {isSyncModalOpen && (
+      {isSyncModalOpen && createPortal(
         <div className="modal-overlay" onClick={() => setIsSyncModalOpen(false)} style={{ zIndex: 11000 }}>
           <div 
             className="modal-content" 
@@ -2044,7 +2157,8 @@ export default function TodoView() {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Drawer de Templates de Tarefas */}
@@ -2078,7 +2192,7 @@ export default function TodoView() {
                     Personalizar: {customizingTemplate.title}
                   </h4>
                   <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: 0 }}>
-                    Ajuste os títulos e descrições das tarefas antes de importá-las.
+                    Ajuste os títulos e descrições das ações antes de importá-las.
                   </p>
                 </div>
 
@@ -2093,7 +2207,7 @@ export default function TodoView() {
                             onChange={() => handleToggleCustomTask(t.id)}
                             style={{ cursor: 'pointer', accentColor: 'var(--primary)' }}
                           />
-                          <span>Incluir tarefa</span>
+                          <span>Incluir ação</span>
                         </label>
                         <button
                           type="button"
@@ -2107,12 +2221,12 @@ export default function TodoView() {
                       {t.enabled && (
                         <>
                           <div className="template-customizer-input-group">
-                            <span className="template-customizer-label">Título da Tarefa</span>
+                            <span className="template-customizer-label">Título da Ação</span>
                             <input
                               type="text"
                               value={t.title}
                               onChange={(e) => handleUpdateCustomTask(t.id, 'title', e.target.value)}
-                              placeholder="Título da tarefa..."
+                              placeholder="Título da ação..."
                               className="template-customizer-input"
                             />
                           </div>
@@ -2138,7 +2252,7 @@ export default function TodoView() {
                   onClick={handleAddCustomTask}
                   className="template-customizer-btn-add"
                 >
-                  <Plus size={14} /> Adicionar Nova Tarefa
+                  <Plus size={14} /> Adicionar Nova Ação
                 </button>
 
                 <div className="template-customizer-actions">

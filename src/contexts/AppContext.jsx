@@ -2325,12 +2325,19 @@ export function AppProvider({ children }) {
     if (!currentUser?.id) return;
 
     const existingTask = tasks.find(t => t.id === id);
+    const finalUpdates = { ...updatedData };
+
+    if (updatedData.completed === true && !updatedData.completedAt) {
+      finalUpdates.completedAt = new Date().toISOString();
+    } else if (updatedData.completed === false) {
+      finalUpdates.completedAt = null;
+    }
 
     // OPTIMISTIC UPDATE
-    setTasks((prev) => prev.map((t) => t.id === id ? { ...t, ...updatedData } : t));
+    setTasks((prev) => prev.map((t) => t.id === id ? { ...t, ...finalUpdates } : t));
     logEvent('task_updated', { task_id: id });
 
-    if (updatedData.completed === true) {
+    if (finalUpdates.completed === true) {
       logEvent('task_completed', { taskId: id });
       if (existingTask && existingTask.dueDate) {
         logEvent('calendar_task_completed', { taskId: id });
@@ -2345,28 +2352,28 @@ export function AppProvider({ children }) {
       }
     }
 
-    if (updatedData.dueDate !== undefined) {
-      if (updatedData.dueDate && (!existingTask || !existingTask.dueDate)) {
-        logEvent('calendar_task_scheduled', { taskId: id, date: updatedData.dueDate });
-        logEvent('task_scheduled', { taskId: id, date: updatedData.dueDate });
-      } else if (existingTask && existingTask.dueDate && updatedData.dueDate && existingTask.dueDate !== updatedData.dueDate) {
-        logEvent('calendar_task_moved', { taskId: id, oldDate: existingTask.dueDate, newDate: updatedData.dueDate });
-        logEvent('task_rescheduled', { taskId: id, oldDate: existingTask.dueDate, newDate: updatedData.dueDate });
+    if (finalUpdates.dueDate !== undefined) {
+      if (finalUpdates.dueDate && (!existingTask || !existingTask.dueDate)) {
+        logEvent('calendar_task_scheduled', { taskId: id, date: finalUpdates.dueDate });
+        logEvent('task_scheduled', { taskId: id, date: finalUpdates.dueDate });
+      } else if (existingTask && existingTask.dueDate && finalUpdates.dueDate && existingTask.dueDate !== finalUpdates.dueDate) {
+        logEvent('calendar_task_moved', { taskId: id, oldDate: existingTask.dueDate, newDate: finalUpdates.dueDate });
+        logEvent('task_rescheduled', { taskId: id, oldDate: existingTask.dueDate, newDate: finalUpdates.dueDate });
       }
     }
 
     if (currentUser.isDemo) {
-      const updatedList = tasks.map((t) => t.id === id ? { ...t, ...updatedData, updatedAt: new Date().toISOString() } : t);
+      const updatedList = tasks.map((t) => t.id === id ? { ...t, ...finalUpdates, updatedAt: new Date().toISOString() } : t);
       setTasks(updatedList);
       localStorage.setItem(`flowday_demo_tasks_${currentUser.id}`, JSON.stringify(updatedList));
       return;
     }
 
     if (existingTask) {
-      scheduleNotificationForTask({ ...existingTask, ...updatedData });
+      scheduleNotificationForTask({ ...existingTask, ...finalUpdates });
     }
 
-    tasksService.update(currentUser.id, id, updatedData).catch(err => {
+    tasksService.update(currentUser.id, id, finalUpdates).catch(err => {
       console.error('[AppContext] Erro ao atualizar tarefa:', err);
     });
   }, [currentUser, tasks, logEvent, scheduleNotificationForTask]);

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { User, Shield, Briefcase, FileText, Camera, Trash2, CheckCircle2, Sun, Moon, Palette } from 'lucide-react';
 import { useAppContext } from '../contexts/AppContext';
 import DefaultAvatar from './DefaultAvatar';
@@ -68,15 +69,34 @@ const raccoonSvg = `
 
 const capybaraSvg = `
 <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-  <circle cx="50" cy="50" r="48" fill="#FFFFFF" stroke="#1E293B" stroke-width="3" />
-  <path d="M52 78 C52 60, 68 55, 80 62 L80 82 H45 Z" fill="#0EA5E9" stroke="#1E293B" stroke-width="2.5" />
-  <path d="M68 38 C72 38, 75 42, 72 47 C69 50, 65 48, 65 44 Z" fill="#0284C7" stroke="#1E293B" stroke-width="2.5" />
-  <path d="M30 54 C28 50, 26 44, 30 38 C34 32, 54 32, 68 34 C72 35, 74 42, 72 50 C70 58, 62 68, 50 68 C40 68, 32 58, 30 54 Z" fill="#0EA5E9" stroke="#1E293B" stroke-width="2.5" />
-  <path d="M30 38 Q34 48 30 54" fill="none" stroke="#1E293B" stroke-width="2" />
-  <path d="M28 40 Q26 43 28 46" fill="none" stroke="#1E293B" stroke-width="2.5" stroke-linecap="round" />
-  <ellipse cx="44" cy="42" rx="3.5" ry="2" fill="#1E293B" transform="rotate(-10 44 42)" />
-  <circle cx="43" cy="41" r="0.8" fill="#FFFFFF" />
-  <path d="M68 41 C69 41, 71 42, 70 44 C69 45, 67 45, 67 43 Z" fill="#FFFFFF" />
+  <!-- Círculo de fundo -->
+  <circle cx="50" cy="50" r="48" fill="#E0F2FE" stroke="#1E293B" stroke-width="3" />
+  
+  <!-- Corpo/Pescoço -->
+  <path d="M35 75 Q42 62 50 62 Q58 62 65 75 Z" fill="#D2A078" stroke="#1E293B" stroke-width="2.5" />
+  
+  <!-- Cachecol/Detalhe Azul -->
+  <path d="M33 72 C33 66, 67 66, 67 72 C67 78, 33 78, 33 72 Z" fill="#0EA5E9" stroke="#1E293B" stroke-width="2.5" />
+  <path d="M38 74 L32 90 H44 Z" fill="#0284C7" stroke="#1E293B" stroke-width="2.5" />
+  
+  <!-- Cabeça da Capivara -->
+  <!-- Orelha -->
+  <path d="M60 28 C56 22, 68 22, 65 32 Z" fill="#D2A078" stroke="#1E293B" stroke-width="2.5" />
+  <path d="M61 29 C59 25, 65 25, 63 31 Z" fill="#9A6A48" />
+  
+  <!-- Cabeça principal -->
+  <path d="M28 50 C26 42, 34 32, 50 32 C58 32, 66 38, 66 48 C66 56, 58 62, 50 62 C38 62, 30 58, 28 50 Z" fill="#D2A078" stroke="#1E293B" stroke-width="2.5" />
+  
+  <!-- Focinho (Snout) -->
+  <path d="M28 44 C26 38, 36 34, 38 48 C40 54, 34 58, 28 54 Z" fill="#9A6A48" stroke="#1E293B" stroke-width="2" />
+  <path d="M26 44 Q28 47 30 46" fill="none" stroke="#1E293B" stroke-width="2.5" stroke-linecap="round" />
+  
+  <!-- Olho -->
+  <circle cx="50" cy="42" r="3.5" fill="#1E293B" />
+  <circle cx="49" cy="41" r="1" fill="#FFFFFF" />
+  
+  <!-- Detalhe da bochecha/nariz -->
+  <path d="M38 52 Q42 54 44 52" fill="none" stroke="#1E293B" stroke-width="2" stroke-linecap="round" />
 </svg>
 `;
 
@@ -337,6 +357,17 @@ export default function ProfileView() {
       setBio(userProfile.bio || '');
     }
   }, [userProfile]);
+
+  useEffect(() => {
+    const handleGlobalEsc = (e) => {
+      if (e.key === 'Escape') {
+        setShowPhotoOptions(false);
+        setShowAvatarLibrary(false);
+      }
+    };
+    window.addEventListener('keydown', handleGlobalEsc);
+    return () => window.removeEventListener('keydown', handleGlobalEsc);
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -611,7 +642,7 @@ export default function ProfileView() {
       </div>
 
       {/* Modal de Opções de Foto */}
-      {showPhotoOptions && (
+      {showPhotoOptions && createPortal(
         <div style={{
           position: 'fixed',
           top: 0, left: 0, right: 0, bottom: 0,
@@ -744,11 +775,12 @@ export default function ProfileView() {
               Cancelar
             </button>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Modal da Biblioteca de Avatares */}
-      {showAvatarLibrary && (
+      {showAvatarLibrary && createPortal(
         <div style={{
           position: 'fixed',
           top: 0, left: 0, right: 0, bottom: 0,
@@ -889,7 +921,8 @@ export default function ProfileView() {
               ))}
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
     </div>

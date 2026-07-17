@@ -7727,4 +7727,22 @@ body,
   border-radius: 4px;
 }
 
+/* Layout compactness and modal height confinement - Mobile adjustments */
+body:has(.modal-overlay) {
+  overflow: hidden !important;
+}
+
+@media (max-width: 768px) {
+  .tasks-view {
+    gap: 16px !important;
+    padding-bottom: 24px !important;
+  }
+  .app-main-content {
+    padding: 12px 12px 76px 12px !important;
+  }
+  .profile-view-container {
+    padding: 12px 0 !important;
+  }
+}
+
 

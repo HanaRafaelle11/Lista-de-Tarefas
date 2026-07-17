@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import * as LucideIcons from 'lucide-react';
 import { X, Search, Check, Link2, Unlink, Tag, AlertCircle, Calendar, Inbox, Trash2, Plus } from 'lucide-react';
 import { useAppContext } from '../contexts/AppContext';
@@ -106,7 +107,7 @@ export default function GoalTasksModal({ isOpen, onClose, goal, tasks, linkedTas
 
   if (!isOpen || !goal) return null;
 
-  return (
+  return createPortal(
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-content goal-tasks-modal animate-scale-up" onClick={e => e.stopPropagation()}>
         {/* Header */}
@@ -151,7 +152,7 @@ export default function GoalTasksModal({ isOpen, onClose, goal, tasks, linkedTas
           <form onSubmit={handleQuickCreate} style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
             <input
               type="text"
-              placeholder="Criar nova tarefa e vincular..."
+              placeholder="Criar nova ação e vincular..."
               value={quickTaskTitle}
               onChange={(e) => setQuickTaskTitle(e.target.value)}
               disabled={isCreatingQuickTask}
@@ -322,6 +323,7 @@ export default function GoalTasksModal({ isOpen, onClose, goal, tasks, linkedTas
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

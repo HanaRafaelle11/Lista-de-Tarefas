@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import * as LucideIcons from 'lucide-react';
 import { X, Plus, Trash2, Smile, Calendar, Clock, Target, Edit2 } from 'lucide-react';
 import EmojiPicker from 'emoji-picker-react';
@@ -71,6 +72,13 @@ function getLocalDateString(date = new Date()) {
   return `${year}-${month}-${day}`;
 }
 
+const isImageFile = (file) => {
+  if (!file) return false;
+  if (file.type && file.type.startsWith('image/')) return true;
+  if (file.name && /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(file.name)) return true;
+  return false;
+};
+
 export default function GoalModal({ isOpen, onClose, onSave, onDelete, editingGoal }) {
   const { currentUser, openCustomAlert } = useAppContext();
   const [title, setTitle] = useState('');
@@ -86,6 +94,7 @@ export default function GoalModal({ isOpen, onClose, onSave, onDelete, editingGo
 
   const [attachments, setAttachments] = useState([]);
   const [uploading, setUploading] = useState(false);
+  const [saveAsTemplate, setSaveAsTemplate] = useState(false);
 
   const handleFileChange = async (e) => {
     const file = e.target.files[0];
@@ -174,7 +183,9 @@ export default function GoalModal({ isOpen, onClose, onSave, onDelete, editingGo
       setTargetDate(editingGoal.target_date || '');
       setStartTime(editingGoal.start_time || '');
       setEndTime(editingGoal.end_time || '');
+      setActions(editingGoal.actions || []);
       setAttachments(editingGoal.attachments || []);
+      setSaveAsTemplate(false);
     } else {
       setTitle('');
       setDescription('');
@@ -185,6 +196,7 @@ export default function GoalModal({ isOpen, onClose, onSave, onDelete, editingGo
       setEndTime('');
       setActions([]);
       setAttachments([]);
+      setSaveAsTemplate(false);
     }
   }, [editingGoal, isOpen]);
 
@@ -218,6 +230,26 @@ export default function GoalModal({ isOpen, onClose, onSave, onDelete, editingGo
       }
     }
 
+    if (!editingGoal && saveAsTemplate) {
+      try {
+        const customTemplates = JSON.parse(localStorage.getItem('flowday_custom_goal_templates') || '[]');
+        const newTemplate = {
+          id: 'custom_' + Date.now(),
+          title: title.trim(),
+          description: description.trim(),
+          color,
+          icon,
+          actions: actions.filter(a => a.trim() !== ''),
+          category: 'Personalizado',
+          isCustom: true
+        };
+        localStorage.setItem('flowday_custom_goal_templates', JSON.stringify([newTemplate, ...customTemplates]));
+        window.dispatchEvent(new Event('flowday_custom_templates_changed'));
+      } catch (err) {
+        console.warn('Erro ao salvar modelo customizado:', err);
+      }
+    }
+
     onSave({
       title: title.trim(),
       description: description.trim(),
@@ -229,6 +261,24 @@ export default function GoalModal({ isOpen, onClose, onSave, onDelete, editingGo
       actions: actions.filter(a => a.trim() !== ''),
       attachments,
     });
+  };
+
+  const handleKeyDownAction = (e, index) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (index === actions.length - 1) {
+        setActions([...actions, '']);
+        setTimeout(() => {
+          const inputs = document.querySelectorAll('.action-input');
+          const lastInput = inputs[inputs.length - 1];
+          if (lastInput) lastInput.focus();
+        }, 50);
+      } else {
+        const inputs = document.querySelectorAll('.action-input');
+        const nextInput = inputs[index + 1];
+        if (nextInput) nextInput.focus();
+      }
+    }
   };
 
   const handleAddAction = () => {
@@ -247,7 +297,7 @@ export default function GoalModal({ isOpen, onClose, onSave, onDelete, editingGo
 
   if (!isOpen) return null;
 
-  return (
+  return createPortal(
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-content goal-modal animate-scale-up" onClick={e => e.stopPropagation()}>
         {/* Header */}
@@ -360,7 +410,13 @@ export default function GoalModal({ isOpen, onClose, onSave, onDelete, editingGo
                       }}
                     >
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px', overflow: 'hidden' }}>
-                        <LucideIcons.FileText size={14} style={{ color: 'var(--primary)' }} />
+                        {isImageFile(file) ? (
+                          <div style={{ width: '20px', height: '20px', borderRadius: '3px', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, border: '1px solid var(--border-medium)' }}>
+                            <img src={file.url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          </div>
+                        ) : (
+                          <LucideIcons.FileText size={14} style={{ color: 'var(--primary)' }} />
+                        )}
                         <span style={{ fontSize: '12px', color: 'var(--text-main)', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', maxWidth: '240px' }}>
                           {file.name}
                         </span>
@@ -550,7 +606,8 @@ export default function GoalModal({ isOpen, onClose, onSave, onDelete, editingGo
                     placeholder={`Ação ${index + 1}`}
                     value={action}
                     onChange={(e) => handleActionChange(index, e.target.value)}
-                    className="todo-modal-input"
+                    onKeyDown={(e) => handleKeyDownAction(e, index)}
+                    className="todo-modal-input action-input"
                     style={{ flex: 1 }}
                   />
                   <button 
@@ -571,6 +628,22 @@ export default function GoalModal({ isOpen, onClose, onSave, onDelete, editingGo
               </button>
             </div>
           </div>
+
+          {/* Opção de Salvar como Modelo */}
+          {!editingGoal && (
+            <div className="todo-form-group" style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: '8px 0 16px' }}>
+              <input
+                id="save-as-template"
+                type="checkbox"
+                checked={saveAsTemplate}
+                onChange={e => setSaveAsTemplate(e.target.checked)}
+                style={{ width: 'auto', cursor: 'pointer', accentColor: 'var(--primary)' }}
+              />
+              <label htmlFor="save-as-template" className="todo-form-label" style={{ cursor: 'pointer', margin: 0, fontSize: '13px' }}>
+                Salvar na lista de modelos pré-determinados
+              </label>
+            </div>
+          )}
 
           {/* Ações */}
           <div className="todo-modal-actions" style={{ justifyContent: 'space-between', width: '100%' }}>
@@ -602,6 +675,7 @@ export default function GoalModal({ isOpen, onClose, onSave, onDelete, editingGo
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

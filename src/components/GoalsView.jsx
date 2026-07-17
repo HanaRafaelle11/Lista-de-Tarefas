@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Plus, Target, Sprout, Award, Archive, Sparkles, X, AlertTriangle, Trash2 } from 'lucide-react';
 import GoalCard from './GoalCard';
 import GoalModal from './GoalModal';
@@ -89,6 +90,60 @@ export default function GoalsView() {
 
   const [showBulkConfirmCompleted, setShowBulkConfirmCompleted] = useState(false);
   const [showBulkConfirmAll, setShowBulkConfirmAll] = useState(false);
+  const [customTemplates, setCustomTemplates] = useState([]);
+
+  const loadCustomTemplates = () => {
+    try {
+      const templates = JSON.parse(localStorage.getItem('flowday_custom_goal_templates') || '[]');
+      setCustomTemplates(templates);
+    } catch (e) {
+      console.warn('Erro ao carregar modelos customizados:', e);
+    }
+  };
+
+  useEffect(() => {
+    loadCustomTemplates();
+    window.addEventListener('flowday_custom_templates_changed', loadCustomTemplates);
+    return () => window.removeEventListener('flowday_custom_templates_changed', loadCustomTemplates);
+  }, []);
+
+  const allTemplates = useMemo(() => {
+    return [...customTemplates, ...GOAL_TEMPLATES];
+  }, [customTemplates]);
+
+  const handleDeleteCustomTemplate = (templateId) => {
+    openCustomConfirm(
+      "Deseja realmente excluir este modelo de objetivo? Esta ação não pode ser desfeita.",
+      "Excluir Modelo",
+      () => {
+        try {
+          const templates = JSON.parse(localStorage.getItem('flowday_custom_goal_templates') || '[]');
+          const updated = templates.filter(t => t.id !== templateId);
+          localStorage.setItem('flowday_custom_goal_templates', JSON.stringify(updated));
+          window.dispatchEvent(new Event('flowday_custom_templates_changed'));
+        } catch (e) {
+          console.warn('Erro ao excluir modelo:', e);
+        }
+      }
+    );
+  };
+
+  useEffect(() => {
+    const handleGlobalEsc = (e) => {
+      if (e.key === 'Escape') {
+        setIsGoalModalOpen(false);
+        setIsTasksModalOpen(false);
+        setIsTemplatesDrawerOpen(false);
+        setEditingGoal(null);
+        setManagingGoal(null);
+        setPendingCompleteGoalId(null);
+        setShowBulkConfirmCompleted(false);
+        setShowBulkConfirmAll(false);
+      }
+    };
+    window.addEventListener('keydown', handleGlobalEsc);
+    return () => window.removeEventListener('keydown', handleGlobalEsc);
+  }, []);
 
   useEffect(() => {
     if (shouldOpenGoalModal) {
@@ -555,7 +610,7 @@ export default function GoalsView() {
               Importe um modelo de objetivo macro estruturado com sugestões de tarefas integradas para acelerar o seu progresso.
             </p>
             
-            {GOAL_TEMPLATES.map(template => {
+            {allTemplates.map(template => {
               const isAlreadyActive = goals.some(g => g.title === template.title && g.status === 'active');
               
               const handleImportGoal = () => {
@@ -576,9 +631,31 @@ export default function GoalsView() {
                   key={template.id} 
                   className={`template-persona-card ${isAlreadyActive ? 'template-disabled-card' : ''}`}
                 >
-                  <h4 className="template-persona-title">
+                  <h4 className="template-persona-title" style={{ display: 'flex', alignItems: 'center', width: '100%' }}>
                     <span style={{ fontSize: '16px', marginRight: '6px' }}>{template.icon}</span>
-                    {template.title}
+                    <span style={{ flex: 1 }}>{template.title}</span>
+                    {template.isCustom && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteCustomTemplate(template.id);
+                        }}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: 'var(--danger)',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          padding: '4px',
+                          marginLeft: '8px'
+                        }}
+                        title="Excluir Modelo"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    )}
                   </h4>
                   <p className="template-persona-desc">{template.description}</p>
                   
@@ -619,7 +696,7 @@ export default function GoalsView() {
       </div>
 
       {/* ── Diálogo de confirmação: concluir tarefas vinculadas ── */}
-      {pendingCompleteGoalId && (() => {
+      {pendingCompleteGoalId && createPortal((() => {
         const linkedIds = goalTasks.filter(gt => gt.goal_id === pendingCompleteGoalId).map(gt => gt.task_id);
         const incompleteLinked = tasks.filter(t => linkedIds.includes(t.id) && !t.completed);
         return (
@@ -655,14 +732,14 @@ export default function GoalsView() {
                 </button>
                 <button
                   onClick={confirmCompleteGoalWithoutTasks}
-                  style={{
-                  }}
+                  className="todo-modal-cancel-btn"
+                  style={{ fontSize: '13px', fontWeight: '600', cursor: 'pointer', padding: '9px 16px', flex: '1 1 auto' }}
                 >
                   Apenas concluir o objetivo
                 </button>
                 <button
                   onClick={() => setPendingCompleteGoalId(null)}
-                  style={{ fontSize: '13px', color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', marginTop: '4px' }}
+                  style={{ fontSize: '13px', color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', marginTop: '4px', width: '100%', textAlign: 'center' }}
                 >
                   Cancelar
                 </button>
@@ -670,7 +747,7 @@ export default function GoalsView() {
             </div>
           </div>
         );
-      })()}
+      })(), document.body)}
     </div>
   );
 }
