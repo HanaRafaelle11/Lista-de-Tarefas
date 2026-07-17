@@ -299,20 +299,27 @@ function readQueue() {
   return queueMemory;
 }
 
+let writeTimeout = null;
+
 function writeQueue(queue) {
   // Executa otimização semântica antes de persistir
   const optimized = optimizeQueue(queue);
   queueMemory = optimized;
 
-  // Sincroniza em background com o localDB (IndexedDB)
-  localDB.clear('pendingOps')
-    .then(() => {
-      const items = optimized.map(item => ({ ...item, id: item.idempotency_key }));
-      return localDB.putMany('pendingOps', items);
-    })
-    .catch(err => {
-      console.warn('[syncQueue] Falha ao persistir fila no IndexedDB:', err.message);
-    });
+  // Cancela qualquer gravação agendada anteriormente
+  if (writeTimeout) clearTimeout(writeTimeout);
+
+  // Agenda a gravação no IndexedDB com debounce de 50ms para evitar colisões
+  writeTimeout = setTimeout(() => {
+    localDB.clear('pendingOps')
+      .then(() => {
+        const items = queueMemory.map(item => ({ ...item, id: item.idempotency_key }));
+        return localDB.putMany('pendingOps', items);
+      })
+      .catch(err => {
+        console.warn('[syncQueue] Falha ao persistir fila no IndexedDB:', err.message);
+      });
+  }, 50);
 }
 
 // ─── Backoff ─────────────────────────────────────────────────────────────────
